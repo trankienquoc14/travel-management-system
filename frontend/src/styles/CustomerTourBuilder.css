@@ -1,0 +1,455 @@
+/* ==========================================================================
+   GIAO DIỆN TỰ THIẾT KẾ TOUR (CUSTOMER BUILDER) - OPTIMIZED VERSION
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Khung bọc toàn trang (Khớp với lớp builder-page-wrapper trong React) */
+.builder-page-wrapper {
+    background-color: #f8fafc;
+    min-height: 100vh;
+    padding: 40px 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Container trung tâm */
+.builder-container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto 40px auto;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+/* Header vùng điều hướng/tiêu đề */
+.builder-header {
+    background: linear-gradient(135deg, #0ea5e9, #1d4ed8);
+    color: #ffffff;
+    padding: 45px 30px;
+    text-align: center;
+}
+
+.builder-header h2 {
+    margin: 0 0 12px 0;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.builder-header p {
+    margin: 0;
+    font-size: 16px;
+    color: #e0f2fe;
+    font-weight: 400;
+}
+
+/* Form chính */
+.builder-form {
+    padding: 40px 30px;
+}
+
+/* Các phân đoạn (Sections) */
+.builder-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 30px;
+    transition: box-shadow 0.3s ease;
+}
+
+.builder-section:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.builder-section.section-info {
+    border-left: 4px solid #0ea5e9;
+}
+
+.builder-section.section-prefs {
+    border-left: 4px solid #6366f1;
+}
+
+.builder-section h3 {
+    margin-top: 0;
+    margin-bottom: 24px;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 700;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 12px;
+}
+
+/* ==========================================================================
+   BỐ CỤC Ô NHẬP LIỆU & GRID 12 CỘT
+   ========================================================================== */
+.trip-info-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 24px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.field-full {
+    grid-column: span 12;
+}
+
+.field-half {
+    grid-column: span 6;
+}
+
+.field-third {
+    grid-column: span 4;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 11px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #0f172a;
+    background-color: #f8fafc;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.price-hint {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #0284c7;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   HỢP PHẦN DỊCH VỤ LÕI (HORIZONTAL SLIDER CARDS)
+   ========================================================================== */
+.service-cards-container {
+    display: flex;
+    overflow-x: auto;
+    gap: 16px;
+    padding: 4px 4px 16px 4px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.service-cards-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.service-cards-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.service-cards-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 100px;
+}
+
+.service-cards-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Thẻ dịch vụ đơn lẻ */
+.service-card {
+    flex: 0 0 260px;
+    scroll-snap-align: start;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    min-height: 330px;
+    height: 100%;
+}
+
+.service-card:hover {
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.service-card.selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px #2563eb, 0 8px 20px rgba(37, 99, 235, 0.15);
+}
+
+.card-image-wrapper {
+    width: 100%;
+    height: 130px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.card-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.service-card:hover .card-cover-img {
+    transform: scale(1.05);
+}
+
+/* ĐÃ FIX: Bỏ justify-content: space-between để nội dung tự nhiên */
+.card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.card-header {
+    margin-bottom: 8px;
+    /* Thu gọn khoảng cách */
+}
+
+.card-info strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 6px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-info .sub-text {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 12px;
+    margin-top: auto;
+    width: 100%;
+    min-height: 40px;
+}
+
+.price-tag {
+    font-weight: 700;
+    color: #dc2626;
+    font-size: 13px;
+    background: #fef2f2;
+    padding: 6px 10px;
+    /* Chỉnh lại padding một chút cho cân đối */
+    border-radius: 6px;
+    white-space: nowrap;
+
+    /* Ép đồng bộ */
+    margin: 0 !important;
+    line-height: normal !important;
+    display: inline-block !important;
+}
+
+.status-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    white-space: nowrap;
+
+    /* Ép đồng bộ với price-tag */
+    margin: 0 !important;
+    line-height: normal !important;
+    display: inline-block !important;
+}
+
+.service-card.selected .price-tag {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.service-card.selected .status-text {
+    color: #2563eb;
+}
+
+/* ==========================================================================
+   DANH SÁCH ĐỊA ĐIỂM (CHECKBOX CARDS GRID)
+   ========================================================================== */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.checkbox-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.checkbox-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.checkbox-card input[type="checkbox"] {
+    accent-color: #6366f1;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-card strong {
+    font-size: 15px;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.checkbox-card.active {
+    border-color: #6366f1;
+    background: #f5f3ff;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+}
+
+.checkbox-card.active strong {
+    color: #4f46e5;
+}
+
+/* Khung Tạm tính chi phí dịch vụ */
+.estimated-cost-box {
+    margin-top: 24px;
+    padding: 20px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    color: #166534;
+}
+
+.estimated-cost-box strong {
+    color: #14532d;
+}
+
+.estimated-cost-box .amount {
+    font-size: 22px;
+    color: #16a34a;
+    font-weight: 800;
+}
+
+/* ==========================================================================
+   NÚT SUBMIT HOÀN TẤT
+   ========================================================================== */
+.btn-submit-builder {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #10b981, #047857);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-sizing: border-box;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-submit-builder:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, #059669, #065f46);
+}
+
+.btn-submit-builder:active {
+    transform: translateY(0);
+}
+
+/* ==========================================================================
+   MÀN HÌNH ĐÁP ỨNG (RESPONSIVE)
+   ========================================================================== */
+@media (max-width: 992px) {
+    .builder-form {
+        padding: 30px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .trip-info-grid .field-half,
+    .trip-info-grid .field-third {
+        grid-column: span 12;
+    }
+
+    .builder-header {
+        padding: 35px 20px;
+    }
+
+    .builder-header h2 {
+        font-size: 22px;
+    }
+}
+
+/* ==========================================================================
+   NHÃN GIÁ CHO ĐỊA ĐIỂM THAM QUAN
+   ========================================================================== */
+.place-price-tag {
+    font-weight: 700;
+    color: #dc2626;
+    /* Màu đỏ đô giống price-tag ở trên */
+    font-size: 12px;
+    background: #fef2f2;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    display: inline-block;
+    line-height: normal;
+}
+
+/* Biến thể màu xanh cho các địa điểm miễn phí */
+.place-price-tag.free {
+    color: #16a34a;
+    /* Xanh lá */
+    background: #f0fdf4;
+}

@@ -1,0 +1,96 @@
+/* =========================================
+   GIAO DIỆN QUẢN TRỊ VIÊN / SALES (ERP)
+========================================= */
+
+.erp-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f1f5f9;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* CỘT SIDEBAR TRÁI */
+.erp-sidebar {
+    width: 260px;
+    background-color: #1e293b;
+    color: #ffffff;
+    padding: 25px 20px;
+    flex-shrink: 0;
+}
+
+.erp-sidebar h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 30px;
+    color: #38bdf8;
+    /* Xanh nhạt nổi bật */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.erp-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.erp-sidebar li {
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #cbd5e1;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.erp-sidebar li:hover {
+    background-color: #334155;
+    color: #ffffff;
+}
+
+.erp-sidebar li.active {
+    background-color: #2563eb;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* PHẦN NỘI DUNG CHÍNH (CONTENT) */
+.erp-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* DANH SÁCH YÊU CẦU */
+.request-list h3, .request-detail h3 {
+    margin-top: 0;
+    color: #0f172a;
+    font-size: 18px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+/* Tùy chỉnh thanh cuộn cho danh sách nếu quá dài */
+.request-list>div {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Định dạng các ô input của form báo giá */
+.request-detail input:focus,
+.request-detail textarea:focus {
+    outline: none;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.request-detail button:hover {
+    background-color: #059669 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
