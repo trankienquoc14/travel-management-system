@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th7 04, 2026 lúc 02:05 PM
+-- Thời gian đã tạo: Th7 04, 2026 lúc 09:24 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -50,7 +50,8 @@ INSERT INTO `bookings` (`booking_id`, `customer_id`, `departure_id`, `quote_id`,
 (3, 3, 1, NULL, 1, '2026-06-26 09:15:40', 3500000.00, 'Pending', 'Unpaid', NULL),
 (4, 7, 1, NULL, 1, '2026-06-26 09:30:20', 3500000.00, 'Pending', 'Unpaid', NULL),
 (5, 7, 1, NULL, 1, '2026-06-26 10:00:16', 3500000.00, 'Pending', 'Unpaid', NULL),
-(6, 8, NULL, 10, 2, '2026-07-04 11:33:52', 2987500.00, 'Confirmed', 'Unpaid', 'Tour thiết kế riêng: Đà Lạt (2026-07-08 - 2026-07-10)');
+(6, 8, NULL, 10, 2, '2026-07-04 11:33:52', 2987500.00, 'Pending', 'Unpaid', 'Tour thiết kế riêng: Đà Lạt (2026-07-08 - 2026-07-10)'),
+(7, 8, NULL, 10, 2, '2026-07-04 18:08:46', 2987500.00, 'Confirmed', 'Paid', 'Tour thiết kế riêng: Đà Lạt (2026-07-08 - 2026-07-10)');
 
 -- --------------------------------------------------------
 
@@ -410,11 +411,11 @@ CREATE TABLE `partner_services` (
 --
 
 INSERT INTO `partner_services` (`partner_service_id`, `partner_id`, `service_id`, `unit_price`, `available_quantity`, `status`) VALUES
-(1, 1, 1, 800000.00, 49, 'Active'),
+(1, 1, 1, 800000.00, 48, 'Active'),
 (2, 1, 2, 1200000.00, 20, 'Active'),
-(3, 2, 1, 1000000.00, 29, 'Active'),
+(3, 2, 1, 1000000.00, 28, 'Active'),
 (4, 2, 2, 1800000.00, 15, 'Active'),
-(5, 3, 1, 1500000.00, 99, 'Active'),
+(5, 3, 1, 1500000.00, 98, 'Active'),
 (6, 3, 2, 2500000.00, 50, 'Active'),
 (7, 4, 3, 2800000.00, 100, 'Active'),
 (8, 5, 4, 600000.00, 40, 'Active'),
@@ -443,7 +444,8 @@ CREATE TABLE `payments` (
 INSERT INTO `payments` (`payment_id`, `booking_id`, `payment_method`, `amount`, `transaction_code`, `payment_status`, `paid_at`) VALUES
 (1, 1, 'VNPAY', 7000000.00, 'TX001', 'Success', '2026-06-21 00:53:17'),
 (2, 2, 'MOMO', 6900000.00, 'TX002', 'Pending', NULL),
-(3, 6, 'VNPAY', 2987500.00, 'TXN_1783164832409', 'Pending', NULL);
+(3, 6, 'VNPAY', 2987500.00, 'TXN_1783164832409', 'Pending', NULL),
+(4, 7, 'Cash', 2987500.00, 'TXN_1783188526882', 'Success', '2026-07-04 18:45:59');
 
 -- --------------------------------------------------------
 
@@ -918,7 +920,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT cho bảng `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT cho bảng `booking_change_requests`
@@ -1014,7 +1016,7 @@ ALTER TABLE `partner_services`
 -- AUTO_INCREMENT cho bảng `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT cho bảng `performance_reviews`
