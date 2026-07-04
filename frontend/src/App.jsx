@@ -1,30 +1,40 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Import toàn bộ các trang (Kiểm tra kỹ xem có đủ không nhé)
+// Import toàn bộ các trang
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import HomePage from './components/HomePage';
 import TourDetail from './components/TourDetail';
 import MyBookings from './components/MyBookings';
-import BookingForm from './components/BookingForm'; // <-- Dòng import bắt buộc cho trang Checkout
+import BookingForm from './components/BookingForm';
 import CustomerTourBuilder from './components/CustomerTourBuilder';
 import StaffTourRequestManager from './components/StaffTourRequestManager';
 import CustomerQuotes from './components/CustomerQuotes';
 
-// Hàm bảo vệ Route: Chưa đăng nhập thì đuổi về trang Login
+// ✅ SỬA 1: Hàm bảo vệ Route kiểm tra đồng bộ cả 'user' lẫn 'token'
 const ProtectedRoute = ({ children }) => {
   const userStr = localStorage.getItem('user');
-  if (!userStr) return <Navigate to="/login" replace />;
+  const token = localStorage.getItem('token');
+  
+  // Nếu thiếu 1 trong 2 thì bắt đăng nhập lại
+  if (!userStr || !token) {
+    return <Navigate to="/login" replace />;
+  }
   return children;
 };
 
-// Hàm phân luồng khi vừa vào web
+// ✅ SỬA 2: Hàm phân luồng hỗ trợ cả 'role_id' chuẩn theo CSDL MySQL
 const RootRedirect = () => {
   const userStr = localStorage.getItem('user');
-  if (!userStr) return <Navigate to="/login" replace />;
+  const token = localStorage.getItem('token');
+  
+  if (!userStr || !token) return <Navigate to="/login" replace />;
+  
   const user = JSON.parse(userStr);
-  return user.role === 6 ? <Navigate to="/home" replace /> : <Navigate to="/dashboard" replace />;
+  const userRole = Number(user.role_id || user.role); // Lấy role_id hoặc role
+
+  return userRole === 6 ? <Navigate to="/home" replace /> : <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -51,17 +61,18 @@ function App() {
           <ProtectedRoute><MyBookings /></ProtectedRoute>
         } />
 
+        <Route path="/my-quotes" element={
+          <ProtectedRoute><CustomerQuotes /></ProtectedRoute>
+        } />
+
         {/* Các trang dành cho Nhân viên/Admin */}
         <Route path="/dashboard" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
         } />
+        
         <Route path="/build-tour" element={<CustomerTourBuilder />} />
-        {/* Đường dẫn dành cho Nhân viên/Admin quản lý Yêu cầu Tour */}
+        
         <Route path="/admin/tour-requests" element={<StaffTourRequestManager />} />
-       
-        <Route path="/my-quotes" element={
-          <ProtectedRoute><CustomerQuotes /></ProtectedRoute>
-        } />
       </Routes>
     </BrowserRouter>
   );

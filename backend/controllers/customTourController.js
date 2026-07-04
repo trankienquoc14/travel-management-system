@@ -405,7 +405,7 @@ exports.bookCustomTourQuote = async (req, res) => {
         const noteText = `Tour thiết kế riêng: ${quote.destination} (${quote.departure_date} - ${quote.return_date})`;
         const [bookingInsert] = await sequelize.query(`
             INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
-            VALUES (?, NULL, ?, ?, NOW(), ?, 'Confirmed', 'Unpaid', ?)
+            VALUES (?, NULL, ?, ?, NOW(), ?, 'Pending', 'Unpaid', ?)
         `, {
             replacements: [customerId, quoteId, quote.people_count, quote.quote_price, noteText],
             transaction
