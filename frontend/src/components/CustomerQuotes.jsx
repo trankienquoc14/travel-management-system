@@ -69,30 +69,21 @@ const CustomerQuotes = () => {
         }
     };
     // THÊM HÀM NÀY VÀO DƯỚI handleCustomerAction
-    const handleBookCustomTour = async () => {
+    const handleBookCustomTour = () => {
         if (!selectedQuote) return;
 
         const price = selectedQuote.quoted_price || selectedQuote.quote_price;
-        if (!window.confirm(`Xác nhận đặt tour ${selectedQuote.destination} với chi phí ${formatMoney(price)} đ?`)) {
+        if (!window.confirm(`Xác nhận tiến hành đặt tour đi ${selectedQuote.destination} với chi phí ${formatMoney(price)} đ?`)) {
             return;
         }
 
-        try {
-            const token = localStorage.getItem('token');
-            const res = await axios.post(
-                `http://localhost:5000/api/custom-tours/quotes/${selectedQuote.quote_id}/book`,
-                { payment_method: 'VNPAY' },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            if (res.data && res.data.success) {
-                alert('🎉 Đặt tour thành công! Đang chuyển hướng sang trang Đơn Hàng.');
-                navigate('/my-bookings');
+        // ✅ THAY BẰNG LỆNH CHUYỂN HƯỚNG SANG BOOKING FORM:
+        navigate('/booking-form', {
+            state: {
+                isCustomTour: true,
+                quoteData: selectedQuote
             }
-        } catch (error) {
-            console.error("Lỗi đặt tour:", error);
-            alert(error.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn đặt tour!');
-        }
+        });
     };
 
     const handleLogout = () => {
@@ -351,10 +342,7 @@ const CustomerQuotes = () => {
                                             <button onClick={() => setShowRevisionInput(!showRevisionInput)} style={{ padding: '14px 25px', backgroundColor: '#fff', color: '#f97316', border: '2px solid #f97316', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
                                                 {showRevisionInput ? 'ĐÓNG FORM GHI CHÚ' : 'YÊU CẦU SỬA ĐỔI'}
                                             </button>
-                                            <button
-                                                onClick={handleBookCustomTour}
-                                                style={{ padding: '14px 30px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', whiteSpace: 'nowrap' }}
-                                            >
+                                            <button onClick={handleBookCustomTour} style={{ padding: '14px 30px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', whiteSpace: 'nowrap' }}>
                                                 ĐỒNG Ý & ĐẶT TOUR
                                             </button>
                                         </div>

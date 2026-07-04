@@ -20,5 +20,6 @@ router.put('/requests/:id/reject', protect, customTourController.rejectRequest);
 router.post('/requests/:id/send-notification', protect, customTourController.sendNotification);
 router.get('/services/:destination', customTourController.getDestinationExtraServices);
 router.get('/requests/customer/:customerId', protect, customTourController.getCustomerRequests);
+router.post('/quotes/:quoteId/book', protect, customTourController.bookCustomTourQuote);
 
 module.exports = router;

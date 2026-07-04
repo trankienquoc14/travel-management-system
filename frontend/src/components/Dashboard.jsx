@@ -12,6 +12,7 @@ import StaffTourRequestManager from './StaffTourRequestManager';
 import StaffTourDesigner from './StaffTourDesigner';
 import StaffPendingTours from './StaffPendingTours'; // Thêm dòng này
 import ManagerTourApproval from './ManagerTourApproval';
+import StaffPaymentManagement from './StaffPaymentManagement'; // 👈 Thêm dòng này
 // ... các import cũ của bạn
 
 const Dashboard = () => {
@@ -147,11 +148,13 @@ const Dashboard = () => {
               <li className={activeTab === 'approved_tours' ? 'active' : ''} onClick={() => setActiveTab('approved_tours')}>
                 📤 Tour đã thiết kế
               </li>
+
               {/* Nơi chèn các tính năng tương lai của NVVP theo Use Case */}
               <li className={activeTab === 'orders' ? 'active' : ''} onClick={() => alert("Chức năng đang phát triển theo Sơ đồ Use Case")}>
                 🛒 Quản lý Đơn Đặt Tour
               </li>
-              <li className={activeTab === 'payments' ? 'active' : ''} onClick={() => alert("Chức năng đang phát triển theo Sơ đồ Use Case")}>
+              {/* SỬA DÒNG CŨ ĐANG BỊ ALERT THÀNH DÒNG NÀY: */}
+              <li className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}>
                 💳 Xác nhận Thanh toán
               </li>
             </>
@@ -260,7 +263,7 @@ const Dashboard = () => {
           {activeTab === 'tours' && (isTourManager || isAdmin) && <TourManagement onAddNew={() => { setEditTourId(null); setActiveTab('tour_form'); }} onEdit={(id) => { setEditTourId(id); setActiveTab('tour_form'); }} />}
           {activeTab === 'tour_form' && (isTourManager || isAdmin) && <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />}
           {activeTab === 'approve_quotes' && (isTourManager || isAdmin) && <ManagerTourApproval />} {/* THÊM DÒNG NÀY */}
-
+          {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
           {activeTab === 'partner_requests' && isPartner && <div style={{ padding: '20px' }}><h2>Yêu cầu đặt dịch vụ từ TravelERP</h2></div>}

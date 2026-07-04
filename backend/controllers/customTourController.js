@@ -459,3 +459,66 @@ exports.bookCustomTourQuote = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+// POST /api/custom-tours/quotes/:quoteId/book
+exports.bookCustomTourQuote = async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const { quoteId } = req.params;
+        const customerId = req.user?.id || req.user?.userId || req.user?.user_id;
+        const { payment_method = 'VNPAY_QR', notes } = req.body;
+
+        if (!customerId) {
+            await transaction.rollback();
+            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để đặt tour!' });
+        }
+
+        // 1. Lấy thông tin Báo giá & Yêu cầu gốc
+        const [quotes] = await sequelize.query(`
+            SELECT q.*, r.people_count, r.destination, r.departure_date, r.return_date
+            FROM custom_tour_quotes q
+            INNER JOIN custom_tour_requests r ON q.request_id = r.request_id
+            WHERE q.quote_id = ?
+        `, { replacements: [quoteId], transaction });
+
+        if (quotes.length === 0) {
+            await transaction.rollback();
+            return res.status(404).json({ success: false, message: 'Không tìm thấy bản báo giá!' });
+        }
+
+        const quote = quotes[0];
+
+        // 2. Cập nhật trạng thái chốt tour
+        await sequelize.query(`UPDATE custom_tour_quotes SET approval_status = 'Customer_Accepted' WHERE quote_id = ?`, { replacements: [quoteId], transaction });
+        await sequelize.query(`UPDATE custom_tour_requests SET status = 'Completed' WHERE request_id = ?`, { replacements: [quote.request_id], transaction });
+
+        // 3. Tạo Booking mới
+        const noteText = notes || `Tour thiết kế riêng: ${quote.destination} (${quote.departure_date} - ${quote.return_date})`;
+        const [bookingResult] = await sequelize.query(`
+            INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
+            VALUES (?, NULL, ?, ?, NOW(), ?, 'Confirmed', 'Unpaid', ?)
+        `, {
+            replacements: [customerId, quoteId, quote.people_count, quote.quote_price, noteText],
+            transaction
+        });
+
+        const newBookingId = bookingResult;
+
+        // 4. Tạo phiếu chờ thanh toán trong bảng payments
+        const txnCode = 'TXN_' + Date.now();
+        await sequelize.query(`
+            INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status)
+            VALUES (?, ?, ?, ?, 'Pending')
+        `, { replacements: [newBookingId, payment_method, quote.quote_price, txnCode], transaction });
+
+        await transaction.commit();
+        res.status(200).json({
+            success: true,
+            message: '🎉 Đặt tour thành công!',
+            booking_id: newBookingId
+        });
+    } catch (error) {
+        await transaction.rollback();
+        console.error("Lỗi tạo booking tour thiết kế:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
