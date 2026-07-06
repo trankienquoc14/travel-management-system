@@ -29,4 +29,8 @@ router.put('/:id', protect, upload.single('image'), tourController.updateTour);
 
 router.delete('/:id', protect, tourController.deleteTour);
 
+// === QUẢN LÝ SỰ CỐ TOUR (Dành cho Quản lý Tour & Admin) ===
+router.get('/incidents/all', protect, tourController.getAllIncidents);
+router.put('/incidents/:id/status', protect, tourController.updateIncidentStatus);
+
 module.exports = router;

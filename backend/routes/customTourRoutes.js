@@ -7,7 +7,7 @@ const { protect } = require('../middleware/authMiddleware'); // Đảm bảo b�
 // Route dành cho Khách hàng
 router.post('/request', protect, customTourController.createCustomRequest);
 // Phải thêm dòng này vào NHỮNG DÒNG ĐẦU TIÊN (Trước các route có /:id)
-router.get('/requests/customer/:customerId', customTourController.getStaffPendingTours);
+router.get('/requests/pending/staff', protect, customTourController.getStaffPendingTours);
 // Đặt cùng chỗ với các route API khác
 router.put('/requests/:id/customer-action', customTourController.updateCustomerAction);
 router.post('/quotes/:quoteId/book', protect, customTourController.bookCustomTourQuote);

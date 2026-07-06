@@ -152,3 +152,56 @@ exports.deleteTour = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Lấy danh sách toàn bộ sự cố (GET)
+exports.getAllIncidents = async (req, res) => {
+  try {
+    const [incidents] = await sequelize.query(`
+      SELECT 
+        ir.incident_id, ir.title, ir.description, ir.status, ir.created_at,
+        d.departure_id, d.departure_date,
+        t.tour_id, t.tour_name, t.destination,
+        u.full_name as guide_name, u.phone as guide_phone, g.license_number
+      FROM incident_reports ir
+      JOIN departures d ON ir.departure_id = d.departure_id
+      JOIN tours t ON d.tour_id = t.tour_id
+      JOIN guides g ON ir.guide_id = g.guide_id
+      JOIN users u ON g.user_id = u.user_id
+      ORDER BY ir.incident_id DESC
+    `);
+
+    res.status(200).json({
+      success: true,
+      data: incidents
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Cập nhật trạng thái sự cố và phản hồi giải quyết (PUT)
+exports.updateIncidentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, resolution_notes } = req.body; // 'Open' hoặc 'Resolved', kèm phản hồi
+
+    if (!['Open', 'Resolved'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái sự cố không hợp lệ!' });
+    }
+
+    await sequelize.query(`
+      UPDATE incident_reports 
+      SET status = ?, resolution_notes = ? 
+      WHERE incident_id = ?
+    `, {
+      replacements: [status, resolution_notes || null, id]
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Cập nhật trạng thái sự cố và ghi chú giải quyết thành công!'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

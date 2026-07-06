@@ -1,46 +1,6 @@
 const sequelize = require('../config/database');
 
-// 1. Tạo đơn đặt hàng cho Tour trọn gói cố định (Đã tối ưu bảo mật & Transaction)
-exports.createBooking = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  try {
-    const { departure_id, num_people, total_amount, notes } = req.body;
-    const customer_id = req.user?.id || req.user?.user_id || req.user?.userId;
-
-    if (!customer_id) {
-      await transaction.rollback();
-      return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để đặt tour!' });
-    }
-
-    // 1. Tạo đơn đặt hàng mới vào bảng bookings (Dùng dấu ? để chống SQL Injection)
-    const [result] = await sequelize.query(`
-      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
-      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?)
-    `, {
-      replacements: [customer_id, departure_id, num_people, total_amount, notes || null],
-      transaction
-    });
-
-    const newBookingId = result;
-
-    // 2. Trừ đi số lượng chỗ trống trong bảng departures
-    await sequelize.query(`
-      UPDATE departures 
-      SET available_slots = GREATEST(0, available_slots - ?)
-      WHERE departure_id = ?
-    `, {
-      replacements: [num_people, departure_id],
-      transaction
-    });
-
-    await transaction.commit();
-    res.status(200).json({ success: true, message: 'Đặt tour thành công!', booking_id: newBookingId });
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Lỗi createBooking:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+// 1. Tạo đơn đặt hàng cho Tour trọn gói cố định (Định nghĩa chính thức nằm ở dòng 96 phía dưới)
 
 // 2. Lấy danh sách đơn hàng của khách hàng (HỖ TRỢ CẢ TOUR TRỌN GÓI VÀ TOUR THIẾT KẾ RIÊNG)
 exports.getMyBookings = async (req, res) => {
