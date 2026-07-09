@@ -67,23 +67,42 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
     const budgetDiff = (selectedReq?.budget || 0) - suggestedPrice;
     // Hàm xử lý UI cho các trạng thái Tour
     const getStatusUI = (req) => {
-        // Nhóm 1: Khách vừa gửi tới, chưa đụng vào
-        if (req.status === 'Pending') {
-            return { bg: '#dcfce7', color: '#16a34a', text: 'MỚI' };
-        }
+        switch (req.status) {
+            case 'Pending':
+                return {
+                    bg: '#dcfce7',
+                    color: '#16a34a',
+                    text: 'MỚI'
+                };
 
-        // Nhóm 2: Đang nằm trong tay nhân viên (Đang tính toán dở, hoặc bị Quản lý trả về bắt sửa)
-        if (req.status === 'Processing' || req.status === 'Rejected') {
-            return { bg: '#fef3c7', color: '#d97706', text: 'ĐANG XỬ LÝ' };
-        }
+            case 'Processing':
+                return {
+                    bg: '#fef3c7',
+                    color: '#d97706',
+                    text: 'ĐANG THIẾT KẾ'
+                };
 
-        // Nhóm 3: Đã đẩy khỏi tay nhân viên (Đang chờ Quản lý duyệt, hoặc Quản lý đã duyệt xong)
-        if (req.status === 'Pending_Approval' || req.status === 'Approved' || req.status === 'Quote_Sent') {
-            return { bg: '#f1f5f9', color: '#64748b', text: 'ĐÃ HOÀN THÀNH' };
-        }
+            case 'Completed':
+                return {
+                    bg: '#dbeafe',
+                    color: '#2563eb',
+                    text: 'ĐÃ HOÀN THÀNH'
+                };
 
-        // Fallback
-        return { bg: '#f8fafc', color: '#94a3b8', text: 'CHƯA RÕ' };
+            case 'Cancelled':
+                return {
+                    bg: '#fee2e2',
+                    color: '#dc2626',
+                    text: 'ĐÃ HỦY'
+                };
+
+            default:
+                return {
+                    bg: '#f1f5f9',
+                    color: '#64748b',
+                    text: 'KHÔNG XÁC ĐỊNH'
+                };
+        }
     };
 
     return (

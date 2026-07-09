@@ -18,6 +18,8 @@ import HRCustomerManagement from './HRCustomerManagement';
 import HRPerformanceReview from './HRPerformanceReview';
 import GuideWorkspace from './GuideWorkspace';
 import IncidentManagement from './IncidentManagement';
+import TourOperationalManager from './TourOperationalManager';
+import StaffFixedTourDesigner from './StaffFixedTourDesigner';
 // ... các import cũ của bạn
 
 const Dashboard = () => {
@@ -30,6 +32,7 @@ const Dashboard = () => {
   const [editServiceData, setEditServiceData] = useState(null);
   const [editPartnerData, setEditPartnerData] = useState(null);
   const [designingRequest, setDesigningRequest] = useState(null);
+  const [fixedTourToEdit, setFixedTourToEdit] = useState(null);
 
 
   useEffect(() => {
@@ -148,25 +151,56 @@ const Dashboard = () => {
           )}
 
           {/* ========================================================= */}
-          {/* 2. NGHIỆP VỤ NHÂN VIÊN VĂN PHÒNG (Kèm Admin)              */}
-          {/* Tư vấn khách hàng, Thiết kế tour riêng, Đặt tour...       */}
+          {/* 2. NGHIỆP VỤ NHÂN VIÊN VĂN PHÒNG (Tour Operator)          */}
           {/* ========================================================= */}
           {(isOfficeStaff || isAdmin) && (
             <>
-              <li className={activeTab === 'tour_requests' ? 'active' : ''} onClick={() => setActiveTab('tour_requests')}>
-                🛎️ Tư vấn & Thiết kế Tour
-              </li>
-              <li className={activeTab === 'approved_tours' ? 'active' : ''} onClick={() => setActiveTab('approved_tours')}>
-                📤 Tour đã thiết kế
+              {/* Thiết kế tour theo yêu cầu */}
+              <li
+                className={activeTab === 'tour_requests' ? 'active' : ''}
+                onClick={() => setActiveTab('tour_requests')}
+              >
+                🛎️ Thiết kế Tour Theo Yêu Cầu
               </li>
 
-              {/* Nơi chèn các tính năng tương lai của NVVP theo Use Case */}
-              <li className={activeTab === 'orders' ? 'active' : ''} onClick={() => alert("Chức năng đang phát triển theo Sơ đồ Use Case")}>
-                🛒 Quản lý Đơn Đặt Tour
+              {/* Tour đã gửi quản lý */}
+              <li
+                className={activeTab === 'approved_tours' ? 'active' : ''}
+                onClick={() => setActiveTab('approved_tours')}
+              >
+                📋 Tour Đã Thiết Kế
               </li>
-              {/* SỬA DÒNG CŨ ĐANG BỊ ALERT THÀNH DÒNG NÀY: */}
-              <li className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}>
-                💳 Xác nhận Thanh toán
+
+              {/* Thiết kế tour cố định */}
+              <li
+                className={activeTab === 'fixed_tours' ? 'active' : ''}
+                onClick={() => setActiveTab('fixed_tours')}
+              >
+                🗺️ Thiết Kế Tour Cố Định
+              </li>
+
+              {/* Booking */}
+              <li
+                className={activeTab === 'orders' ? 'active' : ''}
+                onClick={() => setActiveTab('orders')}
+              >
+                🛒 Quản Lý Booking
+              </li>
+
+              {/* Thanh toán */}
+              <li
+                className={activeTab === 'payments' ? 'active' : ''}
+                onClick={() => setActiveTab('payments')}
+              >
+                💳 Xác Nhận Thanh Toán
+              </li>
+
+              {/* Hủy đổi lịch */}
+              <li
+                className={activeTab === 'change_request' ? 'active' : ''}
+                onClick={() => setActiveTab('change_request')}
+              >
+                🔄 Xử Lý Hủy / Đổi Lịch
               </li>
             </>
           )}
@@ -182,6 +216,9 @@ const Dashboard = () => {
               </li>
               <li className={activeTab === 'tours' || activeTab === 'tour_form' ? 'active' : ''} onClick={() => setActiveTab('tours')}>
                 🗺️ Quản lý Tour
+              </li>
+              <li className={activeTab === 'operational_manager' ? 'active' : ''} onClick={() => setActiveTab('operational_manager')}>
+                ⚙️ Vận hành Tour
               </li>
               <li className={activeTab === 'services' || activeTab === 'service_form' ? 'active' : ''} onClick={() => setActiveTab('services')}>
                 🏨 Quản lý Dịch vụ
@@ -273,6 +310,11 @@ const Dashboard = () => {
                 // Đẩy sang tab thiết kế để sửa
                 setActiveTab('tour_designer');
               }}
+              // 🚀 THÊM ĐOẠN NÀY ĐỂ MỞ BẢN SỬA TOUR CỐ ĐỊNH
+              onEditFixedDesign={(tour) => {
+                setFixedTourToEdit(tour); // Lưu tour cần sửa
+                setActiveTab('fixed_tours'); // Chuyển sang màn hình Thiết kế Tour Cố Định
+              }}
             />
           )}
 
@@ -293,10 +335,12 @@ const Dashboard = () => {
           {activeTab === 'tour_form' && (isTourManager || isAdmin) && <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />}
           {activeTab === 'approve_quotes' && (isTourManager || isAdmin) && <ManagerTourApproval />} {/* THÊM DÒNG NÀY */}
           {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
+          {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
+          {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner />}
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
           {activeTab === 'partner_requests' && isPartner && <div style={{ padding: '20px' }}><h2>Yêu cầu đặt dịch vụ từ TravelERP</h2></div>}
-          
+
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}
           {activeTab === 'hr_customers' && (isHRManager || isAdmin) && <HRCustomerManagement />}

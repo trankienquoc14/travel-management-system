@@ -599,17 +599,59 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                         />
                     </div>
 
-                    {requestData.approval_status !== 'Approved' ? (
+                    {['Pending_Approval', 'Approved', 'Quote_Sent', 'Customer_Accepted'].includes(requestData?.approval_status) ? (
+                        <div
+                            style={{
+                                marginTop: '20px',
+                                padding: '15px',
+                                borderRadius: '8px',
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                background:
+                                    requestData.approval_status === 'Approved'
+                                        ? '#f0fdf4'
+                                        : '#eff6ff',
+                                color:
+                                    requestData.approval_status === 'Approved'
+                                        ? '#15803d'
+                                        : '#2563eb',
+                                border:
+                                    requestData.approval_status === 'Approved'
+                                        ? '1px solid #bbf7d0'
+                                        : '1px solid #bfdbfe'
+                            }}
+                        >
+                            {requestData.approval_status === 'Pending_Approval' &&
+                                '⏳ Bản thiết kế đang chờ Quản lý phê duyệt.'}
+
+                            {requestData.approval_status === 'Approved' &&
+                                '✅ Bản thiết kế đã được Quản lý phê duyệt.'}
+
+                            {requestData.approval_status === 'Quote_Sent' &&
+                                '📤 Báo giá đã được gửi cho khách hàng.'}
+
+                            {requestData.approval_status === 'Customer_Accepted' &&
+                                '🎉 Khách hàng đã xác nhận đặt tour.'}
+                        </div>
+                    ) : (
                         <button
                             onClick={handleSubmitToManager}
-                            style={{ padding: '15px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)', marginTop: '20px' }}
+                            style={{
+                                padding: '15px',
+                                background: '#10b981',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: '700',
+                                fontSize: '16px',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                                marginTop: '20px'
+                            }}
                         >
                             Gửi Phê Duyệt
                         </button>
-                    ) : (
-                        <div style={{ marginTop: '20px', padding: '15px', background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: '8px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>
-                            Bản thiết kế này đã được Quản lý phê duyệt. Không thể chỉnh sửa thêm.
-                        </div>
                     )}
                 </div>
             </div>

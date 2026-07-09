@@ -26,6 +26,7 @@ const destinationRoutes = require('./routes/destinationRoutes');
 const placeRoutes = require('./routes/placeRoutes');
 const hrRoutes = require('./routes/hrRoutes');
 const guideRoutes = require('./routes/guideRoutes');
+const staffRoutes = require('./routes/staffRoutes');
 
 // 4. Đăng ký các Routes (TẤT CẢ app.use phải nằm ở khu vực này)
 app.use('/api/tours', tourRoutes);
@@ -40,6 +41,7 @@ app.use('/api/destinations', destinationRoutes);
 app.use('/api/places', placeRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/guide', guideRoutes);
+app.use('/api/staff', staffRoutes);
 
 // 5. Kết nối Database và Khởi động Server
 const PORT = process.env.PORT || 5000;
