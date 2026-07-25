@@ -10,6 +10,7 @@ import PartnerForm from './PartnerForm';
 import PartnerInventory from './PartnerInventory';
 import StaffTourRequestManager from './StaffTourRequestManager';
 import StaffTourDesigner from './StaffTourDesigner';
+import PlaceManagement from './PlaceManagement';
 import StaffPendingTours from './StaffPendingTours'; // Thêm dòng này
 import ManagerTourApproval from './ManagerTourApproval';
 import StaffPaymentManagement from './StaffPaymentManagement'; // 👈 Thêm dòng này
@@ -223,6 +224,9 @@ const Dashboard = () => {
               <li className={activeTab === 'services' || activeTab === 'service_form' ? 'active' : ''} onClick={() => setActiveTab('services')}>
                 🏨 Quản lý Dịch vụ
               </li>
+              <li className={activeTab === 'places' ? 'active' : ''} onClick={() => setActiveTab('places')}>
+                📍 Quản lý Địa điểm
+              </li>
               <li className={activeTab === "partners" || activeTab === "partner_form" ? "active" : ""} onClick={() => setActiveTab("partners")}>
                 🤝 Quản lý Đối tác
               </li>
@@ -329,6 +333,7 @@ const Dashboard = () => {
           {/* Vùng Quản lý Tour */}
           {activeTab === 'services' && (isTourManager || isAdmin) && <ServiceManagement onAddNew={() => { setEditServiceData(null); setActiveTab('service_form'); }} onEdit={(data) => { setEditServiceData(data); setActiveTab('service_form'); }} />}
           {activeTab === 'service_form' && (isTourManager || isAdmin) && <ServiceForm editData={editServiceData} onBack={() => { setActiveTab('services'); setEditServiceData(null); }} />}
+          {activeTab === 'places' && (isTourManager || isAdmin) && <PlaceManagement />}
           {activeTab === "partners" && (isTourManager || isAdmin) && <PartnerManagement onAddNew={() => { setEditPartnerData(null); setActiveTab("partner_form"); }} onEdit={(data) => { setEditPartnerData(data); setActiveTab("partner_form"); }} />}
           {activeTab === "partner_form" && (isTourManager || isAdmin) && <PartnerForm editData={editPartnerData} onBack={() => { setEditPartnerData(null); setActiveTab("partners"); }} />}
           {activeTab === 'tours' && (isTourManager || isAdmin) && <TourManagement onAddNew={() => { setEditTourId(null); setActiveTab('tour_form'); }} onEdit={(id) => { setEditTourId(id); setActiveTab('tour_form'); }} />}

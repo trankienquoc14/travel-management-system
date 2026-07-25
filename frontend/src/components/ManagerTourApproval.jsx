@@ -15,6 +15,7 @@ const ManagerApproveTours = () => {
     const [selectedFixedTour, setSelectedFixedTour] = useState(null); // Dành cho Tour Cố Định
 
     const [feedback, setFeedback] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
@@ -32,13 +33,11 @@ const ManagerApproveTours = () => {
                 axios.get('http://localhost:5000/api/staff/tours', { headers: { Authorization: `Bearer ${token}` } }) // Gọi API Staff để lấy tour Pending
             ]);
 
-            // Lọc Tour Thiết Kế Riêng (Mở rộng điều kiện)
+            // Lọc Tour Thiết Kế Riêng
             if (resCustom.data.success) {
                 const filteredCustom = resCustom.data.data.filter(
-                    (req) => req.status === 'Pending_Approval' ||
-                        req.approval_status === 'Pending_Approval' ||
-                        req.status === 'Designed' ||
-                        req.status === 'Pending'
+                    (req) => req.status === 'Pending_Manager_Approval' ||
+                        req.approval_status === 'Pending_Approval'
                 );
                 setPendingTours(filteredCustom);
             }
@@ -60,12 +59,14 @@ const ManagerApproveTours = () => {
     // ==========================================================
     // CÁC HÀM XỬ LÝ TOUR THIẾT KẾ RIÊNG (GIỮ NGUYÊN CỦA BẠN)
     // ==========================================================
-    const handleApprove = async (tourId) => {
+    const handleApprove = async (quoteId) => {
         if (!window.confirm('Bạn có chắc chắn muốn phê duyệt bản thiết kế này?')) return;
         try {
             setActionLoading(true);
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/custom-tours/requests/${tourId}/approve`, {}, {
+            await axios.post(`http://localhost:5000/api/custom-tours/quotes/${quoteId}/manager-review`, {
+                action: 'approve'
+            }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             alert('✅ Đã phê duyệt tour thành công!');
@@ -76,15 +77,15 @@ const ManagerApproveTours = () => {
         } finally { setActionLoading(false); }
     };
 
-    const handleReject = async (tourId) => {
+    const handleReject = async (quoteId) => {
         if (!feedback.trim()) return alert('Vui lòng nhập lý do / yêu cầu chỉnh sửa cho nhân viên!');
         try {
             setActionLoading(true);
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/custom-tours/requests/${tourId}/reject`,
-                { note: feedback },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await axios.post(`http://localhost:5000/api/custom-tours/quotes/${quoteId}/manager-review`, {
+                action: 'reject',
+                manager_note: feedback
+            }, { headers: { Authorization: `Bearer ${token}` } });
             alert('⚠️ Đã gửi yêu cầu chỉnh sửa lại cho nhân viên!');
             setSelectedTour(null);
             setFeedback('');
@@ -115,6 +116,7 @@ const ManagerApproveTours = () => {
                 if (tourData) {
                     setSelectedFixedTour(tourData);
                     setFeedback('');
+                    setIsRejecting(false);
                 }
             }
         } catch (error) {
@@ -124,16 +126,20 @@ const ManagerApproveTours = () => {
     };
 
     const handleUpdateFixedStatus = async (id, status) => {
-        const actionName = status === 'Active' ? 'PHÊ DUYỆT' : 'TỪ CHỐI';
+        const actionName = status === 'Approved' ? 'PHÊ DUYỆT' : 'TỪ CHỐI';
+        if (status === 'Rejected' && !feedback.trim()) {
+            return alert('Vui lòng nhập lý do từ chối để nhân viên biết và chỉnh sửa!');
+        }
         if (!window.confirm(`Bạn chắc chắn muốn ${actionName} tour này chứ?`)) return;
         setActionLoading(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/tours/admin/status/${id}`, { status }, {
+            await axios.put(`http://localhost:5000/api/tours/admin/status/${id}`, { status, rejection_reason: feedback }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            alert(`✅ Đã ${status === 'Active' ? 'phê duyệt mở bán' : 'từ chối'} tour cố định thành công!`);
+            alert(`✅ Đã ${status === 'Approved' ? 'phê duyệt bản thiết kế' : 'từ chối'} tour cố định thành công!`);
             setSelectedFixedTour(null);
+            setFeedback('');
             fetchData();
         } catch (error) { alert('Lỗi khi cập nhật trạng thái tour cố định!'); }
         finally { setActionLoading(false); }
@@ -191,7 +197,7 @@ const ManagerApproveTours = () => {
                                 <div>💰 Giá đề xuất: <strong style={{ color: '#16a34a' }}>{formatMoney(tour.quoted_price || 0)}đ</strong></div>
                             </div>
                             <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '16px 0' }} />
-                            <button onClick={() => { setSelectedTour(tour); setFeedback(''); }} style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <button onClick={() => { setSelectedTour(tour); setFeedback(''); setIsRejecting(false); }} style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', gap: '8px' }}>
                                 Xem chi tiết & Duyệt
                             </button>
                         </div>
@@ -335,17 +341,30 @@ const ManagerApproveTours = () => {
                             </div>
 
                             {/* GHI CHÚ TỪ CHỐI */}
-                            <div style={{ marginBottom: '12px' }}>
-                                <label style={{ display: 'block', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Ghi chú yêu cầu chỉnh sửa (Bắt buộc nếu chọn "Yêu cầu sửa")</label>
-                                <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Ví dụ: Giá vốn quá cao..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', minHeight: '80px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-                            </div>
+                            {isRejecting && (
+                                <div style={{ marginBottom: '12px', background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                                    <label style={{ display: 'block', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#dc2626' }}>Ghi chú yêu cầu chỉnh sửa (Bắt buộc):</label>
+                                    <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Ví dụ: Giá vốn quá cao..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', minHeight: '80px', fontFamily: 'inherit', boxSizing: 'border-box' }} autoFocus />
+                                </div>
+                            )}
                         </div>
 
                         {/* BUTTONS */}
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '8px' }}>
-                            <button onClick={() => setSelectedTour(null)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Đóng</button>
-                            <button onClick={() => handleReject(selectedTour.request_id)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Yêu cầu sửa</button>
-                            <button onClick={() => handleApprove(selectedTour.request_id)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Phê duyệt</button>
+                            {!isRejecting ? (
+                                <>
+                                    <button onClick={() => { setSelectedTour(null); setIsRejecting(false); }} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Đóng</button>
+                                    <button onClick={() => setIsRejecting(true)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Yêu cầu sửa</button>
+                                    <button onClick={() => handleApprove(selectedTour.quote_id)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Phê duyệt</button>
+                                </>
+                            ) : (
+                                <>
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                        <button onClick={() => handleReject(selectedTour.quote_id)} disabled={actionLoading} style={{ padding: '8px 16px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>Xác nhận Gửi yêu cầu</button>
+                                        <button onClick={() => setIsRejecting(false)} style={{ padding: '8px 16px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>Hủy</button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -442,11 +461,28 @@ const ManagerApproveTours = () => {
                             </div>
                         </div>
 
+                        {/* GHI CHÚ TỪ CHỐI */}
+                        {isRejecting && (
+                            <div style={{ marginBottom: '12px', background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                                <label style={{ display: 'block', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#dc2626' }}>Ghi chú / Lý do từ chối (Bắt buộc):</label>
+                                <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Ví dụ: Lịch trình chưa hợp lý, cần sửa lại..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', minHeight: '80px', fontFamily: 'inherit', boxSizing: 'border-box' }} autoFocus />
+                            </div>
+                        )}
+
                         {/* BUTTONS */}
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '8px' }}>
-                            <button onClick={() => setSelectedFixedTour(null)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Đóng</button>
-                            <button onClick={() => handleUpdateFixedStatus(selectedFixedTour.tour_id, 'Rejected')} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>❌ Từ chối</button>
-                            <button onClick={() => handleUpdateFixedStatus(selectedFixedTour.tour_id, 'Active')} disabled={actionLoading} style={{ padding: '10px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>✅ Phê duyệt & Mở Bán</button>
+                            {!isRejecting ? (
+                                <>
+                                    <button onClick={() => { setSelectedFixedTour(null); setIsRejecting(false); }} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Đóng</button>
+                                    <button onClick={() => setIsRejecting(true)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>❌ Từ chối</button>
+                                    <button onClick={() => handleUpdateFixedStatus(selectedFixedTour.tour_id, 'Approved')} disabled={actionLoading} style={{ padding: '10px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>✅ Phê duyệt Thiết kế</button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={() => setIsRejecting(false)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Hủy</button>
+                                    <button onClick={() => handleUpdateFixedStatus(selectedFixedTour.tour_id, 'Rejected')} disabled={actionLoading} style={{ padding: '10px 16px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Xác nhận Từ chối</button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

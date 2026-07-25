@@ -30,7 +30,10 @@ const CustomerQuotes = () => {
     // 2. HÀM LẤY DỮ LIỆU TỪ BACKEND (Backend đã LEFT JOIN lấy bản Quote mới nhất từ bảng custom_tour_quotes)
     const fetchMyQuotes = async (userId) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/custom-tours/requests/customer/${userId}`);
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`http://localhost:5000/api/custom-tours/requests/customer/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (response.data.success) {
                 setQuotes(response.data.data || []);
             }
@@ -97,25 +100,35 @@ const CustomerQuotes = () => {
 
     // HÀM RENDER HUY HIỆU TRẠNG THÁI (ĐỌC TỪ BẢNG QUOTES LÀ CHÍNH)
     const renderStatusForCustomer = (quote) => {
-        // 1. Ưu tiên đọc trạng thái từ bản thiết kế trong bảng custom_tour_quotes
+        // 1. Nếu có quote, xử lý theo approval_status
         if (quote.approval_status) {
             switch (quote.approval_status) {
+                case 'Initial_Quoted':
+                    return { text: 'Báo giá sơ bộ', color: '#0369a1', bg: '#e0f2fe', icon: '💰' };
                 case 'Quote_Sent':
-                    return { text: 'Đã có báo giá mới', color: '#047857', bg: '#d1fae5', icon: '🎉' };
+                    return { text: 'Đã có bản thiết kế', color: '#047857', bg: '#d1fae5', icon: '🎉' };
                 case 'Customer_Revision':
                     return { text: 'Đang điều chỉnh', color: '#c2410c', bg: '#ffedd5', icon: '✍️' };
                 case 'Customer_Accepted':
                     return { text: 'Đã chốt tour', color: '#15803d', bg: '#bbf7d0', icon: '✅' };
                 default:
-                    return { text: 'Chuyên viên đang thiết kế', color: '#1d4ed8', bg: '#dbeafe', icon: '⚙️' };
+                    return { text: 'Chuyên viên đang xử lý', color: '#1d4ed8', bg: '#dbeafe', icon: '⚙️' };
             }
         }
 
-        // 2. Nếu chưa có bản thiết kế nào bên bảng Quotes -> Đọc trạng thái Macro bên bảng Request
-        if (quote.status === 'Completed') return { text: 'Hoàn thành', color: '#15803d', bg: '#bbf7d0', icon: '✅' };
-        if (quote.status === 'Processing') return { text: 'Đang tiếp nhận', color: '#1d4ed8', bg: '#dbeafe', icon: '⚙️' };
-
-        return { text: 'Mới gửi yêu cầu', color: '#d97706', bg: '#fef3c7', icon: '📥' };
+        // 2. Fallback về status của requests
+        switch (quote.status) {
+            case 'Pending':
+                return { text: 'Mới gửi yêu cầu', color: '#d97706', bg: '#fef3c7', icon: '📥' };
+            case 'Designing':
+                return { text: 'Đang thiết kế chi tiết', color: '#1d4ed8', bg: '#dbeafe', icon: '⚙️' };
+            case 'Initial_Quoted':
+                return { text: 'Đã báo giá sơ bộ', color: '#0369a1', bg: '#e0f2fe', icon: '💰' };
+            case 'Completed':
+                return { text: 'Đã chốt tour', color: '#15803d', bg: '#bbf7d0', icon: '✅' };
+            default:
+                return { text: 'Đang xử lý', color: '#1d4ed8', bg: '#dbeafe', icon: '⚙️' };
+        }
     };
 
     // HÀM RENDER LỊCH TRÌNH TIMELINE HIỆN ĐẠI (Đọc từ itinerary của bảng Quotes)
@@ -195,46 +208,83 @@ const CustomerQuotes = () => {
             </nav>
 
             {/* MAIN CONTENT */}
-            <div style={{ flex: 1, padding: '40px 20px' }}>
-                <div style={{ maxWidth: '1400px', width: '95%', margin: '0 auto', display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-
+            <div style={{ flex: 1, padding: '40px 20px', backgroundColor: '#f4f7f6' }}>
+                <div style={{ maxWidth: '1440px', width: '98%', margin: '0 auto', display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
                     {/* CỘT TRÁI: DANH SÁCH YÊU CẦU */}
-                    <div style={{ flex: '0 0 380px', backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', gap: '15px' }}>
-                            <button onClick={() => navigate('/home')} style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer', fontWeight: '600', color: '#475569', transition: '0.2s' }}>⬅ Quay lại</button>
-                            <h3 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Đơn của tôi</h3>
+                    <div style={{ flex: '0 0 420px', backgroundColor: '#ffffff', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', position: 'sticky', top: '40px' }}>
+                        <style>
+                            {`
+                                @keyframes slideRight {
+                                    from { transform: translateX(0); }
+                                    to { transform: translateX(4px); }
+                                }
+                                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+                                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+                            `}
+                        </style>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', gap: '15px' }}>
+                            <button onClick={() => navigate('/home')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#ffffff', cursor: 'pointer', color: '#475569', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseOver={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.transform = 'translateY(0)' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            </button>
+                            <h3 style={{ margin: 0, fontSize: '24px', color: '#0f172a', fontWeight: '800', letterSpacing: '-0.5px' }}>Đơn thiết kế của tôi</h3>
                         </div>
 
                         {quotes.length === 0 ? (
-                            <div style={{ padding: '40px 20px', borderRadius: '12px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#64748b', border: '2px dashed #cbd5e1' }}>
-                                <div style={{ fontSize: '40px', opacity: 0.5, marginBottom: '10px' }}>🏜️</div>
-                                Chưa có chuyến đi nào được thiết kế.
+                            <div style={{ padding: '60px 20px', borderRadius: '20px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#64748b', border: '2px dashed #cbd5e1' }}>
+                                <div style={{ fontSize: '50px', marginBottom: '15px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }}>🧳</div>
+                                <div style={{ fontSize: '18px', fontWeight: '700', color: '#334155' }}>Chưa có chuyến đi nào</div>
+                                <div style={{ fontSize: '14px', marginTop: '8px', lineHeight: '1.5' }}>Bạn chưa có yêu cầu thiết kế tour nào. Hãy bắt đầu trải nghiệm mới!</div>
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '8px', paddingBottom: '20px', flex: 1 }}>
                                 {quotes.map((quote) => {
                                     const statusUI = renderStatusForCustomer(quote);
+                                    const isSelected = selectedQuote?.request_id === quote.request_id;
                                     return (
                                         <div key={quote.request_id} onClick={() => { setSelectedQuote(quote); setShowRevisionInput(false); }}
+                                            onMouseOver={(e) => { if (!isSelected) { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 10px 20px -5px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#cbd5e1'; } }}
+                                            onMouseOut={(e) => { if (!isSelected) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#f1f5f9'; } }}
                                             style={{
-                                                padding: '20px', border: '2px solid', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s ease',
-                                                backgroundColor: selectedQuote?.request_id === quote.request_id ? '#eff6ff' : 'white',
-                                                borderColor: selectedQuote?.request_id === quote.request_id ? '#3b82f6' : '#e2e8f0',
-                                                boxShadow: selectedQuote?.request_id === quote.request_id ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none'
+                                                padding: '24px', border: '2px solid', borderRadius: '20px', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                backgroundColor: isSelected ? '#ffffff' : '#f8fafc',
+                                                borderColor: isSelected ? '#0ea5e9' : '#f1f5f9',
+                                                boxShadow: isSelected ? '0 12px 24px -8px rgba(14, 165, 233, 0.25)' : 'none',
+                                                position: 'relative',
+                                                overflow: 'hidden'
                                             }}
                                         >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                                <h4 style={{ margin: 0, color: '#0f172a', fontSize: '16px' }}>📍 {quote.destination || 'Chưa cập nhật'}</h4>
-                                                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold' }}>#{quote.request_id}</span>
-                                            </div>
-                                            <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px', display: 'flex', gap: '10px' }}>
-                                                <span>📅 {formatDate(quote.departure_date)}</span>
-                                                <span>👥 {quote.people_count} khách</span>
-                                            </div>
-                                            <div>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '700', fontSize: '12px', color: statusUI.color, backgroundColor: statusUI.bg, padding: '4px 10px', borderRadius: '20px' }}>
-                                                    <span>{statusUI.icon}</span> {statusUI.text}
+                                            {isSelected && (
+                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'linear-gradient(to bottom, #0ea5e9, #3b82f6)' }} />
+                                            )}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                                <h4 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '800', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    📍 {quote.destination || 'Chưa cập nhật'}
+                                                </h4>
+                                                <span style={{ background: '#f1f5f9', color: '#64748b', fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '12px', letterSpacing: '0.5px' }}>
+                                                    #{quote.request_id}
                                                 </span>
+                                            </div>
+                                            
+                                            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '13px', fontWeight: '600' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                    {formatDate(quote.departure_date)}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '13px', fontWeight: '600' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                                    {quote.people_count} khách
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '13px', color: statusUI.color, backgroundColor: statusUI.bg, padding: '6px 14px', borderRadius: '12px' }}>
+                                                    <span style={{ fontSize: '14px' }}>{statusUI.icon}</span> {statusUI.text}
+                                                </span>
+                                                {isSelected && (
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'slideRight 1s infinite alternate' }}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -313,6 +363,30 @@ const CustomerQuotes = () => {
                                             </div>
                                         </div>
 
+                                    </div>
+                                ) : selectedQuote.approval_status === 'Initial_Quoted' || selectedQuote.status === 'Initial_Quoted' ? (
+                                    <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', padding: '30px', borderRadius: '12px', color: '#0369a1', display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
+                                        <div style={{ fontSize: '40px' }}>💰</div>
+                                        <div style={{ flex: 1 }}>
+                                            <strong style={{ display: 'block', marginBottom: '10px', fontSize: '20px' }}>Báo giá sơ bộ đã được gửi</strong>
+                                            <span style={{ fontSize: '15px', lineHeight: '1.6', display: 'block', marginBottom: '15px' }}>Nhân viên đã xem xét yêu cầu của bạn và ước tính chi phí báo giá sơ bộ: <strong style={{ color: '#0284c7', fontSize: '18px' }}>{formatMoney(selectedQuote.quoted_price || selectedQuote.quote_price)} đ</strong>.</span>
+                                            {selectedQuote.staff_note && (
+                                                <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #0ea5e9', color: '#334155' }}>
+                                                    <strong>Nhân viên nhắn nhủ:</strong><br/>
+                                                    <span style={{ whiteSpace: 'pre-wrap' }}>{selectedQuote.staff_note}</span>
+                                                </div>
+                                            )}
+                                            
+                                            <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
+                                                <button onClick={() => setShowRevisionInput(!showRevisionInput)} style={{ padding: '10px 20px', backgroundColor: '#fff', color: '#f97316', border: '2px solid #f97316', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+                                                    {showRevisionInput ? 'ĐÓNG FORM' : 'YÊU CẦU ĐIỀU CHỈNH'}
+                                                </button>
+                                                <button onClick={() => handleCustomerAction('Initial_Accepted')} style={{ padding: '10px 25px', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(14, 165, 233, 0.2)' }}>
+                                                    ĐỒNG Ý MỨC GIÁ NÀY
+                                                </button>
+                                            </div>
+                                            <span style={{ fontSize: '13px', display: 'block', marginTop: '15px', fontStyle: 'italic', color: '#64748b' }}>*Nhân viên sẽ lên lịch trình chi tiết sau khi bạn đồng ý mức giá sơ bộ này.</span>
+                                        </div>
                                     </div>
                                 ) : selectedQuote.approval_status === 'Customer_Revision' ? (
                                     <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', padding: '30px', borderRadius: '12px', color: '#c2410c', display: 'flex', alignItems: 'flex-start', gap: '20px' }}>

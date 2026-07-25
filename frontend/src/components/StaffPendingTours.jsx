@@ -238,6 +238,12 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                     <div>💰 Giá công bố: <strong style={{ color: '#ea580c' }}>{formatMoney(tour.base_price)}đ</strong></div>
                                 </div>
                                 
+                                {isRejected && tour.rejection_reason && (
+                                    <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '13px', color: '#991b1b' }}>
+                                        <strong>Lý do từ chối:</strong> {tour.rejection_reason}
+                                    </div>
+                                )}
+                                
                                 <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '16px 0' }} />
                                 
                                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -346,6 +352,13 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                 })()}
                             </div>
                         </div>
+
+                        {viewingFixedTour.status === 'Rejected' && viewingFixedTour.rejection_reason && (
+                            <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '14px', color: '#991b1b' }}>
+                                <strong>⚠️ Quản lý yêu cầu chỉnh sửa:</strong><br/>
+                                <span style={{ whiteSpace: 'pre-line' }}>{viewingFixedTour.rejection_reason}</span>
+                            </div>
+                        )}
 
                         {/* BUTTONS XỬ LÝ TRONG MODAL */}
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '8px' }}>

@@ -26,7 +26,7 @@ const StaffFixedTourDesigner = () => {
     const fetchTours = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/tours', { headers: { Authorization: `Bearer ${token}` } });
+            const res = await axios.get('http://localhost:5000/api/tours/staff/tours', { headers: { Authorization: `Bearer ${token}` } });
             if (res.data.success) setTours(res.data.data || []);
         } catch (error) { console.error(error); }
     };
@@ -57,7 +57,7 @@ const StaffFixedTourDesigner = () => {
         const fetchServices = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:5000/api/staff/destination-resources?destination=${encodeURIComponent(formData.destination)}`, {
+                const res = await axios.get(`http://localhost:5000/api/tours/staff/destination-resources?destination=${encodeURIComponent(formData.destination)}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.data && res.data.success) {
@@ -102,7 +102,7 @@ const StaffFixedTourDesigner = () => {
         try {
             const token = localStorage.getItem('token');
             // 🚀 SỬA ĐƯỜNG DẪN Ở ĐÂY: Dùng API của Staff để lấy được cả tour đang bị từ chối/chờ duyệt
-            const res = await axios.get(`http://localhost:5000/api/staff/tours/${tour.tour_id}`, {
+            const res = await axios.get(`http://localhost:5000/api/tours/staff/tours/${tour.tour_id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -257,7 +257,7 @@ const StaffFixedTourDesigner = () => {
             submitData.append('departures', JSON.stringify([]));
 
             // URL trong sáng, rõ ràng: "Tôi là staff, tôi muốn lưu tour"
-            await axios.post(`http://localhost:5000/api/staff/tours/save`, submitData, {
+            await axios.post(`http://localhost:5000/api/tours/design`, submitData, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'multipart/form-data'

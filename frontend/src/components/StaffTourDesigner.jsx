@@ -405,13 +405,11 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/custom-tours/requests/${requestData.request_id}/quote`, {
+            await axios.post(`http://localhost:5000/api/custom-tours/requests/${requestData.request_id}/submit-manager`, {
                 base_cost: totalCost,
-                quoted_price: suggestedPrice,
-                markup_percent: quoteData.markup,
-                proposed_itinerary: designPayload,
-                staff_note: quoteData.staffNote,
-                approval_status: 'Pending_Approval'
+                quote_price: suggestedPrice,
+                itinerary: designPayload,
+                note: quoteData.staffNote
             }, { headers: { Authorization: `Bearer ${token}` } });
 
             alert('🎉 Đã chốt bản thiết kế & Gửi Quản lý phê duyệt thành công!');
