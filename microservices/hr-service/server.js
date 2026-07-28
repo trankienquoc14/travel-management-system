@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -25,7 +27,7 @@ app.use('/api/partner-services', partnerServiceRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-const PORT = process.env.PORT || 5004;
+const PORT = process.env.HR_SERVICE_PORT || 5004;
 
 sequelize.authenticate()
   .then(() => {

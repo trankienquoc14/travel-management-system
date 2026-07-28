@@ -1,41 +1,44 @@
-﻿const sequelize = require('../config/database');
+const sequelize = require('../config/database');
 
 exports.createCustomRequest = async (req, res) => {
     try {
-        // Láº¥y ID cá»§a khĂ¡ch hĂ ng Ä‘ang Ä‘Äƒng nháº­p
         const customerId = req.user?.id || req.user?.userId || req.user?.user_id;
-
         const {
             destination,
             departure_date,
             return_date,
             people_count,
             budget,
-            preferences // Rá»• sá»Ÿ thĂ­ch dáº¡ng Object (JSON) tá»« Frontend gá»­i lĂªn
+            preferences // Rổ sở thích dạng Object (JSON) từ Frontend gửi lên
         } = req.body;
 
         if (!customerId) {
-            return res.status(401).json({ success: false, message: 'Vui lĂ²ng Ä‘Äƒng nháº­p Ä‘á»ƒ gá»­i yĂªu cáº§u!' });
+            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để gửi yêu cầu!' });
         }
 
-        // ÄĂ³ng gĂ³i rá»• sá»Ÿ thĂ­ch thĂ nh má»™t chuá»—i JSON chuáº©n Ä‘á»ƒ lÆ°u vĂ o cá»™t requirements
-        const requirementsString = JSON.stringify(preferences);
+        const depDate = departure_date || req.body.expected_departure_date || null;
+        const retDate = return_date || null;
+        const count = people_count || ((req.body.num_adults || 0) + (req.body.num_children || 0)) || 1;
+        const estBudget = budget || req.body.estimated_budget || 0;
+        const reqObject = preferences || { note: req.body.note || '' };
 
-        // LÆ°u vĂ o cÆ¡ sá»Ÿ dá»¯ liá»‡u
+        const requirementsString = JSON.stringify(reqObject);
+
+        // Lưu vào cơ sở dữ liệu
         await sequelize.query(`
             INSERT INTO custom_tour_requests 
             (customer_id, destination, departure_date, return_date, people_count, budget, requirements, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
         `, {
             replacements: [
-                customerId, destination, departure_date, return_date,
-                people_count, budget, requirementsString
+                customerId, destination || 'Chưa chọn', depDate, retDate,
+                count, estBudget, requirementsString
             ]
         });
 
         res.status(201).json({
             success: true,
-            message: 'ÄĂ£ gá»­i yĂªu cáº§u thiáº¿t káº¿ Tour thĂ nh cĂ´ng! ChuyĂªn viĂªn cá»§a chĂºng tĂ´i sáº½ liĂªn há»‡ sá»›m.'
+            message: 'Đã gửi yêu cầu thiết kế Tour thành công! Chuyên viên của chúng tôi sẽ liên hệ sớm.'
         });
     } catch (error) {
         console.error("Lá»—i khi táº¡o Custom Tour Request:", error);
@@ -277,13 +280,13 @@ exports.sendNotification = async (req, res) => {
             UPDATE custom_tour_quotes SET approval_status = 'Quote_Sent' WHERE quote_id = ? 
         `, { replacements: [latestQuote[0].quote_id], transaction });
 
-        // Báº£ng REQUESTS chá»‰ giá»¯ tráº¡ng thĂ¡i 'Processing' (Äang xá»­ lĂ½)
+        // Báº£ng REQUESTS chá»‰ giá»¯ tráº¡ng thĂ¡i 'Processing' (Ä ang xá»­ lĂ½)
         await sequelize.query(`
             UPDATE custom_tour_requests SET status = 'Processing' WHERE request_id = ?
         `, { replacements: [id], transaction });
 
         await transaction.commit();
-        res.status(200).json({ success: true, message: 'ÄĂ£ gá»­i bĂ¡o giĂ¡ má»›i nháº¥t cho khĂ¡ch hĂ ng!' });
+        res.status(200).json({ success: true, message: 'Ä Ă£ gá»­i bĂ¡o giĂ¡ má»›i nháº¥t cho khĂ¡ch hĂ ng!' });
     } catch (error) {
         await transaction.rollback();
         res.status(500).json({ success: false, message: error.message });
@@ -294,40 +297,38 @@ exports.sendNotification = async (req, res) => {
 exports.updateCustomerAction = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { id } = req.params; // request_id
-        const { status, customer_note } = req.body; // status lĂ  'Customer_Accepted' hoáº·c 'Customer_Revision'
+        const id = req.params.id || req.params.quoteId;
+        const rawStatus = req.body.status || req.body.action || 'Customer_Accepted';
+        const finalStatus = (rawStatus === 'Accept' || rawStatus === 'Accepted' || rawStatus === 'Customer_Accepted') ? 'Customer_Accepted' : rawStatus;
+        const customer_note = req.body.customer_note || req.body.notes || '';
 
-        // 1. TĂ¬m báº£n Quote má»›i nháº¥t Ä‘ang Ä‘Æ°á»£c gá»­i cho khĂ¡ch
-        const [latestQuote] = await sequelize.query(`
-            SELECT quote_id FROM custom_tour_quotes 
-            WHERE request_id = ? 
-            ORDER BY quote_id DESC LIMIT 1
-        `, { replacements: [id], transaction });
+        // 1. Tìm bản Quote phù hợp
+        let latestQuote;
+        if (req.params.quoteId) {
+            [latestQuote] = await sequelize.query(`
+                SELECT quote_id, request_id FROM custom_tour_quotes WHERE quote_id = ?
+            `, { replacements: [req.params.quoteId], transaction });
+        } else {
+            [latestQuote] = await sequelize.query(`
+                SELECT quote_id, request_id FROM custom_tour_quotes WHERE request_id = ? ORDER BY quote_id DESC LIMIT 1
+            `, { replacements: [req.params.id], transaction });
+        }
 
         if (latestQuote.length > 0) {
             const quoteId = latestQuote[0].quote_id;
+            const targetReqId = latestQuote[0].request_id;
 
-            // 2. Cáº­p nháº­t tráº¡ng thĂ¡i (vĂ  ghi chĂº náº¿u cĂ³) tháº³ng vĂ o Báº¢N QUOTE ÄĂ“
-            if (status === 'Customer_Revision' && customer_note) {
-                await sequelize.query(`
-                    UPDATE custom_tour_quotes 
-                    SET approval_status = ?, staff_note = CONCAT(IFNULL(staff_note, ''), '\\n\\n[KhĂ¡ch pháº£n há»“i]: ', ?)
-                    WHERE quote_id = ?
-                `, { replacements: [status, customer_note, quoteId], transaction });
-            } else {
-                await sequelize.query(`
-                    UPDATE custom_tour_quotes SET approval_status = ? WHERE quote_id = ?
-                `, { replacements: [status, quoteId], transaction });
-            }
+            await sequelize.query(`
+                UPDATE custom_tour_quotes SET approval_status = ? WHERE quote_id = ?
+            `, { replacements: [finalStatus, quoteId], transaction });
+
+            await sequelize.query(`
+                UPDATE custom_tour_requests SET status = ? WHERE request_id = ?
+            `, { replacements: [finalStatus, targetReqId], transaction });
         }
 
-        // 3. Äá»“ng bá»™ tráº¡ng thĂ¡i sang báº£ng Requests
-        await sequelize.query(`
-            UPDATE custom_tour_requests SET status = ? WHERE request_id = ?
-        `, { replacements: [status, id], transaction });
-
         await transaction.commit();
-        res.status(200).json({ success: true, message: 'Cáº­p nháº­t pháº£n há»“i thĂ nh cĂ´ng!' });
+        res.status(200).json({ success: true, message: 'Cập nhật phản hồi thành công!' });
     } catch (error) {
         await transaction.rollback();
         res.status(500).json({ success: false, message: error.message });

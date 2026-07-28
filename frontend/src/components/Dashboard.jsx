@@ -17,10 +17,18 @@ import StaffPaymentManagement from './StaffPaymentManagement'; // 👈 Thêm dò
 import HREmployeeManagement from './HREmployeeManagement';
 import HRCustomerManagement from './HRCustomerManagement';
 import HRPerformanceReview from './HRPerformanceReview';
+import HRAttendance from './HRAttendance';
+import HRPayroll from './HRPayroll';
 import GuideWorkspace from './GuideWorkspace';
 import IncidentManagement from './IncidentManagement';
 import TourOperationalManager from './TourOperationalManager';
 import StaffFixedTourDesigner from './StaffFixedTourDesigner';
+import StaffChangeRequestManager from './StaffChangeRequestManager';
+import StaffBookingManagement from './StaffBookingManagement';
+import UserProfile from './UserProfile';
+import MyBookings from './MyBookings';
+import CustomerQuotes from './CustomerQuotes';
+import CustomerTourBuilder from './CustomerTourBuilder';
 // ... các import cũ của bạn
 
 const Dashboard = () => {
@@ -34,7 +42,7 @@ const Dashboard = () => {
   const [editPartnerData, setEditPartnerData] = useState(null);
   const [designingRequest, setDesigningRequest] = useState(null);
   const [fixedTourToEdit, setFixedTourToEdit] = useState(null);
-
+  const [selectedDeparture, setSelectedDeparture] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -48,6 +56,8 @@ const Dashboard = () => {
       // 🚀 ĐẶT TAB MẶC ĐỊNH THEO TỪNG ROLE (Dựa vào Use Case)
       if (parsedUser.role === 7 || parsedUser.role === 'Partner') {
         setActiveTab('partner_inventory'); // Đối tác vào thẳng Kho của họ
+      } else if (parsedUser.role === 6 || parsedUser.role === 'Customer') {
+        setActiveTab('my_bookings'); // Khách hàng vào thẳng Đơn đặt tour của tôi
       } else if (parsedUser.role === 4) {
         setActiveTab('tour_requests'); // Nhân viên văn phòng vào thẳng Yêu cầu/Tư vấn
       } else if (parsedUser.role === 2 || parsedUser.role === 'HR Manager') {
@@ -89,6 +99,7 @@ const Dashboard = () => {
 
   // 🚀 ĐỊNH NGHĨA QUYỀN TRUY CẬP TỪ SƠ ĐỒ USE CASE
   const isPartner = user.role === 7 || user.role === 'Partner';
+  const isCustomer = user.role === 6 || user.role === 'Customer';
   const isOfficeStaff = user.role === 4;
   const isTourManager = user.role === 3;
   const isHRManager = user.role === 2 || user.role === 'HR Manager';
@@ -141,7 +152,6 @@ const Dashboard = () => {
         <div className="sidebar-logo"><h2>Travel<span>ERP</span></h2></div>
         <div className="sidebar-subtitle">MENU CHÍNH</div>
         <ul className="sidebar-menu">
-
           {/* ========================================================= */}
           {/* 1. MENU CHUNG (Admin được xem mọi thứ)                    */}
           {/* ========================================================= */}
@@ -203,6 +213,12 @@ const Dashboard = () => {
               >
                 🔄 Xử Lý Hủy / Đổi Lịch
               </li>
+              <li
+                className={activeTab === 'hr_customers' ? 'active' : ''}
+                onClick={() => setActiveTab('hr_customers')}
+              >
+                👥 Quản lý Khách hàng
+              </li>
             </>
           )}
 
@@ -253,7 +269,8 @@ const Dashboard = () => {
           {(isHRManager || isAdmin) && (
             <>
               <li className={activeTab === 'hr_employees' ? 'active' : ''} onClick={() => setActiveTab('hr_employees')}>👥 Quản lý Nhân sự</li>
-              <li className={activeTab === 'hr_customers' ? 'active' : ''} onClick={() => setActiveTab('hr_customers')}>👥 Quản lý Khách hàng</li>
+              <li className={activeTab === 'hr_attendance' ? 'active' : ''} onClick={() => setActiveTab('hr_attendance')}>📅 Chấm công Nhân viên</li>
+              <li className={activeTab === 'hr_payroll' ? 'active' : ''} onClick={() => setActiveTab('hr_payroll')}>💰 Tính lương Nhân sự</li>
               <li className={activeTab === 'hr_performance' ? 'active' : ''} onClick={() => setActiveTab('hr_performance')}>⭐ Đánh giá Hiệu suất</li>
             </>
           )}
@@ -262,7 +279,14 @@ const Dashboard = () => {
           {/* 6. NGHIỆP VỤ HƯỚNG DẪN VIÊN (Kèm Admin)                  */}
           {/* ========================================================= */}
           {(isTourGuide || isAdmin) && (
-            <li className={activeTab === 'guide_work' ? 'active' : ''} onClick={() => setActiveTab('guide_work')}>💼 Lịch trình Dẫn đoàn</li>
+            <>
+              <li className={activeTab === 'guide_work' ? 'active' : ''} onClick={() => setActiveTab('guide_work')}>💼 Lịch trình Dẫn đoàn</li>
+              <li className={activeTab === 'guide_passengers' ? 'active' : ''} onClick={() => setActiveTab('guide_passengers')}>📋 Điểm danh hành khách</li>
+              <li className={activeTab === 'guide_itinerary' ? 'active' : ''} onClick={() => setActiveTab('guide_itinerary')}>🗺️ Lịch trình chi tiết</li>
+              <li className={activeTab === 'guide_map' ? 'active' : ''} onClick={() => setActiveTab('guide_map')}>📍 Bản đồ & Định vị</li>
+              <li className={activeTab === 'guide_updates' ? 'active' : ''} onClick={() => setActiveTab('guide_updates')}>📝 Cập nhật hành trình</li>
+              <li className={activeTab === 'guide_incidents' ? 'active' : ''} onClick={() => setActiveTab('guide_incidents')}>🚨 Báo cáo sự cố</li>
+            </>
           )}
 
           {/* ========================================================= */}
@@ -274,13 +298,35 @@ const Dashboard = () => {
             </li>
           )}
 
+          {/* ========================================================= */}
+          {/* 8. NGHIỆP VỤ KHÁCH HÀNG (Customer)                        */}
+          {/* ========================================================= */}
+          {isCustomer && (
+            <>
+              <li className={activeTab === 'my_bookings' ? 'active' : ''} onClick={() => setActiveTab('my_bookings')}>
+                🛒 Đơn Đặt Tour Của Tôi
+              </li>
+              <li className={activeTab === 'customer_quotes' ? 'active' : ''} onClick={() => setActiveTab('customer_quotes')}>
+                🛎️ Tour Thiết Kế Theo Yêu Cầu
+              </li>
+              <li className={activeTab === 'customer_builder' ? 'active' : ''} onClick={() => setActiveTab('customer_builder')}>
+                ✨ Gửi Yêu Cầu Thiết Kế Tour
+              </li>
+            </>
+          )}
+
+          {/* Hồ sơ cá nhân (Cho tất cả các tài khoản - Đặt dưới cùng thanh menu) */}
+          <li className={activeTab === 'profile' ? 'active' : ''} onClick={() => setActiveTab('profile')} style={{ marginTop: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '10px' }}>
+            👤 Hồ sơ cá nhân
+          </li>
+
         </ul>
       </aside>
 
       <main className="main-content">
         <header className="top-header">
           <div className="header-search"><input type="text" placeholder="Tìm kiếm mã booking, tên khách..." /></div>
-          <div className="user-profile">
+          <div className="user-profile" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('profile')} title="Bấm để xem & chỉnh sửa Hồ sơ cá nhân">
             <div className="avatar">{user.fullName.charAt(0)}</div>
             <div>
               <span className="user-name">{user.fullName}</span>
@@ -288,11 +334,22 @@ const Dashboard = () => {
                 {isAdmin ? 'Quản trị viên' : isTourManager ? 'Quản lý Tour' : isOfficeStaff ? 'Nhân viên Văn phòng' : isHRManager ? 'quản lý nhân sự' : isTourGuide ? 'Hướng dẫn viên' : 'Đối tác'}
               </span>
             </div>
-            <button onClick={handleLogout} className="logout-btn">Đăng xuất</button>
+            <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="logout-btn">Đăng xuất</button>
           </div>
         </header>
 
         <div className="content-area">
+          {/* Hồ sơ cá nhân (Dành cho tất cả các tài khoản) */}
+          {activeTab === 'profile' && (
+            <UserProfile 
+              onProfileUpdated={(updated) => {
+                setUser({ ...user, fullName: updated.full_name });
+                const stored = JSON.parse(localStorage.getItem('user') || '{}');
+                localStorage.setItem('user', JSON.stringify({ ...stored, fullName: updated.full_name }));
+              }} 
+            />
+          )}
+
           {/* Vùng chung */}
           {activeTab === 'overview' && (isTourManager || isAdmin) && renderOverview()}
 
@@ -339,7 +396,9 @@ const Dashboard = () => {
           {activeTab === 'tours' && (isTourManager || isAdmin) && <TourManagement onAddNew={() => { setEditTourId(null); setActiveTab('tour_form'); }} onEdit={(id) => { setEditTourId(id); setActiveTab('tour_form'); }} />}
           {activeTab === 'tour_form' && (isTourManager || isAdmin) && <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />}
           {activeTab === 'approve_quotes' && (isTourManager || isAdmin) && <ManagerTourApproval />} {/* THÊM DÒNG NÀY */}
+          {activeTab === 'orders' && (isOfficeStaff || isAdmin) && <StaffBookingManagement />}
           {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
+          {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
           {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
           {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner />}
           {/* Vùng đối tác */}
@@ -348,14 +407,28 @@ const Dashboard = () => {
 
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}
-          {activeTab === 'hr_customers' && (isHRManager || isAdmin) && <HRCustomerManagement />}
+          {activeTab === 'hr_customers' && (isOfficeStaff || isAdmin) && <HRCustomerManagement />}
+          {activeTab === 'hr_attendance' && (isHRManager || isAdmin) && <HRAttendance />}
+          {activeTab === 'hr_payroll' && (isHRManager || isAdmin) && <HRPayroll />}
           {activeTab === 'hr_performance' && (isHRManager || isAdmin) && <HRPerformanceReview />}
 
           {/* Vùng Hướng dẫn viên */}
-          {activeTab === 'guide_work' && (isTourGuide || isAdmin) && <GuideWorkspace />}
+          {['guide_work', 'guide_passengers', 'guide_itinerary', 'guide_map', 'guide_incidents', 'guide_updates'].includes(activeTab) && (isTourGuide || isAdmin) && (
+            <GuideWorkspace 
+              activeTab={activeTab} 
+              selectedDeparture={selectedDeparture} 
+              setSelectedDeparture={setSelectedDeparture} 
+              setActiveTab={setActiveTab} 
+            />
+          )}
 
           {/* Vùng Xử lý Sự cố (Dành cho Quản lý Tour & Admin) */}
           {activeTab === 'incidents' && (isTourManager || isAdmin) && <IncidentManagement />}
+
+          {/* Vùng Khách hàng */}
+          {activeTab === 'my_bookings' && isCustomer && <MyBookings />}
+          {activeTab === 'customer_quotes' && isCustomer && <CustomerQuotes onRequestNew={() => setActiveTab('customer_builder')} />}
+          {activeTab === 'customer_builder' && isCustomer && <CustomerTourBuilder onSubmitted={() => setActiveTab('customer_quotes')} />}
         </div>
       </main>
     </div>

@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -13,7 +15,7 @@ const bookingRoutes = require('./routes/bookingRoutes');
 // Cấu hình routes
 app.use('/api/bookings', bookingRoutes);
 
-const PORT = process.env.PORT || 5003;
+const PORT = process.env.BOOKING_SERVICE_PORT || 5003;
 
 sequelize.authenticate()
   .then(() => {

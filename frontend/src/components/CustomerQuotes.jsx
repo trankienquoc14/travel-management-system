@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import CustomerNavbar from './CustomerNavbar';
 import '../index.css';
 
 const CustomerQuotes = () => {
@@ -184,28 +185,7 @@ const CustomerQuotes = () => {
     return (
         <div className="homepage-container" style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             {/* NAV BAR */}
-            <nav className="home-navbar" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                <div className="home-logo" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>
-                    Travel<span className="text-primary">ERP</span>
-                </div>
-                <ul className="home-menu">
-                    <li onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>Khám phá</li>
-                    <li onClick={() => navigate('/my-bookings')} style={{ cursor: 'pointer' }}>Đơn hàng của tôi</li>
-                    {user && (
-                        <li className="active" onClick={() => navigate('/my-quotes')} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            Báo giá thiết kế
-                        </li>
-                    )}
-                    <li><Link to="/build-tour" className="menu-item" style={{ textDecoration: 'none', color: 'inherit' }}>Tự thiết kế Tour</Link></li>
-                </ul>
-                <div className="home-user-actions">
-                    <div className="user-info">
-                        <div className="user-avatar">{user?.fullName?.charAt(0) || 'U'}</div>
-                        <span>{user?.fullName}</span>
-                    </div>
-                    <button onClick={handleLogout} className="btn-outline">Đăng xuất</button>
-                </div>
-            </nav>
+            <CustomerNavbar activeTab="my-quotes" />
 
             {/* MAIN CONTENT */}
             <div style={{ flex: 1, padding: '40px 20px', backgroundColor: '#f4f7f6' }}>

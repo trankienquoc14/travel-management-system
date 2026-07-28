@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import CustomerNavbar from './CustomerNavbar';
 import '../styles/CustomerTourBuilder.css';
 import '../index.css';
 import { 
@@ -434,33 +435,8 @@ const CustomerTourBuilder = () => {
 
     return (
         <div className="homepage-container">
-            <nav className="home-navbar">
-                <div className="home-logo" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>
-                    Travel<span className="text-primary">ERP</span>
-                </div>
-                <ul className="home-menu">
-                    <li onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>Khám phá</li>
-                    <li onClick={() => navigate('/my-bookings')} style={{ cursor: 'pointer' }}>Đơn hàng của tôi</li>
-                    <li className="active">
-                        <Link to="/build-tour" className="menu-item" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            Tự thiết kế Tour
-                        </Link>
-                    </li>
-                </ul>
-                <div className="home-user-actions">
-                    {user ? (
-                        <>
-                            <div className="user-info">
-                                <div className="user-avatar">{user.fullName?.charAt(0) || 'U'}</div>
-                                <span>{user.fullName}</span>
-                            </div>
-                            <button onClick={handleLogout} className="btn-outline">Đăng xuất</button>
-                        </>
-                    ) : (
-                        <button onClick={() => navigate('/login')} className="btn-primary">Đăng nhập</button>
-                    )}
-                </div>
-            </nav>
+            {/* NAVBAR GIAO DIỆN CHUẨN */}
+            <CustomerNavbar activeTab="build-tour" />
 
             <div className="wizard-page-wrapper">
                 <div className="wizard-container">

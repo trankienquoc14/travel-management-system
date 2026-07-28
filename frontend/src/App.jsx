@@ -48,7 +48,7 @@ const RootRedirect = () => {
   const userStr = localStorage.getItem('user');
   const token = localStorage.getItem('token');
   
-  if (!userStr || !token) return <Navigate to="/login" replace />;
+  if (!userStr || !token) return <Navigate to="/home" replace />;
   
   const user = JSON.parse(userStr);
   const userRole = Number(user.role_id || user.role); 
@@ -66,11 +66,12 @@ function App() {
         {/* =========================================
             KHU VỰC DÀNH CHO KHÁCH HÀNG (MỌI ROLE ĐỀU VÀO ĐƯỢC) 
             ========================================= */}
-        <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/tour/:id" element={<ProtectedRoute><TourDetail /></ProtectedRoute>} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/tour/:id" element={<TourDetail />} />
         <Route path="/booking-form" element={<ProtectedRoute><BookingForm /></ProtectedRoute>} />
         <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
         <Route path="/my-quotes" element={<ProtectedRoute><CustomerQuotes /></ProtectedRoute>} />
+
         
         {/* Đã bọc bảo vệ cho việc khách hàng tự build tour */}
         <Route path="/build-tour" element={<ProtectedRoute><CustomerTourBuilder /></ProtectedRoute>} />

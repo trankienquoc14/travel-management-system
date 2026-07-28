@@ -5,10 +5,10 @@ const { protect } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 
-// Cấu hình lưu trữ tệp tin ảnh sự cố
+// Cấu hình lưu trữ tệp tin ảnh sự cố vào thư mục chia sẻ shared-uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Lưu vào thư mục uploads của backend
+    cb(null, path.join(__dirname, '../../shared-uploads'));
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -30,4 +30,12 @@ router.get('/departures/:departureId/incidents', protect, guideController.getDep
 router.get('/tours/:tourId/itinerary', protect, guideController.getTourItinerary);
 router.get('/profile', protect, guideController.getGuideProfile);
 
+// Hỗ trợ cập nhật hành trình liên tục (Live Trip Updates)
+router.get('/departures/:departureId/updates', protect, guideController.getDepartureUpdates);
+router.post('/departures/:departureId/updates', protect, upload.single('image'), guideController.createDepartureUpdate);
+
+// Hỗ trợ cập nhật giải quyết sự cố
+router.put('/incidents/:id', protect, guideController.updateIncidentStatus);
+
 module.exports = router;
+

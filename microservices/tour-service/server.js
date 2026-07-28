@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -19,7 +21,7 @@ app.use('/api/custom-tours', customTourRoutes);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/places', placeRoutes);
 
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.TOUR_SERVICE_PORT || 5002;
 
 sequelize.authenticate()
   .then(() => {

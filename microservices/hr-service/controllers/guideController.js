@@ -17,15 +17,19 @@ exports.getAssignedWork = async (req, res) => {
 
     const guideId = guide[0].guide_id;
 
-    // Lấy danh sách phân công
+    // Lấy danh sách phân công (Tính toán số khách thực tế từ bảng bookings)
     const [works] = await sequelize.query(`
       SELECT 
-        d.departure_id, d.departure_date, d.return_date, d.max_slots, d.available_slots, d.status,
-        t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url
+        d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status,
+        t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url,
+        COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0) AS actual_booked,
+        (d.max_slots - COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0)) AS available_slots
       FROM guide_assignments ga
       JOIN departures d ON ga.departure_id = d.departure_id
       JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN bookings b ON d.departure_id = b.departure_id
       WHERE ga.guide_id = ?
+      GROUP BY d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status, t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url
       ORDER BY d.departure_date DESC
     `, { replacements: [guideId] });
 
@@ -272,3 +276,97 @@ exports.getGuideProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 9. Lấy nhật ký hành trình của đoàn đi
+exports.getDepartureUpdates = async (req, res) => {
+  try {
+    const { departureId } = req.params;
+    const [updates] = await sequelize.query(`
+      SELECT * FROM departure_updates 
+      WHERE departure_id = ? 
+      ORDER BY created_at DESC
+    `, { replacements: [departureId] });
+
+    res.status(200).json({ success: true, data: updates, needs_db_migration: false });
+  } catch (error) {
+    if (error.parent && error.parent.errno === 1146) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        needs_db_migration: true,
+        sql: `CREATE TABLE departure_updates (
+  update_id INT AUTO_INCREMENT PRIMARY KEY,
+  departure_id INT NOT NULL,
+  guide_id INT NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  activity VARCHAR(100) NOT NULL,
+  description TEXT NOT NULL,
+  image_url VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (departure_id) REFERENCES departures(departure_id) ON DELETE CASCADE
+);`
+      });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 10. Tạo mới cập nhật nhật ký hành trình
+exports.createDepartureUpdate = async (req, res) => {
+  try {
+    const { departureId } = req.params;
+    const { location, activity, description } = req.body;
+    const userId = req.user.user_id;
+
+    const [guide] = await sequelize.query('SELECT guide_id FROM guides WHERE user_id = ?', {
+      replacements: [userId]
+    });
+    if (guide.length === 0) {
+      return res.status(403).json({ success: false, message: 'Chỉ hướng dẫn viên mới có quyền cập nhật!' });
+    }
+    const guideId = guide[0].guide_id;
+    const image_url = req.file ? '/uploads/' + req.file.filename : null;
+
+    await sequelize.query(`
+      INSERT INTO departure_updates (departure_id, guide_id, location, activity, description, image_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
+    `, { replacements: [departureId, guideId, location, activity, description, image_url] });
+
+    res.status(201).json({ success: true, message: 'Cập nhật hành trình thành công!' });
+  } catch (error) {
+    if (error.parent && error.parent.errno === 1146) {
+      return res.status(200).json({
+        success: true,
+        needs_db_migration: true,
+        message: 'Lưu ở chế độ mô phỏng thành công!',
+        data: {
+          location,
+          activity,
+          description,
+          image_url: req.file ? '/uploads/' + req.file.filename : null,
+          created_at: new Date().toISOString()
+        }
+      });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 11. Cập nhật trạng thái xử lý sự cố (Dành cho Quản lý / Staff)
+exports.updateIncidentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status = 'Resolved', resolution_notes } = req.body;
+    await sequelize.query(`
+      UPDATE incident_reports 
+      SET status = ?, resolution_notes = ? 
+      WHERE incident_id = ?
+    `, { replacements: [status, resolution_notes || null, id] });
+
+    res.status(200).json({ success: true, message: 'Cập nhật xử lý sự cố thành công!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

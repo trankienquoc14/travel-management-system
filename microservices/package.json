@@ -4,13 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently \"cd api-gateway && node server.js\" \"cd auth-service && node server.js\" \"cd tour-service && node server.js\" \"cd booking-service && node server.js\" \"cd hr-service && node server.js\""
+    "start": "concurrently \"node api-gateway/server.js\" \"node auth-service/server.js\" \"node tour-service/server.js\" \"node booking-service/server.js\" \"node hr-service/server.js\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "concurrently": "^10.0.3"
+    "concurrently": "^10.0.4"
   }
 }

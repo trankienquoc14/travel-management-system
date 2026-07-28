@@ -260,7 +260,7 @@ exports.saveTourOperationalSchedule = async (req, res) => {
         }
       }
 
-      // C. LĂ†Â¯U Ă„ÂĂ¡Â»Â¢T KHĂ¡Â»ÂI HÄ‚â‚¬NH
+      // C. LƯU ĐỢT KHỞI HÀNH & PHÂN CÔNG HƯỚNG DẪN VIÊN
       const keepDepIds = departures.map(d => d.departure_id).filter(id => id);
       if (keepDepIds.length > 0) {
           await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND departure_id NOT IN (?)`, { replacements: [targetTourId, keepDepIds], transaction });
@@ -269,17 +269,45 @@ exports.saveTourOperationalSchedule = async (req, res) => {
       }
 
       for (let dep of departures) {
-        if (dep.departure_id) {
+        let realGuideId = null;
+        if (dep.guide_id) {
+          // Tìm guide_id chuẩn từ bảng guides theo user_id hoặc guide_id
+          const [gRow] = await sequelize.query(`SELECT guide_id FROM guides WHERE user_id = ? OR guide_id = ? LIMIT 1`, {
+            replacements: [dep.guide_id, dep.guide_id],
+            transaction
+          });
+          if (gRow.length > 0) {
+            realGuideId = gRow[0].guide_id;
+          }
+        }
+
+        let targetDepId = dep.departure_id;
+
+        if (targetDepId) {
             await sequelize.query(`
               UPDATE departures 
               SET departure_date=?, return_date=?, max_slots=?, guide_id=? 
               WHERE departure_id=?
-            `, { replacements: [dep.departure_date, dep.return_date, dep.max_slots || 30, dep.guide_id || null, dep.departure_id], transaction });
+            `, { replacements: [dep.departure_date, dep.return_date, dep.max_slots || 30, dep.guide_id || null, targetDepId], transaction });
         } else {
-            await sequelize.query(`
+            const [insRes] = await sequelize.query(`
               INSERT INTO departures (tour_id, departure_date, return_date, max_slots, available_slots, status, guide_id)
               VALUES (?, ?, ?, ?, ?, 'Open', ?)
             `, { replacements: [targetTourId, dep.departure_date, dep.return_date, dep.max_slots || 30, dep.max_slots || 30, dep.guide_id || null], transaction });
+            targetDepId = insRes;
+        }
+
+        // Luôn xóa sạch bản ghi phân công cũ cho đợt này trước khi chèn mới duy nhất 1 HDV
+        await sequelize.query(`DELETE FROM guide_assignments WHERE departure_id = ?`, {
+          replacements: [targetDepId],
+          transaction
+        });
+
+        if (realGuideId && targetDepId) {
+          await sequelize.query(`INSERT INTO guide_assignments (departure_id, guide_id, assigned_at) VALUES (?, ?, NOW())`, {
+            replacements: [targetDepId, realGuideId],
+            transaction
+          });
         }
       }
     }
@@ -291,18 +319,18 @@ exports.saveTourOperationalSchedule = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// [QUĂ¡ÂºÂ¢N LÄ‚Â] PhÄ‚Âª duyĂ¡Â»â€¡t hoĂ¡ÂºÂ·c TĂ¡Â»Â« chĂ¡Â»â€˜i Tour CĂ¡Â»â€˜ Ă„â€˜Ă¡Â»â€¹nh
+// [QUĂ¡ÂºÂ¢N LÄ‚Â ] PhÄ‚Âª duyĂ¡Â»â€¡t hoĂ¡ÂºÂ·c TĂ¡Â»Â« chĂ¡Â»â€˜i Tour CĂ¡Â»â€˜ Ă„â€˜Ă¡Â»â€¹nh
 exports.updateTourStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, rejection_reason } = req.body; // BĂ¡ÂºÂ¯t giÄ‚Â¡ trĂ¡Â»â€¹ 'Active' (DuyĂ¡Â»â€¡t) hoĂ¡ÂºÂ·c 'Rejected' (TĂ¡Â»Â« chĂ¡Â»â€˜i)
+    const { status, rejection_reason } = req.body;
+    const finalStatus = (status === 'Approved' || status === 'Active') ? 'Active' : status;
 
-    // CĂ¡ÂºÂ­p nhĂ¡ÂºÂ­t trĂ¡ÂºÂ¡ng thÄ‚Â¡i trong database
     await sequelize.query(`
-            UPDATE tours SET status = ?, rejection_reason = ? WHERE tour_id = ?
-        `, { replacements: [status, rejection_reason || null, id] });
+      UPDATE tours SET status = ?, rejection_reason = ? WHERE tour_id = ?
+    `, { replacements: [finalStatus, rejection_reason || null, id] });
 
-    res.status(200).json({ success: true, message: `Ă„ÂÄ‚Â£ cĂ¡ÂºÂ­p nhĂ¡ÂºÂ­t trĂ¡ÂºÂ¡ng thÄ‚Â¡i thÄ‚Â nh ${status}` });
+    res.status(200).json({ success: true, message: `Đã cập nhật trạng thái thành ${finalStatus}` });
   } catch (error) {
     console.error("LĂ¡Â»â€”i cĂ¡ÂºÂ­p nhĂ¡ÂºÂ­t trĂ¡ÂºÂ¡ng thÄ‚Â¡i tour:", error);
     res.status(500).json({ success: false, message: error.message });

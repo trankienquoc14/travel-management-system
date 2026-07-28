@@ -17,6 +17,8 @@ const TourOperationalManager = () => {
     const [baseCost, setBaseCost] = useState(0);
     const [basePrice, setBasePrice] = useState(0);
 
+    const todayStr = new Date().toISOString().split('T')[0];
+
     useEffect(() => {
         fetchInitialData();
     }, []);
@@ -36,7 +38,10 @@ const TourOperationalManager = () => {
             // 2. Fetch Guides
             const resEmployees = await axios.get('http://localhost:5000/api/hr/employees', { headers });
             if (resEmployees.data.success) {
-                const guideList = (resEmployees.data.data || []).filter(e => e.role_name === 'Tour Guide' && e.status === 'Active');
+                const guideList = (resEmployees.data.data || []).filter(e => 
+                    (e.role_id === 5 || e.role_name === 'Tour Guide' || e.role_name?.toLowerCase().includes('guide')) && 
+                    e.status === 'Active'
+                );
                 setGuides(guideList);
             }
         } catch (error) { 
@@ -74,6 +79,28 @@ const TourOperationalManager = () => {
 
     const handleSaveDepartures = async () => {
         if (!selectedTour) return;
+
+        // RÀNG BUỘC KIỂM TRA NGÀY VÀ SỐ KHÁCH TRƯỚC KHI LƯU
+        for (let i = 0; i < departures.length; i++) {
+            const dep = departures[i];
+            if (!dep.departure_date) {
+                alert(`⚠️ Đợt #${i + 1}: Vui lòng chọn Ngày khởi hành!`);
+                return;
+            }
+            if (dep.departure_date < todayStr) {
+                alert(`⚠️ Đợt #${i + 1}: Ngày khởi hành (${formatDateStr(dep.departure_date)}) không được ở quá khứ! Vui lòng chọn từ ngày hôm nay (${formatDateStr(todayStr)}) trở đi.`);
+                return;
+            }
+            if (dep.return_date && dep.return_date < dep.departure_date) {
+                alert(`⚠️ Đợt #${i + 1}: Ngày về (${formatDateStr(dep.return_date)}) không được trước Ngày khởi hành!`);
+                return;
+            }
+            if (!dep.max_slots || dep.max_slots <= 0) {
+                alert(`⚠️ Đợt #${i + 1}: Số lượng khách tối đa phải lớn hơn 0!`);
+                return;
+            }
+        }
+
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -93,7 +120,9 @@ const TourOperationalManager = () => {
             }, { headers: { Authorization: `Bearer ${token}` } });
 
             if (res.data.success) {
-                alert(`🎉 Đã lưu cấu hình đợt khởi hành cho Tour: ${selectedTour.tour_name}`);
+                alert(`🎉 Đã lưu cấu hình lịch trình & phân công Hướng dẫn viên thành công cho Tour: ${selectedTour.tour_name}`);
+                // Refresh data
+                handleSelectTour(selectedTour);
             }
         } catch (e) { 
             alert("Lỗi khi lưu lịch trình khởi hành!"); 
@@ -251,7 +280,13 @@ const TourOperationalManager = () => {
                                                 <div style={{ padding: '20px', background: 'linear-gradient(to bottom, #f8fafc, #ffffff)', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Khởi Hành</div>
-                                                        <input type="date" value={dep.departure_date} onChange={e => handleDepartureDateChange(idx, e.target.value)} style={{ padding: '0', border: 'none', background: 'transparent', width: '100%', fontFamily: 'inherit', color: '#111827', fontSize: '16px', fontWeight: '700', outline: 'none', cursor: 'pointer' }} />
+                                                        <input 
+                                                            type="date" 
+                                                            min={todayStr}
+                                                            value={dep.departure_date} 
+                                                            onChange={e => handleDepartureDateChange(idx, e.target.value)} 
+                                                            style={{ padding: '0', border: 'none', background: 'transparent', width: '100%', fontFamily: 'inherit', color: '#111827', fontSize: '16px', fontWeight: '700', outline: 'none', cursor: 'pointer' }} 
+                                                        />
                                                     </div>
                                                     
                                                     <div style={{ padding: '0 15px', color: '#cbd5e1' }}>
@@ -273,7 +308,7 @@ const TourOperationalManager = () => {
                                                             <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '8px' }}>SỐ KHÁCH</label>
                                                             <div style={{ display: 'flex', alignItems: 'center', background: '#f3f4f6', padding: '10px 14px', borderRadius: '12px' }}>
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                                                <input type="number" value={dep.max_slots} onChange={e => { const up = [...departures]; up[idx].max_slots = Number(e.target.value); setDepartures(up); }} style={{ width: '100%', border: 'none', background: 'transparent', fontFamily: 'inherit', color: '#111827', fontSize: '15px', fontWeight: '700', outline: 'none', textAlign: 'center' }} />
+                                                                <input type="number" min="1" value={dep.max_slots} onChange={e => { const up = [...departures]; up[idx].max_slots = Number(e.target.value); setDepartures(up); }} style={{ width: '100%', border: 'none', background: 'transparent', fontFamily: 'inherit', color: '#111827', fontSize: '15px', fontWeight: '700', outline: 'none', textAlign: 'center' }} />
                                                             </div>
                                                         </div>
                                                         <div style={{ flex: 1 }}>
@@ -282,7 +317,7 @@ const TourOperationalManager = () => {
                                                                 <select value={dep.guide_id || ''} onChange={e => { const up = [...departures]; up[idx].guide_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} style={{ width: '100%', border: 'none', background: 'transparent', fontFamily: 'inherit', color: dep.guide_id ? '#0369a1' : '#4b5563', fontSize: '14px', fontWeight: '600', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
                                                                     <option value="">Chưa phân công</option>
                                                                     {guides.map(g => (
-                                                                        <option key={g.user_id} value={g.user_id}>{g.full_name}</option>
+                                                                        <option key={g.user_id} value={g.user_id}>{g.full_name} ({g.email})</option>
                                                                     ))}
                                                                 </select>
                                                             </div>
