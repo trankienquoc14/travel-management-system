@@ -55,7 +55,8 @@ exports.login = async (req, res) => {
       user: {
         id: user.user_id,
         fullName: user.full_name,
-        role: user.role_id
+        role: user.role_id,
+        avatar: user.avatar
       }
     });
 
@@ -97,6 +98,25 @@ exports.updateProfile = async (req, res) => {
     const userId = req.user.user_id || req.user.id;
     const { full_name, phone, gender, date_of_birth, avatar, new_password } = req.body;
 
+    // Xử lý lưu file ảnh avatar nếu người dùng tải lên Base64
+    let avatarPath = avatar;
+    if (avatar && typeof avatar === 'string' && avatar.startsWith('data:image')) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const uploadsDir = path.join(__dirname, '../../shared-uploads');
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        
+        const base64Data = avatar.replace(/^data:image\/\w+;base64,/, "");
+        const filename = `avatar_${userId}_${Date.now()}.jpg`;
+        const filepath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filepath, base64Data, 'base64');
+        avatarPath = `/uploads/${filename}`;
+      } catch (imgErr) {
+        console.error("Lỗi lưu file ảnh avatar:", imgErr);
+      }
+    }
+
     let updateFields = [];
     let replacements = [];
 
@@ -104,7 +124,7 @@ exports.updateProfile = async (req, res) => {
     if (phone !== undefined) { updateFields.push('phone = ?'); replacements.push(phone); }
     if (gender !== undefined) { updateFields.push('gender = ?'); replacements.push(gender); }
     if (date_of_birth !== undefined) { updateFields.push('date_of_birth = ?'); replacements.push(date_of_birth || null); }
-    if (avatar !== undefined) { updateFields.push('avatar = ?'); replacements.push(avatar); }
+    if (avatar !== undefined) { updateFields.push('avatar = ?'); replacements.push(avatarPath); }
 
     if (new_password) {
       const password_hash = await bcrypt.hash(new_password, 10);

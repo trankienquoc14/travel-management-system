@@ -160,6 +160,7 @@ exports.confirmPayment = async (req, res) => {
     await sequelize.query(`UPDATE bookings SET payment_status = 'Paid', booking_status = 'Confirmed' WHERE booking_id = ?`, { replacements: [bookingId], transaction });
 
     await transaction.commit();
+    await autoSyncAttendanceForTourDate(bookingId);
     res.status(200).json({ success: true, message: '✅ Cập nhật trạng thái thanh toán thành công!' });
   } catch (error) {
     await transaction.rollback();
@@ -210,6 +211,7 @@ exports.confirmCashByStaff = async (req, res) => {
     `, { replacements: [bookingId], transaction });
 
     await transaction.commit();
+    await autoSyncAttendanceForTourDate(bookingId);
     res.status(200).json({ success: true, message: '✅ Xác nhận thu tiền mặt & chốt đơn thành công!' });
   } catch (error) {
     await transaction.rollback();
@@ -414,6 +416,49 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
+// TỰ ĐỘNG CẬP NHẬT BẢNG CÔNG (TIMEKEEPING) VÀO NGÀY ĐI TOUR KHI DUYỆT ĐƠN HÀNG
+const autoSyncAttendanceForTourDate = async (bookingId) => {
+  try {
+    const [rows] = await sequelize.query(`
+      SELECT 
+        b.booking_id,
+        COALESCE(DATE_FORMAT(d.departure_date, '%Y-%m-%d'), DATE_FORMAT(cr.departure_date, '%Y-%m-%d'), DATE_FORMAT(b.booking_date, '%Y-%m-%d')) AS tour_date,
+        g.user_id AS guide_user_id,
+        q.staff_id AS staff_user_id
+      FROM bookings b
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN guide_assignments ga ON d.departure_id = ga.departure_id
+      LEFT JOIN guides g ON ga.guide_id = g.guide_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+      WHERE b.booking_id = ?
+    `, { replacements: [bookingId] });
+
+    if (rows.length > 0 && rows[0].tour_date) {
+      const tourDate = rows[0].tour_date; // Lấy chính xác NGHỆT KHỞI HÀNH TOUR, KHÔNG PHẢI NGÀY DUYỆT
+      const targetUserId = rows[0].guide_user_id || rows[0].staff_user_id || 2;
+
+      console.log(`[Auto-Timekeeping] Ghi nhận ngày công vào ngày đi tour ${tourDate} cho User ID ${targetUserId}`);
+
+      await sequelize.query(`
+        INSERT INTO timekeeping (employee_id, work_date, status, check_in, check_out, notes)
+        VALUES (?, ?, 'Present', '08:00:00', '17:00:00', ?)
+        ON DUPLICATE KEY UPDATE 
+          status = 'Present',
+          notes = VALUES(notes)
+      `, {
+        replacements: [
+          targetUserId,
+          tourDate,
+          `Tự động chốt công ngày đi tour theo đơn hàng #BKG-${bookingId} đã được duyệt`
+        ]
+      });
+    }
+  } catch (err) {
+    console.error("[Auto-Timekeeping Error]:", err.message);
+  }
+};
+
 // 5. CẬP NHẬT TRẠNG THÁI BOOKING (Dành cho Nhân viên / Admin)
 exports.updateBookingStatus = async (req, res) => {
   try {
@@ -427,6 +472,10 @@ exports.updateBookingStatus = async (req, res) => {
     await sequelize.query(`UPDATE bookings SET booking_status = ? WHERE booking_id = ?`, {
       replacements: [booking_status, bookingId]
     });
+
+    if (booking_status === 'Confirmed') {
+      await autoSyncAttendanceForTourDate(bookingId);
+    }
 
     res.status(200).json({ success: true, message: '✅ Cập nhật trạng thái booking thành công!' });
   } catch (error) {

@@ -20,10 +20,14 @@ router.post('/customers', protect, restrictTo(1, 2, 4), hrController.createCusto
 router.put('/customers/:id', protect, restrictTo(1, 2, 4), hrController.updateCustomer);
 router.delete('/customers/:id', protect, restrictTo(1, 2, 4), hrController.deleteCustomer);
 
-// Các tuyến đường chấm công nhân sự (Admin [1] & HR Manager [2])
+// Tuyến đường điểm danh / Chấm công GPS Realtime dành cho TOÀN BỘ nhân sự (trừ Khách hàng)
+router.post('/attendance/gps-checkin', protect, hrController.gpsCheckIn);
+router.get('/attendance/my-status', protect, hrController.getMyAttendanceStatus);
+
+// Các tuyến đường chấm công nhân sự
+router.get('/attendance/history', protect, hrController.getAttendanceHistory);
 router.get('/attendance', protect, restrictTo(1, 2), hrController.getAttendance);
 router.post('/attendance', protect, restrictTo(1, 2), hrController.updateAttendance);
-router.get('/attendance/history', protect, restrictTo(1, 2), hrController.getAttendanceHistory);
 
 // Các tuyến đường tính lương nhân sự (Admin [1] & HR Manager [2])
 router.get('/payroll', protect, restrictTo(1, 2), hrController.getPayroll);
@@ -31,5 +35,9 @@ router.post('/payroll', protect, restrictTo(1, 2), hrController.savePayroll);
 
 // Route xử lý giải quyết sự cố (Tour Manager [3] & Admin [1])
 router.put('/incidents/:id', protect, restrictTo(1, 3), guideController.updateIncidentStatus);
+
+// Route Quản lý người dùng & Phân vai trò hệ thống (Dành riêng cho Admin [1])
+router.get('/users', protect, restrictTo(1), hrController.getAllUsers);
+router.put('/users/:id/role', protect, restrictTo(1), hrController.updateUserRole);
 
 module.exports = router;

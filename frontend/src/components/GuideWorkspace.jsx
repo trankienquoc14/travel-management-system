@@ -29,9 +29,20 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   const [selectedUpdateFile, setSelectedUpdateFile] = useState(null);
   const [isPostingUpdate, setIsPostingUpdate] = useState(false);
 
+  // Trạng thái giám sát dành cho Admin/Manager
+  const [guidesList, setGuidesList] = useState([]);
+  const [selectedGuideId, setSelectedGuideId] = useState('all');
+
+  const storedUser = localStorage.getItem('user');
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const isAdminOrManager = currentUser && [1, 2, 3, '1', '2', '3'].includes(currentUser.role);
+
   useEffect(() => {
-    fetchWork();
-    fetchProfile();
+    if (isAdminOrManager) {
+      fetchGuidesList();
+    }
+    fetchWork('all');
+    fetchProfile('all');
   }, []);
 
   // Tự động tải dữ liệu đoàn khi đoàn được chọn thay đổi
@@ -43,10 +54,24 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   }, [selectedDeparture]);
 
-  const fetchProfile = async () => {
+  const fetchGuidesList = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/guide/profile', {
+      const res = await axios.get('http://localhost:5000/api/guide/all-guides', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setGuidesList(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Lỗi tải danh sách Hướng dẫn viên:', error);
+    }
+  };
+
+  const fetchProfile = async (guideId = selectedGuideId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/guide/profile?guide_id=${guideId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -57,20 +82,19 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
-  const fetchWork = async () => {
+  const fetchWork = async (guideId = selectedGuideId) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/guide/work', {
+      const res = await axios.get(`http://localhost:5000/api/guide/work?guide_id=${guideId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
         setWorks(res.data.data);
-        
-        // 🚀 LOGIC ERP CHUYÊN NGHIỆP:
-        // Tự động chọn chuyến đi đầu tiên làm mặc định nếu người dùng chưa chọn bất kỳ chuyến đi nào.
-        if (res.data.data.length > 0 && !selectedDeparture) {
+        if (res.data.data.length > 0) {
           setSelectedDeparture(res.data.data[0]);
+        } else {
+          setSelectedDeparture(null);
         }
       }
     } catch (error) {
@@ -78,6 +102,12 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGuideChange = (newGuideId) => {
+    setSelectedGuideId(newGuideId);
+    fetchWork(newGuideId);
+    fetchProfile(newGuideId);
   };
 
   const fetchTripUpdates = async (departureId) => {
@@ -426,12 +456,67 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   // LOGIC ERP KHÔNG CÓ ĐOÀN NÀO ĐƯỢC GÁN
   if (works.length === 0) {
     return (
-      <div style={{ padding: '40px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center', maxWidth: '600px', margin: '40px auto', fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
-        <h3 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '18px', fontWeight: '700' }}>Bạn chưa có chuyến đi nào được gán</h3>
-        <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
-          Tài khoản hướng dẫn viên của bạn hiện chưa được phân công dẫn đoàn nào trong hệ thống.
-        </p>
+      <div style={{ padding: '0px', background: '#f8fafc', minHeight: '80vh', fontFamily: "'Inter', sans-serif" }}>
+        {isAdminOrManager && (
+          <div style={{
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            color: '#ffffff',
+            padding: '18px 24px',
+            borderRadius: '16px',
+            marginBottom: '24px',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.15)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                🛡️ CHẾ ĐỘ GIÁM SÁT DÀNH CHO ADMIN & MANAGER
+              </div>
+              <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: '800' }}>
+                👁️ Theo Dõi Công Việc & Lịch Trình Của Hướng Dẫn Viên
+              </h3>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#cbd5e1' }}>Xem Công Việc Của HDV:</span>
+              <select
+                value={selectedGuideId}
+                onChange={(e) => handleGuideChange(e.target.value)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  border: '1px solid #475569',
+                  background: '#1e293b',
+                  color: '#ffffff',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                }}
+              >
+                <option value="all">🌐 Tất cả Hướng dẫn viên (Toàn hệ thống)</option>
+                {guidesList.map(g => (
+                  <option key={g.guide_id} value={g.guide_id}>
+                    🚩 HDV #{g.guide_id}: {g.full_name} ({g.phone || g.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div style={{ padding: '40px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center', maxWidth: '600px', margin: '40px auto' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
+          <h3 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '18px', fontWeight: '700' }}>Không tìm thấy chuyến đi được gán</h3>
+          <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
+            Hướng dẫn viên này hiện chưa được phân công dẫn đoàn nào hoặc chưa có chuyến đi phù hợp.
+          </p>
+        </div>
       </div>
     );
   }
@@ -439,6 +524,60 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   return (
     <div style={{ padding: '0px', background: '#f8fafc', minHeight: '80vh', fontFamily: "'Inter', sans-serif" }}>
       
+      {/* 🚀 BANNER DÀNH RIÊNG CHO ADMIN & QUẢN LÝ: CHỌN HDV ĐỂ GIÁM SÁT CÔNG VIỆC */}
+      {isAdminOrManager && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+          color: '#ffffff',
+          padding: '18px 24px',
+          borderRadius: '16px',
+          marginBottom: '24px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              🛡️ CHẾ ĐỘ GIÁM SÁT DÀNH CHO ADMIN & MANAGER
+            </div>
+            <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: '800' }}>
+              👁️ Theo Dõi Công Việc & Lịch Trình Của Hướng Dẫn Viên
+            </h3>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: '#cbd5e1' }}>Xem Công Việc Của HDV:</span>
+            <select
+              value={selectedGuideId}
+              onChange={(e) => handleGuideChange(e.target.value)}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: '1px solid #475569',
+                background: '#1e293b',
+                color: '#ffffff',
+                fontWeight: '700',
+                fontSize: '14px',
+                outline: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+              }}
+            >
+              <option value="all">🌐 Tất cả Hướng dẫn viên (Toàn hệ thống)</option>
+              {guidesList.map(g => (
+                <option key={g.guide_id} value={g.guide_id}>
+                  🚩 HDV #{g.guide_id}: {g.full_name} ({g.phone || g.email})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* 🚀 TAB 1: DANH SÁCH CHUYẾN ĐI ĐƯỢC PHÂN CÔNG */}
       {activeTab === 'guide_work' && (
         <>
@@ -701,23 +840,111 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                 </div>
               )}
 
-              {/* CHI TIẾT: Lịch trình Tour */}
+              {/* CHI TIẾT: Lịch trình chi tiết của Tour */}
               {activeTab === 'guide_itinerary' && (
-                <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700' }}>🗺️ Lịch trình chi tiết của Tour</h4>
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                  
+                  {/* HEADER LỊCH TRÌNH */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                        📋 SỔ TAY HƯỚNG DẪN VIÊN • LỊCH TRÌNH VẬN HÀNH CHI TIẾT
+                      </div>
+                      <h4 style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span>🗺️</span> {selectedDeparture?.tour_name || 'Lịch trình tour'}
+                      </h4>
+                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', fontWeight: '500' }}>
+                        📍 Điểm đến: <strong>{selectedDeparture?.destination}</strong> • ⏱️ Thời gian: <strong>{selectedDeparture?.duration_days} Ngày</strong> • 📅 Khởi hành: <strong>{new Date(selectedDeparture?.departure_date).toLocaleDateString('vi-VN')}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => window.print()}
+                        style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#334155', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        🖨️ In Lịch Trình Chi Tiết
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DANH SÁCH CÁC NGÀY LỊCH TRÌNH */}
                   {itineraries.length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Tour này chưa được nhập lịch trình chi tiết.</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '12px' }}>
+                      Tour này chưa được nhập lịch trình chi tiết.
+                    </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {itineraries.map((it) => (
-                        <div key={it.itinerary_id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#f8fafc' }}>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-                            <span style={{ background: '#1e3a8a', color: '#fff', padding: '3px 8px', borderRadius: '4px', fontWeight: '700', fontSize: '11px' }}>NGÀY {it.day_number}</span>
-                            <h5 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{it.title}</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      {itineraries.map((it) => {
+                        const blocks = (it.description || '').split('\n\n').filter(Boolean);
+
+                        return (
+                          <div key={it.itinerary_id} style={{ border: '1px solid #cbd5e1', borderRadius: '14px', overflow: 'hidden', background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                            
+                            {/* BANNER HEADER NGÀY */}
+                            <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)', color: '#ffffff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ background: '#0284c7', color: '#fff', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '13px', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+                                  NGÀY {it.day_number}
+                                </span>
+                                <h5 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>
+                                  {it.title}
+                                </h5>
+                              </div>
+                              <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '12px', fontWeight: '600' }}>
+                                📌 Ngày {it.day_number} / {selectedDeparture?.duration_days}
+                              </span>
+                            </div>
+
+                            {/* NỘI DUNG LỊCH TRÌNH CHI TIẾT THEO MỐC THỜI GIAN */}
+                            <div style={{ padding: '20px' }}>
+                              
+                              {/* THỦ THUẬT VẬN HÀNH HDV (GUIDE CHECKLIST CARD) */}
+                              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: '700' }}>
+                                  <span>🚌</span> Xe & Tài xế: <span style={{ color: '#0f172a', fontWeight: '600' }}>Xe 45 chỗ đời mới</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: '700' }}>
+                                  <span>🏨</span> Khách sạn: <span style={{ color: '#0f172a', fontWeight: '600' }}>Tiêu chuẩn 4★ (Nhận/Trả phòng)</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: '700' }}>
+                                  <span>🍽️</span> Suất ăn: <span style={{ color: '#0f172a', fontWeight: '600' }}>Sáng Buffet • Trưa & Tối Đặc sản</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: '700' }}>
+                                  <span>💡</span> Nhắc nhở HDV: <span style={{ color: '#0f172a', fontWeight: '600' }}>Kiểm tra sĩ số & Thẻ đoàn</span>
+                                </div>
+                              </div>
+
+                              {/* DÒNG THỜI GIAN TIMELINE HOẠT ĐỘNG */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                {blocks.length === 0 ? (
+                                  <p style={{ margin: 0, color: '#475569', fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
+                                    {it.description}
+                                  </p>
+                                ) : (
+                                  blocks.map((blk, idx) => {
+                                    const isSang = blk.includes('🌅') || blk.toLowerCase().includes('sáng');
+                                    const isTrua = blk.includes('☀️') || blk.toLowerCase().includes('trưa');
+                                    const isChieu = blk.includes('🌇') || blk.toLowerCase().includes('chiều');
+
+                                    const badgeText = isSang ? '#92400e' : isTrua ? '#0369a1' : isChieu ? '#c2410c' : '#6b21a8';
+                                    const borderColor = isSang ? '#fde68a' : isTrua ? '#bae6fd' : isChieu ? '#fed7aa' : '#e9d5ff';
+
+                                    return (
+                                      <div key={idx} style={{ background: '#f8fafc', border: `1px solid ${borderColor}`, borderRadius: '10px', padding: '14px 18px', borderLeft: `5px solid ${badgeText}` }}>
+                                        <p style={{ margin: 0, color: '#1e293b', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-line', fontWeight: '500' }}>
+                                          {blk}
+                                        </p>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+
+                            </div>
                           </div>
-                          <p style={{ margin: 0, color: '#475569', fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-line' }}>{it.description}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

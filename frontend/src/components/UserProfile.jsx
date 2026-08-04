@@ -143,7 +143,7 @@ const UserProfile = ({ onProfileUpdated }) => {
                         overflow: 'hidden'
                     }}>
                         {avatar ? (
-                            <img src={avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={avatar.startsWith('data:') || avatar.startsWith('http') ? avatar : `http://localhost:5000${avatar}`} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                             (fullName || 'U').charAt(0).toUpperCase()
                         )}

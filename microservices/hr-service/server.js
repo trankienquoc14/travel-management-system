@@ -7,7 +7,8 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 const sequelize = require('./config/database');
 const hrRoutes = require('./routes/hrRoutes');

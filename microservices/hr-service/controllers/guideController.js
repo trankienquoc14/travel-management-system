@@ -4,34 +4,52 @@ const sequelize = require('../config/database');
 exports.getAssignedWork = async (req, res) => {
   try {
     const userId = req.user.user_id;
+    const userRole = req.user.role_id;
+    const { guide_id } = req.query;
 
-    // Lấy thông tin hướng dẫn viên trước
-    const [guide] = await sequelize.query(
-      'SELECT guide_id FROM guides WHERE user_id = ?',
-      { replacements: [userId] }
-    );
+    let whereClause = '';
+    let replacements = [];
 
-    if (guide.length === 0) {
-      return res.status(404).json({ success: false, message: 'Tài khoản này chưa được cấu hình làm Hướng dẫn viên!' });
+    if (guide_id && guide_id !== 'all') {
+      // Nếu Admin/Manager chọn một Hướng dẫn viên cụ thể
+      whereClause = 'WHERE ga.guide_id = ?';
+      replacements.push(guide_id);
+    } else if (guide_id === 'all' || [1, 2, 3].includes(Number(userRole))) {
+      // Nếu Admin/Manager xem tất cả công việc của mọi HDV
+      whereClause = '';
+    } else {
+      // Nếu là tài khoản Hướng dẫn viên đăng nhập
+      const [guide] = await sequelize.query(
+        'SELECT guide_id FROM guides WHERE user_id = ?',
+        { replacements: [userId] }
+      );
+
+      if (guide.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+
+      whereClause = 'WHERE ga.guide_id = ?';
+      replacements.push(guide[0].guide_id);
     }
 
-    const guideId = guide[0].guide_id;
-
-    // Lấy danh sách phân công (Tính toán số khách thực tế từ bảng bookings)
+    // Lấy danh sách phân công (Kèm tên Hướng dẫn viên phụ trách)
     const [works] = await sequelize.query(`
       SELECT 
         d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status,
         t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url,
+        gu.full_name AS assigned_guide_name, gu.email AS assigned_guide_email, gu.phone AS assigned_guide_phone, ga.guide_id,
         COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0) AS actual_booked,
         (d.max_slots - COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0)) AS available_slots
       FROM guide_assignments ga
       JOIN departures d ON ga.departure_id = d.departure_id
       JOIN tours t ON d.tour_id = t.tour_id
+      JOIN guides g ON ga.guide_id = g.guide_id
+      JOIN users gu ON g.user_id = gu.user_id
       LEFT JOIN bookings b ON d.departure_id = b.departure_id
-      WHERE ga.guide_id = ?
-      GROUP BY d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status, t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url
+      ${whereClause}
+      GROUP BY d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status, t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url, gu.full_name, gu.email, gu.phone, ga.guide_id
       ORDER BY d.departure_date DESC
-    `, { replacements: [guideId] });
+    `, { replacements });
 
     res.status(200).json({
       success: true,
@@ -253,24 +271,73 @@ exports.getTourItinerary = async (req, res) => {
   }
 };
 
-// 8. Lấy thông tin hồ sơ của Hướng dẫn viên
+// 8. Lấy thông tin hồ sơ của Hướng dẫn viên (Hỗ trợ truy vấn theo guide_id cho Admin)
 exports.getGuideProfile = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    const [profile] = await sequelize.query(`
-      SELECT g.guide_id, g.license_number, g.experience_years, u.full_name, u.email, u.phone, u.avatar, u.gender
-      FROM guides g
-      JOIN users u ON g.user_id = u.user_id
-      WHERE g.user_id = ?
-    `, { replacements: [userId] });
+    const { guide_id } = req.query;
+
+    let query = '';
+    let replacements = [];
+
+    if (guide_id && guide_id !== 'all') {
+      query = `
+        SELECT g.guide_id, g.license_number, g.experience_years, u.full_name, u.email, u.phone, u.avatar, u.gender
+        FROM guides g
+        JOIN users u ON g.user_id = u.user_id
+        WHERE g.guide_id = ?
+      `;
+      replacements.push(guide_id);
+    } else {
+      query = `
+        SELECT g.guide_id, g.license_number, g.experience_years, u.full_name, u.email, u.phone, u.avatar, u.gender
+        FROM guides g
+        JOIN users u ON g.user_id = u.user_id
+        WHERE g.user_id = ?
+      `;
+      replacements.push(userId);
+    }
+
+    const [profile] = await sequelize.query(query, { replacements });
 
     if (profile.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Hướng dẫn viên!' });
+      // Trường hợp Admin xem nhưng chưa chọn HDV cụ thể
+      return res.status(200).json({
+        success: true,
+        data: {
+          guide_id: 0,
+          license_number: 'ADMIN-ACCESS',
+          experience_years: 5,
+          full_name: req.user.full_name || 'Hệ thống Quản trị',
+          email: req.user.email,
+          phone: req.user.phone || '0900000000',
+          gender: 'Male'
+        }
+      });
     }
 
     res.status(200).json({
       success: true,
       data: profile[0]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 8b. Lấy danh sách toàn bộ Hướng dẫn viên (Cho Admin / Manager chọn)
+exports.getAllGuidesList = async (req, res) => {
+  try {
+    const [guides] = await sequelize.query(`
+      SELECT g.guide_id, g.user_id, g.license_number, g.experience_years, u.full_name, u.email, u.phone, u.avatar, u.status
+      FROM guides g
+      JOIN users u ON g.user_id = u.user_id
+      ORDER BY g.guide_id ASC
+    `);
+
+    res.status(200).json({
+      success: true,
+      data: guides
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

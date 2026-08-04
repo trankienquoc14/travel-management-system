@@ -240,18 +240,6 @@ const HREmployeeManagement = () => {
             </div>
 
             <div className="form-group">
-              <label>Vai trò hệ thống *</label>
-              <select name="role_id" value={formData.role_id} onChange={handleChange} required>
-                <option value={2}>HR Manager (Quản lý nhân sự)</option>
-                <option value={3}>Tour Manager (Quản lý Tour)</option>
-                <option value={4}>Office Staff (Nhân viên văn phòng)</option>
-                <option value={5}>Tour Guide (Hướng dẫn viên)</option>
-                <option value={7}>Partner (Đối tác cung ứng)</option>
-                <option value={1}>Administrator (Quản trị viên)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
               <label>Giới tính</label>
               <select name="gender" value={formData.gender} onChange={handleChange}>
                 <option value="Male">Nam</option>
@@ -305,6 +293,13 @@ const HREmployeeManagement = () => {
         <button className="btn-add-new" onClick={handleAddNew}>
           + Thêm Nhân viên
         </button>
+      </div>
+
+      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '13.5px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span>ℹ️</span>
+        <span>
+          <strong>Lưu ý về Phân vai trò:</strong> Chức năng Quản lý Nhân sự chỉ quản lý thông tin hồ sơ & tài khoản làm việc. Việc phân bổ / thay đổi <strong>Vai trò hệ thống (Role)</strong> được thực hiện độc quyền bởi <strong>Admin</strong> tại menu <em>Quản lý Người dùng</em>.
+        </span>
       </div>
 
       <div style={{ marginBottom: '16px', display: 'flex', gap: '10px' }}>

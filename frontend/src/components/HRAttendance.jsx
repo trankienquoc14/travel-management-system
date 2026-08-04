@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import GPSCheckInWidget from './GPSCheckInWidget';
 
 const HRAttendance = () => {
   const [activeSubTab, setActiveSubTab] = useState('summary'); // Mặc định là 'summary' (Tổng hợp theo nhân viên dạng lưới tháng)
@@ -37,11 +38,8 @@ const HRAttendance = () => {
 
   const [newShift, setNewShift] = useState({ name: '', checkIn: '08:00', checkOut: '17:00', gracePeriod: 15, activeDays: 'T2 - T6' });
 
-  // Mẫu Đơn nghỉ phép (Simulated)
-  const [leaveRequests, setLeaveRequests] = useState([
-    { id: 1, name: 'Nguyễn Văn Hướng dẫn viên 2', role: 'Tour Guide', type: '🏥 Nghỉ phép', reason: 'Đi khám bệnh định kỳ', fromDate: '2026-07-26', toDate: '2026-07-26', status: 'Pending' },
-    { id: 2, name: 'Trần Văn Nhân viên 1', role: 'Office Staff', type: '🏥 Nghỉ phép', reason: 'Giải quyết việc riêng gia đình', fromDate: '2026-07-28', toDate: '2026-07-29', status: 'Approved' }
-  ]);
+  // Mẫu Đơn nghỉ phép
+  const [leaveRequests, setLeaveRequests] = useState([]);
 
   // Tính số ngày trong tháng được chọn
   const getDaysInMonth = (month, year) => {
@@ -555,6 +553,7 @@ const HRAttendance = () => {
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                   <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Nhân sự</th>
+                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>📸 Ảnh Selfie AI</th>
                   <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Trạng thái</th>
                   <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Giờ Vào</th>
                   <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Giờ Ra</th>
@@ -568,6 +567,20 @@ const HRAttendance = () => {
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: '600', color: '#1e293b' }}>{emp.full_name}</div>
                       <div style={{ fontSize: '12px', color: '#64748b' }}>{emp.role_name} • {emp.email}</div>
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      {emp.face_image_url ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <img 
+                            src={emp.face_image_url.startsWith('http') ? emp.face_image_url : `http://localhost:5000${emp.face_image_url}`} 
+                            alt="Selfie Checkin" 
+                            style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
+                          />
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534' }}>Khớp {emp.match_confidence || 98.5}%</span>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>Chưa có ảnh</span>
+                      )}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <select

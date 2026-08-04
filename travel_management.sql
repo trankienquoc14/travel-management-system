@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th7 28, 2026 lúc 04:21 PM
+-- Thời gian đã tạo: Th8 04, 2026 lúc 04:25 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -122,7 +122,7 @@ CREATE TABLE `custom_tour_quotes` (
   `itinerary` longtext DEFAULT NULL,
   `staff_note` text DEFAULT NULL,
   `manager_note` text DEFAULT NULL,
-  `approval_status` enum('Pending','Initial_Quoted','Designing','Pending_Approval','Approved','Rejected','Quote_Sent','Customer_Revision','Customer_Accepted') DEFAULT 'Pending',
+  `approval_status` varchar(50) DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -164,7 +164,7 @@ CREATE TABLE `custom_tour_requests` (
   `base_cost` decimal(15,2) DEFAULT 0.00,
   `quoted_price` decimal(15,2) DEFAULT 0.00,
   `staff_note` text DEFAULT NULL,
-  `status` enum('Pending','Initial_Quoted','Designing','Pending_Manager_Approval','Manager_Rejected','Manager_Approved','Sent_To_Customer','Customer_Revision','Customer_Accepted','Completed','Canceled') DEFAULT 'Pending',
+  `status` varchar(50) DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -174,8 +174,8 @@ CREATE TABLE `custom_tour_requests` (
 
 INSERT INTO `custom_tour_requests` (`request_id`, `customer_id`, `destination`, `departure_date`, `return_date`, `people_count`, `budget`, `requirements`, `markup_percent`, `base_cost`, `quoted_price`, `staff_note`, `status`, `created_at`) VALUES
 (7, 8, 'Nha Trang', '2026-07-24', '2026-07-26', 1, 6000000.00, '{\"hotel\":\"2\",\"transport\":\"9\",\"activities\":[1,2,3,5,4,7,6],\"note\":\"\",\"participantBreakdown\":{\"adults\":1,\"children\":0},\"hotelName\":\"Khách sạn Mường Thanh Nha Trang - Phòng Cao cấp (Deluxe View) - Đêm\",\"hotelPrice\":1200000,\"transportName\":\"Dịch vụ xe ghép 16 chỗ - Thuê xe Du lịch 16 chỗ - Ngày\",\"transportPrice\":1500000,\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000}]}', 15, 4520000.00, 1500000.00, '', 'Initial_Quoted', '2026-07-02 19:21:35'),
-(8, 8, 'Đà Lạt', '2026-07-08', '2026-07-10', 2, 4000000.00, '{\"hotel\":\"3\",\"transport\":\"8\",\"activities\":[8,9,10,12,11,13,14],\"note\":\"\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"hotelPrice\":1000000,\"transportName\":\"Nhà xe Phương Trang (FUTA Bus) - Vé xe giường nằm - Khứ hồi\",\"transportPrice\":600000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000}]}', 20, 0.00, 0.00, NULL, '', '2026-07-04 07:54:17'),
-(9, 8, 'Đà Lạt', '2026-07-21', '2026-07-23', 2, 5000000.00, '{\"hotel\":\"3\",\"transport\":\"8\",\"activities\":[8,9,10,12,14,13],\"note\":\"\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"hotelPrice\":1000000,\"transportName\":\"Nhà xe Phương Trang (FUTA Bus) - Vé xe giường nằm - Khứ hồi\",\"transportPrice\":600000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000}]}', 20, 0.00, 0.00, NULL, '', '2026-07-09 06:11:25'),
+(8, 8, 'Đà Lạt', '2026-07-08', '2026-07-10', 2, 4000000.00, '{\"hotel\":\"3\",\"transport\":\"8\",\"activities\":[8,9,10,12,11,13,14],\"note\":\"\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"hotelPrice\":1000000,\"transportName\":\"Nhà xe Phương Trang (FUTA Bus) - Vé xe giường nằm - Khứ hồi\",\"transportPrice\":600000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000}]}', 20, 0.00, 0.00, NULL, 'Pending_Manager_Approval', '2026-07-04 07:54:17'),
+(9, 8, 'Đà Lạt', '2026-07-21', '2026-07-23', 2, 5000000.00, '{\"hotel\":\"3\",\"transport\":\"8\",\"activities\":[8,9,10,12,14,13],\"note\":\"\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"hotelPrice\":1000000,\"transportName\":\"Nhà xe Phương Trang (FUTA Bus) - Vé xe giường nằm - Khứ hồi\",\"transportPrice\":600000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000}]}', 20, 0.00, 0.00, NULL, 'Pending_Manager_Approval', '2026-07-09 06:11:25'),
 (10, 8, 'Đà Lạt', '2026-07-31', '2026-08-02', 2, 3000000.00, '{\"hotel\":\"8\",\"transport\":\"3\",\"activities\":[8,9,10,13,12,11],\"note\":\"\",\"pickup_location\":\"58 Nguyễn Oanh, Hạnh Thông, Hồ Chí Minh\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":1300000,\"transportName\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"transportPrice\":400000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000}]}', 20, 0.00, 2988000.00, NULL, 'Initial_Quoted', '2026-07-24 07:42:33');
 
 -- --------------------------------------------------------
@@ -334,18 +334,18 @@ CREATE TABLE `itineraries` (
 --
 
 INSERT INTO `itineraries` (`itinerary_id`, `tour_id`, `day_number`, `title`, `description`) VALUES
-(6, 7, 1, 'Ngày 1: Khám phá Đà Lạt', ''),
-(7, 7, 2, 'Ngày 2: Khám phá Đà Lạt', ''),
-(8, 7, 3, 'Ngày 3: Khám phá Đà Lạt', ''),
-(9, 8, 1, 'Ngày 1: Khám phá Phú Quốc', ''),
-(10, 8, 2, 'Ngày 2: Khám phá Phú Quốc', ''),
-(11, 8, 3, 'Ngày 3: Khám phá Phú Quốc', ''),
-(12, 9, 1, 'Ngày 1: Khám phá Đà Lạt', ''),
-(13, 9, 2, 'Ngày 2: Khám phá Đà Lạt', ''),
-(14, 9, 3, 'Ngày 3: Khám phá Đà Lạt', ''),
-(24, 10, 1, 'Ngày 1: Khám phá Phú Quốc', ''),
-(25, 10, 2, 'Ngày 2: Khám phá Phú Quốc', ''),
-(26, 10, 3, 'Ngày 3: Khám phá Phú Quốc', '');
+(27, 7, 1, 'Ngày 1: TP.HCM - Đà Lạt: Thành Phố Ngàn Hoa & Quảng Trường Lâm Viên', '🌅 06:00 - 08:30: Tập trung đoàn tại Văn phòng TravelERP. HDV phát thẻ đoàn, kiểm tra danh sách hành khách và phổ biến nội quy chuyến đi. Khởi hành đi Đà Lạt bằng xe du lịch đời mới. Dùng điểm tâm sáng với Bánh canh Trảng Bàng đặc sản.\n\n☀️ 11:30 - 13:00: Đoàn dừng chân dùng cơm trưa tại Nhà hàng Tâm Châu (Bảo Lộc), thưởng thức danh trà & cà phê tự do. HDV điểm danh số lượng khách trước khi xe vượt đèo Bảo Lộc.\n\n🌇 15:30 - 17:30: Đến Đà Lạt, đoàn làm thủ tục nhận phòng tại Khách sạn TTC Hotel Premium (4 sao). Tự do nghỉ ngơi. HDV chuẩn bị sẵn vé tham quan cho các ngày tiếp theo.\n\n🌙 18:00 - 21:00: Dùng tiệc tối tại Nhà hàng Lê Lai với thực đơn đặc sản vùng cao. Tự do dạo ngắm Chợ Đêm Đà Lạt, check-in Quảng trường Lâm Viên, nụ hoa Atiso khổng lồ và thưởng thức sữa đậu nành nóng. HDV nhắc nhở khách giờ tập trung sáng Ngày 2.'),
+(28, 7, 2, 'Ngày 2: Chinh Phục Đỉnh Langbiang - Thung Lũng Tình Yêu - Đồi Chè Cầu Đất', '🌅 07:00 - 08:00: Dùng điểm tâm buffet sáng tại khách sạn. HDV kiểm tra sĩ số đoàn lên xe khởi hành.\n\n☀️ 08:30 - 11:30: Khởi hành tham quan Khu du lịch Langbiang. HDV làm thủ tục hỗ trợ đoàn lên xe Jeep chinh phục đỉnh Rada ngắm toàn cảnh thung lũng Đankia và suối Vàng suối Bạc.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng dưới chân núi Langbiang với thực đơn Cơm lam thịt nướng Tây Nguyên. \n\n🌆 14:30 - 17:30: Di chuyển tham quan Đồi Chè Cầu Đất & Tuabin gió khổng lồ. HDV hỗ trợ chụp ảnh lưu niệm đoàn. Trên đường về ghé tham quan Vườn dâu tây công nghệ cao và cơ sở mua sắm mứt Đà Lạt.\n\n🌙 18:30 - 21:30: Tham gia đêm Giao lưu Cồng chiêng Tây Nguyên dưới chân núi Mẹ, thưởng thức rượu cần & thịt lợn rừng nướng. HDV điều phối hoạt động văn hóa nghệ thuật với đồng bào dân tộc K\'Ho.'),
+(29, 7, 3, 'Ngày 3: Thiền Viện Trúc Lâm - Chợ Đà Lạt - TP.HCM', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet, làm thủ tục trả phòng khách sạn. HDV kiểm tra kỹ hành lý và tài sản cá nhân giúp hành khách.\n\n☀️ 08:30 - 11:00: Viếng Thiền Viện Trúc Lâm thanh tĩnh ngắm Hồ Tuyền Lâm. HDV hướng dẫn đoàn trải nghiệm cáp treo Đồi Robin ngắm toàn cảnh rừng thông thơ mộng.\n\n🌇 11:30 - 13:30: Dùng cơm trưa tại Nhà hàng Hướng Dương (Bảo Lộc). Mua sắm quà lưu niệm (Trà, Cà phê, Mứt hoa quả) cho người thân.\n\n🌙 18:00 - 19:00: Xe đưa đoàn về lại điểm đón ban đầu tại TP.HCM. HDV phát phiếu khảo sát chất lượng dịch vụ, gửi lời cảm ơn và hỗ trợ hành khách trả hành lý. Kết thúc chuyến đi an toàn.'),
+(30, 9, 1, 'Ngày 1: TP.HCM - Đà Lạt: Thành Phố Ngàn Hoa & Quảng Trường Lâm Viên', '🌅 06:00 - 08:30: Tập trung đoàn tại Văn phòng TravelERP. HDV phát thẻ đoàn, kiểm tra danh sách hành khách và phổ biến nội quy chuyến đi. Khởi hành đi Đà Lạt bằng xe du lịch đời mới. Dùng điểm tâm sáng với Bánh canh Trảng Bàng đặc sản.\n\n☀️ 11:30 - 13:00: Đoàn dừng chân dùng cơm trưa tại Nhà hàng Tâm Châu (Bảo Lộc), thưởng thức danh trà & cà phê tự do. HDV điểm danh số lượng khách trước khi xe vượt đèo Bảo Lộc.\n\n🌇 15:30 - 17:30: Đến Đà Lạt, đoàn làm thủ tục nhận phòng tại Khách sạn TTC Hotel Premium (4 sao). Tự do nghỉ ngơi. HDV chuẩn bị sẵn vé tham quan cho các ngày tiếp theo.\n\n🌙 18:00 - 21:00: Dùng tiệc tối tại Nhà hàng Lê Lai với thực đơn đặc sản vùng cao. Tự do dạo ngắm Chợ Đêm Đà Lạt, check-in Quảng trường Lâm Viên, nụ hoa Atiso khổng lồ và thưởng thức sữa đậu nành nóng. HDV nhắc nhở khách giờ tập trung sáng Ngày 2.'),
+(31, 9, 2, 'Ngày 2: Chinh Phục Đỉnh Langbiang - Thung Lũng Tình Yêu - Đồi Chè Cầu Đất', '🌅 07:00 - 08:00: Dùng điểm tâm buffet sáng tại khách sạn. HDV kiểm tra sĩ số đoàn lên xe khởi hành.\n\n☀️ 08:30 - 11:30: Khởi hành tham quan Khu du lịch Langbiang. HDV làm thủ tục hỗ trợ đoàn lên xe Jeep chinh phục đỉnh Rada ngắm toàn cảnh thung lũng Đankia và suối Vàng suối Bạc.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng dưới chân núi Langbiang với thực đơn Cơm lam thịt nướng Tây Nguyên. \n\n🌆 14:30 - 17:30: Di chuyển tham quan Đồi Chè Cầu Đất & Tuabin gió khổng lồ. HDV hỗ trợ chụp ảnh lưu niệm đoàn. Trên đường về ghé tham quan Vườn dâu tây công nghệ cao và cơ sở mua sắm mứt Đà Lạt.\n\n🌙 18:30 - 21:30: Tham gia đêm Giao lưu Cồng chiêng Tây Nguyên dưới chân núi Mẹ, thưởng thức rượu cần & thịt lợn rừng nướng. HDV điều phối hoạt động văn hóa nghệ thuật với đồng bào dân tộc K\'Ho.'),
+(32, 9, 3, 'Ngày 3: Thiền Viện Trúc Lâm - Chợ Đà Lạt - TP.HCM', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet, làm thủ tục trả phòng khách sạn. HDV kiểm tra kỹ hành lý và tài sản cá nhân giúp hành khách.\n\n☀️ 08:30 - 11:00: Viếng Thiền Viện Trúc Lâm thanh tĩnh ngắm Hồ Tuyền Lâm. HDV hướng dẫn đoàn trải nghiệm cáp treo Đồi Robin ngắm toàn cảnh rừng thông thơ mộng.\n\n🌇 11:30 - 13:30: Dùng cơm trưa tại Nhà hàng Hướng Dương (Bảo Lộc). Mua sắm quà lưu niệm (Trà, Cà phê, Mứt hoa quả) cho người thân.\n\n🌙 18:00 - 19:00: Xe đưa đoàn về lại điểm đón ban đầu tại TP.HCM. HDV phát phiếu khảo sát chất lượng dịch vụ, gửi lời cảm ơn và hỗ trợ hành khách trả hành lý. Kết thúc chuyến đi an toàn.'),
+(33, 8, 1, 'Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club', '🌅 07:30 - 09:30: Xe & HDV đón đoàn tại Sân bay Phú Quốc / Bến tàu Rạch Giá. Dùng điểm tâm sáng với đặc sản Bún quậy Kiến Xây nổi tiếng.\n\n☀️ 10:00 - 12:00: Tham quan Cơ sở nuôi cấy Ngọc Trai Phú Quốc, lắng nghe quy trình nuôi cấy ngọc trai thiên nhiên biển Nam. HDV tư vấn đòn mua sắm ngọc trai chính hiệu.\n\n🌇 12:30 - 15:30: Dùng cơm trưa hải sản tại Nhà hàng ven biển. Nhận phòng Resort Sunset Beach (4 sao). Tự do tắm biển & nghỉ ngơi.\n\n🌙 16:30 - 21:00: HDV đưa đoàn đến Sunset Sanato Beach Club ngắm hoàng hôn ngút ngàn và chụp ảnh tượng voi chân dài, tượng người gác cổng. Dùng tiệc tối hải sản tươi sống và tự do dạo Chợ đêm Phú Quốc.'),
+(34, 8, 2, 'Ngày 2: Tour 4 Đảo Canô - Lặn Ngắm San Ho - Cáp Treo Hòn Thơm', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet tại Resort. HDV nhắc nhở quý khách chuẩn bị trang phục bơi, kem chống nắng, túi chống nước điện thoại.\n\n☀️ 08:30 - 12:30: Di chuyển xuống Cảng An Thới. Lên Canô cao tốc lướt biển khám phá 4 đảo: Hòn Mây Rút, Hòn Móng Tay, Hòn Gầm Ghì. HDV hỗ trợ trang thiết bị lặn ngắm san hô tự nhiên & chụp ảnh quay phim flycam.\n\n🌇 13:00 - 16:30: Dùng bữa trưa hải sản trên đảo. Trải nghiệm Cáp treo Hòn Thơm vượt biển dài nhất thế giới và vui chơi tại Công viên nước Aquatopia.\n\n🌙 18:30 - 21:30: Xe đưa đoàn dùng cơm tối với đặc sản Gỏi cá trích & Rượu sim rừng. Tự do dạo phố biển hoặc đăng ký Tour trải nghiệm câu mực đêm cùng ngư dân.'),
+(35, 8, 3, 'Ngày 3: Chùa Hộ Quốc - Dinh Cậu - Tạm Biệt Phú Quốc', '🌅 07:30 - 08:30: Dùng điểm tâm sáng, làm thủ tục trả phòng resort. HDV tập trung đoàn kiểm tra hành lý.\n\n☀️ 09:00 - 11:30: Viếng Chùa Hộ Quốc (Thiền Viện Trúc Lâm Hộ Quốc) tựa lưng núi hướng biển xanh. Tham quan Nhà thùng nước mắm truyền thống Phụng Hưng & Dinh Cậu tâm linh.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng. Mua sắm đặc sản Nước mắm Phú Quốc, Hạt tiêu Suối Đá, Rượu sim làm quà.\n\n🌙 15:00 - 17:00: Xe đưa đoàn ra Sân bay Phú Quốc / Bến tàu. HDV hỗ trợ làm thủ tục check-in vé và gửi lời chào tạm biệt quý khách.'),
+(36, 10, 1, 'Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club', '🌅 07:30 - 09:30: Xe & HDV đón đoàn tại Sân bay Phú Quốc / Bến tàu Rạch Giá. Dùng điểm tâm sáng với đặc sản Bún quậy Kiến Xây nổi tiếng.\n\n☀️ 10:00 - 12:00: Tham quan Cơ sở nuôi cấy Ngọc Trai Phú Quốc, lắng nghe quy trình nuôi cấy ngọc trai thiên nhiên biển Nam. HDV tư vấn đòn mua sắm ngọc trai chính hiệu.\n\n🌇 12:30 - 15:30: Dùng cơm trưa hải sản tại Nhà hàng ven biển. Nhận phòng Resort Sunset Beach (4 sao). Tự do tắm biển & nghỉ ngơi.\n\n🌙 16:30 - 21:00: HDV đưa đoàn đến Sunset Sanato Beach Club ngắm hoàng hôn ngút ngàn và chụp ảnh tượng voi chân dài, tượng người gác cổng. Dùng tiệc tối hải sản tươi sống và tự do dạo Chợ đêm Phú Quốc.'),
+(37, 10, 2, 'Ngày 2: Tour 4 Đảo Canô - Lặn Ngắm San Ho - Cáp Treo Hòn Thơm', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet tại Resort. HDV nhắc nhở quý khách chuẩn bị trang phục bơi, kem chống nắng, túi chống nước điện thoại.\n\n☀️ 08:30 - 12:30: Di chuyển xuống Cảng An Thới. Lên Canô cao tốc lướt biển khám phá 4 đảo: Hòn Mây Rút, Hòn Móng Tay, Hòn Gầm Ghì. HDV hỗ trợ trang thiết bị lặn ngắm san hô tự nhiên & chụp ảnh quay phim flycam.\n\n🌇 13:00 - 16:30: Dùng bữa trưa hải sản trên đảo. Trải nghiệm Cáp treo Hòn Thơm vượt biển dài nhất thế giới và vui chơi tại Công viên nước Aquatopia.\n\n🌙 18:30 - 21:30: Xe đưa đoàn dùng cơm tối với đặc sản Gỏi cá trích & Rượu sim rừng. Tự do dạo phố biển hoặc đăng ký Tour trải nghiệm câu mực đêm cùng ngư dân.'),
+(38, 10, 3, 'Ngày 3: Chùa Hộ Quốc - Dinh Cậu - Tạm Biệt Phú Quốc', '🌅 07:30 - 08:30: Dùng điểm tâm sáng, làm thủ tục trả phòng resort. HDV tập trung đoàn kiểm tra hành lý.\n\n☀️ 09:00 - 11:30: Viếng Chùa Hộ Quốc (Thiền Viện Trúc Lâm Hộ Quốc) tựa lưng núi hướng biển xanh. Tham quan Nhà thùng nước mắm truyền thống Phụng Hưng & Dinh Cậu tâm linh.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng. Mua sắm đặc sản Nước mắm Phú Quốc, Hạt tiêu Suối Đá, Rượu sim làm quà.\n\n🌙 15:00 - 17:00: Xe đưa đoàn ra Sân bay Phú Quốc / Bến tàu. HDV hỗ trợ làm thủ tục check-in vé và gửi lời chào tạm biệt quý khách.');
 
 -- --------------------------------------------------------
 
@@ -364,18 +364,6 @@ CREATE TABLE `itinerary_activities` (
   `note` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `itinerary_activities`
---
-
-INSERT INTO `itinerary_activities` (`activity_id`, `itinerary_id`, `activity_type`, `reference_id`, `start_time`, `end_time`, `order_index`, `note`) VALUES
-(19, 24, 'Place', 15, '14:00:00', NULL, 3, NULL),
-(20, 24, 'Place', 19, '19:00:00', NULL, 4, NULL),
-(21, 25, 'Place', 16, '08:00:00', NULL, 1, NULL),
-(22, 25, 'Place', 20, '19:00:00', NULL, 3, NULL),
-(23, 26, 'Place', 18, '08:00:00', NULL, 1, NULL),
-(24, 26, 'Place', 17, '14:00:00', NULL, 3, NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -389,32 +377,6 @@ CREATE TABLE `itinerary_places` (
   `visit_order` int(11) DEFAULT 1 COMMENT 'Thứ tự tham quan trong ngày',
   `visit_time` time DEFAULT NULL COMMENT 'Giờ dự kiến (VD: 08:30:00)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Đang đổ dữ liệu cho bảng `itinerary_places`
---
-
-INSERT INTO `itinerary_places` (`id`, `itinerary_id`, `place_id`, `visit_order`, `visit_time`) VALUES
-(2, 6, 8, 2, '14:00:00'),
-(3, 6, 13, 3, '19:00:00'),
-(4, 7, 9, 1, '08:00:00'),
-(5, 7, 10, 2, '14:00:00'),
-(6, 7, 12, 3, '19:00:00'),
-(7, 8, 14, 2, '14:00:00'),
-(8, 8, 11, 3, '19:00:00'),
-(9, 9, 15, 2, '14:00:00'),
-(10, 10, 16, 1, '08:00:00'),
-(11, 10, 18, 2, '14:00:00'),
-(12, 10, 17, 3, '14:00:00'),
-(13, 11, 19, 1, '08:00:00'),
-(14, 11, 20, 4, '19:00:00'),
-(15, 12, 10, 2, '14:00:00'),
-(16, 12, 11, 3, '19:00:00'),
-(17, 13, 8, 1, '08:00:00'),
-(18, 13, 12, 2, '14:00:00'),
-(19, 13, 13, 3, '19:00:00'),
-(20, 14, 9, 1, '08:00:00'),
-(21, 14, 14, 2, '14:00:00');
 
 -- --------------------------------------------------------
 
@@ -740,6 +702,13 @@ CREATE TABLE `timekeeping` (
   `status` enum('Present','Absent','Late','Leave') DEFAULT 'Present',
   `check_in` time DEFAULT NULL,
   `check_out` time DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  `location_address` varchar(255) DEFAULT NULL,
+  `device_info` varchar(255) DEFAULT NULL,
+  `face_image_url` varchar(255) DEFAULT NULL,
+  `face_verified` tinyint(1) DEFAULT 1,
+  `match_confidence` decimal(5,2) DEFAULT 98.50,
   `notes` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -747,13 +716,10 @@ CREATE TABLE `timekeeping` (
 -- Đang đổ dữ liệu cho bảng `timekeeping`
 --
 
-INSERT INTO `timekeeping` (`timekeeping_id`, `employee_id`, `work_date`, `status`, `check_in`, `check_out`, `notes`) VALUES
-(1, 2, '2026-07-26', 'Present', '08:00:00', '17:00:00', NULL),
-(2, 3, '2026-07-26', 'Present', '08:00:00', '17:00:00', NULL),
-(3, 4, '2026-07-26', 'Present', '08:00:00', '17:00:00', NULL),
-(4, 5, '2026-07-26', 'Present', '08:00:00', '17:00:00', NULL),
-(5, 6, '2026-07-26', 'Present', '08:00:00', '17:00:00', NULL),
-(6, 4, '2026-07-27', 'Present', '08:00:00', '17:00:00', 'Đúng giờ');
+INSERT INTO `timekeeping` (`timekeeping_id`, `employee_id`, `work_date`, `status`, `check_in`, `check_out`, `latitude`, `longitude`, `location_address`, `device_info`, `face_image_url`, `face_verified`, `match_confidence`, `notes`) VALUES
+(1, 2, '2026-08-04', 'Late', '14:35:57', '14:36:12', 10.83480407, 106.63652891, 'Hẻm 54/75 Bùi Quang Là, Khu phố 16, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71509, Việt Nam', 'Browser Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb', NULL, 1, 98.50, 'Định vị GPS chính xác ±124m | Định vị GPS chính xác ±124m'),
+(2, 5, '2026-08-04', 'Late', '20:59:42', '21:00:26', 10.83481648, 106.63652603, 'Hẻm 74 Bùi Quang Là, Khu phố 15, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71427, Việt Nam', 'Browser AI Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_5_1785851982704.jpg', 1, 98.50, 'Đã xác thực AI khuôn mặt (98.5%) + GPS ±117m | Đã xác thực AI khuôn mặt (98.5%) + GPS ±121m'),
+(3, 6, '2026-08-04', 'Late', '21:07:28', NULL, 10.83485025, 106.63647016, 'Hẻm 74 Bùi Quang Là, Khu phố 15, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71427, Việt Nam', 'Browser AI Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_6_1785852448081.jpg', 1, 98.50, 'Đã xác thực AI khuôn mặt (98.5%) + GPS ±115m');
 
 -- --------------------------------------------------------
 
@@ -832,7 +798,7 @@ CREATE TABLE `users` (
   `email` varchar(150) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
-  `avatar` varchar(255) DEFAULT NULL,
+  `avatar` text DEFAULT NULL,
   `gender` enum('Male','Female','Other') DEFAULT NULL,
   `date_of_birth` date DEFAULT NULL,
   `status` enum('Active','Inactive','Blocked') DEFAULT 'Active',
@@ -850,10 +816,11 @@ INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`
 (3, 3, 'Tour Manager', 'manager@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000003', NULL, 'Male', '1989-03-03', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:40'),
 (4, 4, 'Office Staff', 'staff@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000004', NULL, 'Female', '1995-04-04', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:45'),
 (5, 5, 'Guide One', 'guide1@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000005', NULL, 'Male', '1992-05-05', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:52'),
-(6, 5, 'Guide Two', 'guide2@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000006', NULL, 'Female', '1993-06-06', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:49:04'),
+(6, 5, 'Guide Two', 'guide2@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000006', '/uploads/avatar_6_1785853247689.jpg', 'Female', '1993-06-06', 'Active', '2026-06-20 17:53:17', '2026-08-04 14:20:47'),
 (7, 6, 'Nguyễn Văn Hoàng', 'nguyenvanhoang@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000007', NULL, 'Male', '2000-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-28 07:09:17'),
 (8, 6, 'Trần Kiến Quốc', 'trankienquoc@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000008', NULL, 'Female', '2001-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-28 07:10:12'),
-(9, 7, 'Nha xe Đức Mai', 'ducmai@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0326753674', NULL, 'Male', NULL, 'Active', '2026-06-27 09:59:12', '2026-06-28 06:58:12');
+(9, 7, 'Nha xe Đức Mai', 'ducmai@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0326753674', NULL, 'Male', NULL, 'Active', '2026-06-27 09:59:12', '2026-06-28 06:58:12'),
+(10, 4, 'tdoan', 'doanthitramyt2004@gmail.com', '$2b$10$Gpa90D0cbSaicPW3deTo/uxfKC2ehntZ02hC2qeWs8rM02MjXBJLi', '0347853897', NULL, 'Female', '2001-02-06', 'Active', '2026-08-03 13:03:03', '2026-08-03 13:03:03');
 
 --
 -- Chỉ mục cho các bảng đã đổ
@@ -1168,7 +1135,7 @@ ALTER TABLE `incident_reports`
 -- AUTO_INCREMENT cho bảng `itineraries`
 --
 ALTER TABLE `itineraries`
-  MODIFY `itinerary_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `itinerary_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT cho bảng `itinerary_activities`
@@ -1252,7 +1219,7 @@ ALTER TABLE `service_requests`
 -- AUTO_INCREMENT cho bảng `timekeeping`
 --
 ALTER TABLE `timekeeping`
-  MODIFY `timekeeping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `timekeeping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT cho bảng `tours`
@@ -1276,7 +1243,7 @@ ALTER TABLE `tour_category_map`
 -- AUTO_INCREMENT cho bảng `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Các ràng buộc cho các bảng đã đổ
