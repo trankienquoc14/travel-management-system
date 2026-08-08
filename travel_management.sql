@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th8 08, 2026 lúc 03:41 PM
+-- Thời gian đã tạo: Th8 08, 2026 lúc 08:23 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -249,7 +249,8 @@ INSERT INTO `destinations` (`destination_id`, `destination_name`, `description`,
 (13, 'Côn Đảo', 'Quần đảo nổi tiếng về lịch sử và biển đẹp', 'condao.jpg', 'Active'),
 (14, 'Vũng Tàu', 'Thành phố biển gần TP.HCM', 'vungtau.jpg', 'Active'),
 (15, 'Ninh Bình', 'Di sản Tràng An và Tam Cốc', 'ninhbinh.jpg', 'Active'),
-(16, 'Quảng Bình', 'Vương quốc hang động Việt Nam', 'quangbinh.jpg', 'Active');
+(16, 'Quảng Bình', 'Vương quốc hang động Việt Nam', 'quangbinh.jpg', 'Active'),
+(17, 'test_dest2', 'test', NULL, 'Active');
 
 -- --------------------------------------------------------
 
@@ -427,7 +428,10 @@ INSERT INTO `partners` (`partner_id`, `destination_id`, `partner_name`, `partner
 (5, 1, 'Khách sạn Mường Thanh Luxury', 'Hotel', NULL, NULL, 'partner.muongthanh@travel.com', '60 Trần Phú, Nha Trang', 'Active'),
 (6, 2, 'Hôtel Colline Đà Lạt', 'Hotel', NULL, NULL, NULL, '10 Phan Bội Châu, Đà Lạt', 'Active'),
 (7, 2, 'Ana Mandara Villas Dalat', 'Hotel', NULL, NULL, NULL, 'Lê Lai, Phường 5, Đà Lạt', 'Active'),
-(8, 3, 'JW Marriott Phu Quoc', 'Hotel', NULL, NULL, NULL, 'Bãi Khem, Phú Quốc', 'Active');
+(8, 3, 'JW Marriott Phu Quoc', 'Hotel', NULL, NULL, NULL, 'Bãi Khem, Phú Quốc', 'Active'),
+(9, 5, 'Mường Thanh Đà Nẵng', '', 'Quản lý', '0900000000', 'muongthanh_dn@gmail.com', NULL, 'Active'),
+(10, 1, 'Vinpearl Resort Nha Trang', '', 'Quản lý', '0900000000', 'vinpearl_nt@gmail.com', NULL, 'Active'),
+(11, NULL, 'Nhà Xe Hoàng Long Toàn Quốc', 'Transport', 'Quản lý', '0900000000', 'hoanglong_trans@gmail.com', NULL, 'Active');
 
 -- --------------------------------------------------------
 
@@ -441,8 +445,19 @@ CREATE TABLE `partner_services` (
   `service_id` int(11) DEFAULT NULL,
   `unit_price` decimal(15,2) DEFAULT NULL,
   `available_quantity` int(11) DEFAULT NULL,
-  `status` varchar(20) DEFAULT 'Active' COMMENT 'Trạng thái: Active hoặc Inactive'
+  `status` enum('Active','Inactive','Pending') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `partner_services`
+--
+
+INSERT INTO `partner_services` (`partner_service_id`, `partner_id`, `service_id`, `unit_price`, `available_quantity`, `status`) VALUES
+(1, 9, 12, 1200000.00, 50, 'Active'),
+(2, 10, 13, 2200000.00, 30, 'Active'),
+(3, 11, 14, 1000000.00, 10, 'Active'),
+(4, 11, 15, 1800000.00, 5, 'Active'),
+(6, 10, 20, 4000000.00, 3, 'Active');
 
 -- --------------------------------------------------------
 
@@ -585,8 +600,8 @@ INSERT INTO `places` (`place_id`, `destination_id`, `partner_id`, `place_name`, 
 (50, 8, NULL, 'Phố cổ Hà Nội', 'Tham quan', '36 phố phường', 0.00, 'phoco.jpg', 'Active'),
 (51, 8, NULL, 'Nhà hát Lớn', 'Tham quan', 'Kiến trúc Pháp', 0.00, 'nhahatlon.jpg', 'Active'),
 (52, 8, NULL, 'Hồ Tây', 'Tham quan', 'Hồ lớn nhất Hà Nội', 0.00, 'hotay.jpg', 'Active'),
-(53, 9, NULL, 'Vịnh Hạ Long', '', 'Kỳ quan thiên nhiên', 950000.00, 'halongbay.jpg', 'Active'),
-(54, 9, NULL, 'Hang Sửng Sốt', 'Tham quan', 'Hang động nổi tiếng', 150000.00, 'sungsot.jpg', 'Active'),
+(53, 9, NULL, 'Vịnh Hạ Long', 'Tham quan', 'Kỳ quan thiên nhiên', 950000.00, '/uploads/1786211402112-du-lich-vinh-Ha-Long-hinh-anh1_1625911963.webp', 'Active'),
+(54, 9, NULL, 'Hang Sửng Sốt', 'Tham quan', 'Hang động nổi tiếng', 150000.00, '/uploads/1786211339888-hang-sung-sot-2_1627633591.webp', 'Active'),
 (55, 9, NULL, 'Đảo Ti Tốp', 'Tham quan', 'Đảo đẹp của Hạ Long', 100000.00, '/uploads/1784714136526-dao-titop-quang-ninh-02_1625285135.webp', 'Active'),
 (56, 9, NULL, 'Sun World Hạ Long', 'Vui chơi', 'Công viên giải trí', 350000.00, '/uploads/1784714091209-sunworldHL.jpg', 'Active'),
 (57, 9, NULL, 'Bảo tàng Quảng Ninh', 'Tham quan', 'Kiến trúc độc đáo', 40000.00, '/uploads/1784713934970-images.jpg', 'Active');
@@ -642,7 +657,7 @@ CREATE TABLE `services` (
   `service_type` varchar(100) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `image_url` varchar(255) DEFAULT NULL,
-  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `status` enum('Active','Inactive','Pending') DEFAULT 'Active',
   `partner_id` int(11) DEFAULT NULL,
   `destination_id` int(11) DEFAULT NULL,
   `unit` varchar(50) DEFAULT NULL,
@@ -666,7 +681,12 @@ INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `descripti
 (7, 'Phòng Standard Hướng Phố', 'Khách sạn', NULL, NULL, 'Active', 5, 1, 'Phòng/Đêm', 900000.00, 1200000.00, 2, '{\"star_rating\": 4, \"room_type\": \"Standard\", \"bed_type\": \"2 Twin Beds\", \"has_breakfast\": true}'),
 (8, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 6, 2, 'Phòng/Đêm', 1300000.00, 1600000.00, 2, '{\"star_rating\": 4, \"room_type\": \"Superior\", \"bed_type\": \"1 Queen Bed\", \"has_breakfast\": true}'),
 (9, 'Villa 1 Phòng Ngủ (Cổ điển)', 'Khách sạn', NULL, NULL, 'Active', 7, 2, 'Căn/Đêm', 3200000.00, 3800000.00, 2, '{\"star_rating\": 5, \"room_type\": \"Villa\", \"architecture\": \"French Colonial\", \"has_breakfast\": true}'),
-(10, 'Emerald Bay View', 'Khách sạn', NULL, NULL, 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 6000000.00, 2, '{\"star_rating\": 5, \"room_type\": \"Premium\", \"bed_type\": \"1 King Bed\", \"has_breakfast\": true, \"welcome_drink\": true}');
+(10, 'Emerald Bay View', 'Khách sạn', '', '/uploads/1786211032534-907253131.avif', 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 6000000.00, 2, '{}'),
+(12, 'Phòng Deluxe Hướng Biển', 'Accommodation', '', '/uploads/1786211263783-230213333.jpg', 'Active', NULL, 5, 'Phòng/Đêm', 1200000.00, 1500000.00, 0, '{}'),
+(13, 'Phòng Suite Cao Cấp', 'Accommodation', '', '/uploads/1786211185878-710398912.webp', 'Active', NULL, 1, 'Phòng/Đêm', 2000000.00, 2500000.00, 0, '{}'),
+(14, 'Xe Ford Transit 16 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210855576-636069820.webp', 'Active', NULL, NULL, 'Xe/Ngày', 960000.00, 1200000.00, 0, '{}'),
+(15, 'Xe Thaco 29 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210745118-332571067.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1760000.00, 2200000.00, 0, '{}'),
+(20, 'Phòng Suite Cơ Bản', 'Khách sạn', 'Trải nghiệm sang trọng, dịch vụ đẳng cấp', '/uploads/1786209370282-387963415.webp', 'Active', 10, 1, 'Phòng/Đêm', 0.00, 4200000.00, 2, '{}');
 
 -- --------------------------------------------------------
 
@@ -693,7 +713,8 @@ CREATE TABLE `service_bookings` (
 --
 
 INSERT INTO `service_bookings` (`booking_id`, `customer_id`, `service_id`, `quantity`, `usage_date`, `total_amount`, `payment_method`, `status`, `voucher_code`, `notes`, `created_at`) VALUES
-(1, 8, 7, 1, '2026-08-09', 1200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-7C4CIH', '', '2026-08-08 03:30:55');
+(1, 8, 7, 1, '2026-08-09', 1200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-7C4CIH', '', '2026-08-08 03:30:55'),
+(3, 8, 20, 1, '2026-08-13', 4200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-PJ14XB', '', '2026-08-08 18:03:44');
 
 -- --------------------------------------------------------
 
@@ -718,7 +739,8 @@ CREATE TABLE `service_requests` (
 --
 
 INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_id`, `partner_id`, `requested_by`, `request_content`, `status`, `created_at`, `agreed_price`) VALUES
-(7, NULL, 1, 5, 4, 'Khách hàng đặt: Ngày 2026-08-09 - Số lượng: 1', 'Accepted', '2026-08-08 10:39:19', 1200000);
+(7, NULL, 1, 5, 4, 'Khách hàng đặt: Ngày 2026-08-09 - Số lượng: 1', 'Accepted', '2026-08-08 10:39:19', 1200000),
+(8, NULL, 3, 10, 8, 'Khách hàng đặt: Ngày 2026-08-13 - Số lượng: 1', 'Accepted', '2026-08-08 18:03:44', 4200000);
 
 -- --------------------------------------------------------
 
@@ -854,7 +876,10 @@ INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`
 (8, 6, 'Trần Kiến Quốc', 'trankienquoc@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000008', NULL, 'Female', '2001-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-28 07:10:12'),
 (9, 7, 'Nha xe Đức Mai', 'ducmai@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0326753674', NULL, 'Male', NULL, 'Active', '2026-06-27 09:59:12', '2026-06-28 06:58:12'),
 (10, 4, 'tdoan', 'doanthitramyt2004@gmail.com', '$2b$10$Gpa90D0cbSaicPW3deTo/uxfKC2ehntZ02hC2qeWs8rM02MjXBJLi', '0347853897', NULL, 'Female', '2001-02-06', 'Active', '2026-08-03 13:03:03', '2026-08-03 13:03:03'),
-(11, 7, 'Partner', 'partner.muongthanh@travel.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000055', NULL, NULL, NULL, 'Active', '2026-08-08 10:23:29', '2026-08-08 10:25:08');
+(11, 7, 'Partner', 'partner.muongthanh@travel.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000055', NULL, NULL, NULL, 'Active', '2026-08-08 10:23:29', '2026-08-08 10:25:08'),
+(12, 7, 'KS Mường Thanh Đà Nẵng', 'muongthanh_dn@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0901234567', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:03'),
+(13, 7, 'Vinpearl Nha Trang', 'vinpearl_nt@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0902345678', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:51'),
+(14, 7, 'Nhà Xe Hoàng Long', 'hoanglong_trans@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0903456789', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:11');
 
 --
 -- Chỉ mục cho các bảng đã đổ
@@ -1151,7 +1176,7 @@ ALTER TABLE `departure_updates`
 -- AUTO_INCREMENT cho bảng `destinations`
 --
 ALTER TABLE `destinations`
-  MODIFY `destination_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `destination_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT cho bảng `guides`
@@ -1199,13 +1224,13 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT cho bảng `partners`
 --
 ALTER TABLE `partners`
-  MODIFY `partner_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `partner_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT cho bảng `partner_services`
 --
 ALTER TABLE `partner_services`
-  MODIFY `partner_service_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `partner_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT cho bảng `payments`
@@ -1247,19 +1272,19 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT cho bảng `services`
 --
 ALTER TABLE `services`
-  MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT cho bảng `service_bookings`
 --
 ALTER TABLE `service_bookings`
-  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT cho bảng `service_requests`
 --
 ALTER TABLE `service_requests`
-  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT cho bảng `timekeeping`
@@ -1289,7 +1314,7 @@ ALTER TABLE `tour_category_map`
 -- AUTO_INCREMENT cho bảng `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- Các ràng buộc cho các bảng đã đổ

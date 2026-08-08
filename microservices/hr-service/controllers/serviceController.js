@@ -12,12 +12,16 @@ exports.getAllPartners = async (req, res) => {
 
 exports.getAllServices = async (req, res) => {
     try {
-        // Câu lệnh SQL mới cực kỳ tối giản, không còn JOIN rườm rà
         const [services] = await sequelize.query(`
-            SELECT s.*, p.partner_name, d.destination_name
+            SELECT s.*, p.partner_name, d.destination_name, ps.proposed_cost
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             LEFT JOIN travel_management.destinations d ON s.destination_id = d.destination_id
+            LEFT JOIN (
+                SELECT service_id, MAX(unit_price) AS proposed_cost 
+                FROM partner_services 
+                GROUP BY service_id
+            ) ps ON s.service_id = ps.service_id
             ORDER BY s.service_id DESC
         `);
 
@@ -70,6 +74,15 @@ exports.updateService = async (req, res) => {
             attributes || '{}', status || 'Active', id
         ] });
 
+        // Nếu Quản lý Tour duyệt (status === 'Active'), thì cập nhật cho partner_services tương ứng
+        if (status === 'Active' && partner_id) {
+            await sequelize.query(`
+                UPDATE partner_services 
+                SET status = 'Active' 
+                WHERE service_id = ? AND partner_id = ?
+            `, { replacements: [id, partner_id] });
+        }
+
         res.status(200).json({ success: true, message: 'Cập nhật Dịch vụ thành công!' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -79,12 +92,12 @@ exports.updateService = async (req, res) => {
 exports.deleteService = async (req, res) => {
     try {
         const { id } = req.params;
-        await sequelize.query('DELETE FROM services WHERE service_id = ?', { replacements: [id] });
-        res.status(200).json({ success: true, message: 'Xóa Dịch vụ thành công!' });
+        // Gỡ đăng bán (đổi status = Inactive) thay vì xóa cứng
+        await sequelize.query("UPDATE services SET status = 'Inactive' WHERE service_id = ?", { replacements: [id] });
+        await sequelize.query("UPDATE partner_services SET status = 'Inactive' WHERE service_id = ?", { replacements: [id] });
+        
+        res.status(200).json({ success: true, message: 'Đã gỡ đăng bán dịch vụ!' });
     } catch (error) {
-        if (error.original && error.original.errno === 1451) {
-            return res.status(400).json({ success: false, message: 'Không thể xóa vì Dịch vụ đang liên kết với dữ liệu khác!' });
-        }
         res.status(500).json({ success: false, message: error.message });
     }
 };

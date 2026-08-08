@@ -31,6 +31,7 @@ const ServiceManagement = () => {
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [mainTab, setMainTab] = useState('Active'); // 'Active' or 'Pending'
 
     const categories = ['Tất cả', 'Khách sạn', 'Nhà hàng', 'Xe vận chuyển', 'Vé máy bay', 'Vé tham quan', 'Khác'];
 
@@ -104,7 +105,8 @@ const ServiceManagement = () => {
             selling_price: service.selling_price || 0,
             capacity: service.capacity || 0,
             status: service.status || 'Active',
-            existing_image_url: service.image_url || ''
+            existing_image_url: service.image_url || '',
+            proposed_cost: service.proposed_cost || null
         });
         setImageFile(null);
         setImagePreview(service.image_url ? `http://localhost:5000${service.image_url}` : null);
@@ -141,22 +143,26 @@ const ServiceManagement = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc muốn xóa dịch vụ này?')) {
+    const handleDelete = async (service_id) => {
+        if (window.confirm('Bạn có chắc chắn muốn gỡ đăng bán dịch vụ này? Dịch vụ sẽ không còn hiển thị cho khách hàng.')) {
             try {
                 const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:5000/api/services/${id}`, {
+                await axios.delete(`http://localhost:5000/api/services/${service_id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+                alert('Đã gỡ đăng bán thành công!');
                 fetchData();
             } catch (error) {
-                alert('Lỗi khi xóa dịch vụ: ' + (error.response?.data?.message || error.message));
+                alert('Lỗi khi gỡ đăng bán: ' + (error.response?.data?.message || error.message));
             }
         }
     };
 
     // Filter logic
     const filteredServices = services.filter(service => {
+        if (mainTab === 'Active' && service.status === 'Pending') return false;
+        if (mainTab === 'Pending' && service.status !== 'Pending') return false;
+
         const matchSearch = service.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (service.partner_name || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchCategory = selectedCategory === 'Tất cả' || service.service_type === selectedCategory;
@@ -202,16 +208,28 @@ const ServiceManagement = () => {
             {/* Header Section */}
             <div className="pm-header">
                 <div>
-                    <h2>Quản Lý Dịch Vụ</h2>
-                    <p>Quản lý toàn bộ danh mục Khách sạn, Nhà hàng, Phương tiện và các dịch vụ khác.</p>
+                    <h2>Quản Lý Yêu Cầu Dịch Vụ</h2>
+                    <p>Xét duyệt và cập nhật giá bán cho các dịch vụ do Đối tác cung cấp.</p>
                 </div>
-                {!showForm && (
-                    <button onClick={handleAddNewClick} className="pm-btn-primary">
-                        <Plus size={20} />
-                        Thêm Dịch Vụ Mới
-                    </button>
-                )}
             </div>
+
+            {/* Main Tabs */}
+            {!showForm && (
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', padding: '0 20px' }}>
+                    <button 
+                        onClick={() => setMainTab('Active')} 
+                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: mainTab === 'Active' ? '#3b82f6' : '#e2e8f0', color: mainTab === 'Active' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
+                    >
+                        ✅ Dịch Vụ Đang Bán
+                    </button>
+                    <button 
+                        onClick={() => setMainTab('Pending')} 
+                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: mainTab === 'Pending' ? '#f59e0b' : '#e2e8f0', color: mainTab === 'Pending' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
+                    >
+                        ⏳ Yêu Cầu Chờ Duyệt
+                    </button>
+                </div>
+            )}
 
             {showForm ? (
                 /* FORM THÊM / SỬA */
@@ -227,19 +245,18 @@ const ServiceManagement = () => {
                         <div className="pm-form-grid">
                             
                             <div className="pm-form-group full">
-                                <label className="pm-form-label">Tên Dịch Vụ <span>*</span></label>
+                                <label className="pm-form-label">Tên Dịch Vụ (Do đối tác cung cấp) <span>*</span></label>
                                 <input 
                                     type="text" name="service_name" value={formData.service_name} onChange={handleInputChange} required 
-                                    className="pm-form-input"
-                                    placeholder="Ví dụ: Phòng Deluxe, Xe 45 chỗ đời mới..."
+                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 />
                             </div>
                             
                             <div className="pm-form-group">
-                                <label className="pm-form-label">Phân Loại <span>*</span></label>
+                                <label className="pm-form-label">Phân Loại</label>
                                 <select 
                                     name="service_type" value={formData.service_type} onChange={handleInputChange} required
-                                    className="pm-form-select"
+                                    className="pm-form-select" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 >
                                     {categories.filter(c => c !== 'Tất cả').map(c => (
                                         <option key={c} value={c}>{c}</option>
@@ -251,7 +268,7 @@ const ServiceManagement = () => {
                                 <label className="pm-form-label">Đối Tác Cung Cấp</label>
                                 <select 
                                     name="partner_id" value={formData.partner_id} onChange={handleInputChange}
-                                    className="pm-form-select"
+                                    className="pm-form-select" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 >
                                     <option value="">-- Nội bộ công ty / Tự túc --</option>
                                     {partners.map(p => (
@@ -262,12 +279,15 @@ const ServiceManagement = () => {
 
                             {!isGlobalService && (
                                 <div className="pm-form-group">
-                                    <label className="pm-form-label">Điểm Đến <span>*</span></label>
+                                    <label className="pm-form-label">Điểm Đến {formData.service_type !== 'Xe vận chuyển' && ' *'}</label>
                                     <select 
-                                        name="destination_id" value={formData.destination_id} onChange={handleInputChange} required
+                                        name="destination_id" 
+                                        value={formData.destination_id || ''} 
+                                        onChange={handleInputChange} 
+                                        required={formData.service_type !== 'Xe vận chuyển'}
                                         className="pm-form-select"
                                     >
-                                        <option value="">-- Lựa chọn điểm đến --</option>
+                                        <option value="">-- Toàn cục / Không yêu cầu --</option>
                                         {destinations.map(d => (
                                             <option key={d.destination_id} value={d.destination_id}>{d.destination_name}</option>
                                         ))}
@@ -279,8 +299,7 @@ const ServiceManagement = () => {
                                 <label className="pm-form-label">Đơn Vị Tính</label>
                                 <input 
                                     type="text" name="unit" value={formData.unit} onChange={handleInputChange} 
-                                    className="pm-form-input"
-                                    placeholder="Phòng/Đêm, Người, Xe/Ngày..."
+                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 />
                             </div>
 
@@ -288,12 +307,12 @@ const ServiceManagement = () => {
                                 <label className="pm-form-label">Sức Chứa / Số Lượng</label>
                                 <input 
                                     type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} 
-                                    className="pm-form-input"
+                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 />
                             </div>
 
                             <div className="pm-form-group">
-                                <label className="pm-form-label">Giá Gốc (VNĐ)</label>
+                                <label className="pm-form-label">Giá Gốc Tham Khảo (VNĐ)</label>
                                 <input 
                                     type="number" name="base_cost" value={formData.base_cost} onChange={handleInputChange} 
                                     className="pm-form-input"
@@ -301,38 +320,64 @@ const ServiceManagement = () => {
                             </div>
                             
                             <div className="pm-form-group">
-                                <label className="pm-form-label">Giá Bán (VNĐ)</label>
+                                <label className="pm-form-label" style={{ color: '#d97706' }}>👉 Giá Đối Tác Đề Xuất</label>
                                 <input 
-                                    type="number" name="selling_price" value={formData.selling_price} onChange={handleInputChange} 
-                                    className="pm-form-input"
+                                    type="text" value={formData.proposed_cost ? Number(formData.proposed_cost).toLocaleString('vi-VN') + ' đ' : 'Chưa có dữ liệu'} 
+                                    className="pm-form-input" disabled 
+                                    style={{ backgroundColor: '#fffbeb', color: '#d97706', fontWeight: 'bold', border: '1px solid #fcd34d' }}
                                 />
                             </div>
 
                             <div className="pm-form-group full">
-                                <label className="pm-form-label">Mô Tả Nhanh</label>
+                                <label className="pm-form-label" style={{ color: '#10b981', fontSize: '15px' }}>💰 Giá Bán Chính Thức (Niêm Yết Cho Khách) <span>*</span></label>
+                                <input 
+                                    type="number" name="selling_price" value={formData.selling_price} onChange={handleInputChange} 
+                                    className="pm-form-input" required
+                                    style={{ border: '2px solid #10b981', fontSize: '16px', fontWeight: 'bold' }}
+                                />
+                            </div>
+
+                            <div className="pm-form-group full">
+                                <label className="pm-form-label">Mô Tả Nhanh (Do đối tác cung cấp)</label>
                                 <textarea 
                                     name="description" value={formData.description} onChange={handleInputChange} rows="3"
-                                    className="pm-form-textarea"
-                                    placeholder="Tiện ích, quy định đặc biệt..."
+                                    className="pm-form-textarea" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 ></textarea>
                             </div>
 
                             <div className="pm-form-group full">
-                                <label className="pm-form-label">Hình Ảnh Dịch Vụ</label>
-                                <input 
-                                    type="file" accept="image/*" onChange={handleImageChange}
-                                    className="pm-form-file"
-                                />
-                                {imagePreview && (
-                                    <img src={imagePreview} alt="Preview" className="pm-image-preview" />
+                                <label className="pm-form-label">Hình Ảnh Dịch Vụ (Cập nhật nếu cần)</label>
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Preview" className="pm-image-preview" style={{ opacity: 1, marginBottom: '10px' }} />
+                                ) : (
+                                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '10px' }}>Chưa có hình ảnh</p>
                                 )}
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            setImageFile(file);
+                                            setImagePreview(URL.createObjectURL(file));
+                                        }
+                                    }} 
+                                    className="pm-form-input" 
+                                    style={{ padding: '5px' }}
+                                />
                             </div>
                         </div>
 
                         <div className="pm-form-footer">
-                            <button type="submit" className="pm-form-submit">
-                                {editId ? '💾 Lưu Thay Đổi' : 'Xác Nhận Tạo'}
-                            </button>
+                            {formData.status === 'Pending' ? (
+                                <button type="button" onClick={() => { setFormData({...formData, status: 'Active'}); handleSubmit({preventDefault: () => {}}); }} className="pm-form-submit" style={{ backgroundColor: '#10b981' }}>
+                                    ✅ Duyệt & Đăng Bán
+                                </button>
+                            ) : (
+                                <button type="submit" className="pm-form-submit">
+                                    💾 Lưu Thay Đổi
+                                </button>
+                            )}
                         </div>
                     </form>
                 </div>
@@ -400,12 +445,17 @@ const ServiceManagement = () => {
                                         className="pm-card-header" 
                                         style={{ 
                                             backgroundColor: service.image_url ? 'transparent' : `${getCategoryColor(service.service_type)}15`,
-                                            backgroundImage: service.image_url ? `url(http://localhost:5000${service.image_url})` : 'none'
+                                            backgroundImage: service.image_url ? `url("http://localhost:5000${service.image_url}")` : 'none'
                                         }}
                                     >
                                         <div className="pm-badge" style={{ color: getCategoryColor(service.service_type) }}>
                                             <span>{getCategoryIcon(service.service_type)}</span> {service.service_type}
                                         </div>
+                                        {service.status === 'Pending' && (
+                                            <div className="pm-badge" style={{ backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fcd34d', fontWeight: 'bold' }}>
+                                                ⏳ Yêu Cầu Duyệt
+                                            </div>
+                                        )}
                                         {!service.image_url && (
                                             <div className="pm-card-icon">
                                                 {getCategoryIcon(service.service_type)}
@@ -435,9 +485,9 @@ const ServiceManagement = () => {
                                         
                                         {/* Cost Info */}
                                         <div className="pm-partner-info" style={{ marginTop: '8px', borderTop: 'none', paddingTop: '0' }}>
-                                            <div className="pm-partner-label">Giá vốn (Net)</div>
+                                            <div className="pm-partner-label">Giá đối tác đề xuất (Net)</div>
                                             <div style={{ color: '#d97706', fontWeight: 'bold' }}>
-                                                {Number(service.base_cost).toLocaleString('vi-VN')} đ 
+                                                {service.proposed_cost ? Number(service.proposed_cost).toLocaleString('vi-VN') : Number(service.base_cost).toLocaleString('vi-VN')} đ 
                                                 <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#64748b' }}>
                                                     {service.unit ? ` / ${service.unit}` : ''}
                                                 </span>
@@ -456,12 +506,17 @@ const ServiceManagement = () => {
                                             </div>
                                             
                                             <div className="pm-actions">
-                                                <button onClick={() => handleEditClick(service)} className="pm-btn-icon edit" title="Chỉnh sửa">
+                                                <button onClick={() => handleEditClick(service)} className="pm-btn-icon edit" title={service.status === 'Pending' ? "Xét duyệt" : "Xem chi tiết / Cập nhật giá"}>
                                                     <Edit2 size={18} />
                                                 </button>
-                                                <button onClick={() => handleDelete(service.service_id)} className="pm-btn-icon delete" title="Xóa">
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                {service.status !== 'Inactive' && (
+                                                    <button onClick={() => handleDelete(service.service_id)} className="pm-btn-icon delete" title="Gỡ đăng bán (Tạm ẩn)">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )}
+                                                {service.status === 'Inactive' && (
+                                                    <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: 'bold', marginLeft: '10px' }}>Đã gỡ</span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

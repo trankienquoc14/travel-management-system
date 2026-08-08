@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
+import CustomerFooter from './CustomerFooter';
 import '../styles/CustomerTourBuilder.css';
 import '../index.css';
 import { 
@@ -468,11 +469,7 @@ const CustomerTourBuilder = () => {
                 </div>
             </div>
             
-            <footer className="home-footer mt-auto">
-                <div className="footer-bottom">
-                    <p>© 2026 TravelERP System. Tự hào đồng hành cùng bạn.</p>
-                </div>
-            </footer>
+            <CustomerFooter />
         </div>
     );
 };

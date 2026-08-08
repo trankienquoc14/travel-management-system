@@ -230,14 +230,6 @@ const Dashboard = () => {
                 📋 Tour Đã Thiết Kế
               </li>
 
-              {/* Dịch Vụ Độc Lập */}
-              <li
-                className={activeTab === 'services_booking' ? 'active' : ''}
-                onClick={() => setActiveTab('services_booking')}
-              >
-                🛎️ Duyệt Đơn Dịch Vụ
-              </li>
-
               {/* Booking */}
               <li
                 className={activeTab === 'orders' ? 'active' : ''}
@@ -464,7 +456,6 @@ const Dashboard = () => {
           {activeTab === 'tour_form' && (isTourManager || isAdmin) && <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />}
           {activeTab === 'approve_quotes' && (isTourManager || isAdmin) && <ManagerTourApproval />} {/* THÊM DÒNG NÀY */}
           {activeTab === 'orders' && (isOfficeStaff || isAdmin) && <StaffBookingManagement />}
-          {activeTab === 'services_booking' && (isOfficeStaff || isAdmin) && <StaffServiceBookingManagement />}
           {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
           {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
           {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}

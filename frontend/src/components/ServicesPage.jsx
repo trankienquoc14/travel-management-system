@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CustomerNavbar from './CustomerNavbar';
+import CustomerFooter from './CustomerFooter';
 import ServiceBookingModal from './ServiceBookingModal';
 import '../index.css';
 
@@ -145,6 +146,7 @@ const ServicesPage = () => {
                     onClose={() => setSelectedService(null)} 
                 />
             )}
+            <CustomerFooter />
         </div>
     );
 };

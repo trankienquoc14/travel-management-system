@@ -9,6 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const sequelize = require('./config/database');
 const hrRoutes = require('./routes/hrRoutes');

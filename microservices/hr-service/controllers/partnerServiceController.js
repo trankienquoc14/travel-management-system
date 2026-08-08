@@ -27,17 +27,16 @@ exports.getMyInventory = async (req, res) => {
     }
 };
 
-// 2. Đối tác tự đăng bán dịch vụ mới
+// 2. Đối tác gửi yêu cầu duyệt Dịch vụ mới
 exports.addServiceToInventory = async (req, res) => {
     try {
         const userId = req.user?.id || req.user?.userId || req.user?.user_id;
-        const { service_id, price, available_quantity } = req.body;
+        const { service_name, service_type, description, unit, capacity, price, available_quantity, destination_id } = req.body;
 
-        if (!service_id || !price || !available_quantity) {
-            return res.status(400).json({ success: false, message: 'Vui lòng điền đủ thông tin!' });
+        if (!service_name || !price || !available_quantity) {
+            return res.status(400).json({ success: false, message: 'Vui lòng điền tên dịch vụ, giá và số lượng!' });
         }
 
-        // Đã sửa: Nối bằng u.email = p.email
         const [partner] = await sequelize.query(`
             SELECT p.partner_id 
             FROM users u
@@ -49,21 +48,35 @@ exports.addServiceToInventory = async (req, res) => {
         if (!partner || partner.length === 0 || !partner[0].partner_id) {
             return res.status(403).json({
                 success: false,
-                message: 'Tài khoản của bạn chưa được liên kết với Đối tác nào. Hãy kiểm tra lại Email giữa 2 bảng!'
+                message: 'Tài khoản của bạn chưa được liên kết với Đối tác nào.'
             });
         }
-
         const partner_id = partner[0].partner_id;
 
-        // Đã sửa: Lưu vào cột unit_price theo đúng SQL Dump của bạn
-        await sequelize.query(`
-            INSERT INTO partner_services (partner_id, service_id, unit_price, available_quantity)
-            VALUES (?, ?, ?, ?)
-        `, { replacements: [partner_id, service_id, price, available_quantity] });
+        let finalImageUrl = '';
+        if (req.file) {
+            finalImageUrl = `/uploads/${req.file.filename}`;
+        }
 
-        res.status(201).json({ success: true, message: 'Đã đưa dịch vụ lên kệ thành công!' });
+        // Bước 1: Tạo một Master Service ở trạng thái Pending (Chờ duyệt)
+        const [insertId, metadata] = await sequelize.query(`
+            INSERT INTO services (service_name, service_type, description, image_url, partner_id, destination_id, unit, base_cost, selling_price, capacity, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+        `, { replacements: [
+            service_name, service_type || 'Khách sạn', description || '', finalImageUrl, partner_id,
+            destination_id || null, unit || '', 0, 0, capacity || 0
+        ] });
+        const newServiceId = insertId;
+
+        // Bước 2: Thêm vào kho của đối tác với trạng thái Pending
+        await sequelize.query(`
+            INSERT INTO partner_services (partner_id, service_id, unit_price, available_quantity, status)
+            VALUES (?, ?, ?, ?, 'Pending')
+        `, { replacements: [partner_id, newServiceId, price, available_quantity] });
+
+        res.status(201).json({ success: true, message: 'Đã gửi yêu cầu thêm dịch vụ mới! Đang chờ Quản lý duyệt.' });
     } catch (error) {
-        console.error("Lỗi addService:", error);
+        console.error("Lỗi addServiceToInventory:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -100,18 +113,25 @@ exports.updatePartnerService = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng điền đủ Giá và Số lượng!' });
         }
 
-        // Cập nhật dữ liệu (đúng cột unit_price theo CSDL của bạn)
-        const [result] = await sequelize.query(`
-            UPDATE partner_services ps
+        // 1. Kiểm tra quyền sở hữu
+        const [rows] = await sequelize.query(`
+            SELECT ps.partner_service_id 
+            FROM partner_services ps
             JOIN partners p ON ps.partner_id = p.partner_id
             JOIN users u ON u.email = p.email
-            SET ps.unit_price = ?, ps.available_quantity = ?
             WHERE ps.partner_service_id = ? AND u.user_id = ?
-        `, { replacements: [price, available_quantity, id, userId] });
+        `, { replacements: [id, userId] });
 
-        if (result.affectedRows === 0) {
+        if (rows.length === 0) {
             return res.status(403).json({ success: false, message: 'Không thể sửa! Dịch vụ này không thuộc về bạn.' });
         }
+
+        // 2. Cập nhật dữ liệu
+        await sequelize.query(`
+            UPDATE partner_services 
+            SET unit_price = ?, available_quantity = ?
+            WHERE partner_service_id = ?
+        `, { replacements: [price, available_quantity, id] });
 
         res.status(200).json({ success: true, message: 'Đã cập nhật giá và số lượng thành công!' });
     } catch (error) {

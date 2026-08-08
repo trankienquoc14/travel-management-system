@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
+import CustomerFooter from './CustomerFooter';
 import '../index.css';
 
 const CustomerQuotes = () => {
@@ -444,9 +445,7 @@ const CustomerQuotes = () => {
             </div>
 
             {/* FOOTER */}
-            <footer className="home-footer" style={{ marginTop: 'auto' }}>
-                <div className="footer-bottom"><p>© 2026 TravelERP System. Tự hào đồng hành cùng bạn.</p></div>
-            </footer>
+            <CustomerFooter />
         </div>
     );
 };

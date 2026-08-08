@@ -497,13 +497,34 @@ exports.bookStandaloneService = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đủ thông tin đặt dịch vụ' });
         }
 
+        // Lấy thông tin partner_id từ bảng services
+        const [serviceData] = await sequelize.query('SELECT partner_id FROM travel_management.services WHERE service_id = ?', {
+            replacements: [service_id]
+        });
+
+        const partner_id = serviceData[0] ? serviceData[0].partner_id : null;
+        const initialStatus = partner_id ? 'SentToPartner' : 'Pending';
+
         const [result] = await sequelize.query(`
             INSERT INTO service_bookings 
             (customer_id, service_id, quantity, usage_date, total_amount, payment_method, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, {
-            replacements: [customer_id, service_id, quantity, usage_date, total_amount, payment_method || 'Prepaid', notes || '']
+            replacements: [customer_id, service_id, quantity, usage_date, total_amount, payment_method || 'Prepaid', initialStatus, notes || '']
         });
+
+        const newBookingId = result;
+
+        // Nếu có đối tác, tự động gửi yêu cầu sang cho đối tác luôn (bỏ qua NV Văn phòng)
+        if (partner_id) {
+            const content = `Khách hàng đặt: Ngày ${usage_date} - Số lượng: ${quantity}`;
+            await sequelize.query(`
+                INSERT INTO service_requests (service_booking_id, partner_id, requested_by, request_content, status, agreed_price)
+                VALUES (?, ?, ?, ?, 'Pending', ?)
+            `, {
+                replacements: [newBookingId, partner_id, customer_id, content, total_amount]
+            });
+        }
 
         res.status(201).json({
             success: true,
