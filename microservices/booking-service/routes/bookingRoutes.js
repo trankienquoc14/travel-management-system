@@ -20,4 +20,15 @@ router.post('/change-requests', protect, bookingController.createChangeRequest);
 router.get('/admin/change-requests', protect, bookingController.getAllChangeRequests);
 router.put('/admin/change-requests/:id/process', protect, bookingController.processChangeRequest);
 
+// Quản lý Đặt Dịch Vụ (Standalone Services)
+router.post('/service', protect, bookingController.bookStandaloneService);
+router.get('/my-services', protect, bookingController.getMyServiceBookings);
+router.get('/admin/all-services', protect, bookingController.getAllServiceBookingsAdmin);
+router.put('/admin/services/:id/confirm', protect, bookingController.confirmServiceBooking);
+router.post('/admin/services/:id/forward-to-partner', protect, bookingController.forwardToPartner);
+
+// Dành cho Đối tác (Partner Portal)
+router.get('/partner/requests', protect, bookingController.getPartnerRequests);
+router.put('/partner/requests/:id/status', protect, bookingController.updatePartnerRequestStatus);
+
 module.exports = router;

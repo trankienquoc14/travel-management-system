@@ -424,9 +424,12 @@ exports.saveFixedTourDesign = async (req, res) => {
 exports.getAllFixedTours = async (req, res) => {
     try {
         const [tours] = await sequelize.query(`
-            SELECT tour_id, tour_name, destination, duration_days, status, base_price, image_url, markup_percent 
-            FROM tours 
-            ORDER BY tour_id DESC
+            SELECT t.tour_id, t.tour_name, t.destination, t.duration_days, t.status, t.base_price, t.image_url, t.markup_percent, t.is_custom,
+                   GROUP_CONCAT(d.departure_date ORDER BY d.departure_date ASC) as departure_dates
+            FROM tours t
+            LEFT JOIN departures d ON t.tour_id = d.tour_id AND d.status != 'Completed'
+            GROUP BY t.tour_id
+            ORDER BY t.tour_id DESC
         `);
         res.status(200).json({ success: true, data: tours });
     } catch (error) {
@@ -516,3 +519,22 @@ exports.updateTourPrice = async (req, res) => {
     }
 };
 
+exports.getGuideSchedule = async (req, res) => {
+    try {
+        const [departures] = await sequelize.query(`
+            SELECT 
+                d.departure_id, d.tour_id, d.departure_date, d.return_date, d.guide_id,
+                t.tour_name, t.is_custom 
+            FROM departures d
+            JOIN tours t ON d.tour_id = t.tour_id
+            WHERE d.guide_id IS NOT NULL
+              AND d.status != 'Completed'
+            ORDER BY d.departure_date ASC
+        `);
+
+        res.status(200).json({ success: true, data: departures });
+    } catch (error) {
+        console.error("Lỗi lấy lịch chạy HDV:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

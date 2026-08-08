@@ -6,9 +6,33 @@ const ManagerApproveTours = () => {
     const [activeTab, setActiveTab] = useState('custom'); // 'custom' hoặc 'fixed'
 
     // 2. Dữ liệu danh sách
-    const [pendingTours, setPendingTours] = useState([]); // Tour Thiết Kế Riêng
-    const [pendingFixedTours, setPendingFixedTours] = useState([]); // Tour Cố Định
+    const [allCustomTours, setAllCustomTours] = useState([]); // Tất cả Tour Thiết Kế Riêng
+    const [allFixedTours, setAllFixedTours] = useState([]); // Tất cả Tour Cố Định
     const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState('Pending'); // 'Pending', 'Approved', 'Rejected', 'Completed', 'All'
+
+    // Dữ liệu hiển thị sau khi lọc
+    const pendingTours = allCustomTours.filter(req => {
+        if (statusFilter === 'All') return true;
+        if (statusFilter === 'Pending') return req.status === 'Pending_Manager_Approval' || req.approval_status === 'Pending_Approval';
+        if (statusFilter === 'Approved') return req.approval_status === 'Customer_Review' || req.approval_status === 'Customer_Accepted';
+        if (statusFilter === 'Completed') return req.status === 'Completed';
+        if (statusFilter === 'Rejected') return req.approval_status === 'Manager_Rejected' || req.status === 'Rejected';
+        return false;
+    });
+
+    const pendingFixedTours = allFixedTours.filter(t => {
+        if (statusFilter === 'All') return true;
+        if (statusFilter === 'Pending') return t.status === 'Pending';
+        if (statusFilter === 'Approved') return t.status === 'Approved' || t.status === 'Active';
+        if (statusFilter === 'Completed') return t.status === 'Active';
+        if (statusFilter === 'Rejected') return t.status === 'Rejected';
+        return false;
+    });
+
+    // Tính tổng số tour thực sự đang cần duyệt cho Header
+    const actualPendingCustomCount = allCustomTours.filter(req => req.status === 'Pending_Manager_Approval' || req.approval_status === 'Pending_Approval').length;
+    const actualPendingFixedCount = allFixedTours.filter(t => t.status === 'Pending').length;
 
     // 3. State cho Modal xem chi tiết
     const [selectedTour, setSelectedTour] = useState(null); // Dành cho Tour Riêng
@@ -33,19 +57,14 @@ const ManagerApproveTours = () => {
                 axios.get('http://localhost:5000/api/staff/tours', { headers: { Authorization: `Bearer ${token}` } }) // Gọi API Staff để lấy tour Pending
             ]);
 
-            // Lọc Tour Thiết Kế Riêng
+            // Lưu toàn bộ dữ liệu thay vì chỉ lọc Pending
             if (resCustom.data.success) {
-                const filteredCustom = resCustom.data.data.filter(
-                    (req) => req.status === 'Pending_Manager_Approval' ||
-                        req.approval_status === 'Pending_Approval'
-                );
-                setPendingTours(filteredCustom);
+                setAllCustomTours(resCustom.data.data);
             }
 
-            // Lọc Tour Cố Định
+            // Lưu toàn bộ Tour Cố Định
             if (resFixed.data.success) {
-                const filteredFixed = resFixed.data.data.filter(t => t.status === 'Pending');
-                setPendingFixedTours(filteredFixed);
+                setAllFixedTours(resFixed.data.data);
             }
         } catch (error) {
             console.error('Lỗi tải danh sách tour chờ duyệt:', error);
@@ -157,18 +176,49 @@ const ManagerApproveTours = () => {
                     </p>
                 </div>
                 <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '8px 16px', borderRadius: '8px', fontWeight: '600' }}>
-                    Cần duyệt: {pendingTours.length + pendingFixedTours.length} tour
+                    Cần duyệt: {actualPendingCustomCount + actualPendingFixedCount} tour
                 </div>
             </div>
 
-            {/* THANH TAB CHUYỂN ĐỔI */}
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '24px' }}>
-                <button onClick={() => setActiveTab('custom')} style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'custom' ? '2px solid #3b82f6' : '1px solid #cbd5e1', background: activeTab === 'custom' ? '#eff6ff' : '#fff', color: activeTab === 'custom' ? '#1d4ed8' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    🛎️ Yêu Cầu Thiết Kế Riêng ({pendingTours.length})
-                </button>
-                <button onClick={() => setActiveTab('fixed')} style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'fixed' ? '2px solid #10b981' : '1px solid #cbd5e1', background: activeTab === 'fixed' ? '#ecfdf5' : '#fff', color: activeTab === 'fixed' ? '#047857' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    🗺️ Sản Phẩm Tour Cố Định ({pendingFixedTours.length})
-                </button>
+            {/* THANH TAB CHUYỂN ĐỔI VÀ BỘ LỌC */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                    <button onClick={() => setActiveTab('custom')} style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'custom' ? '2px solid #3b82f6' : '1px solid #cbd5e1', background: activeTab === 'custom' ? '#eff6ff' : '#fff', color: activeTab === 'custom' ? '#1d4ed8' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        🛎️ Yêu Cầu Thiết Kế Riêng ({pendingTours.length})
+                    </button>
+                    <button onClick={() => setActiveTab('fixed')} style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'fixed' ? '2px solid #10b981' : '1px solid #cbd5e1', background: activeTab === 'fixed' ? '#ecfdf5' : '#fff', color: activeTab === 'fixed' ? '#047857' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        🗺️ Sản Phẩm Tour Cố Định ({pendingFixedTours.length})
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '6px 14px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', transition: 'all 0.2s', position: 'relative' }}>
+                    <span style={{ marginRight: '8px', color: '#64748b', fontSize: '14px', fontWeight: '600' }}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ verticalAlign: 'middle', marginRight: '4px', position: 'relative', top: '-1px' }}>
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                        </svg>
+                        Lọc:
+                    </span>
+                    <select 
+                        value={statusFilter} 
+                        onChange={e => setStatusFilter(e.target.value)}
+                        style={{ 
+                            border: 'none', outline: 'none', background: 'transparent', 
+                            fontSize: '15px', fontWeight: '700', color: '#0f172a', 
+                            cursor: 'pointer', appearance: 'none', paddingRight: '24px',
+                            fontFamily: 'inherit'
+                        }}
+                    >
+                        <option value="Pending">⏳ Cần duyệt</option>
+                        <option value="Approved">✅ Đã phê duyệt</option>
+                        <option value="Rejected">❌ Đã từ chối</option>
+                        <option value="Completed">🏁 Đã hoàn thành</option>
+                        <option value="All">Tất cả</option>
+                    </select>
+                    {/* Mũi tên Custom cho Select */}
+                    <svg width="12" height="12" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
             </div>
 
             {/* DANH SÁCH TOUR */}
@@ -187,7 +237,15 @@ const ManagerApproveTours = () => {
                     {activeTab === 'custom' && pendingTours.map((tour) => (
                         <div key={tour.request_id} style={{ background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                                <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đợi quản lý duyệt</span>
+                                {tour.status === 'Pending_Manager_Approval' || tour.approval_status === 'Pending_Approval' ? (
+                                    <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đợi quản lý duyệt</span>
+                                ) : tour.status === 'Completed' ? (
+                                    <span style={{ background: '#dcfce3', color: '#16a34a', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đã hoàn thành</span>
+                                ) : tour.approval_status === 'Manager_Rejected' || tour.status === 'Rejected' ? (
+                                    <span style={{ background: '#fee2e2', color: '#dc2626', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đã từ chối</span>
+                                ) : (
+                                    <span style={{ background: '#dbeafe', color: '#2563eb', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đã phê duyệt</span>
+                                )}
                                 <span style={{ color: '#94a3b8', fontSize: '12px' }}>{new Date(tour.departure_date).toLocaleDateString('vi-VN')}</span>
                             </div>
                             <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#1e293b' }}>{tour.destination}</h3>
@@ -198,7 +256,7 @@ const ManagerApproveTours = () => {
                             </div>
                             <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '16px 0' }} />
                             <button onClick={() => { setSelectedTour(tour); setFeedback(''); setIsRejecting(false); }} style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                                Xem chi tiết & Duyệt
+                                {(tour.status === 'Pending_Manager_Approval' || tour.approval_status === 'Pending_Approval') ? 'Xem chi tiết & Duyệt' : 'Xem chi tiết'}
                             </button>
                         </div>
                     ))}
@@ -207,7 +265,13 @@ const ManagerApproveTours = () => {
                     {activeTab === 'fixed' && pendingFixedTours.map((tour) => (
                         <div key={tour.tour_id} style={{ background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                                <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Sản phẩm mới</span>
+                                {tour.status === 'Pending' ? (
+                                    <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đợi duyệt</span>
+                                ) : tour.status === 'Rejected' ? (
+                                    <span style={{ background: '#fee2e2', color: '#dc2626', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>Đã từ chối</span>
+                                ) : (
+                                    <span style={{ background: '#dcfce3', color: '#16a34a', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>{tour.status === 'Active' ? 'Đã mở bán' : 'Đã duyệt'}</span>
+                                )}
                                 <span style={{ color: '#94a3b8', fontSize: '12px' }}>Mã: #{tour.tour_id}</span>
                             </div>
                             <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#1e293b' }}>{tour.tour_name}</h3>
@@ -218,7 +282,7 @@ const ManagerApproveTours = () => {
                             </div>
                             <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '16px 0' }} />
                             <button onClick={() => handleViewFixedDetail(tour)} style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                                Xem chi tiết & Duyệt
+                                {tour.status === 'Pending' ? 'Xem chi tiết & Duyệt' : 'Xem chi tiết'}
                             </button>
                         </div>
                     ))}
@@ -354,8 +418,12 @@ const ManagerApproveTours = () => {
                             {!isRejecting ? (
                                 <>
                                     <button onClick={() => { setSelectedTour(null); setIsRejecting(false); }} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Đóng</button>
-                                    <button onClick={() => setIsRejecting(true)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Yêu cầu sửa</button>
-                                    <button onClick={() => handleApprove(selectedTour.quote_id)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Phê duyệt</button>
+                                    {(selectedTour.status === 'Pending_Manager_Approval' || selectedTour.approval_status === 'Pending_Approval') && (
+                                        <>
+                                            <button onClick={() => setIsRejecting(true)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Yêu cầu sửa</button>
+                                            <button onClick={() => handleApprove(selectedTour.quote_id)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Phê duyệt</button>
+                                        </>
+                                    )}
                                 </>
                             ) : (
                                 <>
@@ -474,8 +542,12 @@ const ManagerApproveTours = () => {
                             {!isRejecting ? (
                                 <>
                                     <button onClick={() => { setSelectedFixedTour(null); setIsRejecting(false); }} disabled={actionLoading} style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Đóng</button>
-                                    <button onClick={() => setIsRejecting(true)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>❌ Từ chối</button>
-                                    <button onClick={() => handleUpdateFixedStatus(selectedFixedTour.tour_id, 'Approved')} disabled={actionLoading} style={{ padding: '10px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>✅ Phê duyệt Thiết kế</button>
+                                    {selectedFixedTour.status === 'Pending' && (
+                                        <>
+                                            <button onClick={() => setIsRejecting(true)} disabled={actionLoading} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>❌ Từ chối</button>
+                                            <button onClick={() => handleUpdateFixedStatus(selectedFixedTour.tour_id, 'Approved')} disabled={actionLoading} style={{ padding: '10px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>✅ Phê duyệt Thiết kế</button>
+                                        </>
+                                    )}
                                 </>
                             ) : (
                                 <>

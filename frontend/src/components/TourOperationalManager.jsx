@@ -2,6 +2,115 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../index.css';
 
+const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth }) => {
+    let year, month;
+    if (selectedMonth === 'all' || !selectedMonth) {
+        const d = new Date();
+        year = d.getFullYear();
+        month = d.getMonth() + 1;
+    } else {
+        [year, month] = selectedMonth.split('-').map(Number);
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    const monthStart = new Date(year, month - 1, 1).getTime();
+    const monthEnd = new Date(year, month, 0, 23, 59, 59).getTime();
+
+    const getGuideTasks = (guideId) => {
+        return guideSchedules.filter(sch => {
+            if (sch.guide_id !== guideId) return false;
+            const dStart = new Date(sch.departure_date).getTime();
+            const dEnd = new Date(sch.return_date).getTime();
+            return (dStart <= monthEnd && dEnd >= monthStart);
+        });
+    };
+
+    return (
+        <div style={{ marginTop: '32px', background: '#fff', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', fontWeight: '800' }}>Biểu Đồ Lịch Phân Công Hướng Dẫn Viên (Tháng {month}/{year})</h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Trực quan hóa lịch trình thực tế để tránh xếp trùng lặp</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', fontSize: '12px', fontWeight: '600' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#3b82f6', borderRadius: '3px' }}></div> Tour Cố định</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#10b981', borderRadius: '3px' }}></div> Thiết kế riêng</div>
+                </div>
+            </div>
+            <div style={{ overflowX: 'auto', padding: '24px' }}>
+                <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px', marginBottom: '10px' }}>
+                    <div style={{ width: '200px', flexShrink: 0, fontWeight: '700', color: '#475569', fontSize: '14px' }}>Hướng dẫn viên</div>
+                    <div style={{ display: 'flex', flex: 1, minWidth: `${daysInMonth * 24}px` }}>
+                        {daysArray.map(d => (
+                            <div key={d} style={{ flex: 1, textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#94a3b8' }}>{d}</div>
+                        ))}
+                    </div>
+                </div>
+                {guides.map(guide => {
+                    const tasks = getGuideTasks(guide.user_id);
+                    return (
+                        <div key={guide.user_id} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ width: '200px', flexShrink: 0, fontSize: '14px', fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '8px' }} title={guide.full_name}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#64748b' }}>
+                                    {guide.full_name.charAt(0)}
+                                </div>
+                                {guide.full_name}
+                            </div>
+                            <div style={{ display: 'flex', flex: 1, minWidth: `${daysInMonth * 24}px`, position: 'relative', height: '32px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                {/* Draw task bars */}
+                                {tasks.map(task => {
+                                    const tStart = new Date(task.departure_date);
+                                    const tEnd = new Date(task.return_date);
+                                    
+                                    let startDay = 1;
+                                    if (tStart.getFullYear() === year && tStart.getMonth() + 1 === month) {
+                                        startDay = tStart.getDate();
+                                    }
+                                    
+                                    let endDay = daysInMonth;
+                                    if (tEnd.getFullYear() === year && tEnd.getMonth() + 1 === month) {
+                                        endDay = tEnd.getDate();
+                                    }
+
+                                    const leftPercent = ((startDay - 1) / daysInMonth) * 100;
+                                    const widthPercent = ((endDay - startDay + 1) / daysInMonth) * 100;
+
+                                    return (
+                                        <div key={task.departure_id} title={`${task.tour_name} (${task.departure_date} -> ${task.return_date})`} style={{
+                                            position: 'absolute',
+                                            left: `${leftPercent}%`,
+                                            width: `${widthPercent}%`,
+                                            height: '100%',
+                                            background: task.is_custom ? '#10b981' : '#3b82f6',
+                                            borderRadius: '6px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '11px',
+                                            color: '#fff',
+                                            fontWeight: '700',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'help',
+                                            padding: '0 4px',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {task.tour_name.substring(0, 15)}{task.tour_name.length > 15 ? '...' : ''}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const TourOperationalManager = () => {
     const [tours, setTours] = useState([]);
     const [selectedTour, setSelectedTour] = useState(null);
@@ -16,6 +125,8 @@ const TourOperationalManager = () => {
     const [markupPercent, setMarkupPercent] = useState(20);
     const [baseCost, setBaseCost] = useState(0);
     const [basePrice, setBasePrice] = useState(0);
+    const [activeTourTab, setActiveTourTab] = useState('fixed'); // 'fixed' | 'custom'
+    const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
 
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -74,6 +185,25 @@ const TourOperationalManager = () => {
             setLoading(false); 
         }
     };
+
+    const [guideSchedules, setGuideSchedules] = useState([]);
+    const fetchGuideSchedules = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get('http://localhost:5000/api/tours/admin/guide-schedule', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setGuideSchedules(res.data.data || []);
+            }
+        } catch (error) {
+            console.error('Lỗi lấy lịch chạy HDV', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchGuideSchedules();
+    }, []);
 
     const formatMoney = (val) => Number(val || 0).toLocaleString('vi-VN') + ' ₫';
 
@@ -177,18 +307,35 @@ const TourOperationalManager = () => {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: '"Outfit", "Inter", sans-serif', background: '#f5f7fa' }}>
             <div className="page-header" style={{ marginBottom: '25px', padding: '0 10px' }}>
                 <h2 style={{ fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>🚀 Quản Lý Điều Hành</h2>
-                <p style={{ color: '#4b5563', fontSize: '15px', margin: 0, fontWeight: '500' }}>Thiết lập lịch khởi hành và phân công Hướng dẫn viên chuyên nghiệp.</p>
+                <p style={{ color: '#4b5563', fontSize: '15px', margin: 0, fontWeight: '500' }}>Phân bổ lịch chạy, thiết lập thời gian và phân công Hướng dẫn viên.</p>
             </div>
 
             <div style={{ flex: 1, display: 'flex', gap: '24px', width: '100%', height: 'calc(100vh - 140px)' }}>
                 {/* LEFT COLUMN: Modern Tour List */}
                 <div style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' }}>
-                    <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', color: '#111827', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Tất cả Tour</span>
-                        <span style={{ background: '#0194f3', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{tours.length}</span>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
+                        <button 
+                            onClick={() => { setActiveTourTab('fixed'); setSelectedTour(null); }}
+                            style={{ flex: 1, padding: '10px 0', background: activeTourTab === 'fixed' ? '#fff' : 'transparent', color: activeTourTab === 'fixed' ? '#0194f3' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', boxShadow: activeTourTab === 'fixed' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}
+                        >
+                            Tour Cố Định
+                        </button>
+                        <button 
+                            onClick={() => { setActiveTourTab('custom'); setSelectedTour(null); }}
+                            style={{ flex: 1, padding: '10px 0', background: activeTourTab === 'custom' ? '#fff' : 'transparent', color: activeTourTab === 'custom' ? '#0194f3' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', boxShadow: activeTourTab === 'custom' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}
+                        >
+                            Thiết Kế Riêng
+                        </button>
+                    </div>
+                    
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#111827', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Danh Sách Tour</span>
+                        <span style={{ background: '#0194f3', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                            {tours.filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (t.is_custom === 0 || !t.is_custom)).length}
+                        </span>
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', paddingRight: '4px' }}>
-                        {tours.map(t => (
+                        {tours.filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (t.is_custom === 0 || !t.is_custom)).map(t => (
                             <div 
                                 key={t.tour_id} 
                                 onClick={() => handleSelectTour(t)} 
@@ -256,25 +403,50 @@ const TourOperationalManager = () => {
                             {/* Content Area - Modern Cards */}
                             <div style={{ padding: '32px', flex: 1, overflowY: 'auto', background: '#f9fafb' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                    <h3 style={{ margin: 0, fontSize: '20px', color: '#111827', fontWeight: '800' }}>Danh Sách Đợt Khởi Hành</h3>
-                                    <button 
-                                        onClick={() => setDepartures([{ departure_date: '', return_date: '', max_slots: 30 }, ...departures])} 
-                                        style={{ padding: '12px 24px', background: '#fff', color: '#0194f3', border: '2px solid #e0f2fe', borderRadius: '12px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        Thêm Đợt
-                                    </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <h3 style={{ margin: 0, fontSize: '20px', color: '#111827', fontWeight: '800' }}>Danh Sách Đợt Khởi Hành</h3>
+                                        
+                                        {/* Dropdown Lọc Theo Tháng */}
+                                        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '6px 12px' }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                            <select 
+                                                value={selectedMonth} 
+                                                onChange={e => setSelectedMonth(e.target.value)}
+                                                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '14px', fontWeight: '600', color: '#374151', cursor: 'pointer' }}
+                                            >
+                                                <option value="all">Tất cả thời gian</option>
+                                                <option value="2026-08">Tháng 08/2026</option>
+                                                <option value="2026-09">Tháng 09/2026</option>
+                                                <option value="2026-10">Tháng 10/2026</option>
+                                                <option value="2026-11">Tháng 11/2026</option>
+                                                <option value="2026-12">Tháng 12/2026</option>
+                                                <option value="2027-01">Tháng 01/2027</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {activeTourTab !== 'custom' && (
+                                        <button 
+                                            onClick={() => setDepartures([{ departure_date: '', return_date: '', max_slots: 30 }, ...departures])} 
+                                            style={{ padding: '12px 24px', background: '#fff', color: '#0194f3', border: '2px solid #e0f2fe', borderRadius: '12px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Thêm Đợt
+                                        </button>
+                                    )}
                                 </div>
 
-                                {departures.length === 0 ? (
+                                {departures.filter(dep => selectedMonth === 'all' || (dep.departure_date && dep.departure_date.startsWith(selectedMonth))).length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: '80px 20px', background: '#fff', borderRadius: '20px', border: '2px dashed #e5e7eb' }}>
                                         <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📅</div>
-                                        <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#374151' }}>Chưa có lịch chạy nào</h4>
-                                        <p style={{ color: '#6b7280', fontSize: '15px', margin: 0 }}>Bấm thêm đợt để bắt đầu tạo các chuyến đi cho khách hàng.</p>
+                                        <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#374151' }}>Chưa có lịch chạy nào cho thời gian này</h4>
+                                        <p style={{ color: '#6b7280', fontSize: '15px', margin: 0 }}>Vui lòng thêm đợt mới hoặc chọn tháng khác.</p>
                                     </div>
                                 ) : (
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
-                                        {departures.map((dep, idx) => (
+                                        {departures.map((dep, idx) => {
+                                            if (selectedMonth !== 'all' && dep.departure_date && !dep.departure_date.startsWith(selectedMonth)) return null;
+                                            return (
                                             <div key={idx} style={{ background: '#fff', borderRadius: '20px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 25px rgba(0,0,0,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)'; }}>
                                                 {/* Card Header (Dates) */}
                                                 <div style={{ padding: '20px', background: 'linear-gradient(to bottom, #f8fafc, #ffffff)', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -285,7 +457,8 @@ const TourOperationalManager = () => {
                                                             min={todayStr}
                                                             value={dep.departure_date} 
                                                             onChange={e => handleDepartureDateChange(idx, e.target.value)} 
-                                                            style={{ padding: '0', border: 'none', background: 'transparent', width: '100%', fontFamily: 'inherit', color: '#111827', fontSize: '16px', fontWeight: '700', outline: 'none', cursor: 'pointer' }} 
+                                                            disabled={activeTourTab === 'custom'}
+                                                            style={{ padding: '0', border: 'none', background: 'transparent', width: '100%', fontFamily: 'inherit', color: activeTourTab === 'custom' ? '#6b7280' : '#111827', fontSize: '16px', fontWeight: '700', outline: 'none', cursor: activeTourTab === 'custom' ? 'not-allowed' : 'pointer' }} 
                                                         />
                                                     </div>
                                                     
@@ -295,7 +468,7 @@ const TourOperationalManager = () => {
 
                                                     <div style={{ flex: 1, textAlign: 'right' }}>
                                                         <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ngày Về</div>
-                                                        <div style={{ fontSize: '16px', fontWeight: '700', color: dep.return_date ? '#111827' : '#9ca3af' }}>
+                                                        <div style={{ fontSize: '16px', fontWeight: '700', color: dep.return_date ? (activeTourTab === 'custom' ? '#6b7280' : '#111827') : '#9ca3af' }}>
                                                             {formatDateStr(dep.return_date)}
                                                         </div>
                                                     </div>
@@ -308,7 +481,7 @@ const TourOperationalManager = () => {
                                                             <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '8px' }}>SỐ KHÁCH</label>
                                                             <div style={{ display: 'flex', alignItems: 'center', background: '#f3f4f6', padding: '10px 14px', borderRadius: '12px' }}>
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                                                <input type="number" min="1" value={dep.max_slots} onChange={e => { const up = [...departures]; up[idx].max_slots = Number(e.target.value); setDepartures(up); }} style={{ width: '100%', border: 'none', background: 'transparent', fontFamily: 'inherit', color: '#111827', fontSize: '15px', fontWeight: '700', outline: 'none', textAlign: 'center' }} />
+                                                                <input type="number" min="1" value={dep.max_slots} onChange={e => { const up = [...departures]; up[idx].max_slots = Number(e.target.value); setDepartures(up); }} disabled={activeTourTab === 'custom'} style={{ width: '100%', border: 'none', background: 'transparent', fontFamily: 'inherit', color: activeTourTab === 'custom' ? '#6b7280' : '#111827', fontSize: '15px', fontWeight: '700', outline: 'none', textAlign: 'center', cursor: activeTourTab === 'custom' ? 'not-allowed' : 'text' }} />
                                                             </div>
                                                         </div>
                                                         <div style={{ flex: 1 }}>
@@ -324,18 +497,21 @@ const TourOperationalManager = () => {
                                                         </div>
                                                     </div>
 
-                                                    <button 
-                                                        onClick={() => setDepartures(departures.filter((_, i) => i !== idx))} 
-                                                        style={{ width: '100%', padding: '12px', background: '#fff', color: '#ef4444', border: '1px solid #fee2e2', borderRadius: '12px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                                        onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                                        Gỡ Đợt Chạy Này
-                                                    </button>
+                                                    {activeTourTab !== 'custom' && (
+                                                        <button 
+                                                            onClick={() => setDepartures(departures.filter((_, i) => i !== idx))} 
+                                                            style={{ width: '100%', padding: '12px', background: '#fff', color: '#ef4444', border: '1px solid #fee2e2', borderRadius: '12px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                            onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                                            Gỡ Đợt Chạy Này
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
 
@@ -352,6 +528,12 @@ const TourOperationalManager = () => {
                                         )}
                                     </div>
                                 )}
+                                
+                                <GuideTimelineCalendar 
+                                    guides={guides}
+                                    guideSchedules={guideSchedules}
+                                    selectedMonth={selectedMonth}
+                                />
                             </div>
                         </div>
                     )}

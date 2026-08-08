@@ -372,7 +372,7 @@ exports.bookCustomTourQuote = async (req, res) => {
         }
 
         const [quotes] = await sequelize.query(`
-            SELECT q.*, r.people_count, r.destination, r.departure_date, r.return_date, r.staff_id
+            SELECT q.*, r.people_count, r.destination, r.departure_date, r.return_date
             FROM custom_tour_quotes q
             INNER JOIN custom_tour_requests r ON q.request_id = r.request_id
             WHERE q.quote_id = ?
@@ -398,17 +398,17 @@ exports.bookCustomTourQuote = async (req, res) => {
             replacements: [tourName, quote.destination, quote.quote_price, quote.staff_id, itineraryJson],
             transaction
         });
-        const newTourId = tourResult[0] || tourResult.insertId;
+        const newTourId = tourResult?.insertId ?? (typeof tourResult === 'number' ? tourResult : tourResult[0]);
 
         // 4. TẠO DEPARTURE TRONG BẢNG DEPARTURES
         const [departureResult] = await sequelize.query(`
-            INSERT INTO departures (tour_id, start_date, end_date, price, available_seats, total_seats, status)
-            VALUES (?, ?, ?, ?, 0, ?, 'Confirmed')
+            INSERT INTO departures (tour_id, departure_date, return_date, max_slots, available_slots, status)
+            VALUES (?, ?, ?, ?, 0, 'Closed')
         `, {
-            replacements: [newTourId, quote.departure_date, quote.return_date, quote.quote_price, quote.people_count],
+            replacements: [newTourId, quote.departure_date, quote.return_date, quote.people_count],
             transaction
         });
-        const newDepartureId = departureResult[0] || departureResult.insertId;
+        const newDepartureId = departureResult?.insertId ?? (typeof departureResult === 'number' ? departureResult : departureResult[0]);
 
         // 5. TẠO ĐƠN HÀNG TRONG BẢNG BOOKINGS
         const noteText = notes || `Tour thiết kế riêng: ${quote.destination} (${quote.departure_date} - ${quote.return_date})`;
@@ -416,10 +416,10 @@ exports.bookCustomTourQuote = async (req, res) => {
             INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
             VALUES (?, ?, ?, ?, NOW(), ?, 'Confirmed', 'Unpaid', ?)
         `, {
-            replacements: [customerId, newDepartureId, quoteId, quote.people_count, quote.quote_price, noteText],
+            replacements: [customerId, newDepartureId, quoteId, quote.people_count, quote.quote_price * quote.people_count, noteText],
             transaction
         });
-        const newBookingId = bookingInsert[0] || bookingInsert.insertId;
+        const newBookingId = bookingInsert?.insertId ?? (typeof bookingInsert === 'number' ? bookingInsert : bookingInsert[0]);
 
         // 6. TRỪ CHỖ DỊCH VỤ TRONG BẢNG partner_services
         try {
@@ -444,7 +444,7 @@ exports.bookCustomTourQuote = async (req, res) => {
         await sequelize.query(`
             INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status)
             VALUES (?, ?, ?, ?, 'Pending')
-        `, { replacements: [newBookingId, payment_method, quote.quote_price, txnCode], transaction });
+        `, { replacements: [newBookingId, payment_method, quote.quote_price * quote.people_count, txnCode], transaction });
 
         await transaction.commit();
 
@@ -537,9 +537,11 @@ exports.managerReview = async (req, res) => {
         const newQuoteStatus = action === 'approve' ? 'Approved' : 'Rejected';
         const newReqStatus = action === 'approve' ? 'Manager_Approved' : 'Manager_Rejected';
 
+        const managerNoteValue = manager_note || null;
+
         await sequelize.query(`
             UPDATE custom_tour_quotes SET approval_status = ?, manager_note = ?, manager_id = ? WHERE quote_id = ?
-        `, { replacements: [newQuoteStatus, manager_note, managerId, quoteId] });
+        `, { replacements: [newQuoteStatus, managerNoteValue, managerId, quoteId] });
 
         // Update request status based on the quote's request_id
         await sequelize.query(`

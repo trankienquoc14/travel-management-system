@@ -65,6 +65,62 @@ exports.login = async (req, res) => {
   }
 };
 
+// API Đăng ký tài khoản Khách hàng mới
+exports.register = async (req, res) => {
+  try {
+    const { full_name, email, password } = req.body;
+
+    if (!full_name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ họ tên, email và mật khẩu' });
+    }
+
+    // Kiểm tra email đã tồn tại chưa
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Email này đã được sử dụng. Vui lòng đăng nhập!' });
+    }
+
+    // Mã hóa mật khẩu
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Tạo user mới (Role 6 mặc định là Khách Hàng)
+    const newUser = await User.create({
+      full_name,
+      email,
+      password_hash,
+      role_id: 6, 
+      status: 'Active'
+    });
+
+    // Tạo JWT Token tự động đăng nhập sau khi đăng ký
+    const payload = {
+      user_id: newUser.user_id,
+      role_id: newUser.role_id,
+      email: newUser.email
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Đăng ký tài khoản thành công',
+      token,
+      user: {
+        id: newUser.user_id,
+        fullName: newUser.full_name,
+        role: newUser.role_id,
+        avatar: newUser.avatar
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+  }
+};
+
 // 6. Lấy hồ sơ cá nhân của người dùng đăng nhập
 exports.getProfile = async (req, res) => {
   try {

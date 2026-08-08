@@ -39,6 +39,7 @@ router.get('/staff/tours/:id', protect, restrictTo(1, 3, 4), tourController.getF
 router.get('/staff/destination-resources', protect, restrictTo(1, 3, 4), tourController.getDestinationResources);
 
 // Lấy chi tiết lịch trình vận hành
+router.get('/admin/guide-schedule', protect, restrictTo(1, 3), tourController.getGuideSchedule);
 router.get('/admin/:id', protect, restrictTo(1, 3), tourController.getTourOperationalDetail);
 router.post('/admin/save', protect, restrictTo(1, 3), upload.single('image'), tourController.saveTourOperationalSchedule);
 

@@ -83,17 +83,17 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
 
     // Hàm gửi báo giá cho khách (Tour thiết kế riêng)
     const handleSendQuote = async (tour) => {
-        if (!window.confirm(`Bạn muốn gửi báo giá ${Number(tour.quoted_price).toLocaleString('vi-VN')}đ cho khách hàng ${tour.customer_name}?`)) {
+        if (!window.confirm(`Bạn muốn gửi bản thiết kế và giá chính thức ${Number(tour.quoted_price).toLocaleString('vi-VN')}đ cho khách hàng ${tour.customer_name}?`)) {
             return;
         }
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post(`http://localhost:5000/api/custom-tours/requests/${tour.request_id}/send-quote`, {}, {
+            const res = await axios.post(`http://localhost:5000/api/custom-tours/quotes/${tour.quote_id}/send-to-customer`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             if (res.data.success) {
-                alert('Đã gửi báo giá cho khách hàng thành công!');
+                alert('Đã gửi bản thiết kế và giá chính thức cho khách hàng thành công!');
                 setSentStatus(prev => ({ ...prev, [tour.request_id]: true }));
                 fetchData(); 
             }
@@ -103,6 +103,8 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
     };
 
     const formatMoney = (amount) => Number(amount || 0).toLocaleString('vi-VN');
+
+    const [filterStatus, setFilterStatus] = useState('Tất cả');
 
     return (
         <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif", backgroundColor: '#f8fafc', minHeight: 'calc(100vh - 80px)' }}>
@@ -120,20 +122,36 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                 </div>
             </div>
 
-            {/* THANH TAB CHUYỂN ĐỔI */}
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '24px' }}>
-                <button 
-                    onClick={() => setActiveTab('custom')} 
-                    style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'custom' ? '2px solid #3b82f6' : '1px solid #cbd5e1', background: activeTab === 'custom' ? '#eff6ff' : '#fff', color: activeTab === 'custom' ? '#1d4ed8' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
-                >
-                    🛎️ Hồ sơ Thiết Kế Riêng ({pendingTours.length})
-                </button>
-                <button 
-                    onClick={() => setActiveTab('fixed')} 
-                    style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'fixed' ? '2px solid #10b981' : '1px solid #cbd5e1', background: activeTab === 'fixed' ? '#ecfdf5' : '#fff', color: activeTab === 'fixed' ? '#047857' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
-                >
-                    🗺️ Sản phẩm Tour Cố Định ({fixedTours.length})
-                </button>
+            {/* THANH TAB CHUYỂN ĐỔI & BỘ LỌC */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '15px' }}>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                    <button 
+                        onClick={() => { setActiveTab('custom'); setFilterStatus('Tất cả'); }} 
+                        style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'custom' ? '2px solid #3b82f6' : '1px solid #cbd5e1', background: activeTab === 'custom' ? '#eff6ff' : '#fff', color: activeTab === 'custom' ? '#1d4ed8' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                        🛎️ Hồ sơ Thiết Kế Riêng ({pendingTours.length})
+                    </button>
+                    <button 
+                        onClick={() => { setActiveTab('fixed'); setFilterStatus('Tất cả'); }} 
+                        style={{ padding: '12px 24px', borderRadius: '10px', border: activeTab === 'fixed' ? '2px solid #10b981' : '1px solid #cbd5e1', background: activeTab === 'fixed' ? '#ecfdf5' : '#fff', color: activeTab === 'fixed' ? '#047857' : '#64748b', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                        🗺️ Sản phẩm Tour Cố Định ({fixedTours.length})
+                    </button>
+                </div>
+
+                <div style={{ width: '250px' }}>
+                    <select 
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', background: '#fff', cursor: 'pointer', fontWeight: '500', color: '#334155' }}
+                    >
+                        <option value="Tất cả">Tất cả trạng thái</option>
+                        <option value="Chờ duyệt">⏳ Đang chờ duyệt</option>
+                        <option value="Từ chối">❌ Bị từ chối / Cần sửa</option>
+                        <option value="Đã duyệt">✨ Đã duyệt / Mở bán</option>
+                        {activeTab === 'custom' && <option value="Đã gửi khách">✅ Đã gửi khách</option>}
+                    </select>
+                </div>
             </div>
 
             {loading ? (
@@ -144,12 +162,20 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                     {/* ======================================================== */}
                     {/* TAB 1: TOUR THIẾT KẾ RIÊNG */}
                     {/* ======================================================== */}
-                    {activeTab === 'custom' && pendingTours.length === 0 && (
-                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8', background: '#fff', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                            Không có hồ sơ tour thiết kế riêng nào đang xử lý.
-                        </div>
-                    )}
-                    {activeTab === 'custom' && pendingTours.map((tour) => {
+                    {activeTab === 'custom' && pendingTours.filter(tour => {
+                        if (filterStatus === 'Tất cả') return true;
+                        
+                        const isManagerRejected = tour.approval_status === 'Rejected';
+                        const isManagerApproved = tour.approval_status === 'Approved';
+                        const isPendingApproval = tour.approval_status === 'Pending_Approval';
+                        const isAlreadySentToCustomer = sentStatus[tour.request_id] || ['Quote_Sent', 'Customer_Revision', 'Customer_Accepted'].includes(tour.status);
+
+                        if (filterStatus === 'Từ chối') return isManagerRejected;
+                        if (filterStatus === 'Chờ duyệt') return isPendingApproval;
+                        if (filterStatus === 'Đã duyệt') return isManagerApproved && !isAlreadySentToCustomer;
+                        if (filterStatus === 'Đã gửi khách') return isAlreadySentToCustomer;
+                        return true;
+                    }).map((tour) => {
                         const isManagerRejected = tour.approval_status === 'Rejected';
                         const isManagerApproved = tour.approval_status === 'Approved';
                         const isPendingApproval = tour.approval_status === 'Pending_Approval';
@@ -197,7 +223,7 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                             disabled={!isApprovedReadyToSend}
                                             style={{ flex: 1.5, padding: '10px', backgroundColor: isApprovedReadyToSend ? '#10b981' : '#f1f5f9', color: isApprovedReadyToSend ? '#fff' : '#94a3b8', border: isApprovedReadyToSend ? 'none' : '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', cursor: isApprovedReadyToSend ? 'pointer' : 'not-allowed' }}
                                         >
-                                            Gửi báo giá
+                                            Gửi thiết kế & Giá chính thức
                                         </button>
                                     </div>
                                 )}
@@ -209,12 +235,20 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                     {/* ======================================================== */}
                     {/* TAB 2: TOUR CỐ ĐỊNH */}
                     {/* ======================================================== */}
-                    {activeTab === 'fixed' && fixedTours.length === 0 && (
-                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8', background: '#fff', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                            Bạn chưa có sản phẩm tour cố định nào.
-                        </div>
-                    )}
-                    {activeTab === 'fixed' && fixedTours.map((tour) => {
+                    {activeTab === 'fixed' && fixedTours.filter(tour => {
+                        if (filterStatus === 'Tất cả') return true;
+                        
+                        const isPending = tour.status === 'Pending';
+                        const isActive = tour.status === 'Active';
+                        const isRejected = tour.status === 'Rejected';
+
+                        if (filterStatus === 'Từ chối') return isRejected;
+                        if (filterStatus === 'Chờ duyệt') return isPending;
+                        if (filterStatus === 'Đã duyệt') return isActive;
+                        if (filterStatus === 'Đã gửi khách') return false; // Không áp dụng cho tab này
+                        
+                        return true;
+                    }).map((tour) => {
                         const isPending = tour.status === 'Pending';
                         const isActive = tour.status === 'Active';
                         const isRejected = tour.status === 'Rejected';

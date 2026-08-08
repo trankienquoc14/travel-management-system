@@ -6,8 +6,10 @@ const GATEWAY_URL = 'http://localhost:5000';
 
 const MyBookings = () => {
     const [bookings, setBookings] = useState([]);
+    const [serviceBookings, setServiceBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('All');
+    const [viewMode, setViewMode] = useState('Tour'); // 'Tour' hoặc 'Service'
     
     // Modal states
     const [detailBooking, setDetailBooking] = useState(null); // Modal Xem chi tiết
@@ -19,6 +21,7 @@ const MyBookings = () => {
 
     useEffect(() => {
         fetchMyBookings();
+        fetchMyServices();
     }, []);
 
     const fetchMyBookings = async () => {
@@ -35,6 +38,20 @@ const MyBookings = () => {
             console.error("Lỗi khi tải danh sách đơn hàng:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchMyServices = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${GATEWAY_URL}/api/bookings/my-services`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data && response.data.success) {
+                setServiceBookings(response.data.data || []);
+            }
+        } catch (error) {
+            console.error("Lỗi khi tải danh sách dịch vụ:", error);
         }
     };
 
@@ -99,6 +116,15 @@ const MyBookings = () => {
         if (filterStatus === 'Pending') return b.booking_status === 'Pending';
         if (filterStatus === 'Paid') return b.payment_status === 'Paid';
         if (filterStatus === 'Cancelled') return b.booking_status === 'Cancelled';
+        return true;
+    });
+
+    const filteredServiceBookings = serviceBookings.filter(b => {
+        if (filterStatus === 'All') return true;
+        if (filterStatus === 'Confirmed') return b.status === 'Confirmed' || b.status === 'Accepted';
+        if (filterStatus === 'Pending') return b.status === 'Pending';
+        if (filterStatus === 'Paid') return b.payment_status === 'Paid';
+        if (filterStatus === 'Cancelled') return b.status === 'Cancelled' || b.status === 'Rejected';
         return true;
     });
 
@@ -174,34 +200,42 @@ const MyBookings = () => {
                     </div>
                 )}
 
-                {/* 2. Filter Tabs */}
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {[
-                        { id: 'All', label: '📋 Tất cả đơn hàng' },
-                        { id: 'Confirmed', label: '✅ Đã xác nhận' },
-                        { id: 'Pending', label: '⏳ Chờ xử lý' },
-                        { id: 'Paid', label: '💵 Đã thanh toán' },
-                        { id: 'Cancelled', label: '❌ Đã hủy' }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setFilterStatus(tab.id)}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '30px',
-                                border: filterStatus === tab.id ? 'none' : '1px solid #cbd5e1',
-                                background: filterStatus === tab.id ? '#0194f3' : '#ffffff',
-                                color: filterStatus === tab.id ? '#ffffff' : '#475569',
-                                fontWeight: '700',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                boxShadow: filterStatus === tab.id ? '0 4px 12px rgba(1, 148, 243, 0.3)' : 'none'
-                            }}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                {/* 2. Filter Tabs & ViewMode Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '24px' }}>
+                    
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+                        {[
+                            { id: 'All', label: '📋 Tất cả đơn hàng' },
+                            { id: 'Confirmed', label: '✅ Đã xác nhận' },
+                            { id: 'Pending', label: '⏳ Chờ xử lý' },
+                            { id: 'Paid', label: '💵 Đã thanh toán' },
+                            { id: 'Cancelled', label: '❌ Đã hủy' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setFilterStatus(tab.id)}
+                                style={{
+                                    padding: '10px 20px',
+                                    borderRadius: '30px',
+                                    border: filterStatus === tab.id ? 'none' : '1px solid #cbd5e1',
+                                    background: filterStatus === tab.id ? '#0194f3' : '#ffffff',
+                                    color: filterStatus === tab.id ? '#ffffff' : '#475569',
+                                    fontWeight: '700',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: filterStatus === tab.id ? '0 4px 12px rgba(1, 148, 243, 0.3)' : 'none'
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '12px', padding: '4px' }}>
+                        <button onClick={() => setViewMode('Tour')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: viewMode === 'Tour' ? '#fff' : 'transparent', color: viewMode === 'Tour' ? '#0f172a' : '#64748b', fontWeight: '700', cursor: 'pointer', boxShadow: viewMode === 'Tour' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none' }}>📦 Đơn Tour</button>
+                        <button onClick={() => setViewMode('Service')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: viewMode === 'Service' ? '#fff' : 'transparent', color: viewMode === 'Service' ? '#0f172a' : '#64748b', fontWeight: '700', cursor: 'pointer', boxShadow: viewMode === 'Service' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none' }}>🛎️ Dịch vụ riêng</button>
+                    </div>
                 </div>
 
                 {/* 3. Bookings List Cards */}
@@ -209,98 +243,169 @@ const MyBookings = () => {
                     <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '20px', fontSize: '16px', color: '#0194f3', fontWeight: '700' }}>
                         ⏳ Đang tải thông tin đơn hàng...
                     </div>
-                ) : filteredBookings.length === 0 ? (
+                ) : (viewMode === 'Tour' ? filteredBookings : filteredServiceBookings).length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
                         <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏝️</div>
                         <h3 style={{ fontSize: '20px', color: '#0f172a', fontWeight: '800', margin: '0 0 8px 0' }}>Chưa tìm thấy đơn hàng nào</h3>
-                        <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>Bạn chưa có đơn đặt tour trong danh mục này.</p>
+                        <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>Bạn chưa có đơn đặt {viewMode === 'Tour' ? 'tour' : 'dịch vụ'} trong danh mục này.</p>
                         <button onClick={() => window.location.href = '/home'} style={{ padding: '12px 24px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                            ✨ Khám phá các Tour hấp dẫn
+                            ✨ Khám phá các dịch vụ hấp dẫn
                         </button>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {filteredBookings.map((booking) => {
-                            const isCustom = Boolean(booking.quote_id);
+                        {viewMode === 'Tour' ? (
+                            filteredBookings.map((booking) => {
+                                const isCustom = Boolean(booking.quote_id);
 
-                            return (
-                                <div key={booking.booking_id} style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
+                                return (
+                                    <div key={booking.booking_id} style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
+                                        
+                                        {/* Left Cover Image */}
+                                        <div style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(booking.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                                            <div style={{ position: 'absolute', top: '14px', left: '14px', background: isCustom ? '#7e22ce' : '#0284c7', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                                                {isCustom ? '🛎️ Tour Thiết Kế Riêng' : '🗺️ Tour Trọn Gói'}
+                                            </div>
+                                        </div>
+
+                                        {/* Content Info */}
+                                        <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
+                                            <div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
+                                                    <div>
+                                                        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', letterSpacing: '0.5px' }}>
+                                                            MÃ ĐƠN: #BKG-{booking.booking_id.toString().padStart(4, '0')}
+                                                        </span>
+                                                        <h3 style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4' }}>
+                                                            {booking.tour_name}
+                                                        </h3>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                                        {renderStatusBadge(booking.booking_status)}
+                                                        {renderPaymentBadge(booking.payment_status)}
+                                                    </div>
+                                                </div>
+
+                                                {/* Details Grid */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '16px', margin: '16px 0', border: '1px solid #f1f5f9', fontSize: '14px' }}>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📅 NGÀY KHỞI HÀNH</span>
+                                                        <strong style={{ color: '#0f172a' }}>{formatDate(booking.departure_date)}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>⏱️ THỜI GIAN</span>
+                                                        <strong style={{ color: '#0f172a' }}>{booking.duration_days || 3} Ngày</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>👥 SỐ HÀNH KHÁCH</span>
+                                                        <strong style={{ color: '#0f172a' }}>{booking.num_people} Người</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📍 ĐIỂM ĐẾN</span>
+                                                        <strong style={{ color: '#0f172a' }}>{booking.destination || 'Việt Nam'}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Bottom Action Footer */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                                                <div>
+                                                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Tổng thanh toán: </span>
+                                                    <span style={{ fontSize: '22px', fontWeight: '800', color: '#059669', marginLeft: '6px' }}>
+                                                        {formatCurrency(booking.total_amount)}
+                                                    </span>
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                    {/* Button Nút Xem Chi Tiết */}
+                                                    <button
+                                                        onClick={() => setDetailBooking(booking)}
+                                                        style={{ padding: '10px 18px', backgroundColor: '#0194f3', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(1, 148, 243, 0.25)', transition: 'all 0.2s' }}
+                                                    >
+                                                        👁️ Xem Chi Tiết Đơn
+                                                    </button>
+
+                                                    {booking.booking_status !== 'Cancelled' && (
+                                                        <button
+                                                            onClick={() => { setSelectedBooking(booking); setReason(''); }}
+                                                            style={{ padding: '10px 18px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', transition: 'all 0.2s' }}
+                                                        >
+                                                            🔄 Hủy / Đổi Lịch
+                                                        </button>
+                                                    )}
+
+                                                    {booking.payment_status === 'Unpaid' && booking.booking_status !== 'Cancelled' && (
+                                                        <button 
+                                                            onClick={() => alert("Chuyển hướng đến cổng thanh toán trực tuyến VNPAY...")}
+                                                            style={{ padding: '10px 18px', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }}
+                                                        >
+                                                            💳 Thanh Toán Ngay
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            filteredServiceBookings.map((sb) => (
+                                <div key={sb.booking_id} style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
                                     
-                                    {/* Left Cover Image */}
-                                    <div style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(booking.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-                                        <div style={{ position: 'absolute', top: '14px', left: '14px', background: isCustom ? '#7e22ce' : '#0284c7', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                                            {isCustom ? '🛎️ Tour Thiết Kế Riêng' : '🗺️ Tour Trọn Gói'}
+                                    <div style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(sb.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                                        <div style={{ position: 'absolute', top: '14px', left: '14px', background: '#f59e0b', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                                            🛎️ Dịch Vụ
                                         </div>
                                     </div>
 
-                                    {/* Content Info */}
                                     <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
                                         <div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
                                                 <div>
                                                     <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', letterSpacing: '0.5px' }}>
-                                                        MÃ ĐƠN: #BKG-{booking.booking_id.toString().padStart(4, '0')}
+                                                        MÃ ĐƠN: #SRV-{sb.booking_id.toString().padStart(4, '0')}
                                                     </span>
                                                     <h3 style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4' }}>
-                                                        {booking.tour_name}
+                                                        {sb.service_name}
                                                     </h3>
+                                                    <span style={{ fontSize: '13px', color: '#0194f3', fontWeight: '600' }}>{sb.service_type}</span>
                                                 </div>
 
                                                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                                    {renderStatusBadge(booking.booking_status)}
-                                                    {renderPaymentBadge(booking.payment_status)}
+                                                    {renderStatusBadge(sb.status)}
+                                                    {renderPaymentBadge(sb.payment_status)}
                                                 </div>
                                             </div>
 
-                                            {/* Details Grid */}
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '16px', margin: '16px 0', border: '1px solid #f1f5f9', fontSize: '14px' }}>
                                                 <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📅 NGÀY KHỞI HÀNH</span>
-                                                    <strong style={{ color: '#0f172a' }}>{formatDate(booking.departure_date)}</strong>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📅 NGÀY SỬ DỤNG</span>
+                                                    <strong style={{ color: '#0f172a' }}>{formatDate(sb.usage_date)}</strong>
                                                 </div>
                                                 <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>⏱️ THỜI GIAN</span>
-                                                    <strong style={{ color: '#0f172a' }}>{booking.duration_days || 3} Ngày</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>👥 SỐ HÀNH KHÁCH</span>
-                                                    <strong style={{ color: '#0f172a' }}>{booking.num_people} Người</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📍 ĐIỂM ĐẾN</span>
-                                                    <strong style={{ color: '#0f172a' }}>{booking.destination || 'Việt Nam'}</strong>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📦 SỐ LƯỢNG YÊU CẦU</span>
+                                                    <strong style={{ color: '#0f172a' }}>{sb.quantity} {sb.unit}</strong>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Bottom Action Footer */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
                                             <div>
                                                 <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Tổng thanh toán: </span>
                                                 <span style={{ fontSize: '22px', fontWeight: '800', color: '#059669', marginLeft: '6px' }}>
-                                                    {formatCurrency(booking.total_amount)}
+                                                    {formatCurrency(sb.total_amount)}
                                                 </span>
                                             </div>
 
                                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                                {/* Button Nút Xem Chi Tiết */}
                                                 <button
-                                                    onClick={() => setDetailBooking(booking)}
-                                                    style={{ padding: '10px 18px', backgroundColor: '#0194f3', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(1, 148, 243, 0.25)', transition: 'all 0.2s' }}
+                                                    onClick={() => setDetailBooking({...sb, isService: true})}
+                                                    style={{ padding: '10px 18px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)', transition: 'all 0.2s' }}
                                                 >
-                                                    👁️ Xem Chi Tiết Đơn
+                                                    👁️ Xem Chi Tiết Dịch Vụ
                                                 </button>
-
-                                                {booking.booking_status !== 'Cancelled' && (
-                                                    <button
-                                                        onClick={() => { setSelectedBooking(booking); setReason(''); }}
-                                                        style={{ padding: '10px 18px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', transition: 'all 0.2s' }}
-                                                    >
-                                                        🔄 Hủy / Đổi Lịch
-                                                    </button>
-                                                )}
-
-                                                {booking.payment_status === 'Unpaid' && booking.booking_status !== 'Cancelled' && (
+                                                {sb.payment_status === 'Unpaid' && sb.status !== 'Cancelled' && (
                                                     <button 
                                                         onClick={() => alert("Chuyển hướng đến cổng thanh toán trực tuyến VNPAY...")}
                                                         style={{ padding: '10px 18px', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }}
@@ -312,8 +417,8 @@ const MyBookings = () => {
                                         </div>
                                     </div>
                                 </div>
-                            );
-                        })}
+                            ))
+                        )}
                     </div>
                 )}
             </div>
@@ -332,11 +437,11 @@ const MyBookings = () => {
                                 ✕
                             </button>
 
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#38bdf8', textTransform: 'uppercase' }}>
-                                MÃ ĐƠN HÀNG: #BKG-{detailBooking.booking_id.toString().padStart(4, '0')}
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: detailBooking.isService ? '#fde68a' : '#38bdf8', textTransform: 'uppercase' }}>
+                                MÃ ĐƠN HÀNG: #{detailBooking.isService ? 'SRV' : 'BKG'}-{detailBooking.booking_id.toString().padStart(4, '0')}
                             </div>
                             <h3 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '800' }}>
-                                {detailBooking.tour_name}
+                                {detailBooking.isService ? detailBooking.service_name : detailBooking.tour_name}
                             </h3>
                         </div>
 
@@ -347,7 +452,7 @@ const MyBookings = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: '#f8fafc', borderRadius: '16px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     <span style={{ fontWeight: '700', fontSize: '14px', color: '#475569' }}>TRẠNG THÁI:</span>
-                                    {renderStatusBadge(detailBooking.booking_status)}
+                                    {renderStatusBadge(detailBooking.isService ? detailBooking.status : detailBooking.booking_status)}
                                 </div>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     <span style={{ fontWeight: '700', fontSize: '14px', color: '#475569' }}>THANH TOÁN:</span>
@@ -358,29 +463,54 @@ const MyBookings = () => {
                             {/* 2-Column Info Sections */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
                                 
-                                {/* Column 1: Chuyến đi */}
+                                {/* Column 1: Chuyến đi / Dịch vụ */}
                                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '20px' }}>
                                     <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a', fontWeight: '800', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                                        🗺️ Thông Tin Lịch Trình
+                                        {detailBooking.isService ? '🛎️ Thông Tin Dịch Vụ' : '🗺️ Thông Tin Lịch Trình'}
                                     </h4>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
-                                        <div>
-                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>ĐIỂM ĐẾN</span>
-                                            <strong style={{ color: '#0f172a' }}>{detailBooking.destination || 'Việt Nam'}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY KHỞI HÀNH</span>
-                                            <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.departure_date)}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY KẾT THÚC DỰ KIẾN</span>
-                                            <strong style={{ color: '#0f172a' }}>{formatDate(detailBooking.return_date)}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>SỐ HÀNH KHÁCH</span>
-                                            <strong style={{ color: '#0f172a' }}>{detailBooking.num_people} Người lớn / Trẻ em</strong>
-                                        </div>
+                                        {detailBooking.isService ? (
+                                            <>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>LOẠI DỊCH VỤ</span>
+                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.service_type}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY SỬ DỤNG</span>
+                                                    <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.usage_date)}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>SỐ LƯỢNG YÊU CẦU</span>
+                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.quantity} {detailBooking.unit}</strong>
+                                                </div>
+                                                {detailBooking.voucher_code && (
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>MÃ VOUCHER</span>
+                                                        <strong style={{ color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>{detailBooking.voucher_code}</strong>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>ĐIỂM ĐẾN</span>
+                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.destination || 'Việt Nam'}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY KHỞI HÀNH</span>
+                                                    <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.departure_date)}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY KẾT THÚC DỰ KIẾN</span>
+                                                    <strong style={{ color: '#0f172a' }}>{formatDate(detailBooking.return_date)}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>SỐ HÀNH KHÁCH</span>
+                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.num_people} Người lớn / Trẻ em</strong>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -392,17 +522,19 @@ const MyBookings = () => {
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#64748b' }}>Đơn giá 1 hành khách:</span>
-                                            <strong style={{ color: '#0f172a' }}>{formatCurrency(detailBooking.price_per_person)}</strong>
+                                            <span style={{ color: '#64748b' }}>Đơn giá {detailBooking.isService ? `(${detailBooking.unit})` : '1 hành khách'}:</span>
+                                            <strong style={{ color: '#0f172a' }}>{formatCurrency(detailBooking.isService ? (detailBooking.total_amount / (detailBooking.quantity || 1)) : detailBooking.price_per_person)}</strong>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#64748b' }}>Số lượng khách:</span>
-                                            <strong style={{ color: '#0f172a' }}>x {detailBooking.num_people}</strong>
+                                            <span style={{ color: '#64748b' }}>Số lượng:</span>
+                                            <strong style={{ color: '#0f172a' }}>x {detailBooking.isService ? detailBooking.quantity : detailBooking.num_people}</strong>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#64748b' }}>Bảo hiểm du lịch:</span>
-                                            <strong style={{ color: '#10b981' }}>Đã bao gồm (Free)</strong>
-                                        </div>
+                                        {!detailBooking.isService && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ color: '#64748b' }}>Bảo hiểm du lịch:</span>
+                                                <strong style={{ color: '#10b981' }}>Đã bao gồm (Free)</strong>
+                                            </div>
+                                        )}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '10px', marginTop: '4px' }}>
                                             <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '15px' }}>TỔNG TIỀN THANH TOÁN:</span>
                                             <strong style={{ fontSize: '20px', color: '#059669', fontWeight: '800' }}>{formatCurrency(detailBooking.total_amount)}</strong>

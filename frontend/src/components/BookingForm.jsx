@@ -104,7 +104,7 @@ const BookingForm = () => {
 
     const title = isCustom ? `✨ Tour thiết kế riêng: ${quote.destination}` : tour?.tour_name;
     const numPeople = isCustom ? quote.people_count : bookingData.numPeople;
-    const totalAmount = isCustom ? (quote.quoted_price || quote.quote_price) : bookingData.totalAmount;
+    const totalAmount = isCustom ? (quote.quoted_price || quote.quote_price) * quote.people_count : bookingData.totalAmount;
     const bgImage = isCustom
         ? 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600'
         : (tour?.image_url || 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=500');

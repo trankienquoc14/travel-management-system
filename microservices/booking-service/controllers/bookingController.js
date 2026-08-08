@@ -483,4 +483,222 @@ exports.updateBookingStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+
+// ==========================================
+// TÍNH NĂNG ĐẶT DỊCH VỤ ĐƠN LẺ (STANDALONE)
+// ==========================================
+
+exports.bookStandaloneService = async (req, res) => {
+    try {
+        const customer_id = req.user.user_id;
+        const { service_id, quantity, usage_date, total_amount, payment_method, notes } = req.body;
+
+        if (!service_id || !quantity || !usage_date || !total_amount) {
+            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đủ thông tin đặt dịch vụ' });
+        }
+
+        const [result] = await sequelize.query(`
+            INSERT INTO service_bookings 
+            (customer_id, service_id, quantity, usage_date, total_amount, payment_method, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?)
+        `, {
+            replacements: [customer_id, service_id, quantity, usage_date, total_amount, payment_method || 'Prepaid', notes || '']
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Đã gửi yêu cầu đặt dịch vụ thành công',
+            data: { booking_id: result }
+        });
+    } catch (error) {
+        console.error('Lỗi khi đặt dịch vụ đơn lẻ:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+exports.getMyServiceBookings = async (req, res) => {
+    try {
+        const customer_id = req.user.user_id;
+        const [bookings] = await sequelize.query(`
+            SELECT sb.*, 
+                   s.service_name, s.service_type, s.image_url, s.unit
+            FROM service_bookings sb
+            JOIN travel_management.services s ON sb.service_id = s.service_id
+            WHERE sb.customer_id = ?
+            ORDER BY sb.created_at DESC
+        `, {
+            replacements: [customer_id]
+        });
+
+        res.json({ success: true, data: bookings });
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách dịch vụ:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+exports.getAllServiceBookingsAdmin = async (req, res) => {
+    try {
+        const [bookings] = await sequelize.query(`
+            SELECT sb.*, 
+                   s.service_name, s.service_type, s.image_url, s.unit,
+                   (SELECT status FROM service_requests sr WHERE sr.service_booking_id = sb.booking_id ORDER BY created_at DESC LIMIT 1) as partner_status
+            FROM service_bookings sb
+            JOIN travel_management.services s ON sb.service_id = s.service_id
+            ORDER BY sb.created_at DESC
+        `);
+
+        res.json({ success: true, data: bookings });
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách dịch vụ admin:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+exports.confirmServiceBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body; // 'confirm' hoặc 'reject'
+        
+        const [bookingData] = await sequelize.query('SELECT * FROM service_bookings WHERE booking_id = ?', {
+            replacements: [id]
+        });
+        const booking = bookingData[0];
+        
+        if (!booking) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu' });
+
+        if (action === 'reject') {
+            await sequelize.query("UPDATE service_bookings SET status = 'Rejected' WHERE booking_id = ?", { replacements: [id] });
+            return res.json({ success: true, message: 'Đã từ chối yêu cầu' });
+        }
+
+        if (action === 'confirm') {
+            const voucher_code = 'VOUCHER-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            await sequelize.query(`
+                UPDATE service_bookings 
+                SET status = 'Confirmed', voucher_code = ? 
+                WHERE booking_id = ?
+            `, { replacements: [voucher_code, id] });
+
+            return res.json({ success: true, message: 'Đã xác nhận dịch vụ', voucher: voucher_code });
+        }
+
+    } catch (error) {
+        console.error('Lỗi xác nhận dịch vụ:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+// ==========================================
+// TÍNH NĂNG ĐỐI TÁC (PARTNER PORTAL)
+// ==========================================
+
+exports.forwardToPartner = async (req, res) => {
+    try {
+        const { id } = req.params; // service_booking_id
+        const user_id = req.user.user_id;
+
+        const [bookingData] = await sequelize.query('SELECT * FROM service_bookings WHERE booking_id = ?', {
+            replacements: [id]
+        });
+        const booking = bookingData[0];
+        
+        if (!booking) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu đặt dịch vụ' });
+
+        // Lấy thông tin partner_id từ bảng services
+        const [serviceData] = await sequelize.query('SELECT partner_id FROM travel_management.services WHERE service_id = ?', {
+            replacements: [booking.service_id]
+        });
+        
+        if (!serviceData[0] || !serviceData[0].partner_id) {
+             return res.status(400).json({ success: false, message: 'Dịch vụ này chưa được gán cho đối tác cụ thể nào!' });
+        }
+        
+        const partner_id = serviceData[0].partner_id;
+
+        // Kiểm tra xem đã gửi yêu cầu trước đó chưa
+        const [existingReq] = await sequelize.query('SELECT request_id FROM service_requests WHERE service_booking_id = ? LIMIT 1', {
+            replacements: [id]
+        });
+        
+        if (existingReq && existingReq.length > 0) {
+            return res.status(400).json({ success: false, message: 'Yêu cầu cho dịch vụ này đã được gửi trước đó rồi!' });
+        }
+
+        // Ghi vào bảng service_requests
+        const content = `Khách hàng đặt: Ngày ${booking.usage_date} - Số lượng: ${booking.quantity}`;
+        await sequelize.query(`
+            INSERT INTO service_requests (service_booking_id, partner_id, requested_by, request_content, status, agreed_price)
+            VALUES (?, ?, ?, ?, 'Pending', ?)
+        `, {
+            replacements: [id, partner_id, user_id, content, booking.total_amount]
+        });
+
+        res.json({ success: true, message: 'Đã gửi yêu cầu sang cho Đối tác thành công!' });
+    } catch (error) {
+        console.error('Lỗi khi gửi đối tác:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+exports.getPartnerRequests = async (req, res) => {
+    try {
+        const user_id = req.user.user_id || req.user.id; // Tài khoản đang đăng nhập
+        
+        // Lấy email của user
+        const [userData] = await sequelize.query('SELECT email FROM travel_management.users WHERE user_id = ?', {
+            replacements: [user_id]
+        });
+        
+        if (!userData || !userData[0] || !userData[0].email) {
+            return res.status(401).json({ success: false, message: 'Tài khoản không hợp lệ' });
+        }
+        
+        // Tìm partner_id từ bảng partners thông qua email
+        const [partnerData] = await sequelize.query('SELECT partner_id FROM travel_management.partners WHERE email = ?', {
+            replacements: [userData[0].email]
+        });
+
+        if (!partnerData || partnerData.length === 0) {
+            return res.json({ success: true, data: [] }); // Không tìm thấy partner tương ứng với email
+        }
+
+        const real_partner_id = partnerData[0].partner_id;
+
+        const [requests] = await sequelize.query(`
+            SELECT sr.*, sb.usage_date, sb.quantity, sb.total_amount, 
+                   s.service_name, s.service_type, s.image_url
+            FROM service_requests sr
+            JOIN service_bookings sb ON sr.service_booking_id = sb.booking_id
+            JOIN travel_management.services s ON sb.service_id = s.service_id
+            WHERE sr.partner_id = ?
+            ORDER BY sr.created_at DESC
+        `, {
+            replacements: [real_partner_id]
+        });
+
+        res.json({ success: true, data: requests });
+    } catch (error) {
+        console.error('Lỗi khi tải danh sách yêu cầu Đối tác:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+exports.updatePartnerRequestStatus = async (req, res) => {
+    try {
+        const { id } = req.params; // request_id
+        const { status } = req.body; // 'Accepted' hoặc 'Rejected'
+        
+        await sequelize.query(`
+            UPDATE service_requests 
+            SET status = ? 
+            WHERE request_id = ?
+        `, { replacements: [status, id] });
+
+        res.json({ success: true, message: 'Đã phản hồi yêu cầu dịch vụ!' });
+    } catch (error) {
+        console.error('Lỗi cập nhật yêu cầu:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};

@@ -186,6 +186,53 @@ const TourDetail = () => {
                             )) : <p style={{ color: '#64748b' }}>Lịch trình đang được cập nhật...</p>}
                         </div>
                     )}
+
+                    {/* THÔNG TIN CHUYẾN ĐI & CHÍNH SÁCH */}
+                    <div className="tour-policies" style={{ marginTop: '40px', background: '#fff', borderRadius: '20px', padding: '30px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                        <h2 style={{ marginBottom: '24px', fontSize: '22px', borderBottom: '2px solid #f1f5f9', paddingBottom: '12px' }}>Thông tin cần biết</h2>
+                        
+                        <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', marginBottom: '30px' }}>
+                            <div style={{ flex: 1, minWidth: '280px' }}>
+                                <h3 style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', marginBottom: '16px' }}>
+                                    <span style={{ background: '#d1fae5', padding: '6px', borderRadius: '8px', fontSize: '12px' }}>✅</span> Giá tour bao gồm
+                                </h3>
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', lineHeight: '1.8', fontSize: '15px' }}>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#10b981' }}>✓</span> Khách sạn tiêu chuẩn 3-4 sao (2 khách/phòng)</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#10b981' }}>✓</span> Xe du lịch máy lạnh đời mới đưa đón theo lịch trình</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#10b981' }}>✓</span> Các bữa ăn theo tiêu chuẩn chương trình</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#10b981' }}>✓</span> Vé tham quan các điểm du lịch theo lịch trình</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#10b981' }}>✓</span> Bảo hiểm du lịch với mức bồi thường 50.000.000đ</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#10b981' }}>✓</span> Hướng dẫn viên chuyên nghiệp, nhiệt tình</li>
+                                </ul>
+                            </div>
+                            
+                            <div style={{ flex: 1, minWidth: '280px' }}>
+                                <h3 style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', marginBottom: '16px' }}>
+                                    <span style={{ background: '#fee2e2', padding: '6px', borderRadius: '8px', fontSize: '12px' }}>❌</span> Giá tour không bao gồm
+                                </h3>
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', lineHeight: '1.8', fontSize: '15px' }}>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#ef4444' }}>✕</span> Phụ thu phòng đơn (nếu khách ở 1 mình)</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#ef4444' }}>✕</span> Chi phí cá nhân: giặt ủi, điện thoại, ăn ngoài</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#ef4444' }}>✕</span> Tiền bồi dưỡng (Tip) cho HDV và Tài xế</li>
+                                    <li style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}><span style={{ color: '#ef4444' }}>✕</span> Thuế VAT (nếu quý khách yêu cầu xuất hóa đơn)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+                            <h3 style={{ color: '#0f172a', fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>⚠️</span> Chính sách hủy tour (Tham khảo)
+                            </h3>
+                            <ul style={{ paddingLeft: '20px', margin: 0, color: '#475569', lineHeight: '1.8', fontSize: '14.5px' }}>
+                                <li>Hủy trước 15 ngày khởi hành: Miễn phí hủy tour (Hoàn 100% tiền).</li>
+                                <li>Hủy từ 07 - 14 ngày trước khởi hành: Phí hủy là 50% tổng giá trị.</li>
+                                <li>Hủy từ 03 - 06 ngày trước khởi hành: Phí hủy là 70% tổng giá trị.</li>
+                                <li>Hủy trong vòng 48 giờ trước khởi hành: Phí hủy là 100% tổng giá trị.</li>
+                                <li><strong style={{ color: '#0f172a' }}>Lưu ý:</strong> Thời gian hủy tính theo ngày làm việc (trừ T7, CN & Lễ Tết).</li>
+                            </ul>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div className="detail-sidebar">

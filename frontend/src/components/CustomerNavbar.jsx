@@ -33,23 +33,55 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
 
     return (
         <>
-            <nav className="home-navbar" style={{ backgroundColor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'relative', zIndex: 100 }}>
+            <nav className="home-navbar" style={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: '0 4px 30px rgba(0,0,0,0.08)', 
+                position: 'sticky', 
+                top: 0,
+                zIndex: 1000 
+            }}>
                 <div className="home-logo" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>
                     Travel<span className="text-primary">ERP</span>
                 </div>
 
                 <ul className="home-menu">
-                    <li className={activeTab === 'home' ? 'active' : ''} onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>Trang chủ</li>
-                    <li className={activeTab === 'my-bookings' ? 'active' : ''} onClick={() => navigate('/my-bookings')} style={{ cursor: 'pointer' }}>Đơn hàng của tôi</li>
-                    {user && (
-                        <li className={activeTab === 'my-quotes' ? 'active' : ''} onClick={() => navigate('/my-quotes')} style={{ cursor: 'pointer' }}>
-                            Báo giá thiết kế
-                        </li>
-                    )}
-                    <li className={activeTab === 'build-tour' ? 'active' : ''}>
-                        <Link to="/build-tour" className="menu-item-link" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            ✨ Tự thiết kế Tour
-                        </Link>
+                    <li className={activeTab === 'home' ? 'active' : ''} onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>
+                        Trang chủ
+                    </li>
+                    <li className={activeTab === 'services' ? 'active' : ''} onClick={() => navigate('/services')} style={{ cursor: 'pointer' }}>
+                        Dịch vụ Khác
+                    </li>
+                    <li className={activeTab === 'my-bookings' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => {
+                        if (!user) {
+                            alert('Vui lòng đăng nhập hoặc đăng ký thành viên để xem đơn hàng!');
+                            navigate('/login');
+                        } else {
+                            navigate('/my-bookings');
+                        }
+                    }}>
+                        Đơn hàng của tôi
+                    </li>
+                    <li className={activeTab === 'my-quotes' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => {
+                        if (!user) {
+                            alert('Vui lòng đăng nhập hoặc đăng ký thành viên để xem báo giá thiết kế!');
+                            navigate('/login');
+                        } else {
+                            navigate('/my-quotes');
+                        }
+                    }}>
+                        Báo giá thiết kế
+                    </li>
+                    <li className={activeTab === 'build-tour' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => {
+                        if (!user) {
+                            alert('Vui lòng đăng nhập hoặc đăng ký thành viên để sử dụng tính năng Tự thiết kế Tour!');
+                            navigate('/login');
+                        } else {
+                            navigate('/build-tour');
+                        }
+                    }}>
+                        ✨ Tự thiết kế Tour
                     </li>
                 </ul>
 

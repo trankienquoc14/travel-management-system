@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
@@ -7,15 +7,21 @@ import '../index.css';
 const HomePage = () => {
     const [user, setUser] = useState(null);
     const [tours, setTours] = useState([]);
+    const [services, setServices] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+    const [selectedServiceCategory, setSelectedServiceCategory] = useState('Tất cả');
     const [dateFilter, setDateFilter] = useState('');
+    
+    const tourSliderRef = useRef(null);
+    const serviceSliderRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
         fetchTours();
+        fetchServices();
     }, []);
 
     const fetchTours = async () => {
@@ -26,6 +32,18 @@ const HomePage = () => {
             }
         } catch (error) {
             console.error('Lỗi khi tải danh sách tour:', error);
+        }
+    };
+
+    const fetchServices = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/services');
+            if (res.data.success) {
+                const activeServices = res.data.data.filter(s => s.status === 'Active');
+                setServices(activeServices);
+            }
+        } catch (error) {
+            console.error('Lỗi khi tải dịch vụ:', error);
         }
     };
 
@@ -61,10 +79,29 @@ const HomePage = () => {
             (selectedCategory === 'Đà Lạt' && tour.destination?.includes('Đà Lạt')) ||
             (selectedCategory === 'Phú Quốc' && tour.destination?.includes('Phú Quốc')) ||
             (selectedCategory === 'Sapa' && tour.destination?.includes('Sapa')) ||
+            (selectedCategory === 'Đà Nẵng' && tour.destination?.includes('Đà Nẵng')) ||
+            (selectedCategory === 'Hạ Long' && tour.destination?.includes('Hạ Long')) ||
+            (selectedCategory === 'Nha Trang' && tour.destination?.includes('Nha Trang')) ||
             (selectedCategory === 'Giá Tốt' && tour.base_price <= 4000000);
 
         return matchSearch && matchCat;
     });
+
+    // Lọc dịch vụ
+    const filteredServices = services.filter(s => {
+        if (selectedServiceCategory === 'Tất cả') return true;
+        if (selectedServiceCategory === 'Khách sạn') return s.service_type === 'Hotel' || s.service_type === 'Khách sạn';
+        if (selectedServiceCategory === 'Xe du lịch') return s.service_type === 'Transport' || s.service_type === 'Xe vận chuyển';
+        if (selectedServiceCategory === 'Vé máy bay') return s.service_type === 'Flight' || s.service_type === 'Vé máy bay';
+        return true;
+    });
+
+    const scrollSlider = (ref, direction) => {
+        if (ref.current) {
+            const scrollAmount = 340; // Card width (320) + gap (20)
+            ref.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+        }
+    };
 
     return (
         <div className="homepage-container">
@@ -118,37 +155,7 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {/* 3. THANH THỐNG KÊ UY TÍN (TRUST COUNTER) */}
-            <div className="trust-stats-bar">
-                <div className="stat-item">
-                    <span className="stat-icon">⭐</span>
-                    <div>
-                        <strong>4.9 / 5.0</strong>
-                        <span>15,000+ Đánh giá hài lòng</span>
-                    </div>
-                </div>
-                <div className="stat-item border-left">
-                    <span className="stat-icon">✈️</span>
-                    <div>
-                        <strong>500+ Chuyến đi</strong>
-                        <span>Được tổ chức hàng tháng</span>
-                    </div>
-                </div>
-                <div className="stat-item border-left">
-                    <span className="stat-icon">🛡️</span>
-                    <div>
-                        <strong>100% Bảo hiểm</strong>
-                        <span>Bảo vệ toàn diện cho đoàn</span>
-                    </div>
-                </div>
-                <div className="stat-item border-left">
-                    <span className="stat-icon">🤝</span>
-                    <div>
-                        <strong>24/7 Tư vấn</strong>
-                        <span>Hỗ trợ trực tiếp 24/7</span>
-                    </div>
-                </div>
-            </div>
+            {/* Removed Trust Counter to move down */}
 
             {/* 4. QUICK ACCESS DANH MỤC KHÁM PHÁ */}
             <section className="quick-access-section">
@@ -171,7 +178,12 @@ const HomePage = () => {
                             style={{ background: item.bg }}
                             onClick={() => {
                                 if (item.isBuild) {
-                                    navigate('/build-tour');
+                                    if (!user) {
+                                        alert('Vui lòng đăng nhập hoặc đăng ký thành viên để sử dụng tính năng Tự thiết kế Tour!');
+                                        navigate('/login');
+                                    } else {
+                                        navigate('/build-tour');
+                                    }
                                 } else {
                                     setSelectedCategory(item.cat);
                                     const section = document.getElementById('tour-showcase');
@@ -190,42 +202,45 @@ const HomePage = () => {
             {/* 5. TOUR THỊNH HÀNH SHOWCASE */}
             <section className="home-section bg-gray-light" id="tour-showcase">
                 <div className="section-container">
-                    <div className="section-header-flex">
+                    <div className="section-header-flex" style={{ marginBottom: '16px' }}>
                         <div>
                             <h2>🔥 Điểm đến thịnh hành & Nổi bật</h2>
                             <p className="section-sub">Những hành trình được khách hàng lựa chọn nhiều nhất trong mùa du lịch này.</p>
                         </div>
-
-                        {/* Bộ lọc Tab chọn nhanh */}
-                        <div className="category-tabs">
-                            {['Tất cả', 'Đà Lạt', 'Phú Quốc', 'Sapa', 'Giá Tốt'].map((cat) => (
-                                <button 
-                                    key={cat}
-                                    className={`tab-btn ${selectedCategory === cat ? 'active' : ''}`}
-                                    onClick={() => setSelectedCategory(cat)}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
-                        </div>
                     </div>
 
-                    {/* Danh sách Tour Grid */}
-                    <div className="tour-grid">
-                        {filteredTours.length === 0 ? (
-                            <div className="no-tour-found">
-                                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</div>
-                                <h3>Không tìm thấy tour phù hợp</h3>
-                                <p>Rất tiếc, không có chuyến đi nào phù hợp với từ khóa "{searchTerm}". Vui lòng thử lại với từ khóa khác!</p>
-                                <button 
-                                    onClick={() => { setSearchTerm(''); setSelectedCategory('Tất cả'); }}
-                                    className="btn-reset-filter"
-                                >
-                                    Xem tất cả tour
-                                </button>
-                            </div>
-                        ) : (
-                            filteredTours.map((tour) => {
+                    {/* Bộ lọc Tab mở rộng (Full width) */}
+                    <div className="category-tabs" style={{ background: '#fff', padding: '12px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '30px' }}>
+                        {['Tất cả', 'Đà Lạt', 'Phú Quốc', 'Sapa', 'Đà Nẵng', 'Hạ Long', 'Nha Trang', 'Giá Tốt'].map((cat) => (
+                            <button 
+                                key={cat}
+                                className={`tab-btn ${selectedCategory === cat ? 'active' : ''}`}
+                                onClick={() => setSelectedCategory(cat)}
+                                style={{ flex: '1', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', padding: '12px 20px', borderRadius: '12px', fontWeight: '700' }}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Danh sách Tour Slider */}
+                    <div className="tour-slider-container">
+                        <button className="slider-btn left" onClick={() => scrollSlider(tourSliderRef, 'left')}>❮</button>
+                        <div className="tour-slider" ref={tourSliderRef}>
+                            {filteredTours.length === 0 ? (
+                                <div className="no-tour-found" style={{ width: '100%', padding: '40px' }}>
+                                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</div>
+                                    <h3>Không tìm thấy tour phù hợp</h3>
+                                    <p>Rất tiếc, không có chuyến đi nào phù hợp với từ khóa "{searchTerm}". Vui lòng thử lại với từ khóa khác!</p>
+                                    <button 
+                                        onClick={() => { setSearchTerm(''); setSelectedCategory('Tất cả'); }}
+                                        className="btn-reset-filter"
+                                    >
+                                        Xem tất cả tour
+                                    </button>
+                                </div>
+                            ) : (
+                                filteredTours.map((tour) => {
                                 const bgImage = getImageUrl(tour.image_url);
 
                                 return (
@@ -258,6 +273,115 @@ const HomePage = () => {
                                 );
                             })
                         )}
+                        </div>
+                        <button className="slider-btn right" onClick={() => scrollSlider(tourSliderRef, 'right')}>❯</button>
+                    </div>
+                </div>
+                
+                {/* 2.5 DỊCH VỤ NỔI BẬT (Khách sạn, Máy bay, Xe) */}
+                <div className="section-container" style={{ marginTop: '50px' }}>
+                    <div className="section-header" style={{ marginBottom: '16px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <h2 style={{ fontSize: '32px', color: '#0f172a', fontWeight: '800', marginBottom: '10px' }}>Dịch Vụ Độc Lập Nổi Bật</h2>
+                            <p style={{ color: '#64748b', fontSize: '16px' }}>Đặt riêng phòng Khách sạn, Thuê xe hoặc Vé máy bay tiện lợi</p>
+                        </div>
+                    </div>
+
+                    {/* Bộ lọc Tab cho Dịch vụ */}
+                    <div className="category-tabs" style={{ background: '#fff', padding: '12px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '30px' }}>
+                        {['Tất cả', 'Khách sạn', 'Xe du lịch', 'Vé máy bay'].map((cat) => (
+                            <button 
+                                key={cat}
+                                className={`tab-btn ${selectedServiceCategory === cat ? 'active' : ''}`}
+                                onClick={() => setSelectedServiceCategory(cat)}
+                                style={{ flex: '1', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', padding: '12px 20px', borderRadius: '12px', fontWeight: '700' }}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    {/* Danh sách Dịch vụ Slider */}
+                    <div className="tour-slider-container">
+                        <button className="slider-btn left" onClick={() => scrollSlider(serviceSliderRef, 'left')}>❮</button>
+                        <div className="tour-slider" ref={serviceSliderRef}>
+                            {filteredServices.length === 0 ? (
+                                <div className="no-tour-found" style={{ width: '100%', padding: '40px' }}>
+                                    <h3>Không tìm thấy dịch vụ</h3>
+                                </div>
+                            ) : (
+                                filteredServices.map(service => (
+                                    <div className="tour-card" key={service.service_id}>
+                                        <div className="tour-img-wrapper">
+                                            <div className="tour-img" style={{ backgroundImage: `url(${getImageUrl(service.image_url)})` }}></div>
+                                            <span className="tour-badge" style={{ background: '#10b981' }}>{service.service_type}</span>
+                                        </div>
+                                        <div className="tour-info">
+                                            <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: 'bold', marginBottom: '4px' }}>
+                                                📍 {service.destination_name || 'Đang cập nhật'}
+                                            </div>
+                                            <h3 className="tour-title">{service.service_name}</h3>
+                                            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                {service.description || 'Dịch vụ chất lượng cao, đối tác uy tín.'}
+                                            </p>
+                                            
+                                            <div className="tour-price-row">
+                                                <div className="price-block">
+                                                    <span className="price-label">Giá (1 {service.unit})</span>
+                                                    <span className="new-price">{formatCurrency(service.selling_price)}</span>
+                                                </div>
+                                                <button className="btn-book" onClick={() => navigate('/services')}>
+                                                    Xem chi tiết ➡️
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <button className="slider-btn right" onClick={() => scrollSlider(serviceSliderRef, 'right')}>❯</button>
+                    </div>
+                    
+                    <div style={{ textAlign: 'center', marginTop: '30px' }}>
+                        <button 
+                            className="btn-book" 
+                            style={{ padding: '12px 30px', fontSize: '16px', borderRadius: '30px', backgroundColor: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1' }}
+                            onClick={() => navigate('/services')}
+                        >
+                            Khám phá tất cả dịch vụ
+                        </button>
+                    </div>
+                </div>
+
+                {/* 3. THANH THỐNG KÊ UY TÍN (TRUST COUNTER) - Di chuyển vào trong section xám */}
+                <div className="trust-stats-bar" style={{ marginTop: '60px', marginBottom: '10px' }}>
+                    <div className="stat-item">
+                        <span className="stat-icon">⭐</span>
+                        <div>
+                            <strong>4.9 / 5.0</strong>
+                            <span>15,000+ Đánh giá hài lòng</span>
+                        </div>
+                    </div>
+                    <div className="stat-item border-left">
+                        <span className="stat-icon">✈️</span>
+                        <div>
+                            <strong>500+ Chuyến đi</strong>
+                            <span>Được tổ chức hàng tháng</span>
+                        </div>
+                    </div>
+                    <div className="stat-item border-left">
+                        <span className="stat-icon">🛡️</span>
+                        <div>
+                            <strong>100% Bảo hiểm</strong>
+                            <span>Bảo vệ toàn diện cho đoàn</span>
+                        </div>
+                    </div>
+                    <div className="stat-item border-left">
+                        <span className="stat-icon">🤝</span>
+                        <div>
+                            <strong>24/7 Tư vấn</strong>
+                            <span>Hỗ trợ trực tiếp 24/7</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -269,7 +393,14 @@ const HomePage = () => {
                         <span className="banner-tag">🎨 Dịch vụ cao cấp</span>
                         <h2>Bạn muốn một chuyến đi độc nhất theo phong cách riêng?</h2>
                         <p>Tùy chọn khách sạn, phương tiện di chuyển, điểm tham quan và dịch vụ ăn uống chỉ trong 2 phút.</p>
-                        <button className="btn-custom-cta" onClick={() => navigate('/build-tour')}>
+                        <button className="btn-custom-cta" onClick={() => {
+                            if (!user) {
+                                alert('Vui lòng đăng nhập hoặc đăng ký thành viên để tự thiết kế Tour!');
+                                navigate('/login');
+                            } else {
+                                navigate('/build-tour');
+                            }
+                        }}>
                             🎨 Bắt đầu tự thiết kế Tour ngay ➡️
                         </button>
                     </div>
@@ -302,6 +433,18 @@ const HomePage = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* BỔ SUNG: KHU VỰC ĐĂNG KÝ NHẬN BẢN TIN KHUYẾN MÃI (NEWSLETTER) */}
+            <section className="home-section bg-gray-light" style={{ padding: '60px 8%' }}>
+                <div className="section-container" style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '28px', color: 'var(--text-primary)', marginBottom: '12px' }}>📬 Đừng bỏ lỡ ưu đãi cực HOT!</h2>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Đăng ký email ngay để nhận voucher giảm giá lên đến 500.000đ cho chuyến đi đầu tiên và các cẩm nang du lịch hữu ích.</p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                        <input type="email" placeholder="Nhập địa chỉ email của bạn..." style={{ padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '60%', outline: 'none' }} />
+                        <button style={{ padding: '14px 28px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', transition: '0.2s' }} onMouseEnter={e => e.target.style.opacity = '0.9'} onMouseLeave={e => e.target.style.opacity = '1'}>Đăng ký ngay</button>
                     </div>
                 </div>
             </section>

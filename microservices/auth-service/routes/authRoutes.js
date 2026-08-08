@@ -4,8 +4,9 @@ const authController = require('../controllers/authController');
 
 const { protect } = require('../middleware/authMiddleware');
 
-// Route Đăng nhập
+// Route Đăng nhập và Đăng ký
 router.post('/login', authController.login);
+router.post('/register', authController.register);
 
 // Routes Hồ sơ cá nhân (Dành cho tất cả các tài khoản)
 router.get('/me', protect, authController.getProfile);
