@@ -63,24 +63,30 @@ exports.updateService = async (req, res) => {
         let finalImageUrl = existing_image_url || '';
         if (req.file) finalImageUrl = `/uploads/${req.file.filename}`;
 
+        let parsedPartnerId = partner_id;
+        if (parsedPartnerId === 'null' || parsedPartnerId === 'undefined' || parsedPartnerId === '' || parsedPartnerId === undefined) parsedPartnerId = null;
+
+        let parsedDestId = destination_id;
+        if (parsedDestId === 'null' || parsedDestId === 'undefined' || parsedDestId === '' || parsedDestId === undefined) parsedDestId = null;
+
         await sequelize.query(`
             UPDATE services 
             SET service_name = ?, service_type = ?, description = ?, image_url = ?, partner_id = ?, destination_id = ?, unit = ?, base_cost = ?, selling_price = ?, capacity = ?, attributes = ?, status = ?
             WHERE service_id = ?
         `, { replacements: [
             service_name || '', service_type || 'Khách sạn', description || '', finalImageUrl, 
-            partner_id || null, destination_id || null, unit || null, 
+            parsedPartnerId, parsedDestId, unit || null, 
             base_cost || 0, selling_price || 0, capacity || 0, 
             attributes || '{}', status || 'Active', id
         ] });
 
         // Nếu Quản lý Tour duyệt (status === 'Active'), thì cập nhật cho partner_services tương ứng
-        if (status === 'Active' && partner_id) {
+        if (status === 'Active' && parsedPartnerId) {
             await sequelize.query(`
                 UPDATE partner_services 
                 SET status = 'Active' 
                 WHERE service_id = ? AND partner_id = ?
-            `, { replacements: [id, partner_id] });
+            `, { replacements: [id, parsedPartnerId] });
         }
 
         res.status(200).json({ success: true, message: 'Cập nhật Dịch vụ thành công!' });

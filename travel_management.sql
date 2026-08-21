@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th8 08, 2026 lúc 08:23 PM
+-- Thời gian đã tạo: Th8 21, 2026 lúc 03:34 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -139,7 +139,8 @@ INSERT INTO `custom_tour_quotes` (`quote_id`, `request_id`, `staff_id`, `manager
 (8, 7, 4, 3, 4520000.00, 20, 5424000.00, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (24/7/2026):\\n - Sáng: Đón khách & Khởi hành ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ ngơi\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (25/7/2026):\\n - Sáng: Lặn biển Hòn Mun\\n - Trưa: Tự do tắm biển / Nghỉ ngơi\\n - Chiều/Tối: Tắm bùn khoáng I-Resort\\n\\nNGÀY 3 (26/7/2026):\\n - Sáng: Nem nướng Đặng Văn Quyên\\n - Trưa: Mua sắm đặc sản & Trả khách\\n - Chiều/Tối: Chợ Đêm Nha Trang ➔ Tự do tắm biển / Nghỉ ngơi\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Khách sạn Mường Thanh Nha Trang - Phòng Cao cấp (Deluxe View) - Đêm\",\"price\":1200000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Dịch vụ xe ghép 16 chỗ - Thuê xe Du lịch 16 chỗ - Ngày\",\"price\":1500000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"24/7/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"25/7/2026\",\"slots\":{\"morning\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"noon\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0}],\"evening\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}]}},{\"dayIndex\":3,\"dateString\":\"26/7/2026\",\"slots\":{\"morning\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"noon\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0}]}}],\"resources\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000},{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0}]}}', 'Đã sửa lại theo lời dặn\n\n[Khách phản hồi]: đổi lịch ngày 3\n\n[Khách phản hồi]: đổi lịch ngày 3', NULL, 'Customer_Accepted', '2026-07-03 11:03:42'),
 (28, 23, 4, 3, 4970000.00, 20, 5964000.00, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (22/8/2026):\\n - Sáng: Đón khách & Khởi hành về khách sạn ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (23/8/2026):\\n - Sáng: Lặn biển Hòn Mun\\n - Trưa: Tắm bùn khoáng I-Resort\\n - Chiều/Tối: Tự do tắm biển / Nghỉ dưỡng resort\\n\\nNGÀY 3 (24/8/2026):\\n - Sáng: Nem nướng Đặng Văn Quyên\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Chợ Đêm Nha Trang\\n\\nNGÀY 4 (25/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Hải sản Thanh Sương\\n - Chiều/Tối: Mua sắm đặc sản địa phương & Tiễn khách\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"price\":2500000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"price\":400000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"22/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"23/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"noon\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}],\"evening\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}]}},{\"dayIndex\":3,\"dateString\":\"24/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"noon\":[{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0}]}},{\"dayIndex\":4,\"dateString\":\"25/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_4\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000}],\"evening\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}],\"resources\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}', '', 'sửa lại lịch trình ngày 3 và 4', 'Rejected', '2026-08-07 04:58:56'),
 (29, 23, 4, 3, 4970000.00, 20, 5964000.00, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (22/8/2026):\\n - Sáng: Đón khách & Khởi hành về khách sạn ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (23/8/2026):\\n - Sáng: Lặn biển Hòn Mun\\n - Trưa: Tắm bùn khoáng I-Resort\\n - Chiều/Tối: Tự do tắm biển / Nghỉ dưỡng resort\\n\\nNGÀY 3 (24/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Nem nướng Đặng Văn Quyên\\n - Chiều/Tối: Chợ Đêm Nha Trang\\n\\nNGÀY 4 (25/8/2026):\\n - Sáng: Hải sản Thanh Sương\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Mua sắm đặc sản địa phương & Tiễn khách\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"price\":2500000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"price\":400000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"22/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"23/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"noon\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}],\"evening\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}]}},{\"dayIndex\":3,\"dateString\":\"24/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0}]}},{\"dayIndex\":4,\"dateString\":\"25/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000}],\"noon\":[{\"id\":\"act_2_day_4\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}],\"resources\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}', '', NULL, 'Customer_Revision', '2026-08-07 05:01:43'),
-(30, 23, 4, 3, 4970000.00, 20, 5964000.00, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (22/8/2026):\\n - Sáng: Đón khách & Khởi hành về khách sạn ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (23/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Lặn biển Hòn Mun\\n - Chiều/Tối: Tắm bùn khoáng I-Resort\\n\\nNGÀY 3 (24/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Nem nướng Đặng Văn Quyên\\n - Chiều/Tối: Chợ Đêm Nha Trang\\n\\nNGÀY 4 (25/8/2026):\\n - Sáng: Hải sản Thanh Sương\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Mua sắm đặc sản địa phương & Tiễn khách\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"price\":2500000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"price\":400000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"22/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"23/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"evening\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}]}},{\"dayIndex\":3,\"dateString\":\"24/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0}]}},{\"dayIndex\":4,\"dateString\":\"25/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000}],\"noon\":[{\"id\":\"act_2_day_4\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}],\"resources\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}', '', NULL, 'Customer_Accepted', '2026-08-07 05:51:04');
+(30, 23, 4, 3, 4970000.00, 20, 5964000.00, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (22/8/2026):\\n - Sáng: Đón khách & Khởi hành về khách sạn ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (23/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Lặn biển Hòn Mun\\n - Chiều/Tối: Tắm bùn khoáng I-Resort\\n\\nNGÀY 3 (24/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Nem nướng Đặng Văn Quyên\\n - Chiều/Tối: Chợ Đêm Nha Trang\\n\\nNGÀY 4 (25/8/2026):\\n - Sáng: Hải sản Thanh Sương\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Mua sắm đặc sản địa phương & Tiễn khách\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"price\":2500000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"price\":400000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"22/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"23/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"evening\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}]}},{\"dayIndex\":3,\"dateString\":\"24/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0}]}},{\"dayIndex\":4,\"dateString\":\"25/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000}],\"noon\":[{\"id\":\"act_2_day_4\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}],\"resources\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}', '', NULL, 'Customer_Accepted', '2026-08-07 05:51:04'),
+(31, 24, 4, NULL, 0.00, 20, 3960000.00, NULL, '', NULL, 'Customer_Revision', '2026-08-09 03:11:10');
 
 -- --------------------------------------------------------
 
@@ -171,7 +172,8 @@ CREATE TABLE `custom_tour_requests` (
 INSERT INTO `custom_tour_requests` (`request_id`, `customer_id`, `destination`, `departure_date`, `return_date`, `people_count`, `budget`, `requirements`, `markup_percent`, `base_cost`, `quoted_price`, `staff_note`, `status`, `created_at`) VALUES
 (7, 8, 'Nha Trang', '2026-07-24', '2026-07-26', 1, 6000000.00, '{\"hotel\":\"2\",\"transport\":\"9\",\"activities\":[1,2,3,5,4,7,6],\"note\":\"\",\"participantBreakdown\":{\"adults\":1,\"children\":0},\"hotelName\":\"Khách sạn Mường Thanh Nha Trang - Phòng Cao cấp (Deluxe View) - Đêm\",\"hotelPrice\":1200000,\"transportName\":\"Dịch vụ xe ghép 16 chỗ - Thuê xe Du lịch 16 chỗ - Ngày\",\"transportPrice\":1500000,\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000}]}', 15, 4520000.00, 1500000.00, '', 'Initial_Quoted', '2026-07-02 19:21:35'),
 (10, 8, 'Đà Lạt', '2026-07-31', '2026-08-02', 2, 3000000.00, '{\"hotel\":\"8\",\"transport\":\"3\",\"activities\":[8,9,10,13,12,11],\"note\":\"\",\"pickup_location\":\"58 Nguyễn Oanh, Hạnh Thông, Hồ Chí Minh\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":1300000,\"transportName\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"transportPrice\":400000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000}]}', 20, 0.00, 2988000.00, NULL, 'Initial_Quoted', '2026-07-24 07:42:33'),
-(23, 8, 'Nha Trang', '2026-08-22', '2026-08-25', 2, 5000000.00, '{\"hotel\":\"6\",\"transport\":\"3\",\"activities\":[1,2,3,5,4,7,6],\"note\":\"\",\"pickup_location\":\"58 Nguyễn Oanh, Hạnh Thông, Hồ Chí Minh\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"hotelPrice\":2500000,\"transportName\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"transportPrice\":400000,\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000}]}', 20, 0.00, 5964000.00, NULL, 'Completed', '2026-08-07 04:39:55');
+(23, 8, 'Nha Trang', '2026-08-22', '2026-08-25', 2, 5000000.00, '{\"hotel\":\"6\",\"transport\":\"3\",\"activities\":[1,2,3,5,4,7,6],\"note\":\"\",\"pickup_location\":\"58 Nguyễn Oanh, Hạnh Thông, Hồ Chí Minh\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"hotelPrice\":2500000,\"transportName\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"transportPrice\":400000,\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000}]}', 20, 0.00, 5964000.00, NULL, 'Completed', '2026-08-07 04:39:55'),
+(24, 8, 'Đà Lạt', '2026-08-27', '2026-08-29', 2, 4000000.00, '{\"hotel\":\"8\",\"transport\":\"14\",\"activities\":[8,9,10,13,12,11,14],\"note\":\"\",\"pickup_location\":\"58 Nguyễn Oanh\",\"participantBreakdown\":{\"adults\":2,\"children\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":1300000,\"transportName\":\"Hệ thống - Xe Ford Transit 16 Chỗ\",\"transportPrice\":960000,\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000}]}', 20, 0.00, 3960000.00, NULL, 'Designing', '2026-08-09 03:09:11');
 
 -- --------------------------------------------------------
 
@@ -196,7 +198,10 @@ CREATE TABLE `departures` (
 
 INSERT INTO `departures` (`departure_id`, `tour_id`, `departure_date`, `return_date`, `max_slots`, `available_slots`, `status`, `guide_id`) VALUES
 (3, 10, '2026-08-07', '2026-08-09', 30, 30, 'Open', 5),
-(4, 26, '2026-08-22', '2026-08-25', 2, 0, 'Closed', 6);
+(4, 26, '2026-08-22', '2026-08-25', 2, 0, 'Closed', 6),
+(5, 29, '2026-08-25', '2026-08-28', 20, 20, 'Open', 5),
+(6, 29, '2026-08-26', '2026-08-29', 18, 18, 'Open', 6),
+(7, 29, '2026-09-01', '2026-09-04', 20, 20, 'Open', 5);
 
 -- --------------------------------------------------------
 
@@ -226,31 +231,32 @@ CREATE TABLE `destinations` (
   `destination_name` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `image_url` varchar(255) DEFAULT NULL,
-  `status` enum('Active','Inactive') DEFAULT 'Active'
+  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `slogan` varchar(150) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `destinations`
 --
 
-INSERT INTO `destinations` (`destination_id`, `destination_name`, `description`, `image_url`, `status`) VALUES
-(1, 'Nha Trang', NULL, NULL, 'Active'),
-(2, 'Đà Lạt', NULL, NULL, 'Active'),
-(3, 'Phú Quốc', NULL, NULL, 'Active'),
-(4, 'Lào Cai', NULL, NULL, 'Active'),
-(5, 'Đà Nẵng', 'Thành phố biển đáng sống nhất Việt Nam', 'danang.jpg', 'Active'),
-(6, 'Hội An', 'Phố cổ Hội An - Di sản Văn hóa Thế giới', 'hoian.jpg', 'Active'),
-(7, 'Huế', 'Cố đô Huế với nhiều di tích lịch sử', 'hue.jpg', 'Active'),
-(8, 'Hà Nội', 'Thủ đô nghìn năm văn hiến', 'hanoi.jpg', 'Active'),
-(9, 'Hạ Long', 'Vịnh Hạ Long - Kỳ quan thiên nhiên thế giới', 'halong.jpg', 'Active'),
-(10, 'Quy Nhơn', 'Thành phố biển Bình Định', 'quynhon.jpg', 'Active'),
-(11, 'Mũi Né', 'Thiên đường nghỉ dưỡng của Bình Thuận', 'muine.jpg', 'Active'),
-(12, 'Cần Thơ', 'Thủ phủ miền Tây sông nước', 'cantho.jpg', 'Active'),
-(13, 'Côn Đảo', 'Quần đảo nổi tiếng về lịch sử và biển đẹp', 'condao.jpg', 'Active'),
-(14, 'Vũng Tàu', 'Thành phố biển gần TP.HCM', 'vungtau.jpg', 'Active'),
-(15, 'Ninh Bình', 'Di sản Tràng An và Tam Cốc', 'ninhbinh.jpg', 'Active'),
-(16, 'Quảng Bình', 'Vương quốc hang động Việt Nam', 'quangbinh.jpg', 'Active'),
-(17, 'test_dest2', 'test', NULL, 'Active');
+INSERT INTO `destinations` (`destination_id`, `destination_name`, `description`, `image_url`, `status`, `slogan`) VALUES
+(1, 'Nha Trang', NULL, NULL, 'Active', 'Thành phố biển'),
+(2, 'Đà Lạt', NULL, NULL, 'Active', 'Thành phố ngàn hoa'),
+(3, 'Phú Quốc', NULL, NULL, 'Active', NULL),
+(4, 'Lào Cai', NULL, NULL, 'Active', NULL),
+(5, 'Đà Nẵng', 'Thành phố biển đáng sống nhất Việt Nam', 'danang.jpg', 'Active', NULL),
+(6, 'Hội An', 'Phố cổ Hội An - Di sản Văn hóa Thế giới', 'hoian.jpg', 'Active', NULL),
+(7, 'Huế', 'Cố đô Huế với nhiều di tích lịch sử', 'hue.jpg', 'Active', NULL),
+(8, 'Hà Nội', 'Thủ đô nghìn năm văn hiến', 'hanoi.jpg', 'Active', NULL),
+(9, 'Hạ Long', 'Vịnh Hạ Long - Kỳ quan thiên nhiên thế giới', 'halong.jpg', 'Active', NULL),
+(10, 'Quy Nhơn', 'Thành phố biển Bình Định', 'quynhon.jpg', 'Active', NULL),
+(11, 'Mũi Né', 'Thiên đường nghỉ dưỡng của Bình Thuận', 'muine.jpg', 'Active', NULL),
+(12, 'Cần Thơ', 'Thủ phủ miền Tây sông nước', 'cantho.jpg', 'Active', NULL),
+(13, 'Côn Đảo', 'Quần đảo nổi tiếng về lịch sử và biển đẹp', 'condao.jpg', 'Active', NULL),
+(14, 'Vũng Tàu', 'Thành phố biển gần TP.HCM', 'vungtau.jpg', 'Active', NULL),
+(15, 'Ninh Bình', 'Di sản Tràng An và Tam Cốc', 'ninhbinh.jpg', 'Active', NULL),
+(16, 'Quảng Bình', 'Vương quốc hang động Việt Nam', 'quangbinh.jpg', 'Active', NULL),
+(18, 'Hồ Chí Minh', NULL, NULL, 'Active', NULL);
 
 -- --------------------------------------------------------
 
@@ -292,7 +298,10 @@ CREATE TABLE `guide_assignments` (
 
 INSERT INTO `guide_assignments` (`assignment_id`, `departure_id`, `guide_id`, `assigned_at`) VALUES
 (5, 3, 1, '2026-07-28 13:24:01'),
-(6, 4, 2, '2026-08-07 06:38:15');
+(6, 4, 2, '2026-08-07 06:38:15'),
+(10, 5, 1, '2026-08-20 13:49:52'),
+(11, 6, 2, '2026-08-20 13:49:52'),
+(12, 7, 1, '2026-08-20 13:49:52');
 
 -- --------------------------------------------------------
 
@@ -457,7 +466,8 @@ INSERT INTO `partner_services` (`partner_service_id`, `partner_id`, `service_id`
 (2, 10, 13, 2200000.00, 30, 'Active'),
 (3, 11, 14, 1000000.00, 10, 'Active'),
 (4, 11, 15, 1800000.00, 5, 'Active'),
-(6, 10, 20, 4000000.00, 3, 'Active');
+(6, 10, 20, 4000000.00, 3, 'Active'),
+(7, 10, 21, 3000000.00, 2, 'Pending');
 
 -- --------------------------------------------------------
 
@@ -523,7 +533,8 @@ CREATE TABLE `performance_reviews` (
 --
 
 INSERT INTO `performance_reviews` (`performance_id`, `employee_id`, `reviewer_id`, `score`, `comment`, `review_date`) VALUES
-(1, 4, 2, 90, 'Hoàn thành tốt', '2026-06-01');
+(1, 4, 2, 90, 'Hoàn thành tốt', '2026-06-01'),
+(2, 4, 2, 30, 'ttfr', '2026-08-09');
 
 -- --------------------------------------------------------
 
@@ -540,71 +551,73 @@ CREATE TABLE `places` (
   `description` text DEFAULT NULL,
   `estimated_price` decimal(15,2) DEFAULT 0.00 COMMENT 'Giá vé/Chi phí tham khảo (0 nếu miễn phí)',
   `image_url` varchar(255) DEFAULT NULL,
-  `status` enum('Active','Inactive') DEFAULT 'Active'
+  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `action_verb` varchar(50) DEFAULT NULL,
+  `short_display_name` varchar(150) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `places`
 --
 
-INSERT INTO `places` (`place_id`, `destination_id`, `partner_id`, `place_name`, `category`, `description`, `estimated_price`, `image_url`, `status`) VALUES
-(1, 1, NULL, 'VinWonders Nha Trang', 'Vui chơi', 'Khu giải trí đẳng cấp quốc tế trên đảo Hòn Tre, bao gồm cáp treo vượt biển và công viên nước.', 880000.00, 'vinwonders-nt.jpg', 'Active'),
-(2, 1, NULL, 'Tháp Bà Ponagar', 'Tham quan', 'Quần thể đền tháp Chăm Pa cổ kính, nơi lưu giữ giá trị văn hóa lịch sử độc đáo.', 30000.00, 'thap-ba-nt.jpg', 'Active'),
-(3, 1, NULL, 'Lặn biển Hòn Mun', 'Vui chơi', 'Khu bảo tồn biển với rạn san hô tuyệt đẹp, thích hợp cho lặn bình dưỡng khí.', 500000.00, 'hon-mun-nt.jpg', 'Active'),
-(4, 1, NULL, 'Tắm bùn khoáng I-Resort', 'Nghỉ dưỡng', 'Khu nghỉ dưỡng suối khoáng nóng, dịch vụ tắm bùn chăm sóc sức khỏe.', 350000.00, 'iresort-nt.jpg', 'Active'),
-(5, 1, NULL, 'Nem nướng Đặng Văn Quyên', 'Ăn uống', 'Đặc sản nem nướng nổi tiếng nhất Nha Trang.', 60000.00, 'nem-nuong-nt.jpg', 'Active'),
-(6, 1, NULL, 'Chợ Đêm Nha Trang', 'Mua sắm', 'Khu phố đi bộ sầm uất về đêm, bán đồ lưu niệm và các món ăn đường phố.', 0.00, 'cho-dem-nt.jpg', 'Active'),
-(7, 1, NULL, 'Hải sản Thanh Sương', 'Ăn uống', 'Quán hải sản tươi sống bình dân, chế biến tại chỗ.', 250000.00, 'haisan-nt.jpg', 'Active'),
-(8, 2, NULL, 'Đỉnh Langbiang', 'Tham quan', 'Nóc nhà của Đà Lạt, trải nghiệm đi xe Jeep lên đỉnh ngắm toàn cảnh thành phố.', 120000.00, 'langbiang-dl.jpg', 'Active'),
-(9, 2, NULL, 'Thác Datanla', 'Vui chơi', 'Hệ thống máng trượt xuyên rừng thông dài nhất Đông Nam Á.', 170000.00, 'datanla-dl.jpg', 'Active'),
-(10, 2, NULL, 'Vườn thú Zoodoo', 'Tham quan', 'Mô hình sở thú thân thiện mang phong cách Úc, thích hợp cho gia đình có trẻ nhỏ.', 100000.00, 'zoodoo-dl.jpg', 'Active'),
-(11, 2, NULL, 'Lẩu bò Ba Toa Quán Gỗ', 'Ăn uống', 'Quán lẩu bò mộc mạc lâu đời, hương vị đậm đà xua tan cái lạnh Đà Lạt.', 200000.00, 'laubo-dl.jpg', 'Active'),
-(12, 2, NULL, 'Lẩu gà lá é Tao Ngộ', 'Ăn uống', 'Đặc sản lẩu gà nấm kết hợp với vị cay nồng của lá é.', 150000.00, 'lauga-dl.jpg', 'Active'),
-(13, 2, NULL, 'Chợ Đêm Âm Phủ', 'Mua sắm', 'Thiên đường đồ len và ẩm thực đường phố (bánh tráng nướng, sữa đậu nành).', 50000.00, 'chodem-dl.jpg', 'Active'),
-(14, 2, NULL, 'Samten Hills Dalat', 'Nghỉ dưỡng', 'Khu du lịch tâm linh với bảo tháp kinh luân lớn nhất thế giới.', 250000.00, 'samten-dl.jpg', 'Active'),
-(15, 3, NULL, 'Sun World Hòn Thơm', 'Vui chơi', 'Cáp treo 3 dây vượt biển dài nhất thế giới và công viên nước Aquatopia.', 600000.00, 'honthom-pq.jpg', 'Active'),
-(16, 3, NULL, 'Vinpearl Safari Phú Quốc', 'Tham quan', 'Công viên chăm sóc và bảo tồn động vật bán hoang dã lớn nhất Việt Nam.', 650000.00, 'safari-pq.jpg', 'Active'),
-(17, 3, NULL, 'Grand World Phú Quốc', 'Tham quan', 'Thành phố không ngủ với kiến trúc Venice thu nhỏ và các show diễn thực cảnh.', 0.00, 'grandworld-pq.jpg', 'Active'),
-(18, 3, NULL, 'Bãi Sao', 'Nghỉ dưỡng', 'Một trong những bãi biển đẹp nhất đảo ngọc với cát trắng mịn như kem.', 0.00, 'baisao-pq.jpg', 'Active'),
-(19, 3, NULL, 'Bún quậy Kiến Xây', 'Ăn uống', 'Món bún đặc trưng, thực khách tự tay pha nước chấm theo khẩu vị.', 70000.00, 'bunquay-pq.jpg', 'Active'),
-(20, 3, NULL, 'Chợ đêm Dinh Cậu', 'Mua sắm', 'Khu chợ sầm uất chuyên các món hải sản nướng, đậu phộng chou chou.', 200000.00, 'dinhcau-pq.jpg', 'Active'),
-(21, 4, NULL, 'Đỉnh Fansipan (Cáp treo)', 'Tham quan', 'Chinh phục nóc nhà Đông Dương bằng hệ thống cáp treo hiện đại nhất thế giới.', 800000.00, 'fansipan-sp.jpg', 'Active'),
-(22, 4, NULL, 'Bản Cát Cát', 'Tham quan', 'Bản làng cổ của người H\'Mông, mang đậm bản sắc văn hóa Tây Bắc.', 90000.00, 'catcat-sp.jpg', 'Active'),
-(23, 4, NULL, 'Đèo Ô Quy Hồ', 'Tham quan', 'Một trong tứ đại đỉnh đèo của Việt Nam, điểm săn mây tuyệt đẹp.', 0.00, 'oquyho-sp.jpg', 'Active'),
-(24, 4, NULL, 'Nhà hàng Lẩu Cá Tầm', 'Ăn uống', 'Thưởng thức món lẩu cá tầm tươi ngon sưởi ấm giữa tiết trời lạnh giá.', 300000.00, 'catam-sp.jpg', 'Active'),
-(25, 5, NULL, 'Bà Nà Hills', 'Tham quan', 'Khu du lịch nổi tiếng của Đà Nẵng', 900000.00, 'banahills.jpg', 'Active'),
-(26, 5, NULL, 'Cầu Vàng', 'Tham quan', 'Biểu tượng du lịch Đà Nẵng', 0.00, 'cauvang.jpg', 'Active'),
-(27, 5, NULL, 'Cầu Rồng', 'Tham quan', 'Cầu phun lửa cuối tuần', 0.00, 'caurong.jpg', 'Active'),
-(28, 5, NULL, 'Biển Mỹ Khê', 'Tham quan', 'Một trong những bãi biển đẹp nhất thế giới', 0.00, 'mykhe.jpg', 'Active'),
-(29, 5, NULL, 'Ngũ Hành Sơn', 'Tham quan', 'Quần thể núi đá vôi nổi tiếng', 40000.00, 'nguhanhson.jpg', 'Active'),
-(30, 5, NULL, 'Asia Park', 'Vui chơi', 'Công viên giải trí', 200000.00, 'asiapark.jpg', 'Active'),
-(31, 5, NULL, 'Bảo tàng Chăm', 'Tham quan', 'Bảo tàng nghệ thuật Chăm lớn nhất', 60000.00, 'cham.jpg', 'Active'),
-(32, 5, NULL, 'Sơn Trà', 'Tham quan', 'Bán đảo Sơn Trà', 0.00, 'sontra.jpg', 'Active'),
-(33, 5, NULL, 'Chùa Linh Ứng', '', 'Ngôi chùa nổi tiếng', 0.00, 'linhung.jpg', 'Active'),
-(34, 5, NULL, 'Chợ Hàn', 'Mua sắm', 'Đặc sản Đà Nẵng', 0.00, 'chohan.jpg', 'Active'),
-(35, 6, NULL, 'Phố cổ Hội An', 'Tham quan', 'Di sản UNESCO', 120000.00, 'phohoian.jpg', 'Active'),
-(36, 6, NULL, 'Chùa Cầu', 'Tham quan', 'Biểu tượng Hội An', 0.00, 'chuacau.jpg', 'Active'),
-(37, 6, NULL, 'Rừng dừa Bảy Mẫu', '', 'Đi thuyền thúng', 180000.00, 'baymau.jpg', 'Active'),
-(38, 6, NULL, 'Biển An Bàng', 'Tham quan', 'Biển đẹp của Hội An', 0.00, 'anbang.jpg', 'Active'),
-(39, 6, NULL, 'Làng gốm Thanh Hà', '', 'Làm gốm', 80000.00, 'thanhha.jpg', 'Active'),
-(40, 6, NULL, 'Làng rau Trà Quế', '', 'Làm nông dân', 100000.00, 'traque.jpg', 'Active'),
-(41, 7, NULL, 'Đại Nội Huế', 'Tham quan', 'Hoàng thành Huế', 200000.00, 'dainoi.jpg', 'Active'),
-(42, 7, NULL, 'Chùa Thiên Mụ', '', 'Ngôi chùa nổi tiếng', 0.00, 'thienmu.jpg', 'Active'),
-(43, 7, NULL, 'Lăng Khải Định', 'Tham quan', 'Lăng vua Khải Định', 150000.00, 'khaidinh.jpg', 'Active'),
-(44, 7, NULL, 'Lăng Minh Mạng', 'Tham quan', 'Lăng vua Minh Mạng', 150000.00, 'minhmang.jpg', 'Active'),
-(45, 7, NULL, 'Sông Hương', '', 'Nghe ca Huế', 150000.00, 'songhuong.jpg', 'Active'),
-(46, 7, NULL, 'Chợ Đông Ba', 'Mua sắm', 'Chợ nổi tiếng Huế', 0.00, 'dongba.jpg', 'Active'),
-(47, 8, NULL, 'Hồ Hoàn Kiếm', 'Tham quan', 'Biểu tượng Hà Nội', 0.00, 'hohoankiem.jpg', 'Active'),
-(48, 8, NULL, 'Lăng Bác', 'Tham quan', 'Lăng Chủ tịch Hồ Chí Minh', 0.00, 'langbac.jpg', 'Active'),
-(49, 8, NULL, 'Văn Miếu', 'Tham quan', 'Trường đại học đầu tiên', 70000.00, 'vanmieu.jpg', 'Active'),
-(50, 8, NULL, 'Phố cổ Hà Nội', 'Tham quan', '36 phố phường', 0.00, 'phoco.jpg', 'Active'),
-(51, 8, NULL, 'Nhà hát Lớn', 'Tham quan', 'Kiến trúc Pháp', 0.00, 'nhahatlon.jpg', 'Active'),
-(52, 8, NULL, 'Hồ Tây', 'Tham quan', 'Hồ lớn nhất Hà Nội', 0.00, 'hotay.jpg', 'Active'),
-(53, 9, NULL, 'Vịnh Hạ Long', 'Tham quan', 'Kỳ quan thiên nhiên', 950000.00, '/uploads/1786211402112-du-lich-vinh-Ha-Long-hinh-anh1_1625911963.webp', 'Active'),
-(54, 9, NULL, 'Hang Sửng Sốt', 'Tham quan', 'Hang động nổi tiếng', 150000.00, '/uploads/1786211339888-hang-sung-sot-2_1627633591.webp', 'Active'),
-(55, 9, NULL, 'Đảo Ti Tốp', 'Tham quan', 'Đảo đẹp của Hạ Long', 100000.00, '/uploads/1784714136526-dao-titop-quang-ninh-02_1625285135.webp', 'Active'),
-(56, 9, NULL, 'Sun World Hạ Long', 'Vui chơi', 'Công viên giải trí', 350000.00, '/uploads/1784714091209-sunworldHL.jpg', 'Active'),
-(57, 9, NULL, 'Bảo tàng Quảng Ninh', 'Tham quan', 'Kiến trúc độc đáo', 40000.00, '/uploads/1784713934970-images.jpg', 'Active');
+INSERT INTO `places` (`place_id`, `destination_id`, `partner_id`, `place_name`, `category`, `description`, `estimated_price`, `image_url`, `status`, `action_verb`, `short_display_name`) VALUES
+(1, 1, NULL, 'VinWonders Nha Trang', 'Vui chơi', 'Khu giải trí đẳng cấp quốc tế trên đảo Hòn Tre, bao gồm cáp treo vượt biển và công viên nước.', 880000.00, 'vinwonders-nt.jpg', 'Active', NULL, 'VinWonders Nha Trang'),
+(2, 1, NULL, 'Tháp Bà Ponagar', 'Tham quan', 'Quần thể đền tháp Chăm Pa cổ kính, nơi lưu giữ giá trị văn hóa lịch sử độc đáo.', 30000.00, 'thap-ba-nt.jpg', 'Active', NULL, 'Tháp Bà Ponagar'),
+(3, 1, NULL, 'Lặn biển Hòn Mun', 'Vui chơi', 'Khu bảo tồn biển với rạn san hô tuyệt đẹp, thích hợp cho lặn bình dưỡng khí.', 500000.00, 'hon-mun-nt.jpg', 'Active', NULL, 'Lặn biển Hòn Mun'),
+(4, 1, NULL, 'Tắm bùn khoáng I-Resort', 'Nghỉ dưỡng', 'Khu nghỉ dưỡng suối khoáng nóng, dịch vụ tắm bùn chăm sóc sức khỏe.', 350000.00, 'iresort-nt.jpg', 'Active', NULL, 'Tắm bùn khoáng I-Resort'),
+(5, 1, NULL, 'Nem nướng Đặng Văn Quyên', 'Ăn uống', 'Đặc sản nem nướng nổi tiếng nhất Nha Trang.', 60000.00, 'nem-nuong-nt.jpg', 'Active', NULL, 'Nem nướng Đặng Văn Quyên'),
+(6, 1, NULL, 'Chợ Đêm Nha Trang', 'Mua sắm', 'Khu phố đi bộ sầm uất về đêm, bán đồ lưu niệm và các món ăn đường phố.', 0.00, 'cho-dem-nt.jpg', 'Active', NULL, 'Chợ Đêm Nha Trang'),
+(7, 1, NULL, 'Hải sản Thanh Sương', 'Ăn uống', 'Quán hải sản tươi sống bình dân, chế biến tại chỗ.', 250000.00, 'haisan-nt.jpg', 'Active', NULL, 'Hải sản Thanh Sương'),
+(8, 2, NULL, 'Đỉnh Langbiang', 'Tham quan', 'Nóc nhà của Đà Lạt, trải nghiệm đi xe Jeep lên đỉnh ngắm toàn cảnh thành phố.', 120000.00, 'langbiang-dl.jpg', 'Active', NULL, 'Đỉnh Langbiang'),
+(9, 2, NULL, 'Thác Datanla', 'Vui chơi', 'Hệ thống máng trượt xuyên rừng thông dài nhất Đông Nam Á.', 170000.00, 'datanla-dl.jpg', 'Active', NULL, 'Thác Datanla'),
+(10, 2, NULL, 'Vườn thú Zoodoo', 'Tham quan', 'Mô hình sở thú thân thiện mang phong cách Úc, thích hợp cho gia đình có trẻ nhỏ.', 100000.00, 'zoodoo-dl.jpg', 'Active', NULL, 'Vườn thú Zoodoo'),
+(11, 2, NULL, 'Lẩu bò Ba Toa Quán Gỗ', 'Ăn uống', 'Quán lẩu bò mộc mạc lâu đời, hương vị đậm đà xua tan cái lạnh Đà Lạt.', 200000.00, 'laubo-dl.jpg', 'Active', NULL, 'Lẩu bò Ba Toa Quán Gỗ'),
+(12, 2, NULL, 'Lẩu gà lá é Tao Ngộ', 'Ăn uống', 'Đặc sản lẩu gà nấm kết hợp với vị cay nồng của lá é.', 150000.00, 'lauga-dl.jpg', 'Active', NULL, 'Lẩu gà lá é Tao Ngộ'),
+(13, 2, NULL, 'Chợ Đêm Âm Phủ', 'Mua sắm', 'Thiên đường đồ len và ẩm thực đường phố (bánh tráng nướng, sữa đậu nành).', 50000.00, 'chodem-dl.jpg', 'Active', NULL, 'Chợ Đêm Âm Phủ'),
+(14, 2, NULL, 'Samten Hills Dalat', 'Nghỉ dưỡng', 'Khu du lịch tâm linh với bảo tháp kinh luân lớn nhất thế giới.', 250000.00, 'samten-dl.jpg', 'Active', NULL, 'Samten Hills Dalat'),
+(15, 3, NULL, 'Sun World Hòn Thơm', 'Vui chơi', 'Cáp treo 3 dây vượt biển dài nhất thế giới và công viên nước Aquatopia.', 600000.00, 'honthom-pq.jpg', 'Active', NULL, 'Sun World Hòn Thơm'),
+(16, 3, NULL, 'Vinpearl Safari Phú Quốc', 'Tham quan', 'Công viên chăm sóc và bảo tồn động vật bán hoang dã lớn nhất Việt Nam.', 650000.00, 'safari-pq.jpg', 'Active', NULL, 'Vinpearl Safari Phú Quốc'),
+(17, 3, NULL, 'Grand World Phú Quốc', 'Tham quan', 'Thành phố không ngủ với kiến trúc Venice thu nhỏ và các show diễn thực cảnh.', 0.00, 'grandworld-pq.jpg', 'Active', NULL, 'Grand World Phú Quốc'),
+(18, 3, NULL, 'Bãi Sao', 'Nghỉ dưỡng', 'Một trong những bãi biển đẹp nhất đảo ngọc với cát trắng mịn như kem.', 0.00, 'baisao-pq.jpg', 'Active', NULL, 'Bãi Sao'),
+(19, 3, NULL, 'Bún quậy Kiến Xây', 'Ăn uống', 'Món bún đặc trưng, thực khách tự tay pha nước chấm theo khẩu vị.', 70000.00, 'bunquay-pq.jpg', 'Active', NULL, 'Bún quậy Kiến Xây'),
+(20, 3, NULL, 'Chợ đêm Dinh Cậu', 'Mua sắm', 'Khu chợ sầm uất chuyên các món hải sản nướng, đậu phộng chou chou.', 200000.00, 'dinhcau-pq.jpg', 'Active', NULL, 'Chợ đêm Dinh Cậu'),
+(21, 4, NULL, 'Đỉnh Fansipan (Cáp treo)', 'Tham quan', 'Chinh phục nóc nhà Đông Dương bằng hệ thống cáp treo hiện đại nhất thế giới.', 800000.00, 'fansipan-sp.jpg', 'Active', NULL, 'Đỉnh Fansipan (Cáp treo)'),
+(22, 4, NULL, 'Bản Cát Cát', 'Tham quan', 'Bản làng cổ của người H\'Mông, mang đậm bản sắc văn hóa Tây Bắc.', 90000.00, 'catcat-sp.jpg', 'Active', NULL, 'Bản Cát Cát'),
+(23, 4, NULL, 'Đèo Ô Quy Hồ', 'Tham quan', 'Một trong tứ đại đỉnh đèo của Việt Nam, điểm săn mây tuyệt đẹp.', 0.00, 'oquyho-sp.jpg', 'Active', NULL, 'Đèo Ô Quy Hồ'),
+(24, 4, NULL, 'Nhà hàng Lẩu Cá Tầm', 'Ăn uống', 'Thưởng thức món lẩu cá tầm tươi ngon sưởi ấm giữa tiết trời lạnh giá.', 300000.00, 'catam-sp.jpg', 'Active', 'Thưởng thức', 'Nhà hàng Lẩu Cá Tầm'),
+(25, 5, NULL, 'Bà Nà Hills', 'Tham quan', 'Khu du lịch nổi tiếng của Đà Nẵng', 900000.00, 'banahills.jpg', 'Active', NULL, 'Bà Nà Hills'),
+(26, 5, NULL, 'Cầu Vàng', 'Tham quan', 'Biểu tượng du lịch Đà Nẵng', 0.00, 'cauvang.jpg', 'Active', NULL, 'Cầu Vàng'),
+(27, 5, NULL, 'Cầu Rồng', 'Tham quan', 'Cầu phun lửa cuối tuần', 0.00, 'caurong.jpg', 'Active', NULL, 'Cầu Rồng'),
+(28, 5, NULL, 'Biển Mỹ Khê', 'Tham quan', 'Một trong những bãi biển đẹp nhất thế giới', 0.00, 'mykhe.jpg', 'Active', NULL, 'Biển Mỹ Khê'),
+(29, 5, NULL, 'Ngũ Hành Sơn', 'Tham quan', 'Quần thể núi đá vôi nổi tiếng', 40000.00, 'nguhanhson.jpg', 'Active', NULL, 'Ngũ Hành Sơn'),
+(30, 5, NULL, 'Asia Park', 'Vui chơi', 'Công viên giải trí', 200000.00, 'asiapark.jpg', 'Active', NULL, 'Asia Park'),
+(31, 5, NULL, 'Bảo tàng Chăm', 'Tham quan', 'Bảo tàng nghệ thuật Chăm lớn nhất', 60000.00, 'cham.jpg', 'Active', NULL, 'Bảo tàng Chăm'),
+(32, 5, NULL, 'Sơn Trà', 'Tham quan', 'Bán đảo Sơn Trà', 0.00, 'sontra.jpg', 'Active', NULL, 'Sơn Trà'),
+(33, 5, NULL, 'Chùa Linh Ứng', '', 'Ngôi chùa nổi tiếng', 0.00, 'linhung.jpg', 'Active', NULL, 'Chùa Linh Ứng'),
+(34, 5, NULL, 'Chợ Hàn', 'Mua sắm', 'Đặc sản Đà Nẵng', 0.00, 'chohan.jpg', 'Active', NULL, 'Chợ Hàn'),
+(35, 6, NULL, 'Phố cổ Hội An', 'Tham quan', 'Di sản UNESCO', 120000.00, 'phohoian.jpg', 'Active', NULL, 'Phố cổ Hội An'),
+(36, 6, NULL, 'Chùa Cầu', 'Tham quan', 'Biểu tượng Hội An', 0.00, 'chuacau.jpg', 'Active', NULL, 'Chùa Cầu'),
+(37, 6, NULL, 'Rừng dừa Bảy Mẫu', 'Tham quan', 'Đi thuyền thúng', 180000.00, '/uploads/1786237814077-tour-rung-dua-bay-mau-c.jpg', 'Active', NULL, 'Rừng dừa Bảy Mẫu'),
+(38, 6, NULL, 'Biển An Bàng', 'Tham quan', 'Biển đẹp của Hội An', 0.00, 'anbang.jpg', 'Active', NULL, 'Biển An Bàng'),
+(39, 6, NULL, 'Làng gốm Thanh Hà', '', 'Làm gốm', 80000.00, 'thanhha.jpg', 'Active', NULL, 'Làng gốm Thanh Hà'),
+(40, 6, NULL, 'Làng rau Trà Quế', '', 'Làm nông dân', 100000.00, 'traque.jpg', 'Active', NULL, 'Làng rau Trà Quế'),
+(41, 7, NULL, 'Đại Nội Huế', 'Tham quan', 'Hoàng thành Huế', 200000.00, 'dainoi.jpg', 'Active', NULL, 'Đại Nội Huế'),
+(42, 7, NULL, 'Chùa Thiên Mụ', '', 'Ngôi chùa nổi tiếng', 0.00, 'thienmu.jpg', 'Active', NULL, 'Chùa Thiên Mụ'),
+(43, 7, NULL, 'Lăng Khải Định', 'Tham quan', 'Lăng vua Khải Định', 150000.00, 'khaidinh.jpg', 'Active', NULL, 'Lăng Khải Định'),
+(44, 7, NULL, 'Lăng Minh Mạng', 'Tham quan', 'Lăng vua Minh Mạng', 150000.00, 'minhmang.jpg', 'Active', NULL, 'Lăng Minh Mạng'),
+(45, 7, NULL, 'Sông Hương', '', 'Nghe ca Huế', 150000.00, 'songhuong.jpg', 'Active', NULL, 'Sông Hương'),
+(46, 7, NULL, 'Chợ Đông Ba', 'Mua sắm', 'Chợ nổi tiếng Huế', 0.00, 'dongba.jpg', 'Active', NULL, 'Chợ Đông Ba'),
+(47, 8, NULL, 'Hồ Hoàn Kiếm', 'Tham quan', 'Biểu tượng Hà Nội', 0.00, 'hohoankiem.jpg', 'Active', NULL, 'Hồ Hoàn Kiếm'),
+(48, 8, NULL, 'Lăng Bác', 'Tham quan', 'Lăng Chủ tịch Hồ Chí Minh', 0.00, 'langbac.jpg', 'Active', NULL, 'Lăng Bác'),
+(49, 8, NULL, 'Văn Miếu', 'Tham quan', 'Trường đại học đầu tiên', 70000.00, 'vanmieu.jpg', 'Active', NULL, 'Văn Miếu'),
+(50, 8, NULL, 'Phố cổ Hà Nội', 'Tham quan', '36 phố phường', 0.00, 'phoco.jpg', 'Active', NULL, 'Phố cổ Hà Nội'),
+(51, 8, NULL, 'Nhà hát Lớn', 'Tham quan', 'Kiến trúc Pháp', 0.00, 'nhahatlon.jpg', 'Active', NULL, 'Nhà hát Lớn'),
+(52, 8, NULL, 'Hồ Tây', 'Tham quan', 'Hồ lớn nhất Hà Nội', 0.00, '/uploads/1786237754477-185-1773836446051568605896.jpg', 'Active', NULL, 'Hồ Tây'),
+(53, 9, NULL, 'Vịnh Hạ Long', 'Tham quan', 'Kỳ quan thiên nhiên', 950000.00, '/uploads/1786211402112-du-lich-vinh-Ha-Long-hinh-anh1_1625911963.webp', 'Active', NULL, 'Vịnh Hạ Long'),
+(54, 9, NULL, 'Hang Sửng Sốt', 'Tham quan', 'Hang động nổi tiếng', 150000.00, '/uploads/1786211339888-hang-sung-sot-2_1627633591.webp', 'Active', NULL, 'Hang Sửng Sốt'),
+(55, 9, NULL, 'Đảo Ti Tốp', 'Tham quan', 'Đảo đẹp của Hạ Long', 100000.00, '/uploads/1784714136526-dao-titop-quang-ninh-02_1625285135.webp', 'Active', NULL, 'Đảo Ti Tốp'),
+(56, 9, NULL, 'Sun World Hạ Long', 'Vui chơi', 'Công viên giải trí', 350000.00, '/uploads/1784714091209-sunworldHL.jpg', 'Active', NULL, 'Sun World Hạ Long'),
+(57, 9, NULL, 'Bảo tàng Quảng Ninh', 'Tham quan', 'Kiến trúc độc đáo', 40000.00, '/uploads/1784713934970-images.jpg', 'Active', NULL, 'Bảo tàng Quảng Ninh');
 
 -- --------------------------------------------------------
 
@@ -664,29 +677,32 @@ CREATE TABLE `services` (
   `base_cost` decimal(15,2) DEFAULT NULL,
   `selling_price` decimal(15,2) DEFAULT NULL,
   `capacity` int(11) DEFAULT NULL,
-  `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`))
+  `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
+  `action_verb` varchar(50) DEFAULT NULL,
+  `short_display_name` varchar(150) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `services`
 --
 
-INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `capacity`, `attributes`) VALUES
-(1, 'Vé máy bay Khứ hồi - Phổ thông', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 2200000.00, 2500000.00, 1, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Airbus A321\", \"has_baggage\": \"20kg Ký gửi\"}'),
-(2, 'Vé máy bay Khứ hồi - Thương gia', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 5500000.00, 6000000.00, 1, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Boeing 787\", \"has_baggage\": \"30kg Ký gửi + Phòng chờ VIP\"}'),
-(3, 'Vé xe giường nằm đi Tỉnh', 'Xe vận chuyển', NULL, NULL, 'Active', 2, NULL, 'Vé', 400000.00, 500000.00, 1, '{\"vehicle_type\": \"Giường nằm 34 chỗ\", \"brand\": \"Thaco Mobihome\"}'),
-(4, 'Thuê xe Du lịch 16 chỗ / Ngày', 'Xe vận chuyển', NULL, NULL, 'Active', 3, NULL, 'Xe/Ngày', 1200000.00, 1500000.00, 15, '{\"vehicle_type\": \"Ford Transit\", \"brand\": \"Ford\", \"include_driver\": true}'),
-(5, 'Thuê xe Limousine 9 chỗ / Ngày', 'Xe vận chuyển', NULL, NULL, 'Active', 3, NULL, 'Xe/Ngày', 2000000.00, 2500000.00, 9, '{\"vehicle_type\": \"Limousine VIP\", \"brand\": \"Dcar\", \"include_driver\": true, \"massage_seats\": true}'),
-(6, 'Phòng Deluxe Ocean View', 'Khách sạn', NULL, NULL, 'Active', 4, 1, 'Phòng/Đêm', 2500000.00, 3000000.00, 2, '{\"star_rating\": 5, \"room_type\": \"Deluxe\", \"bed_type\": \"1 King Bed\", \"has_breakfast\": true}'),
-(7, 'Phòng Standard Hướng Phố', 'Khách sạn', NULL, NULL, 'Active', 5, 1, 'Phòng/Đêm', 900000.00, 1200000.00, 2, '{\"star_rating\": 4, \"room_type\": \"Standard\", \"bed_type\": \"2 Twin Beds\", \"has_breakfast\": true}'),
-(8, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 6, 2, 'Phòng/Đêm', 1300000.00, 1600000.00, 2, '{\"star_rating\": 4, \"room_type\": \"Superior\", \"bed_type\": \"1 Queen Bed\", \"has_breakfast\": true}'),
-(9, 'Villa 1 Phòng Ngủ (Cổ điển)', 'Khách sạn', NULL, NULL, 'Active', 7, 2, 'Căn/Đêm', 3200000.00, 3800000.00, 2, '{\"star_rating\": 5, \"room_type\": \"Villa\", \"architecture\": \"French Colonial\", \"has_breakfast\": true}'),
-(10, 'Emerald Bay View', 'Khách sạn', '', '/uploads/1786211032534-907253131.avif', 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 6000000.00, 2, '{}'),
-(12, 'Phòng Deluxe Hướng Biển', 'Accommodation', '', '/uploads/1786211263783-230213333.jpg', 'Active', NULL, 5, 'Phòng/Đêm', 1200000.00, 1500000.00, 0, '{}'),
-(13, 'Phòng Suite Cao Cấp', 'Accommodation', '', '/uploads/1786211185878-710398912.webp', 'Active', NULL, 1, 'Phòng/Đêm', 2000000.00, 2500000.00, 0, '{}'),
-(14, 'Xe Ford Transit 16 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210855576-636069820.webp', 'Active', NULL, NULL, 'Xe/Ngày', 960000.00, 1200000.00, 0, '{}'),
-(15, 'Xe Thaco 29 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210745118-332571067.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1760000.00, 2200000.00, 0, '{}'),
-(20, 'Phòng Suite Cơ Bản', 'Khách sạn', 'Trải nghiệm sang trọng, dịch vụ đẳng cấp', '/uploads/1786209370282-387963415.webp', 'Active', 10, 1, 'Phòng/Đêm', 0.00, 4200000.00, 2, '{}');
+INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `capacity`, `attributes`, `action_verb`, `short_display_name`) VALUES
+(1, 'Vé máy bay Khứ hồi - Phổ thông', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 2200000.00, 2500000.00, 1, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Airbus A321\", \"has_baggage\": \"20kg Ký gửi\"}', NULL, NULL),
+(2, 'Vé máy bay Khứ hồi - Thương gia', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 5500000.00, 6000000.00, 1, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Boeing 787\", \"has_baggage\": \"30kg Ký gửi + Phòng chờ VIP\"}', NULL, NULL),
+(3, 'Vé xe giường nằm đi Tỉnh', 'Xe vận chuyển', NULL, NULL, 'Active', 2, NULL, 'Vé', 400000.00, 500000.00, 1, '{\"vehicle_type\": \"Giường nằm 34 chỗ\", \"brand\": \"Thaco Mobihome\"}', NULL, NULL),
+(4, 'Thuê xe Du lịch 16 chỗ / Ngày', 'Xe vận chuyển', '', '/uploads/1786238675096-710880483.jpg', 'Active', 3, NULL, 'Xe/Ngày', 1200000.00, 1500000.00, 15, '{}', NULL, NULL),
+(5, 'Thuê xe Limousine 9 chỗ / Ngày', 'Xe vận chuyển', '', '/uploads/1786238624166-114887815.jpg', 'Active', 3, NULL, 'Xe/Ngày', 2000000.00, 2500000.00, 9, '{}', NULL, NULL),
+(6, 'Phòng Deluxe Ocean View', 'Khách sạn', NULL, NULL, 'Active', 4, 1, 'Phòng/Đêm', 2500000.00, 3000000.00, 2, '{\"star_rating\": 5, \"room_type\": \"Deluxe\", \"bed_type\": \"1 King Bed\", \"has_breakfast\": true}', NULL, NULL),
+(7, 'Phòng Standard Hướng Phố', 'Khách sạn', NULL, NULL, 'Active', 5, 1, 'Phòng/Đêm', 900000.00, 1200000.00, 2, '{\"star_rating\": 4, \"room_type\": \"Standard\", \"bed_type\": \"2 Twin Beds\", \"has_breakfast\": true}', NULL, NULL),
+(8, 'Phòng Superior', 'Khách sạn', '', '/uploads/1786237947856-208711390.jpg', 'Active', 6, 2, 'Phòng/Đêm', 1300000.00, 1600000.00, 2, '{}', NULL, NULL),
+(9, 'Villa 1 Phòng Ngủ (Cổ điển)', 'Khách sạn', '', '/uploads/1786237896616-604688624.jpg', 'Active', 7, 2, 'Căn/Đêm', 3200000.00, 3800000.00, 2, '{}', NULL, NULL),
+(10, 'Emerald Bay View', 'Khách sạn', '', '/uploads/1786211032534-907253131.avif', 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 6000000.00, 2, '{}', NULL, NULL),
+(12, 'Phòng Deluxe Hướng Biển', 'Accommodation', '', '/uploads/1786211263783-230213333.jpg', 'Active', NULL, 5, 'Phòng/Đêm', 1200000.00, 1500000.00, 0, '{}', NULL, NULL),
+(13, 'Phòng Suite Cao Cấp', 'Accommodation', '', '/uploads/1786211185878-710398912.webp', 'Active', NULL, 1, 'Phòng/Đêm', 2000000.00, 2500000.00, 0, '{}', NULL, NULL),
+(14, 'Xe Ford Transit 16 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210855576-636069820.webp', 'Active', NULL, NULL, 'Xe/Ngày', 960000.00, 1200000.00, 0, '{}', NULL, NULL),
+(15, 'Xe Thaco 29 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210745118-332571067.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1760000.00, 2200000.00, 0, '{}', NULL, NULL),
+(20, 'Phòng Suite Cơ Bản', 'Khách sạn', 'Trải nghiệm sang trọng, dịch vụ đẳng cấp', '/uploads/1786209370282-387963415.webp', 'Active', 10, 1, 'Phòng/Đêm', 0.00, 4200000.00, 2, '{}', NULL, NULL),
+(21, 'Phòng Suite Cao Cấp', 'Khách sạn', 'ỷhh', '/uploads/1786246706834-935012199.webp', 'Pending', 10, 1, 'Phòng/Đêm', 0.00, 0.00, 2, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -714,7 +730,8 @@ CREATE TABLE `service_bookings` (
 
 INSERT INTO `service_bookings` (`booking_id`, `customer_id`, `service_id`, `quantity`, `usage_date`, `total_amount`, `payment_method`, `status`, `voucher_code`, `notes`, `created_at`) VALUES
 (1, 8, 7, 1, '2026-08-09', 1200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-7C4CIH', '', '2026-08-08 03:30:55'),
-(3, 8, 20, 1, '2026-08-13', 4200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-PJ14XB', '', '2026-08-08 18:03:44');
+(3, 8, 20, 1, '2026-08-13', 4200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-PJ14XB', '', '2026-08-08 18:03:44'),
+(4, 8, 20, 1, '2026-08-14', 4200000.00, 'Pay_at_Location', '', NULL, '', '2026-08-09 03:36:58');
 
 -- --------------------------------------------------------
 
@@ -740,7 +757,8 @@ CREATE TABLE `service_requests` (
 
 INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_id`, `partner_id`, `requested_by`, `request_content`, `status`, `created_at`, `agreed_price`) VALUES
 (7, NULL, 1, 5, 4, 'Khách hàng đặt: Ngày 2026-08-09 - Số lượng: 1', 'Accepted', '2026-08-08 10:39:19', 1200000),
-(8, NULL, 3, 10, 8, 'Khách hàng đặt: Ngày 2026-08-13 - Số lượng: 1', 'Accepted', '2026-08-08 18:03:44', 4200000);
+(8, NULL, 3, 10, 8, 'Khách hàng đặt: Ngày 2026-08-13 - Số lượng: 1', 'Accepted', '2026-08-08 18:03:44', 4200000),
+(9, NULL, 4, 10, 8, 'Khách hàng đặt: Ngày 2026-08-14 - Số lượng: 1', 'Pending', '2026-08-09 03:36:58', 4200000);
 
 -- --------------------------------------------------------
 
@@ -807,7 +825,10 @@ INSERT INTO `tours` (`tour_id`, `tour_name`, `description`, `destination`, `dura
 (8, 'Khám phá Phú Quốc', '', 'Phú Quốc', 3, 4271600.00, '/uploads/2caf891f3b5404c5d53fb225dbc185b7', 'Pending', 4, 3620000.00, 18, '{\"fixedServices\":{\"accommodation\":[{\"id\":\"ext_hotel_5_1783576300007\",\"name\":\"Vinpearl Resort Phú Quốc - Phòng Tiêu chuẩn (Standard) - Đêm\",\"type\":\"🏨 Lưu trú\",\"price\":\"1500000.00\",\"original_id\":\"hotel_5\"}],\"transport\":[{\"id\":\"ext_transport_8_1783576298231\",\"name\":\"Nhà xe Phương Trang (FUTA Bus) - Vé xe giường nằm - Khứ hồi\",\"type\":\"✈️ Di chuyển\",\"price\":\"600000.00\",\"original_id\":\"transport_8\"}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"Ngày 1\",\"slots\":{\"morning\":[{\"id\":\"ext_act_1_1783576275292\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành\",\"price\":0,\"original_id\":\"act_1\"}],\"noon\":[{\"id\":\"ext_place_15_1783576302557\",\"name\":\"Sun World Hòn Thơm\",\"type\":\"🎟️ Tham quan\",\"price\":\"600000.00\",\"original_id\":\"place_15\"}],\"evening\":[{\"id\":\"ext_act_2_1_1783576275292\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng\",\"price\":0,\"original_id\":\"act_2\"}]}},{\"dayIndex\":2,\"dateString\":\"Ngày 2\",\"slots\":{\"morning\":[{\"id\":\"ext_place_16_1783576310983\",\"name\":\"Vinpearl Safari Phú Quốc\",\"type\":\"🎟️ Tham quan\",\"price\":\"650000.00\",\"original_id\":\"place_16\"}],\"noon\":[{\"id\":\"ext_place_18_1783576315400\",\"name\":\"Bãi Sao\",\"type\":\"🎟️ Tham quan\",\"price\":\"0.00\",\"original_id\":\"place_18\"},{\"id\":\"ext_place_17_1783576321114\",\"name\":\"Grand World Phú Quốc\",\"type\":\"🎟️ Tham quan\",\"price\":\"0.00\",\"original_id\":\"place_17\"}],\"evening\":[{\"id\":\"ext_act_2_2_1783576275292\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng\",\"price\":0,\"original_id\":\"act_2\"}]}},{\"dayIndex\":3,\"dateString\":\"Ngày 3\",\"slots\":{\"morning\":[{\"id\":\"ext_place_19_1783576319482\",\"name\":\"Bún quậy Kiến Xây\",\"type\":\"🎟️ Tham quan\",\"price\":\"70000.00\",\"original_id\":\"place_19\"}],\"noon\":[{\"id\":\"ext_act_2_3_1783576275292\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng\",\"price\":0,\"original_id\":\"act_2\"}],\"evening\":[{\"id\":\"ext_act_3_1783576275292\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0,\"original_id\":\"act_3\"},{\"id\":\"ext_place_20_1783576323360\",\"name\":\"Chợ đêm Dinh Cậu\",\"type\":\"🎟️ Tham quan\",\"price\":\"200000.00\",\"original_id\":\"place_20\"}]}}]}', NULL, 0),
 (9, 'Tour Đà Lạt ', '', 'Đà Lạt', 3, 4248000.00, '/uploads/985ba96391367fa25195b9f957ffa672', 'Pending', 4, 3540000.00, 20, '{\"fixedServices\":{\"accommodation\":[{\"id\":\"ext_hotel_3_1784017671912\",\"name\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"type\":\"🏨 Lưu trú\",\"price\":\"1000000.00\",\"original_id\":\"hotel_3\"}],\"transport\":[{\"id\":\"ext_transport_9_1784017675463\",\"name\":\"Dịch vụ xe ghép 16 chỗ - Thuê xe Du lịch 16 chỗ - Ngày\",\"type\":\"✈️ Di chuyển\",\"price\":\"1500000.00\",\"original_id\":\"transport_9\"}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"Ngày 1\",\"slots\":{\"morning\":[{\"id\":\"ext_act_1_1784017646207\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành\",\"price\":0,\"original_id\":\"act_1\"}],\"noon\":[{\"id\":\"ext_place_10_1784017691251\",\"name\":\"Vườn thú Zoodoo\",\"type\":\"🎟️ Tham quan\",\"price\":\"100000.00\",\"original_id\":\"place_10\"}],\"evening\":[{\"id\":\"ext_place_11_1784017695703\",\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"type\":\"🎟️ Tham quan\",\"price\":\"200000.00\",\"original_id\":\"place_11\"},{\"id\":\"ext_act_2_1_1784017646207\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do dạo phố ngắm cảnh\",\"price\":0,\"original_id\":\"act_2\"}]}},{\"dayIndex\":2,\"dateString\":\"Ngày 2\",\"slots\":{\"morning\":[{\"id\":\"ext_place_8_1784017701098\",\"name\":\"Đỉnh Langbiang\",\"type\":\"🎟️ Tham quan\",\"price\":\"120000.00\",\"original_id\":\"place_8\"}],\"noon\":[{\"id\":\"ext_place_12_1784017706121\",\"name\":\"Lẩu gà lá é Tao Ngộ\",\"type\":\"🎟️ Tham quan\",\"price\":\"150000.00\",\"original_id\":\"place_12\"}],\"evening\":[{\"id\":\"ext_place_13_1784017711271\",\"name\":\"Chợ Đêm Âm Phủ\",\"type\":\"🎟️ Tham quan\",\"price\":\"50000.00\",\"original_id\":\"place_13\"},{\"id\":\"ext_act_2_2_1784017646207\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do dạo phố ngắm cảnh\",\"price\":0,\"original_id\":\"act_2\"}]}},{\"dayIndex\":3,\"dateString\":\"Ngày 3\",\"slots\":{\"morning\":[{\"id\":\"ext_place_9_1784017714803\",\"name\":\"Thác Datanla\",\"type\":\"🎟️ Tham quan\",\"price\":\"170000.00\",\"original_id\":\"place_9\"}],\"noon\":[{\"id\":\"ext_place_14_1784017719234\",\"name\":\"Samten Hills Dalat\",\"type\":\"🎟️ Tham quan\",\"price\":\"250000.00\",\"original_id\":\"place_14\"}],\"evening\":[{\"id\":\"ext_act_3_1784017646207\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0,\"original_id\":\"act_3\"},{\"id\":\"ext_act_2_3_1784017646207\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do dạo phố ngắm cảnh\",\"price\":0,\"original_id\":\"act_2\"}]}}]}', NULL, 0),
 (10, 'Khám phá Phú Quốc ', '', 'Phú Quốc', 3, 6984000.00, '/uploads/1784651147243-499615130.jpg', 'Active', 4, 5820000.00, 20, '{\"fixedServices\":{\"accommodation\":[{\"id\":\"ext_hotel_5_1784626478505\",\"name\":\"Vinpearl Resort Phú Quốc - Phòng Tiêu chuẩn (Standard) - Đêm\",\"type\":\"🏨 Lưu trú\",\"price\":\"1500000.00\",\"original_id\":\"hotel_5\"}],\"transport\":[{\"id\":\"ext_transport_7_1784626467429\",\"name\":\"Vietnam Airlines - Vé máy bay Khứ hồi - Phổ thông\",\"type\":\"✈️ Di chuyển\",\"price\":\"2800000.00\",\"original_id\":\"transport_7\"}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"Ngày 1\",\"slots\":{\"morning\":[{\"id\":\"ext_act_1_1784626454547\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành\",\"price\":0,\"original_id\":\"act_1\"}],\"noon\":[{\"id\":\"ext_act_2_1_1784626454547\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng\",\"price\":0,\"original_id\":\"act_2\"},{\"id\":\"ext_place_15_1784626488681\",\"name\":\"Sun World Hòn Thơm\",\"type\":\"🎟️ Tham quan\",\"price\":\"600000.00\",\"original_id\":\"place_15\"}],\"evening\":[{\"id\":\"ext_place_19_1784626492543\",\"name\":\"Bún quậy Kiến Xây\",\"type\":\"🎟️ Tham quan\",\"price\":\"70000.00\",\"original_id\":\"place_19\"}]}},{\"dayIndex\":2,\"dateString\":\"Ngày 2\",\"slots\":{\"morning\":[{\"id\":\"ext_place_16_1784626503112\",\"name\":\"Vinpearl Safari Phú Quốc\",\"type\":\"🎟️ Tham quan\",\"price\":\"650000.00\",\"original_id\":\"place_16\"}],\"noon\":[{\"id\":\"ext_act_2_2_1784626454547\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng\",\"price\":0,\"original_id\":\"act_2\"}],\"evening\":[{\"id\":\"ext_place_20_1784626507944\",\"name\":\"Chợ đêm Dinh Cậu\",\"type\":\"🎟️ Tham quan\",\"price\":\"200000.00\",\"original_id\":\"place_20\"}]}},{\"dayIndex\":3,\"dateString\":\"Ngày 3\",\"slots\":{\"morning\":[{\"id\":\"ext_place_18_1784626515233\",\"name\":\"Bãi Sao\",\"type\":\"🎟️ Tham quan\",\"price\":\"0.00\",\"original_id\":\"place_18\"}],\"noon\":[{\"id\":\"ext_act_2_3_1784626454547\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng\",\"price\":0,\"original_id\":\"act_2\"},{\"id\":\"ext_place_17_1784626511158\",\"name\":\"Grand World Phú Quốc\",\"type\":\"🎟️ Tham quan\",\"price\":\"0.00\",\"original_id\":\"place_17\"}],\"evening\":[{\"id\":\"ext_act_3_1784626454547\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0,\"original_id\":\"act_3\"}]}}]}', NULL, 0),
-(26, 'Tour Thiết Kế: Nha Trang', NULL, 'Nha Trang', NULL, 5964000.00, '', 'Active', 4, 0.00, 20, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (22/8/2026):\\n - Sáng: Đón khách & Khởi hành về khách sạn ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (23/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Lặn biển Hòn Mun\\n - Chiều/Tối: Tắm bùn khoáng I-Resort\\n\\nNGÀY 3 (24/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Nem nướng Đặng Văn Quyên\\n - Chiều/Tối: Chợ Đêm Nha Trang\\n\\nNGÀY 4 (25/8/2026):\\n - Sáng: Hải sản Thanh Sương\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Mua sắm đặc sản địa phương & Tiễn khách\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"price\":2500000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"price\":400000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"22/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"23/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"evening\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}]}},{\"dayIndex\":3,\"dateString\":\"24/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0}]}},{\"dayIndex\":4,\"dateString\":\"25/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000}],\"noon\":[{\"id\":\"act_2_day_4\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}],\"resources\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}', NULL, 1);
+(26, 'Tour Thiết Kế: Nha Trang', NULL, 'Nha Trang', NULL, 5964000.00, '', 'Active', 4, 0.00, 20, '{\"textVersion\":\"CHƯƠNG TRÌNH DU LỊCH NHA TRANG\\n==========================\\n\\nNGÀY 1 (22/8/2026):\\n - Sáng: Đón khách & Khởi hành về khách sạn ➔ VinWonders Nha Trang\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Tháp Bà Ponagar\\n\\nNGÀY 2 (23/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Lặn biển Hòn Mun\\n - Chiều/Tối: Tắm bùn khoáng I-Resort\\n\\nNGÀY 3 (24/8/2026):\\n - Sáng: Tự do tắm biển / Nghỉ dưỡng resort\\n - Trưa: Nem nướng Đặng Văn Quyên\\n - Chiều/Tối: Chợ Đêm Nha Trang\\n\\nNGÀY 4 (25/8/2026):\\n - Sáng: Hải sản Thanh Sương\\n - Trưa: Tự do tắm biển / Nghỉ dưỡng resort\\n - Chiều/Tối: Mua sắm đặc sản địa phương & Tiễn khách\\n\\n\",\"dragDropState\":{\"logistics\":{\"pickup\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"},\"dropoff\":{\"time\":\"\",\"location\":\"\",\"flightInfo\":\"\",\"note\":\"\"}},\"fixedServices\":{\"accommodation\":[{\"id\":\"hotel\",\"type\":\"🏨 Lưu trú\",\"name\":\"Vinpearl Resort & Spa Nha Trang - Phòng Deluxe Ocean View\",\"price\":2500000}],\"transport\":[{\"id\":\"transport\",\"type\":\"✈️ Di chuyển\",\"name\":\"Nhà xe Phương Trang (FUTA) - Vé xe giường nằm đi Tỉnh\",\"price\":400000}]},\"itineraryDays\":[{\"dayIndex\":1,\"dateString\":\"22/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"place_0\",\"type\":\"🎟️ Tham quan\",\"name\":\"VinWonders Nha Trang\",\"price\":880000}],\"noon\":[{\"id\":\"act_2_day_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"place_1\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tháp Bà Ponagar\",\"price\":30000}]}},{\"dayIndex\":2,\"dateString\":\"23/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_2\",\"type\":\"🎟️ Tham quan\",\"name\":\"Lặn biển Hòn Mun\",\"price\":500000}],\"evening\":[{\"id\":\"place_3\",\"type\":\"🎟️ Tham quan\",\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000}]}},{\"dayIndex\":3,\"dateString\":\"24/8/2026\",\"slots\":{\"morning\":[{\"id\":\"act_2_day_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"noon\":[{\"id\":\"place_4\",\"type\":\"🎟️ Tham quan\",\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000}],\"evening\":[{\"id\":\"place_5\",\"type\":\"🎟️ Tham quan\",\"name\":\"Chợ Đêm Nha Trang\",\"price\":0}]}},{\"dayIndex\":4,\"dateString\":\"25/8/2026\",\"slots\":{\"morning\":[{\"id\":\"place_6\",\"type\":\"🎟️ Tham quan\",\"name\":\"Hải sản Thanh Sương\",\"price\":250000}],\"noon\":[{\"id\":\"act_2_day_4\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0}],\"evening\":[{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}],\"resources\":[{\"id\":\"act_1\",\"type\":\"🕒 Hoạt động\",\"name\":\"Đón khách & Khởi hành về khách sạn\",\"price\":0},{\"id\":\"act_2\",\"type\":\"🕒 Hoạt động\",\"name\":\"Tự do tắm biển / Nghỉ dưỡng resort\",\"price\":0},{\"id\":\"act_3\",\"type\":\"🕒 Hoạt động\",\"name\":\"Mua sắm đặc sản địa phương & Tiễn khách\",\"price\":0}]}}', NULL, 1),
+(27, 'Khám phá Đà Lạt - Nha Trang 4N3Đ', '', '2', 4, 7636000.00, '/uploads/1786955134884-399383371.jpg', 'Pending', 4, 6363333.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"isTitleEdited\":false,\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\",\"meals\":{\"breakfast\":false,\"lunch\":false,\"dinner\":false}}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"1\",\"route_title\":\"Đà Lạt - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Đà Lạt đến Nha Trang\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0}],\"isTitleEdited\":false,\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\",\"meals\":{\"breakfast\":true,\"lunch\":false,\"dinner\":false}}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Nha Trang\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6}],\"isTitleEdited\":false,\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\",\"meals\":{\"breakfast\":true,\"lunch\":false,\"dinner\":false}}},{\"dayIndex\":4,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Tham quan\",\"name\":\"Tham quan Nem nướng Đặng Văn Quyên\",\"price\":\"60000.00\",\"place_id\":5},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"isTitleEdited\":false}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":\"200000\",\"lunch\":\"200000\",\"dinner\":\"200000\",\"tickets\":0,\"insurance\":0},\"ageMultiplier\":{\"child\":75,\"infant\":25},\"selectedTransport\":{\"service_id\":4,\"name\":\"Thuê xe Du lịch 16 chỗ / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1200000.00\"},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":6363333,\"sellingPrice\":7636000,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":1,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":2760000,\"autoAccommodationCost\":1550000,\"autoFixedTransport\":4800000,\"autoVariableTransport\":0},\"dayImages\":{\"1\":\"/uploads/1786953540270-33229155.jpg\"}}', NULL, 0),
+(28, 'fmhgm', 'ytmndytmtym', '2', 3, 4634400.00, '/uploads/1787148409698-410383177.jpg', 'Pending', 4, 3862000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":false,\"dinner\":false}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"1\",\"route_title\":\"Đà Lạt - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Đà Lạt đến Nha Trang\",\"price\":0}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Nem nướng Đặng Văn Quyên\",\"price\":\"60000.00\",\"place_id\":5},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":false,\"lunch\":false,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":5280000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0,\"transportTicket\":0},\"ageMultiplier\":{\"child\":75,\"infant\":25},\"selectedTransport\":{\"service_id\":15,\"service_name\":\"Xe Thaco 29 Chỗ\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1760000.00\",\"selling_price\":\"2200000.00\",\"capacity\":0,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1800000.00\"},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":3862000,\"sellingPrice\":4634400,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":1,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":2210000},\"dayImages\":{\"1\":\"/uploads/1787148409706-761285926.jpg\",\"2\":\"/uploads/1787148409729-378220772.webp\",\"3\":\"/uploads/1787148526221-558143398.webp\"}}', NULL, 0),
+(29, 'Khám phá Đà Lạt - Nha Trang', 'Bạn có thể tự do khám phá thiên nhiên kỳ thú, tận hưởng trọn vẹn từng khoảng khắc bên bạn bè và người thân', '2', 4, 7599000.00, '/uploads/1787155033861-300696428.jpg', 'Active', 4, 6312666.67, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":\"external\",\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"1\",\"route_title\":\"Đà Lạt - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Đà Lạt đến Nha Trang\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Nha Trang\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Tham quan\",\"name\":\"Tham quan Nem nướng Đặng Văn Quyên\",\"price\":\"60000.00\",\"place_id\":5},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20.377019748653492,\"fixed\":{\"transport\":7040000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0,\"transportTicket\":0},\"ageMultiplier\":{\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"road\"},\"selectedTransport\":{\"service_id\":15,\"service_name\":\"Xe Thaco 29 Chỗ\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1760000.00\",\"selling_price\":\"2200000.00\",\"capacity\":0,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1800000.00\"},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":6312666.666666667,\"sellingPrice\":7599000,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":0,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":2760000},\"categories\":[\"Nghỉ dưỡng\",\"Khám phá\",\"Văn hóa\",\"Biển đảo\",\"Gia đình\"],\"highlights\":\"Tặng đặt sản địa phương\\nKhám phá vẻ đẹp tự nhiên, hoang sơ\",\"dayImages\":{\"1\":\"/uploads/1787155033875-510651347.webp\",\"2\":\"/uploads/1787155033878-433529452.jpg\",\"3\":\"/uploads/1787155033878-395761434.webp\",\"4\":\"/uploads/1787155033882-633882125.jpg\"}}', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1152,19 +1173,19 @@ ALTER TABLE `consultation_requests`
 -- AUTO_INCREMENT cho bảng `custom_tour_quotes`
 --
 ALTER TABLE `custom_tour_quotes`
-  MODIFY `quote_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `quote_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT cho bảng `custom_tour_requests`
 --
 ALTER TABLE `custom_tour_requests`
-  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT cho bảng `departures`
 --
 ALTER TABLE `departures`
-  MODIFY `departure_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `departure_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT cho bảng `departure_updates`
@@ -1176,7 +1197,7 @@ ALTER TABLE `departure_updates`
 -- AUTO_INCREMENT cho bảng `destinations`
 --
 ALTER TABLE `destinations`
-  MODIFY `destination_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `destination_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT cho bảng `guides`
@@ -1188,7 +1209,7 @@ ALTER TABLE `guides`
 -- AUTO_INCREMENT cho bảng `guide_assignments`
 --
 ALTER TABLE `guide_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT cho bảng `incident_reports`
@@ -1230,7 +1251,7 @@ ALTER TABLE `partners`
 -- AUTO_INCREMENT cho bảng `partner_services`
 --
 ALTER TABLE `partner_services`
-  MODIFY `partner_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `partner_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT cho bảng `payments`
@@ -1248,7 +1269,7 @@ ALTER TABLE `payroll`
 -- AUTO_INCREMENT cho bảng `performance_reviews`
 --
 ALTER TABLE `performance_reviews`
-  MODIFY `performance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `performance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT cho bảng `places`
@@ -1272,19 +1293,19 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT cho bảng `services`
 --
 ALTER TABLE `services`
-  MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT cho bảng `service_bookings`
 --
 ALTER TABLE `service_bookings`
-  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT cho bảng `service_requests`
 --
 ALTER TABLE `service_requests`
-  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT cho bảng `timekeeping`
@@ -1296,7 +1317,7 @@ ALTER TABLE `timekeeping`
 -- AUTO_INCREMENT cho bảng `tours`
 --
 ALTER TABLE `tours`
-  MODIFY `tour_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `tour_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT cho bảng `tour_categories`

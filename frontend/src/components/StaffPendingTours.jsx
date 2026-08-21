@@ -300,91 +300,188 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
             {/* ========================================================= */}
             {viewingFixedTour && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '95%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                    <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '95%', maxWidth: '1200px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
                         <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', color: '#047857' }}>
                             Chi tiết Sản phẩm: {viewingFixedTour.tour_name}
                         </h3>
                         
+                        
                         <div style={{ overflowY: 'auto', paddingRight: '8px', flex: 1 }}>
+                            {viewingFixedTour.image_url && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <img src={viewingFixedTour.image_url.startsWith('/') ? 'http://localhost:5002' + viewingFixedTour.image_url : viewingFixedTour.image_url} alt="Cover" style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                                </div>
+                            )}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '8px' }}>
                                 <div><p style={{ margin: '0 0 4px 0', color: '#64748b', fontSize: '13px' }}>Tuyến đường</p><p style={{ margin: 0, fontWeight: '600' }}>{viewingFixedTour.destination}</p></div>
                                 <div><p style={{ margin: '0 0 4px 0', color: '#64748b', fontSize: '13px' }}>Thời gian</p><p style={{ margin: 0, fontWeight: '600' }}>{viewingFixedTour.duration_days} Ngày</p></div>
                             </div>
 
-                            <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#1e293b' }}>💰 Cơ cấu giá bán</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '8px' }}>
-                                <div><p style={{ margin: '0 0 4px 0', color: '#64748b', fontSize: '13px' }}>Chi phí dịch vụ gốc</p><p style={{ margin: 0, fontWeight: '600', color: '#ef4444', fontSize: '16px' }}>{formatMoney(viewingFixedTour.base_cost)} đ</p></div>
-                                <div><p style={{ margin: '0 0 4px 0', color: '#64748b', fontSize: '13px' }}>Lợi nhuận (Markup)</p><p style={{ margin: 0, fontWeight: '600', color: '#3b82f6', fontSize: '16px' }}>{viewingFixedTour.markup_percent}%</p></div>
-                                <div><p style={{ margin: '0 0 4px 0', color: '#64748b', fontSize: '13px' }}>Giá bán công bố</p><p style={{ margin: 0, fontWeight: '600', color: '#ea580c', fontSize: '16px' }}>{formatMoney(viewingFixedTour.base_price)} đ</p></div>
-                            </div>
+                            
+                            {(() => {
+                                if (!viewingFixedTour.design_data) return <span style={{ color: '#64748b' }}>Chưa có chi tiết lịch trình.</span>;
+                                try {
+                                    const parsedDesign = typeof viewingFixedTour.design_data === 'string' ? JSON.parse(viewingFixedTour.design_data) : viewingFixedTour.design_data;
+                                    const { days, costConfig, computed, dayImages } = parsedDesign;
+                                    if (!days || !costConfig || !computed) return <span style={{ color: '#64748b' }}>Dữ liệu thiết kế không đầy đủ.</span>;
+                                    
+                                    const formatMoney = (val) => new Intl.NumberFormat('vi-VN').format(Math.round(val || 0));
 
-                            <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#1e293b' }}>🗺️ Lịch trình chi tiết</h4>
-                            <div style={{ marginBottom: '24px' }}>
-                                {(() => {
-                                    if (!viewingFixedTour.design_data) return <span style={{ color: '#64748b' }}>Chưa có chi tiết lịch trình.</span>;
-                                    try {
-                                        const parsedDesign = typeof viewingFixedTour.design_data === 'string' ? JSON.parse(viewingFixedTour.design_data) : viewingFixedTour.design_data;
-                                        
-                                        return (
+                                    return (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
+                                            {/* CỘT TRÁI: LỊCH TRÌNH CHI TIẾT */}
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                {/* KHÁCH SẠN VÀ XE */}
-                                                {parsedDesign.fixedServices && (
-                                                    <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
-                                                        <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                            <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '8px' }}>🏨 Dịch vụ Lưu trú</strong>
-                                                            {parsedDesign.fixedServices.accommodation?.length > 0 ?
-                                                                parsedDesign.fixedServices.accommodation.map(a => <div key={a.id} style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', marginBottom: '4px' }}>{a.name}</div>)
-                                                                : <span style={{ fontSize: '13px', color: '#94a3b8' }}>Chưa chọn khách sạn</span>
-                                                            }
-                                                        </div>
-                                                        <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                            <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '8px' }}>✈️ Phương tiện Di chuyển</strong>
-                                                            {parsedDesign.fixedServices.transport?.length > 0 ?
-                                                                parsedDesign.fixedServices.transport.map(t => <div key={t.id} style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', marginBottom: '4px' }}>{t.name}</div>)
-                                                                : <span style={{ fontSize: '13px', color: '#94a3b8' }}>Chưa chọn phương tiện</span>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* TIMELINE CÁC BUỔI */}
-                                                {parsedDesign.itineraryDays.map((day) => (
+                                                <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#1e293b' }}>🗺️ Lịch trình chi tiết</h4>
+                                                {days.map((day) => (
                                                     <div key={day.dayIndex} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                                                         <div style={{ background: '#ecfdf5', padding: '12px 16px', borderBottom: '1px solid #a7f3d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <span style={{ fontWeight: '700', color: '#047857', fontSize: '15px' }}>NGÀY {day.dayIndex}</span>
-                                                            <span style={{ fontSize: '13px', color: '#059669', fontWeight: '600', backgroundColor: '#d1fae5', padding: '4px 10px', borderRadius: '20px' }}>🗓️ {day.dateString || `Ngày ${day.dayIndex}`}</span>
+                                                            <span style={{ fontWeight: '700', color: '#047857', fontSize: '15px' }}>NGÀY {day.dayIndex} {day.route_title ? " - " + day.route_title : ''}</span>
                                                         </div>
-                                                        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                            {['morning', 'noon', 'evening'].map(slot => {
-                                                                if (!day.slots[slot] || day.slots[slot].length === 0) return null;
-                                                                const slotConfig = {
-                                                                    morning: { icon: '🌅', name: 'BUỔI SÁNG', color: '#d97706', border: '#fde68a' },
-                                                                    noon: { icon: '☀️', name: 'BUỔI TRƯA', color: '#ea580c', border: '#fdba74' },
-                                                                    evening: { icon: '🌙', name: 'BUỔI TỐI', color: '#4f46e5', border: '#a5b4fc' }
-                                                                }[slot];
-                                                                return (
-                                                                    <div key={slot} style={{ display: 'flex', gap: '12px' }}>
-                                                                        <div style={{ width: '105px', flexShrink: 0, color: slotConfig.color, fontSize: '13px', fontWeight: '700', marginTop: '8px', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                                                                            <span style={{ fontSize: '16px' }}>{slotConfig.icon}</span> <span>{slotConfig.name}</span>
+                                                        
+                                                        <div style={{ padding: '16px', display: 'flex', gap: '16px' }}>
+                                                            {dayImages && dayImages[day.dayIndex] && (
+                                                                <div style={{ flexShrink: 0 }}>
+                                                                    <img src={dayImages[day.dayIndex].startsWith('/') ? 'http://localhost:5002' + dayImages[day.dayIndex] : dayImages[day.dayIndex]} alt="Ngày" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                                                                </div>
+                                                            )}
+                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                {/* Bảng hoạt động */}
+                                                                <div style={{ background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                                                    {day.activities && day.activities.length > 0 ? day.activities.map((act, idx) => (
+                                                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 100px', gap: '12px', padding: '10px 12px', borderBottom: idx !== day.activities.length - 1 ? '1px solid #e2e8f0' : 'none', alignItems: 'center' }}>
+                                                                            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 'bold' }}>{act.type}</span>
+                                                                            <strong style={{ fontSize: '13px', color: '#334155' }}>{act.name}</strong>
+                                                                            <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600', textAlign: 'right' }}>{act.price ? formatMoney(act.price) + ' đ' : '-'}</span>
                                                                         </div>
-                                                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: `3px solid ${slotConfig.border}`, paddingLeft: '16px' }}>
-                                                                            {day.slots[slot].map((item, idx) => (
-                                                                                <div key={idx} style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', fontSize: '14px', color: '#334155', border: '1px solid #f1f5f9' }}>
-                                                                                    <strong>{item.name}</strong>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
+                                                                    )) : <div style={{ padding: '10px', fontSize: '13px', color: '#94a3b8' }}>Chưa có hoạt động</div>}
+                                                                </div>
+
+                                                                {/* Khách sạn đặc biệt của ngày */}
+                                                                {day.accommodation && day.accommodation.name && (
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 100px', gap: '12px', background: '#eff6ff', padding: '10px 12px', borderRadius: '8px', border: '1px solid #bfdbfe', alignItems: 'center', marginTop: '4px' }}>
+                                                                        <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 'bold' }}>Lưu trú</span>
+                                                                        <strong style={{ fontSize: '13px', color: '#1e3a8a' }}>{day.accommodation.name}</strong>
+                                                                        <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600', textAlign: 'right' }}>{day.accommodation.price ? formatMoney(day.accommodation.price) + ' đ' : '-'}</span>
                                                                     </div>
-                                                                )
-                                                            })}
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
-                                        );
-                                    } catch (e) { return <span>Lỗi hiển thị lịch trình.</span>; }
-                                })()}
-                            </div>
+
+                                            {/* CỘT PHẢI: BẢNG KÊ TÀI CHÍNH */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#1e293b' }}>📊 Bảng kê Tài chính</h4>
+                                                
+                                                {/* Block Phương tiện */}
+                                                
+                                                                {/* Block Phương tiện CHI TIẾT */}
+                                                                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                                    <strong style={{ fontSize: '14px', color: '#1e293b', display: 'block', marginBottom: '12px' }}>🚗 Phương tiện di chuyển chính: {costConfig.selectedTransport ? costConfig.selectedTransport.name : 'Chưa chọn'}</strong>
+                                                                    
+                                                                    {costConfig.transportTimes && (
+                                                                        <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
+                                                                            <div style={{ flex: 1 }}>
+                                                                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#64748b', marginBottom: '8px' }}>Chuyến đi (Ngày đầu)</div>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                                                    <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.startD || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
+                                                                                    <div style={{ flex: 1, height: '1px', background: '#cbd5e1', position: 'relative' }}><div style={{ position: 'absolute', right: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div><div style={{ position: 'absolute', left: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div></div>
+                                                                                    <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endD || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569' }}>
+                                                                                    <span>Điểm xuất phát</span>
+                                                                                    <span>Điểm đến</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div style={{ width: '1px', background: '#e2e8f0' }}></div>
+
+                                                                            <div style={{ flex: 1 }}>
+                                                                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#64748b', marginBottom: '8px' }}>Chuyến về (Ngày {computed.totalDays})</div>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                                                    <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.startR || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
+                                                                                    <div style={{ flex: 1, height: '1px', background: '#cbd5e1', position: 'relative' }}><div style={{ position: 'absolute', right: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div><div style={{ position: 'absolute', left: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div></div>
+                                                                                    <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endR || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569' }}>
+                                                                                    <span>Điểm kết thúc</span>
+                                                                                    <span>Điểm về</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                    
+
+                                                {/* Block Định phí */}
+                                                <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                                    <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '12px', textTransform: 'uppercase' }}>🔒 Định phí (Cố định toàn tour)</strong>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Tiền xe nguyên chuyến:</span> <strong>{formatMoney(computed.autoFixedTransport)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Tiền Hướng dẫn viên:</span> <strong>{formatMoney(costConfig.fixed?.guidePerDay * computed.totalDays)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Phí cố định khác:</span> <strong>{formatMoney(costConfig.fixed?.otherFixed)} đ</strong>
+                                                    </div>
+                                                    <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>Chia đều cho {costConfig.minimumPax} khách</span>
+                                                        <strong style={{ fontSize: '14px', color: '#0f172a' }}>{formatMoney((computed.autoFixedTransport + (costConfig.fixed?.guidePerDay * computed.totalDays) + costConfig.fixed?.otherFixed) / costConfig.minimumPax)} đ / khách</strong>
+                                                    </div>
+                                                </div>
+
+                                                {/* Block Biến phí */}
+                                                <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                                    <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '12px', textTransform: 'uppercase' }}>👤 Biến phí (Chi phí / 1 khách)</strong>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Tiền Lưu trú:</span> <strong>{formatMoney(computed.autoAccommodationCost)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Ăn Sáng ({computed.totalMeals?.breakfast} bữa):</span> <strong>{formatMoney(computed.totalMeals?.breakfast * costConfig.variable?.breakfast)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Ăn Trưa ({computed.totalMeals?.lunch} bữa):</span> <strong>{formatMoney(computed.totalMeals?.lunch * costConfig.variable?.lunch)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Ăn Tối ({computed.totalMeals?.dinner} bữa):</span> <strong>{formatMoney(computed.totalMeals?.dinner * costConfig.variable?.dinner)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Vé tham quan:</span> <strong>{formatMoney(computed.autoTicketsCost)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#475569' }}>
+                                                        <span>Vé xe cá nhân:</span> <strong>{formatMoney(computed.autoVariableTransport)} đ</strong>
+                                                    </div>
+                                                    <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <strong style={{ fontSize: '14px', color: '#0f172a' }}>Tổng Biến Phí:</strong>
+                                                        <strong style={{ fontSize: '14px', color: '#ef4444' }}>{formatMoney(computed.autoAccommodationCost + (computed.totalMeals?.breakfast * costConfig.variable?.breakfast) + (computed.totalMeals?.lunch * costConfig.variable?.lunch) + (computed.totalMeals?.dinner * costConfig.variable?.dinner) + computed.autoTicketsCost + computed.autoVariableTransport)} đ</strong>
+                                                    </div>
+                                                </div>
+
+                                                {/* Block Lợi nhuận & Chốt giá */}
+                                                <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '12px', border: '1px solid #86efac', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                                    <strong style={{ fontSize: '13px', color: '#166534', display: 'block', marginBottom: '12px', textTransform: 'uppercase' }}>💰 Tổng kết Giá Tour</strong>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', color: '#166534' }}>
+                                                        <span>Giá vốn (Net Cost):</span> <strong>{formatMoney(computed.netCost)} đ</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', color: '#166534' }}>
+                                                        <span>Lợi nhuận mong muốn:</span> <strong>{costConfig.margin}%</strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#166534' }}>
+                                                        <span>Phụ thu phòng đơn:</span> <strong>{formatMoney(costConfig.variable?.singleSupplement)} đ</strong>
+                                                    </div>
+                                                    <div style={{ borderTop: '2px solid #bbf7d0', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <strong style={{ fontSize: '16px', color: '#15803d' }}>GIÁ BÁN CÔNG BỐ:</strong>
+                                                        <strong style={{ fontSize: '20px', color: '#15803d', background: '#dcfce7', padding: '4px 8px', borderRadius: '6px' }}>{formatMoney(computed.sellingPrice)} đ</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                } catch (e) { return <span>Lỗi hiển thị lịch trình.</span>; }
+                            })()}
                         </div>
 
                         {viewingFixedTour.status === 'Rejected' && viewingFixedTour.rejection_reason && (

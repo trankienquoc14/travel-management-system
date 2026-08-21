@@ -29,11 +29,12 @@ router.get('/', tourController.getAllTours);
 router.get('/:id', tourController.getTourById);
 
 // 2. CÁC ROUTE QUẢN LÝ VẬN HÀNH (Chỉ Staff, Manager, Admin)
-router.post('/design', protect, restrictTo(1, 3, 4), upload.single('image'), tourController.saveFixedTourDesign);
+router.post('/design', protect, restrictTo(1, 3, 4), upload.any(), tourController.saveFixedTourDesign);
 
 // --- STAFF ROUTES (RBAC Protected) ---
 router.get('/staff/tours', protect, restrictTo(1, 3, 4), tourController.getAllFixedTours);
-router.post('/staff/tours', protect, restrictTo(1, 3, 4), upload.single('image'), tourController.saveFixedTourDesign);
+router.post('/staff/tours', protect, restrictTo(1, 3, 4), upload.any(), tourController.saveFixedTourDesign);
+router.put('/staff/tours/:id', protect, restrictTo(1, 3, 4), upload.any(), tourController.saveFixedTourDesign);
 router.put('/staff/tours/:id/status', protect, restrictTo(1, 3), tourController.updateTourStatus);
 router.get('/staff/tours/:id', protect, restrictTo(1, 3, 4), tourController.getFixedTourById);
 router.get('/staff/destination-resources', protect, restrictTo(1, 3, 4), tourController.getDestinationResources);

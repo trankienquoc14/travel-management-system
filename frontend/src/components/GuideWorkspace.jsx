@@ -335,19 +335,37 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status, startDateStr) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDateStr);
+    start.setHours(0, 0, 0, 0);
+
     switch (status) {
-      case 'Open': return 'Mở đăng ký (Open)';
-      case 'Closed': return 'Đang di chuyển (Closed)';
+      case 'Open': 
+        if (today > start) return 'Mở đăng ký (Trễ hạn)';
+        return 'Mở đăng ký (Open)';
+      case 'Closed': 
+        if (today < start) return 'Chốt đoàn (Chờ đi)';
+        return 'Đang di chuyển (Closed)';
       case 'Completed': return 'Hoàn thành (Completed)';
       default: return status;
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status, startDateStr) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDateStr);
+    start.setHours(0, 0, 0, 0);
+
     switch (status) {
-      case 'Open': return { bg: '#e0f2fe', text: '#0369a1', dot: '#0284c7' };
-      case 'Closed': return { bg: '#fef3c7', text: '#d97706', dot: '#f59e0b' };
+      case 'Open': 
+        if (today > start) return { bg: '#fee2e2', text: '#b91c1c', dot: '#ef4444' };
+        return { bg: '#e0f2fe', text: '#0369a1', dot: '#0284c7' };
+      case 'Closed': 
+        if (today < start) return { bg: '#ffedd5', text: '#c2410c', dot: '#ea580c' };
+        return { bg: '#fef3c7', text: '#d97706', dot: '#f59e0b' };
       case 'Completed': return { bg: '#dcfce7', text: '#15803d', dot: '#16a34a' };
       default: return { bg: '#f1f5f9', text: '#475569', dot: '#64748b' };
     }
@@ -615,14 +633,14 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
             </div>
           )}
 
-          <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: '16px' }}>
             <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '700' }}>📋 Danh sách chuyến đi được phân công</h3>
             <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>Nhấp "Bắt đầu Quản lý đoàn" để xem thông tin hành khách, điểm danh và báo cáo sự cố hành trình.</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
             {works.map(w => {
-              const colors = getStatusColor(w.status);
+              const colors = getStatusColor(w.status, w.departure_date);
               const bookedCount = w.max_slots - w.available_slots;
               const fillPercent = Math.min(100, Math.round((bookedCount / w.max_slots) * 100));
               const isCurrentActive = selectedDeparture?.departure_id === w.departure_id;
@@ -661,7 +679,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                         gap: '6px'
                       }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.dot }}></span>
-                        {getStatusText(w.status)}
+                        {getStatusText(w.status, w.departure_date)}
                       </span>
                     </div>
 
@@ -680,7 +698,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                         <strong style={{ color: '#334155' }}>{new Date(w.return_date).toLocaleDateString('vi-VN')}</strong>
                       </div>
                       <div style={{ gridColumn: 'span 2' }}>
-                        <span style={{ color: '#64748b' }}>Thời gian đi:</span> <strong style={{ color: '#334155' }}>{w.duration_days} ngày</strong>
+                        <span style={{ color: '#64748b' }}>Thời gian đi:</span> <strong style={{ color: '#334155' }}>{w.duration_days || Math.round((new Date(w.return_date) - new Date(w.departure_date)) / (1000 * 60 * 60 * 24)) + 1} ngày</strong>
                       </div>
                     </div>
 

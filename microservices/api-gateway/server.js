@@ -31,6 +31,7 @@ app.use('/', createProxyMiddleware({
     '/api/tours': services.tour,
     '/api/destinations': services.tour,
     '/api/places': services.tour,
+    '/api/builder': services.tour,
     '/api/custom-tours': services.tour,
     '/api/bookings': services.booking,
     '/api/hr': services.hr,

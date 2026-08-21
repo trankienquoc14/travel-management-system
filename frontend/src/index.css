@@ -1647,7 +1647,7 @@ body {
 .detail-container {
   display: flex;
   gap: 40px;
-  max-width: 1200px;
+  max-width: 1300px;
   margin: -40px auto 0 auto;
   padding: 0 20px;
   position: relative;
@@ -1655,7 +1655,7 @@ body {
 }
 
 .detail-main {
-  flex: 2;
+  flex: 2.2;
   background: var(--surface-color);
   padding: 40px;
   border-radius: 16px;

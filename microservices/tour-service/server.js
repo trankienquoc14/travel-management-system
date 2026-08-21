@@ -8,6 +8,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../shared-uploads')));
 
 const sequelize = require('./config/database');
 const tourRoutes = require('./routes/tourRoutes');
@@ -20,7 +21,7 @@ app.use('/api/tours', tourRoutes);
 app.use('/api/custom-tours', customTourRoutes);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/places', placeRoutes);
-
+app.get('/api/builder/places', require('./controllers/placeController').getBuilderPlaces);
 const PORT = process.env.TOUR_SERVICE_PORT || 5002;
 
 sequelize.authenticate()

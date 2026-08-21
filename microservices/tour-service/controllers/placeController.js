@@ -115,3 +115,52 @@ exports.deletePlace = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// API 2: Lấy danh sách Places (Hỗ trợ lọc theo destination_id và tạo trường ảo)
+exports.getBuilderPlaces = async (req, res) => {
+    try {
+        const { destination_id } = req.query;
+        
+        let query = `
+            SELECT 
+                place_id, 
+                destination_id, 
+                place_name, 
+                estimated_price, 
+                action_verb, 
+                short_display_name
+            FROM places
+        `;
+        let replacements = [];
+
+        // Nếu Frontend có truyền destination_id thì thêm điều kiện WHERE
+        if (destination_id) {
+            query += ` WHERE destination_id = ?`;
+            replacements.push(destination_id);
+        }
+
+        const [places] = await sequelize.query(query, { replacements });
+
+        // Tạo virtual field "auto_text" cho Frontend
+        const processedPlaces = places.map(place => {
+            // Lấy action_verb (mặc định là 'Tham quan' nếu rỗng)
+            const verb = place.action_verb || 'Tham quan';
+            
+            // Ưu tiên dùng short_display_name, nếu không có thì dùng place_name
+            const displayName = place.short_display_name || place.place_name || '';
+
+            return {
+                ...place,
+                auto_text: (verb + ' ' + displayName).trim()
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: processedPlaces
+        });
+    } catch (error) {
+        console.error('Lỗi khi lấy places cho builder:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi server.' });
+    }
+};

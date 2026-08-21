@@ -123,7 +123,11 @@ const ServiceManagement = () => {
             const data = new FormData();
             Object.keys(formData).forEach(key => {
                 if (formData[key] !== null && formData[key] !== "") {
-                    data.append(key, formData[key]);
+                    let value = formData[key];
+                    if (typeof value === 'object' && !(value instanceof File)) {
+                        value = JSON.stringify(value);
+                    }
+                    data.append(key, value);
                 }
             });
             if (imageFile) {

@@ -459,7 +459,7 @@ const Dashboard = () => {
           {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
           {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
           {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
-          {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner />}
+          {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner editTourData={fixedTourToEdit} />}
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
           {activeTab === 'partner_requests' && isPartner && <PartnerServiceRequests />}

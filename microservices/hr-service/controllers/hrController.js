@@ -8,7 +8,7 @@ exports.getAllEmployees = async (req, res) => {
       SELECT u.user_id, u.role_id, u.full_name, u.email, u.phone, u.avatar, u.gender, u.date_of_birth, u.status, u.created_at, r.role_name 
       FROM users u 
       JOIN roles r ON u.role_id = r.role_id 
-      WHERE u.role_id != 6 
+      WHERE u.role_id NOT IN (6, 7) 
       ORDER BY u.user_id DESC
     `);
 

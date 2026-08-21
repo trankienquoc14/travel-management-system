@@ -3,7 +3,7 @@ const sequelize = require('../config/database');
 exports.getAllDestinations = async (req, res) => {
     try {
         const [destinations] = await sequelize.query(
-            "SELECT destination_id, destination_name FROM destinations WHERE status = 'Active'"
+            "SELECT destination_id, destination_name, description, slogan FROM destinations WHERE status = 'Active' ORDER BY destination_name ASC"
         );
         res.status(200).json({ success: true, data: destinations });
     } catch (error) {
