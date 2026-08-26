@@ -508,8 +508,32 @@ exports.startDesigning = async (req, res) => {
 exports.submitToManager = async (req, res) => {
     try {
         const { id } = req.params;
-        const { itinerary, base_cost, quote_price, note } = req.body;
+        let { itinerary, base_cost, quote_price, note } = req.body;
         const staffId = req.user?.id || req.user?.userId || req.user?.user_id;
+
+        // Process images
+        let dayImages = {};
+        if (req.files && Array.isArray(req.files)) {
+            req.files.forEach(f => {
+                if (f.fieldname.startsWith('dayImage_')) {
+                    const dayIdx = f.fieldname.split('_')[1];
+                    dayImages[dayIdx] = `/uploads/${f.filename}`;
+                }
+            });
+        }
+        
+        let parsedItinerary = typeof itinerary === 'string' ? JSON.parse(itinerary) : itinerary;
+        if (!parsedItinerary.dayImages) parsedItinerary.dayImages = {};
+        
+        try {
+            if (req.body.existing_day_images) {
+                const existing = JSON.parse(req.body.existing_day_images);
+                Object.assign(parsedItinerary.dayImages, existing);
+            }
+        } catch(e){}
+        
+        Object.assign(parsedItinerary.dayImages, dayImages);
+        itinerary = JSON.stringify(parsedItinerary);
 
         // Insert new detailed quote
         await sequelize.query(`

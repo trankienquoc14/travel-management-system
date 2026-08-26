@@ -24,6 +24,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
     // Multi-destination Routing State
     const [dayImages, setDayImages] = useState({});
     const [dayImagePreviews, setDayImagePreviews] = useState({});
+    const [filterProv, setFilterProv] = useState('All'); // Lọc theo tỉnh
     const [days, setDays] = useState([
         { dayIndex: 1, start_destination_id: '', end_destination_id: '', route_title: '', activities: [] }
     ]);
@@ -310,10 +311,56 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
     }, [editTourData]);
 
     if (!isEditing) {
+        const getDestName = (tour) => {
+            let destName = 'Chưa phân loại';
+            if (tour.destination) {
+                const destObj = destinations.find(x => String(x.destination_id) === String(tour.destination));
+                if (destObj) {
+                    destName = destObj.destination_name;
+                } else {
+                    destName = String(tour.destination);
+                    if (destName === 'Multi-Destination') destName = 'Nhiều điểm đến';
+                }
+            }
+            if (destName === 'Chưa phân loại' || destName === 'Multi-Destination' || destName === 'Nhiều điểm đến') {
+                try {
+                    const d = typeof tour.design_data === 'string' ? JSON.parse(tour.design_data) : (tour.design_data || {});
+                    if (d.days && d.days.length > 0) {
+                        const firstId = d.days[0].end_destination_id || d.days[0].start_destination_id;
+                        const destObj = destinations.find(x => String(x.destination_id) === String(firstId));
+                        if (destObj) destName = destObj.destination_name;
+                    }
+                } catch(e){}
+            }
+            return destName;
+        };
+
+        const groupedTours = tours.reduce((acc, tour) => {
+            const destName = getDestName(tour);
+            if (!acc[destName]) acc[destName] = [];
+            acc[destName].push(tour);
+            return acc;
+        }, {});
+
+        const provOptions = Object.keys(groupedTours).sort();
+        const visibleProvs = filterProv === 'All' ? provOptions : [filterProv];
+
         return (
             <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>Danh sách Tour Cố định</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>Danh sách Tour Cố định</h2>
+                        {provOptions.length > 0 && (
+                            <select 
+                                value={filterProv} 
+                                onChange={(e) => setFilterProv(e.target.value)}
+                                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', background: '#fff', fontSize: '14px', minWidth: '200px' }}
+                            >
+                                <option value="All">-- Tất cả khu vực --</option>
+                                {provOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                        )}
+                    </div>
                     <button onClick={() => { 
                         setFormData({ tour_id: null, tour_name: '', description: '', image: null, image_url: '', categories: [], highlights: '' });
                         setDays([{ dayIndex: 1, start_destination_id: '', end_destination_id: '', route_title: '', activities: [], accommodation: null, transportTimes: { departureTime: '', returnTime: '' } }]);
@@ -323,15 +370,39 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                         setIsEditing(true);
                     }} style={{ padding: '10px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tạo Tour Mới</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                    {tours.map(t => (
-                        <div key={t.tour_id} style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#1e293b' }}>{t.tour_name}</h3>
-                            <p style={{ margin: '0 0 15px 0', color: '#64748b', fontSize: '14px' }}>{t.duration_days} ngày • Giá: {formatMoneyLocal(t.base_price)} đ</p>
-                            <button onClick={() => handleEditTour(t)} style={{ padding: '8px 16px', background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '6px', cursor: 'pointer', width: '100%', fontWeight: '600' }}>Chỉnh sửa</button>
+                
+                {visibleProvs.length === 0 && Object.keys(groupedTours).length > 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Không có tour nào ở khu vực này.</div>
+                )}
+                {Object.keys(groupedTours).length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Chưa có tour nào.</div>
+                )}
+                
+                {visibleProvs.map(prov => (
+                    <div key={prov} style={{ marginBottom: '32px' }}>
+                        <h3 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #e2e8f0' }}>
+                            <span style={{ marginRight: '8px' }}>📍</span> 
+                            Điểm đến: <span style={{ color: '#047857' }}>{prov}</span>
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                            {groupedTours[prov].map(t => (
+                                <div key={t.tour_id} style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', transition: 'transform 0.2s', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                                    {t.image_url && (
+                                        <div style={{ height: '120px', marginBottom: '16px', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <img src={t.image_url.startsWith('/') ? `http://localhost:5002${t.image_url}` : t.image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                    )}
+                                    <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#1e293b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.tour_name}</h3>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontWeight: '500' }}>⏱️ {t.duration_days} ngày</span>
+                                        <span style={{ color: '#ea580c', fontSize: '15px', fontWeight: 'bold' }}>{formatMoneyLocal(t.base_price)} đ</span>
+                                    </div>
+                                    <button onClick={() => handleEditTour(t)} style={{ padding: '10px 16px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', width: '100%', fontWeight: '600', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#94a3b8'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; }}>✏️ Chỉnh sửa</button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
         );
     }

@@ -1,416 +1,344 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import TimelineBuilder from './TourBuilder/TimelineBuilder';
+
+const formatMoneyLocal = (amount) => {
+    if (isNaN(amount) || amount === null || amount === undefined) return '0';
+    return Number(amount).toLocaleString('vi-VN');
+};
 
 const StaffTourDesigner = ({ requestData, onBack }) => {
-    const [itineraryDays, setItineraryDays] = useState([]);
-    const [resources, setResources] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    // Kho dịch vụ mở rộng tại điểm đến
-    const [destinationExtra, setDestinationExtra] = useState({
-        transport: [],
-        accommodation: [],
-        sightseeing: []
+    // Multi-destination Routing State
+    const [dayImages, setDayImages] = useState({});
+    const [dayImagePreviews, setDayImagePreviews] = useState({});
+    const [days, setDays] = useState([]);
+    const [tourName, setTourName] = useState('');
+    const [tourDescription, setTourDescription] = useState('');
+
+    // Costing State (simplified for Custom Tours)
+    const [costConfig, setCostConfig] = useState({
+        minimumPax: requestData?.people_count || 1,
+        margin: requestData?.markup_percent || 20,
+        fixed: { transport: 0, guidePerDay: 500000, otherFixed: 0 },
+        variable: { accommPerNight: 0, breakfast: 200000, lunch: 200000, dinner: 200000, tickets: 0, insurance: 0 },
+        selectedTransport: null,
+        transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
+        ageMultiplier: {
+            preset: 'custom',
+            child: { percent: 0, fixed_surcharge: 0 },
+            toddler: { percent: 0, fixed_surcharge: 0 },
+            infant: { percent: 0, fixed_surcharge: 0 }
+        }
     });
 
-    const [draggedItem, setDraggedItem] = useState(null);
+    const [staffNote, setStaffNote] = useState(requestData?.staff_note || '');
 
-    const [logistics, setLogistics] = useState({
-        pickup: { time: '', location: '', flightInfo: '', note: '' },
-        dropoff: { time: '', location: '', flightInfo: '', note: '' }
-    });
+    // Resources
+    const [destinations, setDestinations] = useState([]);
+    const [allServices, setAllServices] = useState([]);
+    const [transportServices, setTransportServices] = useState([]);
 
-    const [fixedServices, setFixedServices] = useState({
-        accommodation: [],
-        transport: []
-    });
-
-    const [quoteData, setQuoteData] = useState({
-        markup: requestData?.markup_percent || 20,
-        staffNote: requestData?.staff_note || ''
-    });
+    useEffect(() => {
+        const fetchResources = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const [resDest, resServ] = await Promise.all([
+                    axios.get("http://localhost:5000/api/destinations", { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get("http://localhost:5000/api/services", { headers: { Authorization: `Bearer ${token}` } })
+                ]);
+                
+                if (resDest.data.success) setDestinations(resDest.data.data);
+                if (resServ.data.success) {
+                    setAllServices(resServ.data.data);
+                    setTransportServices(resServ.data.data.filter(s => s.service_type === 'Vé máy bay' || s.service_type === 'Xe vận chuyển' || s.service_type === 'Phương tiện'));
+                }
+            } catch (error) { console.error('Lỗi tải dữ liệu', error); }
+        };
+        fetchResources();
+    }, []);
 
     useEffect(() => {
         if (!requestData) return;
-
-        const fetchDestinationServices = async (excludeNames = []) => {
-            try {
-                const token = localStorage.getItem('token');
-                // Gọi API lấy dịch vụ thực tế trong CSDL theo điểm đến
-                const res = await axios.get(`http://localhost:5000/api/custom-tours/services/${encodeURIComponent(requestData.destination)}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (res.data && res.data.success) {
-                    const realData = res.data.data;
-                    setDestinationExtra({
-                        transport: (realData.transport || []).filter(item => !excludeNames.includes(item.name)),
-                        accommodation: (realData.accommodation || []).filter(item => !excludeNames.includes(item.name)),
-                        sightseeing: (realData.sightseeing || []).filter(item => !excludeNames.includes(item.name))
-                    });
-                }
-            } catch (error) {
-                console.error("Lỗi khi tải kho dịch vụ từ CSDL:", error);
-            }
-        };
-
-        // 1. KIỂM TRA XEM TOUR ĐÃ CÓ BẢN THIẾT KẾ LƯU TRONG DB CHƯA?
-        // ✅ SỬA: Chỉ cần có proposed_itinerary là load lại, không phụ thuộc tên status sai
+        
         if (requestData.proposed_itinerary) {
             try {
-                const parsedData = typeof requestData.proposed_itinerary === 'string'
-                    ? JSON.parse(requestData.proposed_itinerary)
+                const parsed = typeof requestData.proposed_itinerary === 'string' 
+                    ? JSON.parse(requestData.proposed_itinerary) 
                     : requestData.proposed_itinerary;
-
-                const savedState = parsedData.dragDropState;
-
-                if (savedState) {
-                    setLogistics(savedState.logistics);
-                    setFixedServices(savedState.fixedServices);
-                    setItineraryDays(savedState.itineraryDays);
-                    setResources(savedState.resources);
-                    setQuoteData({
-                        markup: requestData.markup_percent || 20,
-                        staffNote: requestData.staff_note || ''
-                    });
-
-                    const usedNames = [];
-                    savedState.fixedServices.accommodation?.forEach(i => usedNames.push(i.name));
-                    savedState.fixedServices.transport?.forEach(i => usedNames.push(i.name));
-                    savedState.itineraryDays?.forEach(d => {
-                        d.slots?.morning?.forEach(i => usedNames.push(i.name));
-                        d.slots?.noon?.forEach(i => usedNames.push(i.name));
-                        d.slots?.evening?.forEach(i => usedNames.push(i.name));
-                    });
-
-                    fetchDestinationServices(usedNames);
-                    return; // 👈 Load xong thì DỪNG LẠI, không chạy xuống Auto Schedule bên dưới nữa!
+                
+                if (parsed.days) {
+                    setDays(parsed.days);
+                    if (parsed.costConfig) {
+                        setCostConfig(prev => ({...prev, ...parsed.costConfig}));
+                    }
+                    if (parsed.dayImages) {
+                        setDayImagePreviews(parsed.dayImages);
+                    }
+                    if (parsed.staffNote) setStaffNote(parsed.staffNote);
+                    if (parsed.tourName) setTourName(parsed.tourName);
+                    if (parsed.tourDescription) setTourDescription(parsed.tourDescription);
+                    return; // if loaded, stop here
                 }
-            } catch (error) {
-                console.error("Lỗi khi phục hồi bản thiết kế:", error);
+            } catch (e) {
+                console.error("Lỗi parse proposed_itinerary", e);
             }
         }
 
-        // 2. NẾU LÀ TOUR MỚI TINH -> CHẠY AUTO SCHEDULE
-        const prefs = requestData.preferences || requestData.requirements || {};
-        const allResources = [];
-
-        if (prefs.hotelName && prefs.hotelName !== 'Không chọn') {
-            allResources.push({ id: 'hotel', type: '🏨 Lưu trú', name: prefs.hotelName, price: Number(prefs.hotelPrice) || 0 });
-        }
-        if (prefs.transportName && prefs.transportName !== 'Không chọn') {
-            allResources.push({ id: 'transport', type: '✈️ Di chuyển', name: prefs.transportName, price: Number(prefs.transportPrice) || 0 });
-        }
-        if (prefs.selectedPlaces && prefs.selectedPlaces.length > 0) {
-            prefs.selectedPlaces.forEach((place, idx) => {
-                allResources.push({ id: `place_${idx}`, type: '🎟️ Tham quan', name: place.name, price: Number(place.price) || 0 });
-            });
+        let prefs = {};
+        if (typeof requestData.preferences === 'string') {
+            try { prefs = JSON.parse(requestData.preferences); } catch(e){}
+        } else if (typeof requestData.preferences === 'object') {
+            prefs = requestData.preferences || {};
         }
 
-        // =========================================================================
-        // ✅ THÊM HOẠT ĐỘNG THÔNG MINH THEO ĐỊA HÌNH ĐIỂM ĐẾN
-        // =========================================================================
-        const dest = (requestData.destination || '').toLowerCase();
-
-        // Danh sách các vùng biển
-        const beachDestinations = ['nha trang', 'phú quốc', 'vũng tàu', 'đà nẵng', 'phan thiết', 'quy nhơn', 'hạ long'];
-        const isBeach = beachDestinations.some(b => dest.includes(b));
-
-        // Nếu là biển thì tạo thẻ tắm biển, nếu núi/khác thì tạo thẻ nghỉ ngơi, uống cafe ngắm cảnh
-        const freeTimeActivityName = isBeach
-            ? 'Tự do tắm biển / Nghỉ dưỡng resort'
-            : 'Tự do dạo phố ngắm cảnh / Nghỉ ngơi thư giãn';
-
-        allResources.push({ id: 'act_1', type: '🕒 Hoạt động', name: 'Đón khách & Khởi hành về khách sạn', price: 0 });
-        allResources.push({ id: 'act_2', type: '🕒 Hoạt động', name: freeTimeActivityName, price: 0 });
-        allResources.push({ id: 'act_3', type: '🕒 Hoạt động', name: 'Mua sắm đặc sản địa phương & Tiễn khách', price: 0 });
-
-        fetchDestinationServices(allResources.map(r => r.name));
-
+        // Initialize new days based on departure and return dates
         const d1 = new Date(requestData.departure_date);
         const d2 = new Date(requestData.return_date);
         const totalDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
 
-        const autoScheduledIds = new Set();
-        const initialFixed = { accommodation: [], transport: [] };
-
-        const hotelItem = allResources.find(r => r.id === 'hotel');
-        if (hotelItem) { initialFixed.accommodation.push(hotelItem); autoScheduledIds.add(hotelItem.id); }
-
-        const transportItem = allResources.find(r => r.id === 'transport');
-        if (transportItem) { initialFixed.transport.push(transportItem); autoScheduledIds.add(transportItem.id); }
-        setFixedServices(initialFixed);
-
-        const daysArray = [];
-        let remainingResources = [...allResources];
-
+        const initialDays = [];
         for (let i = 1; i <= totalDays; i++) {
-            const currentDate = new Date(d1);
-            currentDate.setDate(d1.getDate() + (i - 1));
-            const daySlots = { morning: [], noon: [], evening: [] };
-
-            if (i === 1) {
-                const welcomeAct = remainingResources.find(r => r.id === 'act_1');
-                if (welcomeAct) { daySlots.morning.push(welcomeAct); autoScheduledIds.add(welcomeAct.id); }
+            let accommodation = null;
+            if (prefs.hotelName && (i < totalDays || totalDays === 1)) {
+                accommodation = {
+                    service_id: 'custom',
+                    name: prefs.hotelName,
+                    price: prefs.hotelPrice ? Math.round(Number(prefs.hotelPrice)/Math.max(1, totalDays-1)) : 0,
+                    autoMatchPending: true
+                };
             }
 
-            if (i === totalDays) {
-                const byeAct = remainingResources.find(r => r.id === 'act_3');
-                if (byeAct) { daySlots.evening.push(byeAct); autoScheduledIds.add(byeAct.id); }
-            }
+            initialDays.push({
+                dayIndex: i,
+                start_destination_id: '',
+                end_destination_id: '',
+                route_title: '',
+                activities: [],
+                accommodation: accommodation,
+                meals: { breakfast: true, lunch: true, dinner: true }
+            });
+        }
+        setDays(initialDays);
+        
+        let transportTicketsCost = 0;
+        let initialTransport = null;
 
-            const availablePlaces = remainingResources.filter(r => r.id.startsWith('place_') && !autoScheduledIds.has(r.id));
-            if (availablePlaces.length > 0) {
-                if (daySlots.morning.length < 2) {
-                    const place = availablePlaces.shift();
-                    daySlots.morning.push(place); autoScheduledIds.add(place.id);
-                }
-                if (availablePlaces.length > 0 && daySlots.evening.length < 2) {
-                    const place = availablePlaces.shift();
-                    daySlots.evening.push(place); autoScheduledIds.add(place.id);
-                }
-            }
-
-            if (daySlots.noon.length === 0) {
-                const freeAct = remainingResources.find(r => r.id === 'act_2');
-                if (freeAct) { daySlots.noon.push({ ...freeAct, id: `${freeAct.id}_day_${i}` }); }
-            }
-
-            daysArray.push({ dayIndex: i, dateString: currentDate.toLocaleDateString('vi-VN'), slots: daySlots });
+        if (prefs.transportName) {
+            initialTransport = {
+                service_id: 'custom',
+                service_name: prefs.transportName,
+                base_cost: prefs.transportPrice || 0,
+                unit: 'vé',
+                autoMatchPending: true
+            };
+            transportTicketsCost = Number(prefs.transportPrice || 0);
+        } else if (prefs.transportPrice) {
+            transportTicketsCost = Number(prefs.transportPrice);
         }
 
-        setItineraryDays(daysArray);
-        const leftoverResources = allResources.filter(r => r.id.startsWith('act_') || !autoScheduledIds.has(r.id));
-        setResources(leftoverResources);
+        setCostConfig(prev => ({
+            ...prev,
+            margin: requestData.markup_percent || 20,
+            selectedTransport: initialTransport,
+            variable: { ...prev.variable, tickets: transportTicketsCost }
+        }));
 
     }, [requestData]);
 
-    const handleLogisticsChange = (type, field, value) => {
-        setLogistics(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }));
-    };
 
-    // =========================================================================
-    // HỆ THỐNG KÉO THẢ TỐI ƯU (CHO PHÉP HOÁN ĐỔI THỨ TỰ TRONG CÙNG KHUNG)
-    // =========================================================================
-    const handleDragStart = (e, item, source) => {
-        setDraggedItem({ item, source });
-        e.dataTransfer.effectAllowed = "copyMove";
-        e.target.style.opacity = '0.5';
-    };
 
-    const handleDragEnd = (e) => {
-        e.target.style.opacity = '1';
-        setDraggedItem(null);
-    };
+    useEffect(() => {
+        if (transportServices.length > 0 && costConfig.selectedTransport?.autoMatchPending) {
+            const searchName = costConfig.selectedTransport.service_name.toLowerCase().replace('hệ thống - ', '').trim();
+            const match = transportServices.find(t => 
+                t.service_name.toLowerCase().includes(searchName) || 
+                searchName.includes(t.service_name.toLowerCase())
+            );
 
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = draggedItem?.source === 'extra' ? "copy" : "move";
-    };
-
-    // 1. THẢ VÀO KHUNG TRỐNG (Nối vào cuối danh sách)
-    const handleDropContainer = (e, targetDayIndex, targetSlot) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!draggedItem) return;
-        const { item, source } = draggedItem;
-
-        // Nếu thả trên khoảng trống của cùng 1 khung thì thôi (không đổi gì)
-        if (source.dayIndex === targetDayIndex && source.slot === targetSlot) return;
-
-        executeDrop(item, source, targetDayIndex, targetSlot, null);
-    };
-
-    // 2. THẢ TRỰC TIẾP LÊN MỘT THẺ KHÁC (Để hoán đổi thứ tự / chèn vào giữa)
-    const handleDropOnCard = (e, targetItem, targetDayIndex, targetSlot) => {
-        e.preventDefault();
-        e.stopPropagation(); // Ngăn sự kiện thả rơi xuống khung container
-        if (!draggedItem) return;
-        const { item, source } = draggedItem;
-
-        if (item.id === targetItem.id) return;
-
-        executeDrop(item, source, targetDayIndex, targetSlot, targetItem.id);
-    };
-
-    // HÀM XỬ LÝ CHUYỂN DỊCH VÀ SẮP XẾP VỊ TRÍ ĐỒNG BỘ 1 LẦN
-    const executeDrop = (item, source, targetDayIndex, targetSlot, targetItemId = null) => {
-        const isFromExtra = source === 'extra';
-        const itemToInsert = isFromExtra
-            ? { ...item, id: `${item.id}_${Date.now()}_${Math.floor(Math.random() * 1000)}` }
-            : item;
-
-        // Clone toàn bộ State ra bộ nhớ tạm để không xung đột React
-        let nextResources = [...resources];
-        let nextFixed = {
-            accommodation: [...fixedServices.accommodation],
-            transport: [...fixedServices.transport]
-        };
-        let nextDays = itineraryDays.map(day => ({
-            ...day,
-            slots: {
-                morning: [...day.slots.morning],
-                noon: [...day.slots.noon],
-                evening: [...day.slots.evening]
-            }
-        }));
-
-        // BƯỚC A: XÓA ITEM Ở VỊ TRÍ CŨ (Nếu không phải lấy từ kho Extra)
-        if (!isFromExtra) {
-            if (source === 'resources') {
-                nextResources = nextResources.filter(r => r.id !== item.id);
-            } else if (source.dayIndex === 'fixed') {
-                nextFixed[source.slot] = nextFixed[source.slot].filter(i => i.id !== item.id);
-            } else {
-                nextDays = nextDays.map(day => {
-                    if (day.dayIndex === source.dayIndex) {
-                        day.slots[source.slot] = day.slots[source.slot].filter(i => i.id !== item.id);
+            if (match) {
+                const isTicket = match.unit && (match.unit.toLowerCase().includes('vé') || match.unit.toLowerCase().includes('người'));
+                
+                setCostConfig(prev => ({
+                    ...prev,
+                    selectedTransport: match, // Found match in DB
+                    fixed: {
+                        ...prev.fixed,
+                        transport: isTicket ? 0 : Number(match.base_cost || 0) * days.length
+                    },
+                    variable: {
+                        ...prev.variable,
+                        tickets: isTicket ? Number(match.base_cost || 0) : 0
                     }
-                    return day;
-                });
+                }));
+            } else {
+                // If not found, just remove the flag so it doesn't loop
+                setCostConfig(prev => ({
+                    ...prev,
+                    selectedTransport: { ...prev.selectedTransport, autoMatchPending: false }
+                }));
             }
         }
+    }, [transportServices, costConfig.selectedTransport, days.length]);
 
-        // BƯỚC B: CHÈN ITEM VÀO VỊ TRÍ MỚI CHÍNH XÁC THEO THỨ TỰ
-        const insertIntoList = (list) => {
-            const cleanList = list.filter(i => i.id !== itemToInsert.id);
-            if (!targetItemId) {
-                return [...cleanList, itemToInsert]; // Nối vào cuối
-            }
-            const targetIndex = cleanList.findIndex(i => i.id === targetItemId);
-            if (targetIndex === -1) return [...cleanList, itemToInsert];
-
-            cleanList.splice(targetIndex, 0, itemToInsert); // Chèn vào trước thẻ mục tiêu
-            return cleanList;
-        };
-
-        if (targetDayIndex === 'fixed') {
-            nextFixed[targetSlot] = insertIntoList(nextFixed[targetSlot]);
-        } else {
-            nextDays = nextDays.map(day => {
-                if (day.dayIndex === targetDayIndex) {
-                    day.slots[targetSlot] = insertIntoList(day.slots[targetSlot]);
+    useEffect(() => {
+        if (allServices.length === 0 || days.length === 0) return;
+        let hasChanges = false;
+        
+        const newDays = days.map(d => {
+            if (d.accommodation && d.accommodation.autoMatchPending) {
+                hasChanges = true;
+                const searchName = d.accommodation.name.toLowerCase().replace('hệ thống - ', '').trim();
+                
+                const match = allServices.find(s => 
+                    (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') &&
+                    (s.service_name.toLowerCase().includes(searchName) || searchName.includes(s.service_name.toLowerCase()))
+                );
+                
+                if (match) {
+                    return {
+                        ...d,
+                        accommodation: {
+                            service_id: match.service_id,
+                            name: `${match.service_name} (hoặc tương đương)`,
+                            price: match.base_cost || 0
+                        }
+                    };
+                } else {
+                    return {
+                        ...d,
+                        accommodation: { ...d.accommodation, autoMatchPending: false }
+                    };
                 }
-                return day;
-            });
-        }
-
-        // Cập nhật toàn bộ State
-        setResources(nextResources);
-        setFixedServices(nextFixed);
-        setItineraryDays(nextDays);
-        setDraggedItem(null);
-    };
-
-    // 3. THẢ TRẢ LẠI VÀO KHO RESOURCES BÊN TRÁI
-    const handleDropBackToResources = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!draggedItem) return;
-        const { item, source } = draggedItem;
-
-        if (source === 'resources' || source === 'extra') return;
-
-        let nextResources = [...resources];
-        let nextFixed = {
-            accommodation: [...fixedServices.accommodation],
-            transport: [...fixedServices.transport]
-        };
-        let nextDays = itineraryDays.map(day => ({
-            ...day,
-            slots: {
-                morning: [...day.slots.morning],
-                noon: [...day.slots.noon],
-                evening: [...day.slots.evening]
             }
-        }));
-
-        if (source.dayIndex === 'fixed') {
-            nextFixed[source.slot] = nextFixed[source.slot].filter(i => i.id !== item.id);
-        } else {
-            nextDays = nextDays.map(day => {
-                if (day.dayIndex === source.dayIndex) {
-                    day.slots[source.slot] = day.slots[source.slot].filter(i => i.id !== item.id);
-                }
-                return day;
-            });
-        }
-
-        if (!item.id.includes('_day_') && !item.id.includes('ext_') && !nextResources.some(r => r.id === item.id)) {
-            nextResources.push(item);
-        }
-
-        setResources(nextResources);
-        setFixedServices(nextFixed);
-        setItineraryDays(nextDays);
-        setDraggedItem(null);
-    };
-
-    const handleRemoveFromSlot = (dayIndex, slot, item) => {
-        if (!item.id.includes('_day_') && !item.id.includes('ext_') && !resources.some(r => r.id === item.id)) {
-            setResources(prev => [...prev, item]);
-        }
-        setItineraryDays(prevDays => prevDays.map(day => {
-            if (day.dayIndex === dayIndex) {
-                return { ...day, slots: { ...day.slots, [slot]: day.slots[slot].filter(i => i.id !== item.id) } };
-            }
-            return day;
-        }));
-    };
-
-    const handleRemoveFromFixed = (slot, item) => {
-        if (!item.id.includes('ext_') && !resources.some(r => r.id === item.id)) {
-            setResources(prev => [...prev, item]);
-        }
-        setFixedServices(prev => ({ ...prev, [slot]: prev[slot].filter(i => i.id !== item.id) }));
-    };
-
-    // TÍNH TOÁN & LƯU DB
-    const calculateTotalCost = () => {
-        let total = 0;
-        fixedServices.accommodation.forEach(item => total += (item.price || 0));
-        fixedServices.transport.forEach(item => total += (item.price || 0));
-        itineraryDays.forEach(day => {
-            ['morning', 'noon', 'evening'].forEach(slotKey => {
-                day.slots[slotKey].forEach(item => total += (item.price || 0));
-            });
+            return d;
         });
-        return total;
+
+        if (hasChanges) {
+            setDays(newDays);
+        }
+    }, [days, allServices]);
+
+    const totalDays = days.length;
+    
+    // Auto compute tickets and accommodations
+    let autoTicketsCost = 0;
+    let autoAccommodationCost = 0;
+    let includedBreakfast = 0;
+    let includedLunch = 0;
+    let includedDinner = 0;
+
+    days.forEach(day => {
+        if (day.meals?.breakfast === true || day.meals?.breakfast === 'external') includedBreakfast++;
+        if (day.meals?.lunch === true || day.meals?.lunch === 'external') includedLunch++;
+        if (day.meals?.dinner === true || day.meals?.dinner === 'external') includedDinner++;
+        
+        if (day.accommodation && day.accommodation.price) {
+            autoAccommodationCost += Number(day.accommodation.price);
+        }
+
+        if (day.activities) {
+            day.activities.forEach(act => {
+                if (act.type === 'Tham quan') autoTicketsCost += Number(act.price || 0);
+            });
+        }
+    });
+
+    const defaultBreakfast = includedBreakfast;
+    const defaultLunch = includedLunch;
+    const defaultDinner = includedDinner;
+
+    const handleTransportChange = (e) => {
+        const sId = e.target.value;
+        if (!sId) {
+            setCostConfig(prev => ({ 
+                ...prev, 
+                selectedTransport: null,
+                fixed: { ...prev.fixed, transport: 0 },
+                variable: { ...prev.variable, tickets: 0 },
+                transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
+            }));
+            return;
+        }
+
+        setCostConfig(prev => {
+            let selected = null;
+            if (sId === 'custom' && prev.selectedTransport?.service_id === 'custom') {
+                selected = prev.selectedTransport;
+            } else {
+                selected = transportServices.find(t => String(t.service_id) === String(sId));
+            }
+            
+            if (!selected) return prev;
+
+            const isTicket = selected.unit && (selected.unit.toLowerCase().includes('vé') || selected.unit.toLowerCase().includes('người'));
+            
+            return {
+                ...prev,
+                selectedTransport: selected,
+                fixed: { 
+                    ...prev.fixed, 
+                    transport: isTicket ? 0 : Number(selected.base_cost || 0) * days.length 
+                },
+                variable: { 
+                    ...prev.variable, 
+                    tickets: isTicket ? Number(selected.base_cost || 0) : 0 
+                }
+            };
+        });
     };
 
-    const totalCost = calculateTotalCost();
-    const suggestedPrice = Math.round(totalCost * (1 + Number(quoteData.markup) / 100));
-    const formatMoney = (amount) => Number(amount).toLocaleString('vi-VN');
+    const pax = costConfig.minimumPax || requestData?.people_count || 1;
+    const totalFixed = Number(costConfig.fixed.transport) + (Number(costConfig.fixed.guidePerDay) * totalDays) + Number(costConfig.fixed.otherFixed);
+    const fixedPerPax = pax > 0 ? totalFixed / pax : 0;
+    
+    const countBreakfast = costConfig.variable.countBreakfast !== undefined ? Number(costConfig.variable.countBreakfast) : includedBreakfast;
+    const countLunch = costConfig.variable.countLunch !== undefined ? Number(costConfig.variable.countLunch) : includedLunch;
+    const countDinner = costConfig.variable.countDinner !== undefined ? Number(costConfig.variable.countDinner) : includedDinner;
+
+    const totalVariable = (autoAccommodationCost / 2) 
+        + Number(costConfig.variable.tickets || autoTicketsCost)
+        + (Number(costConfig.variable.breakfast) * countBreakfast)
+        + (Number(costConfig.variable.lunch) * countLunch)
+        + (Number(costConfig.variable.dinner) * countDinner)
+        + Number(costConfig.variable.insurance);
+        
+    const netCost = fixedPerPax + totalVariable;
+    const sellingPrice = netCost * (1 + Number(costConfig.margin) / 100);
 
     const handleSubmitToManager = async () => {
-        let finalTextItinerary = `CHƯƠNG TRÌNH DU LỊCH ${requestData.destination.toUpperCase()}\n`;
-        finalTextItinerary += `==========================\n\n`;
-
-        itineraryDays.forEach(day => {
-            finalTextItinerary += `NGÀY ${day.dayIndex} (${day.dateString}):\n`;
-            if (day.slots.morning.length > 0) finalTextItinerary += ` - Sáng: ${day.slots.morning.map(i => i.name).join(' ➔ ')}\n`;
-            if (day.slots.noon.length > 0) finalTextItinerary += ` - Trưa: ${day.slots.noon.map(i => i.name).join(' ➔ ')}\n`;
-            if (day.slots.evening.length > 0) finalTextItinerary += ` - Chiều/Tối: ${day.slots.evening.map(i => i.name).join(' ➔ ')}\n`;
-            finalTextItinerary += '\n';
-        });
-
         const designPayload = JSON.stringify({
-            textVersion: finalTextItinerary,
-            dragDropState: {
-                logistics,
-                fixedServices,
-                itineraryDays,
-                resources
-            }
+            tourName,
+            tourDescription,
+            days,
+            costConfig,
+            staffNote
         });
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post(`http://localhost:5000/api/custom-tours/requests/${requestData.request_id}/submit-manager`, {
-                base_cost: totalCost,
-                quote_price: suggestedPrice,
-                itinerary: designPayload,
-                note: quoteData.staffNote
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            const formData = new FormData();
+            formData.append('base_cost', netCost);
+            formData.append('quote_price', sellingPrice);
+            formData.append('itinerary', designPayload);
+            formData.append('note', staffNote);
+            formData.append('existing_day_images', JSON.stringify(dayImagePreviews || {}));
+
+            if (dayImages) {
+                Object.keys(dayImages).forEach(dayIdx => {
+                    if (dayImages[dayIdx] instanceof File) {
+                        formData.append(`dayImage_${dayIdx}`, dayImages[dayIdx]);
+                    }
+                });
+            }
+
+            await axios.post(`http://localhost:5000/api/custom-tours/requests/${requestData.request_id}/submit-manager`, formData, { 
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                } 
+            });
 
             alert('🎉 Đã chốt bản thiết kế & Gửi Quản lý phê duyệt thành công!');
             onBack();
@@ -420,238 +348,402 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         }
     };
 
-    const renderExtraCard = (item) => (
-        <div key={item.id} draggable="true" onDragStart={(e) => handleDragStart(e, item, 'extra')} onDragEnd={handleDragEnd} style={{ padding: '10px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'copy', display: 'flex', flexDirection: 'column', marginBottom: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{item.type}</span>
-                {item.price > 0 && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold' }}>+{formatMoney(item.price)}đ</span>}
-            </div>
-            <strong style={{ fontSize: '13px', color: '#1e293b', marginTop: '4px' }}>{item.name}</strong>
-        </div>
-    );
-
-    // HÀM RENDER THẺ CÓ GẮN SỰ KIỆN DROP (CHÌA KHÓA ĐỂ ĐỔI VỊ TRÍ TRONG CÙNG KHUNG)
-    const renderServiceCard = (item, dayIndex, slotKey, removeHandler) => (
-        <div
-            key={item.id}
-            draggable="true"
-            onDragStart={(e) => handleDragStart(e, item, { dayIndex, slot: slotKey })}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDropOnCard(e, item, dayIndex, slotKey)}
-            style={{ padding: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', marginBottom: '6px', cursor: 'grab', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-        >
-            <div style={{ flex: 1, marginRight: '10px', pointerEvents: 'none' }}>
-                <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block' }}>{item.type}</span>
-                <span style={{ fontWeight: '600' }}>{item.name}</span>
-            </div>
-            <span onClick={(e) => { e.stopPropagation(); removeHandler(item); }} style={{ color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', padding: '5px', fontSize: '16px' }}>×</span>
-        </div>
-    );
-
     if (!requestData) return null;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc' }}>
-            <div style={{ padding: '15px 25px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+            <div style={{ padding: '15px 25px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <button onClick={onBack} style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: '600' }}>⬅ Quay lại Inbox</button>
                     <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Phòng Thiết Kế: {requestData.customer_name} - {requestData.destination}</h2>
                 </div>
-                <div style={{ fontSize: '15px', color: '#64748b' }}>
-                    Ngày đi: <strong>{new Date(requestData.departure_date).toLocaleDateString('vi-VN')}</strong> | Ngân sách khách: <strong style={{ color: '#10b981' }}>{formatMoney(requestData.budget)} đ</strong>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '25px' }}>
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+                <TimelineBuilder 
+                    days={days} 
+                    setDays={setDays} 
+                    destinations={destinations} 
+                    allServices={allServices} 
+                    dayImages={dayImages}
+                    setDayImages={setDayImages}
+                    dayImagePreviews={dayImagePreviews}
+                    setDayImagePreviews={setDayImagePreviews}
+                    requestData={requestData}
+                    costConfig={costConfig}
+                    setCostConfig={setCostConfig}
+                    tourName={tourName}
+                    setTourName={setTourName}
+                    tourDescription={tourDescription}
+                    setTourDescription={setTourDescription}
+                />
+
+                <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Yêu cầu của khách hàng */}
+                    {(() => {
+                        let prefs = {};
+                        if (typeof requestData.preferences === 'string') {
+                            try { prefs = JSON.parse(requestData.preferences); } catch(e){}
+                        } else if (typeof requestData.preferences === 'object') {
+                            prefs = requestData.preferences || {};
+                        }
+                        return (
+                            <div style={{ background: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>📋</span> Chi tiết yêu cầu
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#334155' }}>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Điểm đến:</strong> <span style={{ fontWeight: '600', color: '#0369a1' }}>{requestData.destination}</span>
+                                    </div>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Thời gian:</strong> {Math.round((new Date(requestData.return_date) - new Date(requestData.departure_date)) / (1000 * 60 * 60 * 24)) + 1} Ngày {Math.max(0, Math.round((new Date(requestData.return_date) - new Date(requestData.departure_date)) / (1000 * 60 * 60 * 24)))} Đêm 
+                                        <span style={{ color: '#64748b', fontSize: '13px', marginLeft: '6px' }}>({new Date(requestData.departure_date).toLocaleDateString('vi-VN')} - {new Date(requestData.return_date).toLocaleDateString('vi-VN')})</span>
+                                    </div>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Đón khách:</strong> {prefs.pickup_location || 'Tự túc'} {prefs.departure_time ? `(Lúc ${prefs.departure_time})` : ''}
+                                    </div>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Thành viên:</strong> {requestData.people_count} người (
+                                        {[
+                                            (prefs.participantBreakdown?.adults || requestData.people_count) + ' Lớn',
+                                            prefs.participantBreakdown?.children ? prefs.participantBreakdown.children + ' Trẻ em' : null,
+                                            prefs.participantBreakdown?.toddlers ? prefs.participantBreakdown.toddlers + ' Trẻ nhỏ' : null,
+                                            prefs.participantBreakdown?.infants ? prefs.participantBreakdown.infants + ' Em bé' : null
+                                        ].filter(Boolean).join(', ')}
+                                        )
+                                    </div>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Ngân sách khách:</strong> <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatMoneyLocal(requestData.budget)} đ/người</span>
+                                    </div>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Phương tiện:</strong> {prefs.transportName || 'Không rõ'}
+                                    </div>
+                                    <div>
+                                        <strong style={{ color: '#0f172a' }}>Lưu trú:</strong> {prefs.hotelName || 'Không rõ'}
+                                    </div>
+                                    {prefs.note && (
+                                        <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px dashed #7dd3fc', color: '#0c4a6e', marginTop: '5px' }}>
+                                            <strong>Ghi chú:</strong> {prefs.note}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#d97706' }}>Định phí</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chọn phương tiện di chuyển chính</label>
+                                <select 
+                                    value={costConfig.selectedTransport?.service_id || ''} 
+                                    onChange={handleTransportChange}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                >
+                                    <option value="">-- Tự túc / Không chọn --</option>
+                                    {costConfig.selectedTransport?.service_id === 'custom' && (
+                                        <option value="custom">{costConfig.selectedTransport.service_name} (Tự động từ yêu cầu: {Number(costConfig.selectedTransport.base_cost).toLocaleString('vi-VN')}đ)</option>
+                                    )}
+                                    {transportServices.map(t => (
+                                        <option key={t.service_id} value={t.service_id}>{t.service_name} (Từ {Number(t.base_cost).toLocaleString('vi-VN')}đ)</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Điểm hòa vốn</label>
+                                <input type="number" value={costConfig.minimumPax} onChange={e => setCostConfig({...costConfig, minimumPax: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chi phí Xe / Phương tiện</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={Number(costConfig.fixed.transport || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, fixed: {...costConfig.fixed, transport: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Đơn giá HDV / Ngày</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={Number(costConfig.fixed.guidePerDay || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, fixed: {...costConfig.fixed, guidePerDay: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chi phí cố định khác</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={Number(costConfig.fixed.otherFixed || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, fixed: {...costConfig.fixed, otherFixed: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #cbd5e1', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Tổng Định Phí:</span>
+                            <span style={{ color: '#d97706' }}>{Number(totalFixed).toLocaleString('vi-VN')}đ</span>
+                        </div>
+                    </div>
+
+                    <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#2563eb' }}>Biến phí</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <div style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Vé Xe / Máy bay / Khách</label>
+                                <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>{Number(costConfig.variable.tickets || 0).toLocaleString('vi-VN')} đ</div>
+                            </div>
+                            <div style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chi phí khách sạn (2 khách / phòng)</label>
+                                <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>{(autoAccommodationCost / 2).toLocaleString('vi-VN')} đ</div>
+                            </div>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa sáng (Số lượng / Đơn giá)</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <input type="number" placeholder={`Tự động: ${defaultBreakfast}`} value={costConfig.variable.countBreakfast !== undefined ? costConfig.variable.countBreakfast : ''} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, countBreakfast: e.target.value}})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Số bữa sáng" />
+                                            <div style={{ position: 'relative' }}>
+                                                <input type="text" value={Number(costConfig.variable.breakfast || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, breakfast: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Đơn giá" />
+                                                <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa trưa (Số lượng / Đơn giá)</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <input type="number" placeholder={`Tự động: ${defaultLunch}`} value={costConfig.variable.countLunch !== undefined ? costConfig.variable.countLunch : ''} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, countLunch: e.target.value}})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Số bữa trưa" />
+                                            <div style={{ position: 'relative' }}>
+                                                <input type="text" value={Number(costConfig.variable.lunch || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, lunch: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Đơn giá" />
+                                                <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa tối (Số lượng / Đơn giá)</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <input type="number" placeholder={`Tự động: ${defaultDinner}`} value={costConfig.variable.countDinner !== undefined ? costConfig.variable.countDinner : ''} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, countDinner: e.target.value}})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Số bữa tối" />
+                                            <div style={{ position: 'relative' }}>
+                                                <input type="text" value={Number(costConfig.variable.dinner || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, dinner: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Đơn giá" />
+                                                <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Tổng chi phí các điểm tham quan</label>
+                                <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>{Number(autoTicketsCost).toLocaleString('vi-VN')} đ</div>
+                            </div>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bảo hiểm & Khác</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={Number(costConfig.variable.insurance || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, insurance: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #cbd5e1', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Tổng Biến Phí / Khách:</span>
+                            <span style={{ color: '#2563eb' }}>{Number(totalVariable).toLocaleString('vi-VN')}đ</span>
+                        </div>
+                    </div>
+
+                    <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                        <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>Ghi chú nội bộ</h3>
+                        <textarea
+                            value={staffNote}
+                            onChange={(e) => setStaffNote(e.target.value)}
+                            placeholder="Ghi chú lại các thỏa thuận..."
+                            style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'vertical' }}
+                        />
+                    </div>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* CỘT 1: KHO TÀI NGUYÊN */}
-                <div onDragOver={handleDragOver} onDrop={handleDropBackToResources} style={{ width: '320px', background: '#f8fafc', borderRight: '1px solid #e2e8f0', padding: '20px', overflowY: 'auto' }}>
-                    {requestData?.preferences?.note && (
-                        <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#fffbeb', borderLeft: '4px solid #f59e0b', borderRadius: '4px', fontSize: '13px', color: '#92400e' }}>
-                            <strong>📌 Khách ghi chú:</strong><br />
-                            {requestData.preferences.note}
+                    <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', color: '#0ea5e9' }}>Chính sách giá trẻ em</h3>
+                            <select 
+                                value={costConfig.ageMultiplier?.preset || 'custom'}
+                                onChange={e => {
+                                    const preset = e.target.value;
+                                    let newMulti = { ...(costConfig.ageMultiplier || {}), preset };
+                                    if (preset === 'road') {
+                                        newMulti = { preset, child: { percent: 50, fixed_surcharge: 0 }, toddler: { percent: 0, fixed_surcharge: 0 }, infant: { percent: 0, fixed_surcharge: 0 } };
+                                    } else if (preset === 'air') {
+                                        newMulti = { preset, child: { percent: 85, fixed_surcharge: 0 }, toddler: { percent: 50, fixed_surcharge: 0 }, infant: { percent: 0, fixed_surcharge: 500000 } };
+                                    }
+                                    setCostConfig({ ...costConfig, ageMultiplier: newMulti });
+                                }}
+                                style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                            >
+                                <option value="custom">Tuỳ chỉnh (Custom)</option>
+                                <option value="road">Mẫu 1 (Đường bộ): 50% - 0% - 0%</option>
+                                <option value="air">Mẫu 2 (Hàng không): 85% - 50% - (0% + Phụ thu)</option>
+                            </select>
                         </div>
-                    )}
 
-                    <h3 style={{ margin: '0 0 5px 0', fontSize: '16px', color: '#334155' }}>🎒 Lựa Chọn Của Khách</h3>
-                    <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '15px' }}>Kéo các thẻ bên dưới thả vào lịch trình.</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '25px' }}>
-                        {resources.map(item => (
-                            <div key={item.id} draggable="true" onDragStart={(e) => handleDragStart(e, item, 'resources')} onDragEnd={handleDragEnd} style={{ padding: '12px', background: '#e0f2fe', border: '1px solid #7dd3fc', borderRadius: '8px', cursor: 'grab', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: '700' }}>{item.type}</span>
-                                    {item.price > 0 && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold' }}>+{formatMoney(item.price)}đ</span>}
-                                </div>
-                                <strong style={{ fontSize: '14px', color: '#0c4a6e', marginTop: '4px' }}>{item.name}</strong>
-                            </div>
-                        ))}
-                        {resources.length === 0 && <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>Đã kéo hết vào lịch trình.</p>}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                            {[
+                                { key: 'child', label: 'Trẻ em (5 - 11 tuổi)' },
+                                { key: 'toddler', label: 'Trẻ nhỏ (2 - 4 tuổi)' },
+                                { key: 'infant', label: 'Em bé (< 2 tuổi)' }
+                            ].map(group => {
+                                const currentSetting = costConfig.ageMultiplier?.[group.key] || { percent: 0, fixed_surcharge: 0 };
+                                const isCustom = costConfig.ageMultiplier?.preset === 'custom';
+                                const calPrice = (sellingPrice * (currentSetting.percent || 0) / 100) + Number(currentSetting.fixed_surcharge || 0);
+
+                                return (
+                                    <div key={group.key} style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <strong style={{ display: 'block', marginBottom: '10px', color: '#1e293b', fontSize: '14px' }}>{group.label}</strong>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Tỷ lệ % giá người lớn</label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                    <input 
+                                                        type="number" 
+                                                        value={Number(currentSetting.percent).toString()}
+                                                        disabled={!isCustom}
+                                                        onChange={e => {
+                                                            let val = e.target.value;
+                                                            if (val === '') val = 0;
+                                                            else val = parseInt(val, 10);
+                                                            if (isNaN(val)) val = 0;
+                                                            
+                                                            setCostConfig({
+                                                                ...costConfig,
+                                                                ageMultiplier: {
+                                                                    ...(costConfig.ageMultiplier || {}),
+                                                                    [group.key]: { ...currentSetting, percent: val }
+                                                                }
+                                                            })
+                                                        }}
+                                                        style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', background: isCustom ? '#fff' : '#f1f5f9' }}
+                                                    />
+                                                    <span style={{ color: '#64748b', fontSize: '13px' }}>%</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Phụ thu cố định</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <input 
+                                                        type="text" 
+                                                        value={Number(currentSetting.fixed_surcharge || 0).toLocaleString('vi-VN')}
+                                                        disabled={!isCustom}
+                                                        onChange={e => {
+                                                            setCostConfig({
+                                                                ...costConfig,
+                                                                ageMultiplier: {
+                                                                    ...(costConfig.ageMultiplier || {}),
+                                                                    [group.key]: { ...currentSetting, fixed_surcharge: Number(e.target.value.replace(/\D/g, '')) }
+                                                                }
+                                                            })
+                                                        }}
+                                                        style={{ width: '100%', padding: '6px', paddingRight: '20px', borderRadius: '4px', border: '1px solid #cbd5e1', background: isCustom ? '#fff' : '#f1f5f9' }}
+                                                    />
+                                                    <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '12px' }}>đ</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ marginTop: '5px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '12px', color: '#64748b' }}>Giá bán:</span>
+                                                <strong style={{ fontSize: '14px', color: '#0ea5e9' }}>{formatMoneyLocal(calPrice)} đ</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: '20px' }}>
-                        <h3 style={{ margin: '0 0 5px 0', fontSize: '16px', color: '#10b981' }}>🌍 Kho Tổng {requestData.destination}</h3>
-                        <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '15px' }}>Các dịch vụ khác sẵn có tại đây.</p>
+                    {/* TỔNG KẾT CHI PHÍ ĐOÀN */}
+                    <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginTop: '20px' }}>
+                        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>💰</span> Tổng Kết Chi Phí Toàn Đoàn
+                        </h3>
+                        {(() => {
+                            let prefs = {};
+                            try { prefs = typeof requestData.preferences === 'string' ? JSON.parse(requestData.preferences) : requestData.preferences || {}; } catch(e){}
+                            
+                            const pA = prefs.participantBreakdown?.adults || requestData.people_count;
+                            const pC = prefs.participantBreakdown?.children || 0;
+                            const pT = prefs.participantBreakdown?.toddlers || 0;
+                            const pI = prefs.participantBreakdown?.infants || 0;
 
-                        <strong style={{ fontSize: '13px', color: '#475569', display: 'block', marginBottom: '8px' }}>✈️ Di chuyển</strong>
-                        {destinationExtra.transport.map(renderExtraCard)}
+                            const sC = costConfig.ageMultiplier?.child || { percent: 0, fixed_surcharge: 0 };
+                            const sT = costConfig.ageMultiplier?.toddler || { percent: 0, fixed_surcharge: 0 };
+                            const sI = costConfig.ageMultiplier?.infant || { percent: 0, fixed_surcharge: 0 };
 
-                        <strong style={{ fontSize: '13px', color: '#475569', display: 'block', margin: '15px 0 8px 0' }}>🏨 Lưu trú</strong>
-                        {destinationExtra.accommodation.map(renderExtraCard)}
+                            const prA = sellingPrice;
+                            const prC = (sellingPrice * (sC.percent || 0) / 100) + Number(sC.fixed_surcharge || 0);
+                            const prT = (sellingPrice * (sT.percent || 0) / 100) + Number(sT.fixed_surcharge || 0);
+                            const prI = (sellingPrice * (sI.percent || 0) / 100) + Number(sI.fixed_surcharge || 0);
 
-                        <strong style={{ fontSize: '13px', color: '#475569', display: 'block', margin: '15px 0 8px 0' }}>🎟️ Tham quan & Vui chơi</strong>
-                        {destinationExtra.sightseeing.map(renderExtraCard)}
+                            const totalA = pA * prA;
+                            const totalC = pC * prC;
+                            const totalT = pT * prT;
+                            const totalI = pI * prI;
+                            const grandTotal = totalA + totalC + totalT + totalI;
+
+                            return (
+                                <div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', marginBottom: '15px' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f1f5f9', color: '#475569', fontSize: '14px' }}>
+                                                <th style={{ padding: '10px', borderBottom: '2px solid #cbd5e1' }}>Loại khách</th>
+                                                <th style={{ padding: '10px', borderBottom: '2px solid #cbd5e1' }}>Số lượng</th>
+                                                <th style={{ padding: '10px', borderBottom: '2px solid #cbd5e1', textAlign: 'right' }}>Đơn giá</th>
+                                                <th style={{ padding: '10px', borderBottom: '2px solid #cbd5e1', textAlign: 'right' }}>Thành tiền</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pA > 0 && <tr>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Người lớn</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>{pA}</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>{formatMoneyLocal(prA)} đ</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 'bold' }}>{formatMoneyLocal(totalA)} đ</td>
+                                            </tr>}
+                                            {pC > 0 && <tr>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Trẻ em (5-11t)</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>{pC}</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>{formatMoneyLocal(prC)} đ</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 'bold' }}>{formatMoneyLocal(totalC)} đ</td>
+                                            </tr>}
+                                            {pT > 0 && <tr>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Trẻ nhỏ (2-4t)</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>{pT}</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>{formatMoneyLocal(prT)} đ</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 'bold' }}>{formatMoneyLocal(totalT)} đ</td>
+                                            </tr>}
+                                            {pI > 0 && <tr>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Em bé (&lt;2t)</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>{pI}</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>{formatMoneyLocal(prI)} đ</td>
+                                                <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 'bold' }}>{formatMoneyLocal(totalI)} đ</td>
+                                            </tr>}
+                                        </tbody>
+                                    </table>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', padding: '15px 20px', borderRadius: '8px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 'bold', textTransform: 'uppercase' }}>Giá vốn / Khách</span>
+                                            <strong style={{ fontSize: '20px', color: '#047857' }}>{formatMoneyLocal(netCost)} đ</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                            <span style={{ fontSize: '16px', color: '#065f46', fontWeight: 'bold', textTransform: 'uppercase' }}>TỔNG DOANH THU ĐOÀN</span>
+                                            <strong style={{ fontSize: '24px', color: '#047857' }}>{formatMoneyLocal(grandTotal)} đ</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
-                {/* CỘT 2: KHUNG LỊCH TRÌNH */}
-                <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexWrap: 'wrap', alignContent: 'flex-start', gap: '20px' }}>
-                    <div style={{ width: '100%', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                        <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px' }}>✈️ Thông Tin Vận Hành Đầu - Cuối</h3>
-                        <div style={{ display: 'flex', gap: '20px' }}>
-                            <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                                <strong style={{ color: '#0ea5e9', fontSize: '14px', display: 'block', marginBottom: '10px' }}>📍 Đón Khách (Ngày 1)</strong>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                    <input type="time" value={logistics.pickup.time} onChange={(e) => handleLogisticsChange('pickup', 'time', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Giờ đón" />
-                                    <input type="text" value={logistics.pickup.location} onChange={(e) => handleLogisticsChange('pickup', 'location', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Địa điểm (VD: Sân bay TSN)" />
-                                    <input type="text" value={logistics.pickup.flightInfo} onChange={(e) => handleLogisticsChange('pickup', 'flightInfo', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Ký hiệu chuyến bay" />
-                                    <input type="text" value={logistics.pickup.note} onChange={(e) => handleLogisticsChange('pickup', 'note', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Ghi chú thêm" />
-                                </div>
-                            </div>
-                            <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                                <strong style={{ color: '#f59e0b', fontSize: '14px', display: 'block', marginBottom: '10px' }}>📍 Trả Khách (Ngày cuối)</strong>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                    <input type="time" value={logistics.dropoff.time} onChange={(e) => handleLogisticsChange('dropoff', 'time', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Giờ trả" />
-                                    <input type="text" value={logistics.dropoff.location} onChange={(e) => handleLogisticsChange('dropoff', 'location', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Địa điểm trả" />
-                                    <input type="text" value={logistics.dropoff.flightInfo} onChange={(e) => handleLogisticsChange('dropoff', 'flightInfo', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Ký hiệu chuyến bay" />
-                                    <input type="text" value={logistics.dropoff.note} onChange={(e) => handleLogisticsChange('dropoff', 'note', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '13px' }} placeholder="Ghi chú thêm" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ width: '100%', display: 'flex', gap: '20px' }}>
-                        <div onDragOver={handleDragOver} onDrop={(e) => handleDropContainer(e, 'fixed', 'accommodation')} style={{ flex: 1, background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                            <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px' }}>🏨 Điểm Lưu Trú</h3>
-                            <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '10px', minHeight: '60px' }}>
-                                {fixedServices.accommodation.map(item => renderServiceCard(item, 'fixed', 'accommodation', (i) => handleRemoveFromFixed('accommodation', i)))}
-                            </div>
-                        </div>
-                        <div onDragOver={handleDragOver} onDrop={(e) => handleDropContainer(e, 'fixed', 'transport')} style={{ flex: 1, background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                            <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px' }}>✈️ Dịch Vụ Di Chuyển</h3>
-                            <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '10px', minHeight: '60px' }}>
-                                {fixedServices.transport.map(item => renderServiceCard(item, 'fixed', 'transport', (i) => handleRemoveFromFixed('transport', i)))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {itineraryDays.map((day) => (
-                        <div key={day.dayIndex} style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                            <div style={{ background: '#3b82f6', color: '#fff', padding: '12px 15px', fontWeight: '700', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Ngày {day.dayIndex}</span><span style={{ fontSize: '13px', fontWeight: 'normal' }}>{day.dateString}</span>
-                            </div>
-                            <div style={{ padding: '10px' }}>
-                                <div onDragOver={handleDragOver} onDrop={(e) => handleDropContainer(e, day.dayIndex, 'morning')} style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '10px', minHeight: '80px', marginBottom: '10px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>🌅 BUỔI SÁNG</div>
-                                    {day.slots.morning.map(item => renderServiceCard(item, day.dayIndex, 'morning', (i) => handleRemoveFromSlot(day.dayIndex, 'morning', i)))}
-                                </div>
-                                <div onDragOver={handleDragOver} onDrop={(e) => handleDropContainer(e, day.dayIndex, 'noon')} style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '10px', minHeight: '80px', marginBottom: '10px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>☀️ BUỔI TRƯA</div>
-                                    {day.slots.noon.map(item => renderServiceCard(item, day.dayIndex, 'noon', (i) => handleRemoveFromSlot(day.dayIndex, 'noon', i)))}
-                                </div>
-                                <div onDragOver={handleDragOver} onDrop={(e) => handleDropContainer(e, day.dayIndex, 'evening')} style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '10px', minHeight: '80px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>🌙 CHIỀU / TỐI</div>
-                                    {day.slots.evening.map(item => renderServiceCard(item, day.dayIndex, 'evening', (i) => handleRemoveFromSlot(day.dayIndex, 'evening', i)))}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* CỘT 3: CHỐT BÁO GIÁ */}
-                <div style={{ width: '320px', background: '#fff', borderLeft: '1px solid #e2e8f0', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: '#334155' }}>💰 Chốt Báo Giá</h3>
-
-                    <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <span style={{ color: '#64748b', fontSize: '13px' }}>Tổng Cost (đang dùng):</span>
-                            <strong style={{ color: '#dc2626' }}>{formatMoney(totalCost)} đ</strong>
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>Markup Lợi nhuận (%)</label>
-                            <input type="number" min="0" value={quoteData.markup} onChange={e => setQuoteData({ ...quoteData, markup: e.target.value })} style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
-                            <span style={{ color: '#334155', fontWeight: '600' }}>Giá Bán Cuối Cùng:</span>
-                            <strong style={{ color: '#2563eb', fontSize: '18px' }}>{formatMoney(suggestedPrice)} đ</strong>
-                        </div>
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>Ghi chú đính kèm (Gửi Quản lý)</label>
-                        <textarea
-                            rows="5"
-                            value={quoteData.staffNote}
-                            onChange={e => setQuoteData({ ...quoteData, staffNote: e.target.value })}
-                            placeholder="VD: Lịch trình đã được tối ưu đường đi, khách đã đồng ý đổi sang khách sạn 5 sao..."
-                            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'none', fontFamily: 'inherit', fontSize: '13px', boxSizing: 'border-box' }}
-                        />
-                    </div>
-
-                    {['Pending_Approval', 'Approved', 'Quote_Sent', 'Customer_Accepted'].includes(requestData?.approval_status) ? (
-                        <div
-                            style={{
-                                marginTop: '20px',
-                                padding: '15px',
-                                borderRadius: '8px',
-                                textAlign: 'center',
-                                fontWeight: '600',
-                                fontSize: '14px',
-                                background:
-                                    requestData.approval_status === 'Approved'
-                                        ? '#f0fdf4'
-                                        : '#eff6ff',
-                                color:
-                                    requestData.approval_status === 'Approved'
-                                        ? '#15803d'
-                                        : '#2563eb',
-                                border:
-                                    requestData.approval_status === 'Approved'
-                                        ? '1px solid #bbf7d0'
-                                        : '1px solid #bfdbfe'
-                            }}
-                        >
-                            {requestData.approval_status === 'Pending_Approval' &&
-                                '⏳ Bản thiết kế đang chờ Quản lý phê duyệt.'}
-
-                            {requestData.approval_status === 'Approved' &&
-                                '✅ Bản thiết kế đã được Quản lý phê duyệt.'}
-
-                            {requestData.approval_status === 'Quote_Sent' &&
-                                '📤 Báo giá đã được gửi cho khách hàng.'}
-
-                            {requestData.approval_status === 'Customer_Accepted' &&
-                                '🎉 Khách hàng đã xác nhận đặt tour.'}
-                        </div>
-                    ) : (
-                        <button
-                            onClick={handleSubmitToManager}
-                            style={{
-                                padding: '15px',
-                                background: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontWeight: '700',
-                                fontSize: '16px',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
-                                marginTop: '20px'
-                            }}
-                        >
-                            Gửi Phê Duyệt
-                        </button>
-                    )}
-                </div>
+            <div style={{ background: '#ffffff', borderTop: '1px solid #e2e8f0', padding: '15px 30px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', zIndex: 10 }}>
+                <button 
+                    onClick={handleSubmitToManager}
+                    style={{ padding: '14px 30px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}
+                >
+                    ✅ Chốt Thiết Kế & Gửi Quản Lý
+                </button>
             </div>
         </div>
     );

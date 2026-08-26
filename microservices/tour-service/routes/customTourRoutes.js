@@ -2,6 +2,25 @@ const express = require('express');
 const router = express.Router();
 const customTourController = require('../controllers/customTourController');
 const { protect } = require('../middleware/authMiddleware');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const uploadDir = path.join(__dirname, '../../shared-uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // Route dành cho Khách hàng
 router.post('/request', protect, customTourController.createCustomRequest);
@@ -35,7 +54,7 @@ router.get('/requests/customer/:customerId', protect, customTourController.getCu
 // --- NEW WORKFLOW ROUTES ---
 router.post('/requests/:id/initial-quote', protect, customTourController.sendInitialQuote);
 router.put('/requests/:id/start-design', protect, customTourController.startDesigning);
-router.post('/requests/:id/submit-manager', protect, customTourController.submitToManager);
+router.post('/requests/:id/submit-manager', protect, upload.any(), customTourController.submitToManager);
 router.post('/quotes/:quoteId/manager-review', protect, customTourController.managerReview);
 router.post('/quotes/:quoteId/send-to-customer', protect, customTourController.sendToCustomer);
 

@@ -1,12 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const FormattedMoneyInput = ({ value, onChange, placeholder, style, disabled }) => {
+    const displayValue = (value !== null && value !== '') ? Number(value).toLocaleString('vi-VN') : '';
+    const handleChange = (e) => {
+        const raw = e.target.value.replace(/\D/g, '');
+        onChange(raw ? Number(raw) : '');
+    };
+    return (
+        <input
+            type="text"
+            value={displayValue}
+            onChange={handleChange}
+            placeholder={placeholder}
+            style={style}
+            disabled={disabled}
+        />
+    );
+};
+
 const StaffTourRequestManager = ({ onStartDesign }) => {
     const [requests, setRequests] = useState([]);
     const [selectedReq, setSelectedReq] = useState(null);
     const [tempMarkup, setTempMarkup] = useState(20);
     const [customPrice, setCustomPrice] = useState(null);
     const [consultationNote, setConsultationNote] = useState('');
+    const [mealPrices, setMealPrices] = useState({ breakfast: 200000, lunch: 200000, dinner: 200000 });
+    const [guidePricePerDay, setGuidePricePerDay] = useState(500000);
+    const [adjHotelCost, setAdjHotelCost] = useState(null);
+    const [adjTransportCost, setAdjTransportCost] = useState(null);
 
     useEffect(() => {
         fetchRequests();
@@ -27,13 +49,39 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
         setTempMarkup(req.markup_percent || 20);
         setCustomPrice(null);
         setConsultationNote(req.staff_note || '');
+        setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
+        setGuidePricePerDay(500000);
+        
+        const durationDays = Math.round((new Date(req.return_date) - new Date(req.departure_date)) / (1000 * 60 * 60 * 24)) + 1;
+        const nights = Math.max(0, durationDays - 1);
+        const pax = req.people_count || 1;
+        
+        setAdjHotelCost(nights > 0 ? Math.round(((req.preferences?.hotelPrice || 0) * pax) / nights) : 0);
+        setAdjTransportCost(durationDays > 0 ? Math.round(((req.preferences?.transportPrice || 0) * pax) / durationDays) : 0);
     };
 
     const formatMoney = (amount) => Number(amount).toLocaleString('vi-VN');
 
-    const totalCost = (selectedReq?.preferences?.hotelPrice || 0) +
-        (selectedReq?.preferences?.transportPrice || 0) +
-        (selectedReq?.preferences?.selectedPlaces?.reduce((sum, p) => sum + Number(p.price), 0) || 0);
+    const durationDays = selectedReq ? Math.round((new Date(selectedReq.return_date) - new Date(selectedReq.departure_date)) / (1000 * 60 * 60 * 24)) + 1 : 0;
+    const durationNights = Math.max(0, durationDays - 1);
+    const totalPax = selectedReq ? selectedReq.people_count : 1;
+    
+    const autoBreakfastQty = durationNights;
+    const autoLunchQty = durationDays;
+    const autoDinnerQty = durationNights;
+    
+    const mealCostPerPerson = (Number(mealPrices.breakfast) * autoBreakfastQty) + 
+                              (Number(mealPrices.lunch) * autoLunchQty) + 
+                              (Number(mealPrices.dinner) * autoDinnerQty);
+    const guideCostPerPerson = totalPax > 0 ? (Number(guidePricePerDay) * durationDays) / totalPax : 0;
+
+    const totalHotelPerPerson = totalPax > 0 ? ((adjHotelCost || 0) * durationNights) / totalPax : 0;
+    const totalTransportPerPerson = totalPax > 0 ? ((adjTransportCost || 0) * durationDays) / totalPax : 0;
+
+    const totalCost = totalHotelPerPerson +
+        totalTransportPerPerson +
+        (selectedReq?.preferences?.selectedPlaces?.reduce((sum, p) => sum + Number(p.price), 0) || 0) +
+        mealCostPerPerson + guideCostPerPerson;
 
     const suggestedPrice = customPrice !== null ? customPrice : Math.round(totalCost * (1 + Number(tempMarkup) / 100));
     const budgetDiff = (selectedReq?.budget || 0) - suggestedPrice;
@@ -43,11 +91,11 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
         setCustomPrice(null);
     };
 
-    const handlePriceChange = (e) => {
-        const val = Number(e.target.value);
-        setCustomPrice(val);
+    const handlePriceChange = (val) => {
+        const numericVal = Number(val);
+        setCustomPrice(numericVal);
         if (totalCost > 0) {
-            setTempMarkup((((val / totalCost) - 1) * 100).toFixed(1));
+            setTempMarkup((((numericVal / totalCost) - 1) * 100).toFixed(1));
         }
     };
 
@@ -245,7 +293,7 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                     <div className="bento-grid">
                         <div className="bento-box">
                             <span className="bento-icon-bg">📅</span>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Thời gian</div>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Thời gian <span style={{ color: '#1d4ed8', textTransform: 'none', marginLeft: '4px' }}>({durationDays} Ngày {durationNights} Đêm)</span></div>
                             <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600', lineHeight: '1.5' }}>
                                 Đi: {new Date(selectedReq.departure_date).toLocaleDateString('vi-VN')}<br/>
                                 Về: {new Date(selectedReq.return_date).toLocaleDateString('vi-VN')}
@@ -256,7 +304,9 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                             <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Thành viên</div>
                             <div style={{ fontSize: '24px', color: '#0f172a', fontWeight: '800' }}>{selectedReq.people_count}</div>
                             <div style={{ fontSize: '13px', color: '#475569' }}>
-                                {selectedReq.preferences?.participantBreakdown?.adults || 0} Người lớn, {selectedReq.preferences?.participantBreakdown?.children || 0} Trẻ em
+                                {selectedReq.preferences?.participantBreakdown?.adults || 0} Lớn, {selectedReq.preferences?.participantBreakdown?.children || 0} Trẻ em
+                                {(selectedReq.preferences?.participantBreakdown?.toddlers > 0) && `, ${selectedReq.preferences.participantBreakdown.toddlers} Trẻ nhỏ`}
+                                {(selectedReq.preferences?.participantBreakdown?.infants > 0) && `, ${selectedReq.preferences.participantBreakdown.infants} Em bé`}
                             </div>
                         </div>
                         {selectedReq.preferences?.note && (
@@ -271,108 +321,204 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                     <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '40px 0 20px 0' }}>📦 Bóc tách Dịch vụ Tạm tính</h3>
                     
                     <div className="bento-grid">
-                        <div className="bento-box" style={{ background: '#f8fafc' }}>
+                        <div className="bento-box" style={{ background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
                             <span className="bento-icon-bg" style={{ opacity: 0.03 }}>📍</span>
                             <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Đón khách</div>
-                            <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', marginBottom: '10px' }}>{selectedReq.preferences?.pickup_location || 'Tự túc'}</div>
+                            <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', marginBottom: '4px' }}>{selectedReq.preferences?.pickup_location || 'Tự túc'}</div>
+                            {selectedReq.preferences?.departure_time && (
+                                <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>⏰ {selectedReq.preferences.departure_time}</div>
+                            )}
                         </div>
-                        <div className="bento-box" style={{ background: '#f8fafc' }}>
+                        <div className="bento-box" style={{ background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
                             <span className="bento-icon-bg" style={{ opacity: 0.03 }}>🚐</span>
                             <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Phương tiện</div>
                             <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', marginBottom: '10px' }}>{selectedReq.preferences?.transportName || 'Chưa chọn'}</div>
-                            <div style={{ fontSize: '18px', color: '#1d4ed8', fontWeight: '800' }}>{formatMoney(selectedReq.preferences?.transportPrice || 0)} đ</div>
+                            <div style={{ marginTop: 'auto' }}>
+                                <div style={{ marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px' }}>
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>Đơn giá xe / Ngày</div>
+                                    <div style={{ position: 'relative' }}>
+                                        <FormattedMoneyInput value={adjTransportCost} onChange={val => setAdjTransportCost(val || 0)} style={{ width: '100%', padding: '6px 24px 6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', fontWeight: '700', color: '#1d4ed8', boxSizing: 'border-box' }} />
+                                        <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>đ</span>
+                                    </div>
+                                </div>
+                                {totalTransportPerPerson > 0 && (
+                                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Chi phí/Khách:</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '800', color: '#1d4ed8' }}>{formatMoney(totalTransportPerPerson)} đ</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="bento-box" style={{ background: '#f8fafc' }}>
+                        <div className="bento-box" style={{ background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
                             <span className="bento-icon-bg" style={{ opacity: 0.03 }}>🏨</span>
                             <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Lưu trú</div>
                             <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', marginBottom: '10px' }}>{selectedReq.preferences?.hotelName || 'Chưa chọn'}</div>
-                            <div style={{ fontSize: '18px', color: '#1d4ed8', fontWeight: '800' }}>{formatMoney(selectedReq.preferences?.hotelPrice || 0)} đ</div>
+                            <div style={{ marginTop: 'auto' }}>
+                                <div style={{ marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px' }}>
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>Đơn giá phòng / Đêm</div>
+                                    <div style={{ position: 'relative' }}>
+                                        <FormattedMoneyInput value={adjHotelCost} onChange={val => setAdjHotelCost(val || 0)} style={{ width: '100%', padding: '6px 24px 6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', fontWeight: '700', color: '#1d4ed8', boxSizing: 'border-box' }} />
+                                        <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>đ</span>
+                                    </div>
+                                </div>
+                                {totalHotelPerPerson > 0 && (
+                                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Chi phí/Khách:</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '800', color: '#1d4ed8' }}>{formatMoney(totalHotelPerPerson)} đ</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="bento-box" style={{ background: '#f8fafc', gridColumn: 'span 2' }}>
-                            <span className="bento-icon-bg" style={{ opacity: 0.03 }}>🎫</span>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Điểm tham quan</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {selectedReq.preferences?.selectedPlaces?.length > 0 ? (
-                                    selectedReq.preferences.selectedPlaces.map((place, idx) => (
-                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', background: '#fff', padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                            <span style={{ fontWeight: '600', color: '#334155' }}>✔ {place.name}</span>
-                                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{formatMoney(place.price || 0)} đ</span>
+                        {selectedReq.preferences?.meal && selectedReq.preferences.meal !== 'Khách tự túc' && (
+                            <div className="bento-box" style={{ background: '#f8fafc' }}>
+                                <span className="bento-icon-bg" style={{ opacity: 0.03 }}>🍽️</span>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Ăn uống</div>
+                                <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', marginBottom: '10px' }}>{selectedReq.preferences?.meal}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px' }}>
+                                    <div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>Bữa sáng (Số lượng / Đơn giá)</div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input type="text" value={`Tự động: ${autoBreakfastQty}`} disabled style={{ width: '85px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#64748b', fontSize: '13px', boxSizing: 'border-box', textAlign: 'center' }} />
+                                            <div style={{ position: 'relative', flex: 1 }}>
+                                                <FormattedMoneyInput value={mealPrices.breakfast} onChange={val => setMealPrices({...mealPrices, breakfast: val || 0})} placeholder="Đơn giá" style={{ width: '100%', padding: '6px 24px 6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }} />
+                                                <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>đ</span>
+                                            </div>
                                         </div>
-                                    ))
-                                ) : <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>Chưa chọn điểm tham quan nào</div>}
-                            </div>
-                        </div>
-                    </div>
-
-                    <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '40px 0 20px 0' }}>✉️ Tư vấn viên Phản hồi</h3>
-                    <textarea
-                        rows="4"
-                        value={consultationNote}
-                        onChange={(e) => setConsultationNote(e.target.value)}
-                        placeholder="Điền lời chào, thông tin báo giá sơ bộ, và xin ý kiến khách..."
-                        style={{ width: "100%", boxSizing: 'border-box', padding: "16px", borderRadius: "12px", border: "1px solid #cbd5e1", fontSize: "15px", lineHeight: '1.6', fontFamily: 'inherit', outline: 'none', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                        onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.backgroundColor = '#fff'; }}
-                        onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.backgroundColor = '#f8fafc'; }}
-                    />
-                    </div>
-                    
-                    {/* FIXED ACTION BAR DƯỚI CÙNG */}
-                    <div style={{ padding: '20px 30px', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', flexShrink: 0, zIndex: 10, borderRadius: '0 0 20px 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            <div>
-                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>% Markup</div>
-                                <input
-                                    type="number"
-                                    min="0" max="100" step="0.1"
-                                    value={tempMarkup}
-                                    onChange={handleMarkupChange}
-                                    style={{ width: "80px", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "16px", fontWeight: "700", outline: 'none' }}
-                                />
-                            </div>
-                            <div style={{ paddingLeft: '20px', borderLeft: '2px solid #e2e8f0' }}>
-                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>Cost Gốc</div>
-                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626' }}>{formatMoney(totalCost)} đ</div>
-                            </div>
-                            <div style={{ paddingLeft: '20px', borderLeft: '2px solid #e2e8f0' }}>
-                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>Giá Báo Khách</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <input 
-                                        type="number" 
-                                        value={suggestedPrice} 
-                                        onChange={handlePriceChange}
-                                        style={{ width: "130px", padding: "10px", borderRadius: "8px", border: "1px solid #93c5fd", fontSize: "18px", fontWeight: "800", color: "#1d4ed8", outline: 'none', background: '#eff6ff' }}
-                                    />
-                                    <span style={{ fontSize: '18px', fontWeight: '800', color: '#1d4ed8' }}>đ</span>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>Bữa trưa (Số lượng / Đơn giá)</div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input type="text" value={`Tự động: ${autoLunchQty}`} disabled style={{ width: '85px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#64748b', fontSize: '13px', boxSizing: 'border-box', textAlign: 'center' }} />
+                                            <div style={{ position: 'relative', flex: 1 }}>
+                                                <FormattedMoneyInput value={mealPrices.lunch} onChange={val => setMealPrices({...mealPrices, lunch: val || 0})} placeholder="Đơn giá" style={{ width: '100%', padding: '6px 24px 6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }} />
+                                                <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>đ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>Bữa tối (Số lượng / Đơn giá)</div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input type="text" value={`Tự động: ${autoDinnerQty}`} disabled style={{ width: '85px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#64748b', fontSize: '13px', boxSizing: 'border-box', textAlign: 'center' }} />
+                                            <div style={{ position: 'relative', flex: 1 }}>
+                                                <FormattedMoneyInput value={mealPrices.dinner} onChange={val => setMealPrices({...mealPrices, dinner: val || 0})} placeholder="Đơn giá" style={{ width: '100%', padding: '6px 24px 6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }} />
+                                                <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>đ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: 'auto' }}>
+                                    {mealCostPerPerson > 0 && (
+                                        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Tổng/Khách:</span>
+                                            <span style={{ fontSize: '16px', fontWeight: '800', color: '#10b981' }}>{formatMoney(mealCostPerPerson)} đ</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                        )}
+                        {selectedReq.preferences?.guide && selectedReq.preferences.guide !== 'Khách tự túc' && (
+                            <div className="bento-box" style={{ background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+                                <span className="bento-icon-bg" style={{ opacity: 0.03 }}>🗣️</span>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Hướng dẫn viên</div>
+                                <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', marginBottom: '10px' }}>{selectedReq.preferences?.guide}</div>
+                                <div style={{ marginTop: 'auto' }}>
+                                    <div style={{ marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px' }}>
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>Đơn giá HDV / Ngày</div>
+                                        <div style={{ position: 'relative' }}>
+                                            <FormattedMoneyInput placeholder="500000" value={guidePricePerDay || ''} onChange={val => setGuidePricePerDay(val || 0)} style={{ width: '100%', padding: '6px 24px 6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', boxSizing: 'border-box' }} />
+                                            <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>đ</span>
+                                        </div>
+                                    </div>
+                                    {guideCostPerPerson > 0 && (
+                                        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Chia đều/Khách:</span>
+                                            <span style={{ fontSize: '16px', fontWeight: '800', color: '#10b981' }}>{formatMoney(guideCostPerPerson)} đ</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        <div className="bento-box" style={{ background: '#f8fafc', gridColumn: 'span 3' }}>
+                            <span className="bento-icon-bg" style={{ opacity: 0.03 }}>🎫</span>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Điểm tham quan</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {selectedReq.preferences?.selectedPlaces?.length > 0 ? selectedReq.preferences.selectedPlaces.map(p => (
+                                    <div key={p.place_id} style={{ background: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', color: '#334155', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        📍 {p.name} <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'normal' }}>({formatMoney(p.price)}đ)</span>
+                                    </div>
+                                )) : <div style={{ fontSize: '14px', color: '#94a3b8' }}>Không có điểm tham quan nào</div>}
+                            </div>
                         </div>
+                    </div>
 
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            {selectedReq.status === 'Pending' && (
-                                <button 
-                                    onClick={handleSendInitialQuote} 
-                                    style={{ padding: "14px 24px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "15px", cursor: 'pointer', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }}
-                                    onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-                                    onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
-                                >
-                                    📤 Gửi Báo Giá Sơ Bộ
-                                </button>
-                            )}
-                            {selectedReq.status === 'Manager_Approved' && (
-                                <button
-                                    onClick={handleSendToCustomer}
-                                    style={{ padding: "14px 24px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "15px", cursor: "pointer", boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)' }}
-                                >
-                                    🚀 Gửi Cho Khách Hàng
-                                </button>
-                            )}
-                            <button
-                                onClick={handleStartDesign}
-                                style={{ padding: "14px 24px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "15px", cursor: "pointer", boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}
-                            >
-                                🛠️ Vào Phòng Thiết Kế ➔
-                            </button>
+                    <div style={{ marginTop: '30px', padding: '20px 30px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'inline-flex', gap: '24px', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Cost Gốc/Khách</div>
+                            <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap' }}>{formatMoney(totalCost)} đ</div>
                         </div>
+                        <div style={{ fontSize: '24px', color: '#cbd5e1' }}>+</div>
+                        <div>
+                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Markup (%)</div>
+                            <input 
+                                type="number" 
+                                value={tempMarkup} 
+                                onChange={handleMarkupChange}
+                                style={{ width: "70px", padding: "8px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "16px", fontWeight: "700", textAlign: "center", outline: 'none' }}
+                            />
+                        </div>
+                        <div style={{ fontSize: '24px', color: '#cbd5e1' }}>=</div>
+                        <div style={{ paddingLeft: '24px', borderLeft: '2px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Giá Báo Khách</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FormattedMoneyInput 
+                                    value={suggestedPrice} 
+                                    onChange={handlePriceChange}
+                                    style={{ width: "140px", padding: "10px 14px", borderRadius: "8px", border: "1px solid #93c5fd", fontSize: "18px", fontWeight: "800", color: "#1d4ed8", outline: 'none', background: '#eff6ff' }}
+                                />
+                                <span style={{ fontSize: '18px', fontWeight: '800', color: '#1d4ed8', whiteSpace: 'nowrap' }}>đ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '30px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Ghi chú tư vấn (Chỉ nội bộ)</div>
+                        <textarea
+                            value={consultationNote}
+                            onChange={(e) => setConsultationNote(e.target.value)}
+                            placeholder="Ghi chú lại các thỏa thuận, yêu cầu đặc biệt sau khi trao đổi với khách..."
+                            style={{ width: '100%', minHeight: '100px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'vertical', fontSize: '14px', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                </div>
+                
+                {/* FIXED ACTION BAR DƯỚI CÙNG */}
+                <div style={{ padding: '20px 30px', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', flexShrink: 0, zIndex: 10, borderRadius: '0 0 20px 20px' }}>
+                    <div style={{ display: 'flex', gap: '16px', flexShrink: 0 }}>
+                        {selectedReq.status === 'Pending' && (
+                            <button 
+                                onClick={handleSendInitialQuote} 
+                                style={{ padding: "12px 20px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "14px", cursor: 'pointer', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                                onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                                onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+                            >
+                                📤 Gửi Báo Giá Sơ Bộ
+                            </button>
+                        )}
+                        {selectedReq.status === 'Manager_Approved' && (
+                            <button
+                                onClick={handleSendToCustomer}
+                                style={{ padding: "12px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "14px", cursor: "pointer", boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)', whiteSpace: 'nowrap' }}
+                            >
+                                🚀 Gửi Cho Khách Hàng
+                            </button>
+                        )}
+                        <button
+                            onClick={handleStartDesign}
+                            style={{ padding: "12px 20px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "14px", cursor: "pointer", boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', whiteSpace: 'nowrap' }}
+                        >
+                            🛠️ Vào Phòng Thiết Kế ➔
+                        </button>
+                    </div>
                     </div>
                 </div>
             )}

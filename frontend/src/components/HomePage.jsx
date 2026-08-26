@@ -88,13 +88,9 @@ const HomePage = () => {
         return matchSearch && matchCat;
     });
 
-    // Lọc dịch vụ
+    // Lọc dịch vụ (Chỉ giữ lại dịch vụ xe/di chuyển)
     const filteredServices = services.filter(s => {
-        if (selectedServiceCategory === 'Tất cả') return true;
-        if (selectedServiceCategory === 'Khách sạn') return s.service_type === 'Hotel' || s.service_type === 'Khách sạn';
-        if (selectedServiceCategory === 'Xe du lịch') return s.service_type === 'Transport' || s.service_type === 'Xe vận chuyển';
-        if (selectedServiceCategory === 'Vé máy bay') return s.service_type === 'Flight' || s.service_type === 'Vé máy bay';
-        return true;
+        return s.service_type === 'Transport' || s.service_type === 'Xe vận chuyển' || s.service_type === 'Xe du lịch';
     });
 
     const scrollSlider = (ref, direction) => {
@@ -279,27 +275,13 @@ const HomePage = () => {
                     </div>
                 </div>
                 
-                {/* 2.5 DỊCH VỤ NỔI BẬT (Khách sạn, Máy bay, Xe) */}
+                {/* 2.5 DỊCH VỤ NỔI BẬT (Chỉ Xe) */}
                 <div className="section-container" style={{ marginTop: '50px' }}>
-                    <div className="section-header" style={{ marginBottom: '16px' }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <h2 style={{ fontSize: '32px', color: '#0f172a', fontWeight: '800', marginBottom: '10px' }}>Dịch Vụ Độc Lập Nổi Bật</h2>
-                            <p style={{ color: '#64748b', fontSize: '16px' }}>Đặt riêng phòng Khách sạn, Thuê xe hoặc Vé máy bay tiện lợi</p>
+                    <div className="section-header-flex" style={{ marginBottom: '16px' }}>
+                        <div>
+                            <h2>Dịch Vụ Đặt Xe Nổi Bật</h2>
+                            <p className="section-sub">Thuê xe du lịch, xe di chuyển tiện lợi, chất lượng và uy tín do công ty cung cấp</p>
                         </div>
-                    </div>
-
-                    {/* Bộ lọc Tab cho Dịch vụ */}
-                    <div className="category-tabs" style={{ background: '#fff', padding: '12px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '30px' }}>
-                        {['Tất cả', 'Khách sạn', 'Xe du lịch', 'Vé máy bay'].map((cat) => (
-                            <button 
-                                key={cat}
-                                className={`tab-btn ${selectedServiceCategory === cat ? 'active' : ''}`}
-                                onClick={() => setSelectedServiceCategory(cat)}
-                                style={{ flex: '1', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', padding: '12px 20px', borderRadius: '12px', fontWeight: '700' }}
-                            >
-                                {cat}
-                            </button>
-                        ))}
                     </div>
                     
                     {/* Danh sách Dịch vụ Slider */}

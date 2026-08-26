@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ActivityItem from './ActivityItem';
 
-const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayImages, setDayImages, dayImagePreviews, setDayImagePreviews }) => {
+const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayImages, setDayImages, dayImagePreviews, setDayImagePreviews, requestData }) => {
     const [places, setPlaces] = useState([]);
 
     const [draggedActIndex, setDraggedActIndex] = useState(null);
@@ -297,6 +297,9 @@ const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayIma
                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', marginBottom: '10px' }}
                 >
                     <option value="">-- Không chọn / Tự túc --</option>
+                    {day.accommodation?.service_id === 'custom' && (
+                        <option value="custom">{day.accommodation.name} (Tự động từ yêu cầu: {Number(day.accommodation.price).toLocaleString('vi-VN')}đ)</option>
+                    )}
                     {(allServices || []).filter(s => 
                         (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') && 
                         String(s.destination_id) === String(day.end_destination_id)
@@ -367,6 +370,7 @@ const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayIma
                     endPlaces={places.filter(p => String(p.destination_id) === String(day.end_destination_id))}
                     startDestName={destinations.find(d => String(d.destination_id) === String(day.start_destination_id))?.destination_name}
                     endDestName={destinations.find(d => String(d.destination_id) === String(day.end_destination_id))?.destination_name}
+                    requestData={requestData}
                 />
 
                 {/* Quick Add Snippets */}

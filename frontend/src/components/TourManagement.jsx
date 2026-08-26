@@ -21,9 +21,23 @@ const TourManagement = () => {
     const [newPrice, setNewPrice] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
 
+    const [destinations, setDestinations] = useState([]);
+
     useEffect(() => {
         fetchTours();
+        fetchDestinations();
     }, []);
+
+    const fetchDestinations = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/destinations');
+            if (res.data.success) {
+                setDestinations(res.data.data);
+            }
+        } catch (error) {
+            console.error('Lỗi tải danh sách địa điểm:', error);
+        }
+    };
 
     const fetchTours = async () => {
         setLoading(true);
@@ -159,13 +173,38 @@ const TourManagement = () => {
     // Group Logic
     const groupedTours = useMemo(() => {
         const groups = {};
+        
+        const getDestName = (tour) => {
+            let destName = 'Chưa xác định';
+            if (tour.destination) {
+                const destObj = destinations.find(x => String(x.destination_id) === String(tour.destination));
+                if (destObj) {
+                    destName = destObj.destination_name;
+                } else {
+                    destName = String(tour.destination);
+                    if (destName === 'Multi-Destination') destName = 'Nhiều điểm đến';
+                }
+            }
+            if (destName === 'Chưa xác định' || destName === 'Multi-Destination' || destName === 'Nhiều điểm đến') {
+                try {
+                    const d = typeof tour.design_data === 'string' ? JSON.parse(tour.design_data) : (tour.design_data || {});
+                    if (d.days && d.days.length > 0) {
+                        const firstId = d.days[0].end_destination_id || d.days[0].start_destination_id;
+                        const destObj = destinations.find(x => String(x.destination_id) === String(firstId));
+                        if (destObj) destName = destObj.destination_name;
+                    }
+                } catch(e){}
+            }
+            return destName;
+        };
+
         filteredTours.forEach(tour => {
-            const dest = tour.destination || 'Chưa xác định';
+            const dest = getDestName(tour);
             if (!groups[dest]) groups[dest] = [];
             groups[dest].push(tour);
         });
         return groups;
-    }, [filteredTours]);
+    }, [filteredTours, destinations]);
 
     const toggleDestination = (dest) => {
         setExpandedDest(prev => ({ ...prev, [dest]: !prev[dest] }));
