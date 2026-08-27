@@ -171,7 +171,9 @@ exports.getAllRequests = async (req, res) => {
         const [requests] = await sequelize.query(`
             SELECT 
                 r.request_id, r.customer_id, r.destination, r.departure_date, r.return_date, 
-                r.people_count, r.budget, r.requirements, r.status, r.created_at,
+                r.people_count, r.budget,
+                r.requirements,
+                r.status, r.created_at,
                 u.full_name as customer_name, u.phone as customer_phone,
                 q.quote_id, q.base_cost, q.markup_percent, q.quote_price as quoted_price, 
                 q.itinerary as proposed_itinerary, q.staff_note, q.manager_note, q.approval_status
@@ -212,6 +214,7 @@ exports.getCustomerRequests = async (req, res) => {
                 r.return_date,      -- đŸ‘ˆ Kháº¯c phá»¥c lá»—i Invalid Date
                 r.people_count, 
                 r.budget,           -- đŸ‘ˆ Kháº¯c phá»¥c lá»—i NgĂ¢n sĂ¡ch 0 Ä‘
+                r.requirements,
                 r.status, 
                 r.created_at,
                 

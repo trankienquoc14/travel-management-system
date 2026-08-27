@@ -137,7 +137,7 @@ const HomePage = () => {
                         </div>
                         <div className="search-field divider">
                             <label>👥 Hành khách</label>
-                            <input type="text" placeholder="2 người lớn, 0 trẻ em" readOnly />
+                            <input type="text" placeholder="Thêm số lượng hành khách..." />
                         </div>
                         <button 
                             className="btn-search-primary"

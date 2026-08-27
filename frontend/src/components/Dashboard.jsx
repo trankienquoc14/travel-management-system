@@ -37,6 +37,8 @@ import PersonalAttendance from './PersonalAttendance';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
+  const [isPersonalOpen, setIsPersonalOpen] = useState(true);
+  const [isWorkOpen, setIsWorkOpen] = useState(true);
   const [stats, setStats] = useState({ revenue: 0, activeTours: 0, pendingRequests: 0 });
   const navigate = useNavigate();
 
@@ -177,20 +179,55 @@ const Dashboard = () => {
     <div className="dashboard-layout">
       <aside className="sidebar">
         <div className="sidebar-logo"><h2>Travel<span>ERP</span></h2></div>
-        <div className="sidebar-subtitle">MENU CHÍNH</div>
-        <ul className="sidebar-menu">
-          {/* ========================================================= */}
-          {/* 0. CHẤM CÔNG CÁ NHÂN (Dành cho tất cả Nhân viên nội bộ công ty) */}
-          {/* ========================================================= */}
-          {isInternalStaff && (
-            <li
-              className={activeTab === 'personal_attendance' ? 'active' : ''}
-              onClick={() => setActiveTab('personal_attendance')}
-              style={{ backgroundColor: activeTab === 'personal_attendance' ? '#0284c7' : 'transparent', fontWeight: '700' }}
-            >
-              📍 Điểm Danh Cá Nhân (GPS)
-            </li>
+        <div className="sidebar-scrollable" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
+          <div 
+            className="sidebar-subtitle" 
+            onClick={() => setIsPersonalOpen(!isPersonalOpen)}
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'none' }}
+          >
+            CHỨC NĂNG CÁ NHÂN
+            <span>{isPersonalOpen ? '▲' : '▼'}</span>
+          </div>
+          {isPersonalOpen && (
+            <ul className="sidebar-menu" style={{ flex: 'none', overflowY: 'visible', paddingRight: 0 }}>
+              {/* ========================================================= */}
+              {/* 0. CHẤM CÔNG CÁ NHÂN (Dành cho tất cả Nhân viên nội bộ công ty) */}
+              {/* ========================================================= */}
+              {isInternalStaff && (
+                <>
+                  <li
+                    className={activeTab === 'personal_attendance' ? 'active' : ''}
+                    onClick={() => setActiveTab('personal_attendance')}
+                  >
+                    📍 Điểm Danh Cá Nhân (GPS)
+                  </li>
+                  <li onClick={() => alert('Tính năng đang phát triển')}>
+                    📋 Công việc cá nhân
+                  </li>
+                  <li onClick={() => alert('Tính năng đang phát triển')}>
+                    📝 Đơn xin nghỉ phép
+                  </li>
+                </>
+              )}
+              <li
+                className={activeTab === 'profile' ? 'active' : ''}
+                onClick={() => setActiveTab('profile')}
+              >
+                👤 Hồ sơ cá nhân
+              </li>
+            </ul>
           )}
+
+          <div 
+            className="sidebar-subtitle" 
+            onClick={() => setIsWorkOpen(!isWorkOpen)}
+            style={{ marginTop: '24px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'none' }}
+          >
+            CÔNG VIỆC & QUẢN LÝ
+            <span>{isWorkOpen ? '▲' : '▼'}</span>
+          </div>
+          {isWorkOpen && (
+            <ul className="sidebar-menu" style={{ flex: 'none', overflowY: 'visible', paddingRight: 0 }}>
 
           {/* ========================================================= */}
           {/* 1. MENU CHUNG (Admin được xem mọi thứ)                    */}
@@ -355,7 +392,9 @@ const Dashboard = () => {
             </>
           )}
 
-        </ul>
+            </ul>
+          )}
+        </div>
       </aside>
 
       <main className="main-content">

@@ -53,36 +53,19 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                     <li className={activeTab === 'services' ? 'active' : ''} onClick={() => navigate('/services')} style={{ cursor: 'pointer' }}>
                         Dịch vụ Khác
                     </li>
-                    <li className={activeTab === 'my-bookings' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => {
-                        if (!user) {
-                            alert('Vui lòng đăng nhập hoặc đăng ký thành viên để xem đơn hàng!');
-                            navigate('/login');
-                        } else {
-                            navigate('/my-bookings');
-                        }
-                    }}>
-                        Đơn hàng của tôi
-                    </li>
-                    <li className={activeTab === 'my-quotes' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => {
-                        if (!user) {
-                            alert('Vui lòng đăng nhập hoặc đăng ký thành viên để xem báo giá thiết kế!');
-                            navigate('/login');
-                        } else {
-                            navigate('/my-quotes');
-                        }
-                    }}>
-                        Báo giá thiết kế
-                    </li>
-                    <li className={activeTab === 'build-tour' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => {
-                        if (!user) {
-                            alert('Vui lòng đăng nhập hoặc đăng ký thành viên để sử dụng tính năng Tự thiết kế Tour!');
-                            navigate('/login');
-                        } else {
-                            navigate('/build-tour');
-                        }
-                    }}>
-                        ✨ Tự thiết kế Tour
-                    </li>
+                    {user && (
+                        <>
+                            <li className={activeTab === 'my-bookings' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => navigate('/my-bookings')}>
+                                Đơn hàng của tôi
+                            </li>
+                            <li className={activeTab === 'my-quotes' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => navigate('/my-quotes')}>
+                                Báo giá thiết kế
+                            </li>
+                            <li className={activeTab === 'build-tour' ? 'active' : ''} style={{ cursor: 'pointer' }} onClick={() => navigate('/build-tour')}>
+                                ✨ Tự thiết kế Tour
+                            </li>
+                        </>
+                    )}
                 </ul>
 
                 <div className="home-user-actions" ref={dropdownRef} style={{ position: 'relative' }}>
