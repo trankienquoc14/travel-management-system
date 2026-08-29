@@ -640,7 +640,72 @@ const CustomerQuotes = () => {
                                         <div style={{ fontSize: '40px' }}>💰</div>
                                         <div style={{ flex: 1 }}>
                                             <strong style={{ display: 'block', marginBottom: '10px', fontSize: '20px' }}>Báo giá sơ bộ đã được gửi</strong>
-                                            <span style={{ fontSize: '15px', lineHeight: '1.6', display: 'block', marginBottom: '15px' }}>Nhân viên đã xem xét yêu cầu của bạn và ước tính chi phí báo giá sơ bộ: <strong style={{ color: '#0284c7', fontSize: '18px' }}>{formatMoney(selectedQuote.quoted_price || selectedQuote.quote_price)} đ</strong>.</span>
+                                            
+                                            {(() => {
+                                                const rawBreakdown = selectedQuote.price_breakdown;
+                                                const breakdown = typeof rawBreakdown === 'string' ? JSON.parse(rawBreakdown) : rawBreakdown;
+                                                if (breakdown) {
+                                                    const breakdownData = [];
+                                                    if (selectedQuote.requirements) {
+                                                        try {
+                                                            const reqs = typeof selectedQuote.requirements === 'string' ? JSON.parse(selectedQuote.requirements) : selectedQuote.requirements;
+                                                            if (reqs.participantBreakdown) {
+                                                                const pb = reqs.participantBreakdown;
+                                                                if (pb.adults > 0) breakdownData.push({ type: 'Người lớn', count: pb.adults, price: breakdown.adult || 0, total: pb.adults * (breakdown.adult || 0) });
+                                                                if (pb.children > 0) breakdownData.push({ type: 'Trẻ em', count: pb.children, price: breakdown.child || 0, total: pb.children * (breakdown.child || 0) });
+                                                                if (pb.toddlers > 0) breakdownData.push({ type: 'Trẻ nhỏ', count: pb.toddlers, price: breakdown.toddler || 0, total: pb.toddlers * (breakdown.toddler || 0) });
+                                                                if (pb.infants > 0) breakdownData.push({ type: 'Em bé', count: pb.infants, price: breakdown.infant || 0, total: pb.infants * (breakdown.infant || 0) });
+                                                            }
+                                                        } catch(e) {}
+                                                    }
+                                                    if (breakdownData.length > 0) {
+                                                        const totalPassengers = breakdownData.reduce((sum, item) => sum + item.count, 0);
+                                                        
+                                                        return (
+                                                            <div style={{ backgroundColor: '#fff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '16px', marginBottom: '15px', overflow: 'hidden' }}>
+                                                                <div style={{ fontSize: '15px', color: '#0369a1', marginBottom: '12px', fontWeight: '600' }}>Chi tiết ước tính chi phí cho đoàn:</div>
+                                                                <div style={{ overflowX: 'auto' }}>
+                                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                                                        <thead>
+                                                                            <tr style={{ backgroundColor: '#f0f9ff', borderBottom: '2px solid #bae6fd' }}>
+                                                                                <th style={{ padding: '10px', textAlign: 'left', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>Độ tuổi</th>
+                                                                                <th style={{ padding: '10px', textAlign: 'center', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>SL</th>
+                                                                                <th style={{ padding: '10px', textAlign: 'right', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>Đơn giá</th>
+                                                                                <th style={{ padding: '10px', textAlign: 'right', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>Thành tiền</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {breakdownData.map((item, idx) => (
+                                                                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                                                    <td style={{ padding: '10px', fontWeight: '600', color: '#334155' }}>{item.type}</td>
+                                                                                    <td style={{ padding: '10px', textAlign: 'center', color: '#475569' }}>{item.count}</td>
+                                                                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>{formatMoney(item.price)} đ</td>
+                                                                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '600', color: '#0f172a' }}>{formatMoney(item.total)} đ</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                        <tfoot>
+                                                                            <tr style={{ backgroundColor: '#f8fafc', borderTop: '2px solid #bae6fd' }}>
+                                                                                <td style={{ padding: '12px 10px', fontWeight: '800', color: '#0369a1' }}>TỔNG TẠM TÍNH</td>
+                                                                                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#0369a1' }}>{totalPassengers}</td>
+                                                                                <td colSpan="2" style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0284c7', fontSize: '18px' }}>
+                                                                                    {formatMoney(selectedQuote.quoted_price || selectedQuote.quote_price)} đ
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tfoot>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                }
+                                                return (
+                                                    <span style={{ fontSize: '15px', lineHeight: '1.6', display: 'block', marginBottom: '15px' }}>
+                                                        Nhân viên đã xem xét yêu cầu của bạn và ước tính chi phí báo giá sơ bộ: <strong style={{ color: '#0284c7', fontSize: '18px' }}>{formatMoney(selectedQuote.quoted_price || selectedQuote.quote_price)} đ</strong>.
+                                                    </span>
+                                                );
+                                            })()}
+
                                             {selectedQuote.staff_note && (
                                                 <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #0ea5e9', color: '#334155' }}>
                                                     <strong>Nhân viên nhắn nhủ:</strong><br/>

@@ -39,6 +39,8 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [isPersonalOpen, setIsPersonalOpen] = useState(true);
   const [isWorkOpen, setIsWorkOpen] = useState(true);
+  const [isRequestManagerOpen, setIsRequestManagerOpen] = useState(true);
+  const [isTourManagerOpen, setIsTourManagerOpen] = useState(true);
   const [stats, setStats] = useState({ revenue: 0, activeTours: 0, pendingRequests: 0 });
   const navigate = useNavigate();
 
@@ -243,29 +245,62 @@ const Dashboard = () => {
           {/* ========================================================= */}
           {(isOfficeStaff || isAdmin) && (
             <>
-              {/* Thiết kế tour theo yêu cầu */}
-              <li
-                className={activeTab === 'tour_requests' ? 'active' : ''}
-                onClick={() => setActiveTab('tour_requests')}
-              >
-                🛎️ Thiết kế Tour Theo Yêu Cầu
+              <li 
+                onClick={() => setIsRequestManagerOpen(!isRequestManagerOpen)}
+                style={{ cursor: 'pointer', background: 'transparent', padding: '15px 15px 5px 15px', fontSize: '13px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📦 QUẢN LÝ YÊU CẦU</span>
+                <span>{isRequestManagerOpen ? '▲' : '▼'}</span>
               </li>
+              {isRequestManagerOpen && (
+                <>
+                  <li 
+                    className={activeTab === 'tour_requests_pending' ? 'active' : ''}
+                    onClick={() => setActiveTab('tour_requests_pending')} 
+                    style={{ paddingLeft: '35px' }}
+                  >
+                    ⏳ Yêu cầu chờ báo giá
+                  </li>
+                  <li 
+                    className={activeTab === 'tour_requests_revision' ? 'active' : ''}
+                    onClick={() => setActiveTab('tour_requests_revision')} 
+                    style={{ paddingLeft: '35px' }}
+                  >
+                    ✏️ Yêu cầu cần chỉnh sửa
+                  </li>
+                  <li
+                    className={activeTab === 'tour_requests' ? 'active' : ''}
+                    onClick={() => setActiveTab('tour_requests')}
+                    style={{ paddingLeft: '35px' }}
+                  >
+                    🛎️ Thiết kế tour theo yêu cầu
+                  </li>
+                </>
+              )}
 
-              {/* Thiết kế tour cố định */}
-              <li
-                className={activeTab === 'fixed_tours' ? 'active' : ''}
-                onClick={() => setActiveTab('fixed_tours')}
-              >
-                🗺️ Thiết Kế Tour Cố Định
+              <li 
+                onClick={() => setIsTourManagerOpen(!isTourManagerOpen)}
+                style={{ cursor: 'pointer', background: 'transparent', padding: '15px 15px 5px 15px', fontSize: '13px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>🗺️ QUẢN LÝ TOUR</span>
+                <span>{isTourManagerOpen ? '▲' : '▼'}</span>
               </li>
-
-              {/* Tour đã gửi quản lý */}
-              <li
-                className={activeTab === 'approved_tours' ? 'active' : ''}
-                onClick={() => setActiveTab('approved_tours')}
-              >
-                📋 Tour Đã Thiết Kế
-              </li>
+              {isTourManagerOpen && (
+                <>
+                  <li
+                    className={activeTab === 'fixed_tours' ? 'active' : ''}
+                    onClick={() => setActiveTab('fixed_tours')}
+                    style={{ paddingLeft: '35px' }}
+                  >
+                    ➕ Tạo tour mới
+                  </li>
+                  <li
+                    className={activeTab === 'approved_tours' ? 'active' : ''}
+                    onClick={() => setActiveTab('approved_tours')}
+                    style={{ paddingLeft: '35px' }}
+                  >
+                    📋 Tour đã thiết kế
+                  </li>
+                </>
+              )}
 
               {/* Booking */}
               <li
@@ -452,8 +487,14 @@ const Dashboard = () => {
           {activeTab === 'overview' && (isTourManager || isAdmin) && renderOverview()}
 
           {/* Vùng Nhân viên văn phòng */}
-          {activeTab === 'tour_requests' && (isOfficeStaff || isAdmin) && (
+          {['tour_requests', 'tour_requests_pending', 'tour_requests_revision'].includes(activeTab) && (isOfficeStaff || isAdmin) && (
             <StaffTourRequestManager
+              mode={activeTab}
+              defaultFilter={
+                activeTab === 'tour_requests_pending' ? 'Mới' :
+                activeTab === 'tour_requests_revision' ? 'Tất cả cần sửa' : 
+                activeTab === 'tour_requests' ? 'Khách đã chốt giá' : 'Tất cả'
+              }
               onStartDesign={(req) => {
                 setDesigningRequest(req);      // Lưu data khách đang tư vấn dở
                 setActiveTab('tour_designer'); // Chuyển thẳng sang trang Thiết kế

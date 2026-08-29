@@ -1,6 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const formatMoney = (amount) => {
+    if (isNaN(amount) || amount === null || amount === undefined) return '0';
+    return Number(amount).toLocaleString('vi-VN');
+};
+
+const getGrandTotal = (tour) => {
+    if (!['Pending_Approval', 'Approved', 'Rejected', 'Quote_Sent', 'Customer_Revision', 'Customer_Accepted', 'Sent_To_Customer'].includes(tour.approval_status)) {
+        return Number(tour.quoted_price);
+    }
+    
+    try {
+        if (tour.proposed_itinerary) {
+            const parsed = typeof tour.proposed_itinerary === 'string' ? JSON.parse(tour.proposed_itinerary) : tour.proposed_itinerary;
+            if (parsed && parsed.costConfig) {
+                const config = parsed.costConfig;
+                let prefs = {};
+                if (typeof tour.preferences === 'string') {
+                    try { prefs = JSON.parse(tour.preferences); } catch(e){}
+                } else if (typeof tour.preferences === 'object') {
+                    prefs = tour.preferences || {};
+                }
+                const numAdults = prefs.participantBreakdown?.adults || tour.people_count || 1;
+                const numChildren = prefs.participantBreakdown?.children || 0;
+                const numToddlers = prefs.participantBreakdown?.toddlers || 0;
+                const numInfants = prefs.participantBreakdown?.infants || 0;
+                
+                const adultPrice = Number(tour.quoted_price);
+                
+                const c_pct = (config.ageMultiplier?.child?.percent ?? 75) / 100;
+                const c_sur = Number(config.ageMultiplier?.child?.fixed_surcharge || 0);
+                const childPrice = (adultPrice * c_pct) + c_sur;
+                
+                const t_pct = (config.ageMultiplier?.toddler?.percent ?? 50) / 100;
+                const t_sur = Number(config.ageMultiplier?.toddler?.fixed_surcharge || 0);
+                const toddlerPrice = (adultPrice * t_pct) + t_sur;
+                
+                const i_pct = (config.ageMultiplier?.infant?.percent ?? 0) / 100;
+                const i_sur = Number(config.ageMultiplier?.infant?.fixed_surcharge || 0);
+                const infantPrice = (adultPrice * i_pct) + i_sur;
+                
+                return (numAdults * adultPrice) + (numChildren * childPrice) + (numToddlers * toddlerPrice) + (numInfants * infantPrice);
+            }
+        }
+    } catch(e) {
+        console.error(e);
+    }
+    return Number(tour.quoted_price) * (Number(tour.people_count) || 1);
+};
+
 const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
     // 1. Quản lý Tab
     const [activeTab, setActiveTab] = useState('custom'); // 'custom' hoặc 'fixed'
@@ -83,7 +132,7 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
 
     // Hàm gửi báo giá cho khách (Tour thiết kế riêng)
     const handleSendQuote = async (tour) => {
-        if (!window.confirm(`Bạn muốn gửi bản thiết kế và giá chính thức ${Number(tour.quoted_price).toLocaleString('vi-VN')}đ cho khách hàng ${tour.customer_name}?`)) {
+        if (!window.confirm(`Bạn muốn gửi bản thiết kế và giá chính thức ${formatMoney(getGrandTotal(tour))}đ cho khách hàng ${tour.customer_name || 'Khách vãng lai'}?`)) {
             return;
         }
         try {
@@ -197,8 +246,11 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                 <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#1e293b' }}>{tour.destination}</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', color: '#475569', flex: 1 }}>
                                     <div>👤 Khách: <strong>{tour.customer_name || 'Khách vãng lai'}</strong></div>
-                                    <div>⏱️ Lịch: <strong>{new Date(tour.departure_date).toLocaleDateString('vi-VN')}</strong></div>
-                                    <div>💰 Báo giá: <strong style={{ color: '#059669' }}>{formatMoney(tour.quoted_price)}đ</strong></div>
+                                    <div>👥 Số lượng: <strong>{tour.people_count || 1} người</strong></div>
+                                    <div>⏱️ Lịch trình: <strong>{new Date(tour.departure_date).toLocaleDateString('vi-VN')}</strong></div>
+                                    <div>💰 Tổng giá tour: <strong style={{ color: '#059669' }}>
+                                        {formatMoney(getGrandTotal(tour))}đ
+                                    </strong></div>
                                 </div>
                                 
                                 {isManagerRejected && tour.manager_note && (

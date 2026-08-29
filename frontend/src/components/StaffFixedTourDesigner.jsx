@@ -804,9 +804,11 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                     </div>
                 </div>
                 
-                <button onClick={handleSave} disabled={loading} style={{ padding: '12px 28px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)' }}>
-                    {loading ? 'Đang xử lý...' : 'Gửi duyệt'}
-                </button>
+                {(!editTourData || editTourData.approval_status !== 'Approved') && (
+                    <button onClick={handleSave} disabled={loading} style={{ padding: '12px 28px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)' }}>
+                        {loading ? 'Đang xử lý...' : 'Gửi duyệt'}
+                    </button>
+                )}
             </div>
         </div>
     );

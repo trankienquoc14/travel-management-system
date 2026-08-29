@@ -7,8 +7,52 @@ const formatMoneyLocal = (amount) => {
     return Number(amount).toLocaleString('vi-VN');
 };
 
+const FormattedMoneyInput = ({ value, onChange, style }) => {
+    const inputRef = React.useRef(null);
+    const [cursor, setCursor] = React.useState(null);
+    const displayValue = (value !== null && value !== '') ? Number(value).toLocaleString('vi-VN') : '';
+
+    React.useLayoutEffect(() => {
+        if (inputRef.current && cursor !== null) {
+            inputRef.current.setSelectionRange(cursor, cursor);
+        }
+    }, [displayValue, cursor]);
+
+    const handleChange = (e) => {
+        const input = e.target;
+        const currentCursor = input.selectionStart;
+        const rawBeforeCursor = input.value.substring(0, currentCursor).replace(/\D/g, '');
+        
+        const raw = input.value.replace(/\D/g, '');
+        const newVal = raw ? Number(raw) : '';
+        const newFormatted = newVal ? Number(newVal).toLocaleString('vi-VN') : '';
+        
+        let newCursor = 0;
+        let digitsPassed = 0;
+        for (let i = 0; i < newFormatted.length; i++) {
+            if (digitsPassed === rawBeforeCursor.length) break;
+            if (newFormatted[i] >= '0' && newFormatted[i] <= '9') digitsPassed++;
+            newCursor++;
+        }
+        
+        setCursor(newCursor);
+        onChange(newVal);
+    };
+
+    return (
+        <input
+            ref={inputRef}
+            type="text"
+            value={displayValue}
+            onChange={handleChange}
+            style={style}
+        />
+    );
+};
+
 const StaffTourDesigner = ({ requestData, onBack }) => {
     const [loading, setLoading] = useState(false);
+    const [manualSellingPrice, setManualSellingPrice] = useState(null);
 
     // Multi-destination Routing State
     const [dayImages, setDayImages] = useState({});
@@ -33,7 +77,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         }
     });
 
-    const [staffNote, setStaffNote] = useState(requestData?.staff_note || '');
+    const [staffNote, setStaffNote] = useState('');
 
     // Resources
     const [destinations, setDestinations] = useState([]);
@@ -76,7 +120,9 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                     if (parsed.dayImages) {
                         setDayImagePreviews(parsed.dayImages);
                     }
-                    if (parsed.staffNote) setStaffNote(parsed.staffNote);
+                    if (parsed.staffNote && parsed.staffNote !== requestData.staff_note) {
+                        setStaffNote(parsed.staffNote);
+                    }
                     if (parsed.tourName) setTourName(parsed.tourName);
                     if (parsed.tourDescription) setTourDescription(parsed.tourDescription);
                     return; // if loaded, stop here
@@ -305,7 +351,8 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         + Number(costConfig.variable.insurance);
         
     const netCost = fixedPerPax + totalVariable;
-    const sellingPrice = netCost * (1 + Number(costConfig.margin) / 100);
+    const calculatedSellingPrice = netCost * (1 + Number(costConfig.margin) / 100);
+    const sellingPrice = manualSellingPrice !== null && manualSellingPrice !== '' ? manualSellingPrice : (manualSellingPrice === '' ? '' : calculatedSellingPrice);
 
     const handleSubmitToManager = async () => {
         const designPayload = JSON.stringify({
@@ -559,6 +606,57 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 </div>
             </div>
 
+            {/* THIẾT LẬP LỢI NHUẬN (MARKUP) */}
+            <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '20px' }}>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>📈</span> Thiết Lập Lợi Nhuận
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ flex: 1, background: '#ecfdf5', padding: '10px 15px', borderRadius: '8px', border: '1px dashed #34d399' }}>
+                        <div style={{ fontSize: '12px', color: '#047857', marginBottom: '4px', fontWeight: '600', textTransform: 'uppercase' }}>Giá Vốn / Khách</div>
+                        <div style={{ fontSize: '20px', color: '#065f46', fontWeight: 'bold' }}>{formatMoneyLocal(netCost)} đ</div>
+                    </div>
+                    <div style={{ fontSize: '24px', color: '#cbd5e1' }}>+</div>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Biên độ lợi nhuận Markup (%)</label>
+                        <input 
+                            type="number" 
+                            min="0"
+                            value={costConfig.margin} 
+                            onChange={e => {
+                                setCostConfig({ ...costConfig, margin: e.target.value });
+                                setManualSellingPrice(null);
+                            }} 
+                            style={{ width: '100%', padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '16px', fontWeight: 'bold', outline: 'none' }} 
+                        />
+                    </div>
+                    <div style={{ fontSize: '24px', color: '#cbd5e1' }}>=</div>
+                    <div style={{ flex: 1, background: '#fffbeb', padding: '10px 15px', borderRadius: '8px', border: '1px dashed #fcd34d' }}>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#d97706', marginBottom: '4px', fontWeight: '600', textTransform: 'uppercase' }}>Giá Bán Dự Kiến (Người lớn)</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FormattedMoneyInput 
+                                value={sellingPrice} 
+                                onChange={(val) => {
+                                    if (val === '' || val === null || val === undefined) {
+                                        setManualSellingPrice('');
+                                        setCostConfig({ ...costConfig, margin: '' });
+                                        return;
+                                    }
+                                    const numericVal = Number(val);
+                                    setManualSellingPrice(numericVal);
+                                    if (netCost > 0) {
+                                        const newMarkup = (((numericVal / netCost) - 1) * 100).toFixed(1);
+                                        setCostConfig({ ...costConfig, margin: newMarkup });
+                                    }
+                                }}
+                                style={{ width: '100%', minWidth: '120px', background: 'transparent', border: 'none', borderBottom: '1px solid #d97706', color: '#b45309', fontSize: '20px', fontWeight: 'bold', outline: 'none', padding: '0 4px' }}
+                            />
+                            <span style={{ fontSize: '20px', color: '#b45309', fontWeight: 'bold' }}>đ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
                     <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                             <h3 style={{ margin: 0, fontSize: '18px', color: '#0ea5e9' }}>Chính sách giá trẻ em</h3>
@@ -654,6 +752,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                         </div>
                     </div>
 
+
                     {/* TỔNG KẾT CHI PHÍ ĐOÀN */}
                     <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginTop: '20px' }}>
                         <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -721,11 +820,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                             </tr>}
                                         </tbody>
                                     </table>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', padding: '15px 20px', borderRadius: '8px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 'bold', textTransform: 'uppercase' }}>Giá vốn / Khách</span>
-                                            <strong style={{ fontSize: '20px', color: '#047857' }}>{formatMoneyLocal(netCost)} đ</strong>
-                                        </div>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', background: '#ecfdf5', padding: '15px 20px', borderRadius: '8px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                             <span style={{ fontSize: '16px', color: '#065f46', fontWeight: 'bold', textTransform: 'uppercase' }}>TỔNG DOANH THU ĐOÀN</span>
                                             <strong style={{ fontSize: '24px', color: '#047857' }}>{formatMoneyLocal(grandTotal)} đ</strong>
@@ -738,12 +833,14 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 </div>
 
             <div style={{ background: '#ffffff', borderTop: '1px solid #e2e8f0', padding: '15px 30px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', zIndex: 10 }}>
-                <button 
-                    onClick={handleSubmitToManager}
-                    style={{ padding: '14px 30px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}
-                >
-                    ✅ Chốt Thiết Kế & Gửi Quản Lý
-                </button>
+                {(!requestData || !['Manager_Approved', 'Sent_To_Customer', 'Customer_Accepted', 'Completed', 'Canceled'].includes(requestData.status)) && (
+                    <button 
+                        onClick={handleSubmitToManager}
+                        style={{ padding: '14px 30px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}
+                    >
+                        ✅ Chốt Thiết Kế & Gửi Quản Lý
+                    </button>
+                )}
             </div>
         </div>
     );

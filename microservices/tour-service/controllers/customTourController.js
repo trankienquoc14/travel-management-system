@@ -176,7 +176,7 @@ exports.getAllRequests = async (req, res) => {
                 r.status, r.created_at,
                 u.full_name as customer_name, u.phone as customer_phone,
                 q.quote_id, q.base_cost, q.markup_percent, q.quote_price as quoted_price, 
-                q.itinerary as proposed_itinerary, q.staff_note, q.manager_note, q.approval_status
+                q.itinerary as proposed_itinerary, q.staff_note, q.manager_note, q.customer_note, q.approval_status
             FROM custom_tour_requests r
             LEFT JOIN users u ON r.customer_id = u.user_id
             LEFT JOIN (
@@ -218,13 +218,14 @@ exports.getCustomerRequests = async (req, res) => {
                 r.status, 
                 r.created_at,
                 
-                -- 2. Láº¤Y THĂ”NG TIN Báº¢N BĂO GIĂ Má»I NHáº¤T (Náº¾U CĂ“)
+                -- 2. LẤY THÔNG TIN BẢN BÁO GIÁ MỚI NHẤT (NẾU CÓ)
                 q.quote_id,
                 q.quote_price AS quoted_price, 
                 q.itinerary AS proposed_itinerary, 
                 q.staff_note, 
                 q.manager_note, 
-                q.approval_status
+                q.approval_status,
+                q.price_breakdown
             FROM custom_tour_requests r
             LEFT JOIN (
                 SELECT q1.* FROM custom_tour_quotes q1
@@ -322,8 +323,8 @@ exports.updateCustomerAction = async (req, res) => {
             const targetReqId = latestQuote[0].request_id;
 
             await sequelize.query(`
-                UPDATE custom_tour_quotes SET approval_status = ? WHERE quote_id = ?
-            `, { replacements: [finalStatus, quoteId], transaction });
+                UPDATE custom_tour_quotes SET approval_status = ?, customer_note = ? WHERE quote_id = ?
+            `, { replacements: [finalStatus, customer_note, quoteId], transaction });
 
             await sequelize.query(`
                 UPDATE custom_tour_requests SET status = ? WHERE request_id = ?
@@ -473,14 +474,29 @@ exports.bookCustomTourQuote = async (req, res) => {
 exports.sendInitialQuote = async (req, res) => {
     try {
         const { id } = req.params;
-        const { quote_price, note } = req.body;
+        const { quote_price, note, price_breakdown } = req.body;
         const staffId = req.user?.id || req.user?.userId || req.user?.user_id;
+
+        // Retrieve previous notes
+        const [oldQuotes] = await sequelize.query(`
+            SELECT customer_note, manager_note, itinerary, base_cost, markup_percent 
+            FROM custom_tour_quotes 
+            WHERE request_id = ? 
+            ORDER BY quote_id DESC LIMIT 1
+        `, { replacements: [id] });
+        
+        let oldQuote = oldQuotes.length > 0 ? oldQuotes[0] : {};
 
         // Create a new quote entry for initial quote
         await sequelize.query(`
-            INSERT INTO custom_tour_quotes (request_id, staff_id, quote_price, staff_note, approval_status)
-            VALUES (?, ?, ?, ?, 'Initial_Quoted')
-        `, { replacements: [id, staffId, quote_price, note] });
+            INSERT INTO custom_tour_quotes (request_id, staff_id, quote_price, staff_note, customer_note, manager_note, itinerary, base_cost, markup_percent, approval_status, price_breakdown)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Initial_Quoted', ?)
+        `, { replacements: [
+            id, staffId, quote_price, note, 
+            oldQuote.customer_note || null, oldQuote.manager_note || null, oldQuote.itinerary || null,
+            oldQuote.base_cost || 0, oldQuote.markup_percent || 20,
+            price_breakdown || null
+        ] });
 
         // Update request status
         await sequelize.query(`
@@ -538,11 +554,26 @@ exports.submitToManager = async (req, res) => {
         Object.assign(parsedItinerary.dayImages, dayImages);
         itinerary = JSON.stringify(parsedItinerary);
 
+        // Retrieve previous notes
+        const [oldQuotes] = await sequelize.query(`
+            SELECT staff_note, customer_note, manager_note, price_breakdown, markup_percent 
+            FROM custom_tour_quotes 
+            WHERE request_id = ? 
+            ORDER BY quote_id DESC LIMIT 1
+        `, { replacements: [id] });
+        
+        let oldQuote = oldQuotes.length > 0 ? oldQuotes[0] : {};
+
         // Insert new detailed quote
         await sequelize.query(`
-            INSERT INTO custom_tour_quotes (request_id, staff_id, base_cost, quote_price, itinerary, staff_note, approval_status)
-            VALUES (?, ?, ?, ?, ?, ?, 'Pending_Approval')
-        `, { replacements: [id, staffId, base_cost, quote_price, typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary), note] });
+            INSERT INTO custom_tour_quotes (request_id, staff_id, base_cost, quote_price, itinerary, staff_note, customer_note, manager_note, price_breakdown, markup_percent, approval_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending_Approval')
+        `, { replacements: [
+            id, staffId, base_cost, quote_price, 
+            typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary), 
+            oldQuote.staff_note || null, oldQuote.customer_note || null, oldQuote.manager_note || null,
+            oldQuote.price_breakdown || null, oldQuote.markup_percent || 20
+        ] });
 
         await sequelize.query(`
             UPDATE custom_tour_requests SET status = 'Pending_Manager_Approval' WHERE request_id = ?

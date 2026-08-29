@@ -2,13 +2,45 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const FormattedMoneyInput = ({ value, onChange, placeholder, style, disabled }) => {
+    const inputRef = React.useRef(null);
+    const [cursor, setCursor] = React.useState(null);
     const displayValue = (value !== null && value !== '') ? Number(value).toLocaleString('vi-VN') : '';
+
+    React.useLayoutEffect(() => {
+        if (inputRef.current && cursor !== null) {
+            inputRef.current.setSelectionRange(cursor, cursor);
+        }
+    }, [displayValue, cursor]);
+
     const handleChange = (e) => {
-        const raw = e.target.value.replace(/\D/g, '');
-        onChange(raw ? Number(raw) : '');
+        const input = e.target;
+        const currentCursor = input.selectionStart;
+        
+        // Count dots before cursor in the typed string
+        const dotsBefore = (input.value.substring(0, currentCursor).match(/\./g) || []).length;
+        
+        const raw = input.value.replace(/\D/g, '');
+        const newVal = raw ? Number(raw) : '';
+        const newFormatted = newVal ? Number(newVal).toLocaleString('vi-VN') : '';
+        
+        // Count dots before cursor in the new formatted string (roughly)
+        // We know how many digits are before the cursor
+        const rawBeforeCursor = input.value.substring(0, currentCursor).replace(/\D/g, '');
+        let newCursor = 0;
+        let digitsPassed = 0;
+        for (let i = 0; i < newFormatted.length; i++) {
+            if (digitsPassed === rawBeforeCursor.length) break;
+            if (newFormatted[i] >= '0' && newFormatted[i] <= '9') digitsPassed++;
+            newCursor++;
+        }
+        
+        setCursor(newCursor);
+        onChange(newVal);
     };
+
     return (
         <input
+            ref={inputRef}
             type="text"
             value={displayValue}
             onChange={handleChange}
@@ -19,16 +51,28 @@ const FormattedMoneyInput = ({ value, onChange, placeholder, style, disabled }) 
     );
 };
 
-const StaffTourRequestManager = ({ onStartDesign }) => {
+const StaffTourRequestManager = ({ onStartDesign, defaultFilter = 'Tất cả', mode = 'tour_requests' }) => {
     const [requests, setRequests] = useState([]);
     const [selectedReq, setSelectedReq] = useState(null);
     const [tempMarkup, setTempMarkup] = useState(20);
     const [customPrice, setCustomPrice] = useState(null);
+    const [manualGrandTotal, setManualGrandTotal] = useState(null);
     const [consultationNote, setConsultationNote] = useState('');
     const [mealPrices, setMealPrices] = useState({ breakfast: 200000, lunch: 200000, dinner: 200000 });
     const [guidePricePerDay, setGuidePricePerDay] = useState(500000);
     const [adjHotelCost, setAdjHotelCost] = useState(null);
     const [adjTransportCost, setAdjTransportCost] = useState(null);
+    const [policyType, setPolicyType] = useState('Custom');
+    const [childPolicy, setChildPolicy] = useState({
+        child: { percent: 75, surcharge: 0 },
+        toddler: { percent: 50, surcharge: 0 },
+        infant: { percent: 0, surcharge: 0 }
+    });
+    const [filterStatus, setFilterStatus] = useState(defaultFilter);
+
+    useEffect(() => {
+        setFilterStatus(defaultFilter);
+    }, [defaultFilter, mode]);
 
     useEffect(() => {
         fetchRequests();
@@ -44,9 +88,38 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
         } catch (error) { console.error('Lỗi tải dữ liệu', error); }
     };
 
+    const startDesignDirectly = async (req) => {
+        try {
+            const token = localStorage.getItem('token');
+            // Gửi API update trạng thái sang Designing
+            await axios.put(`http://localhost:5000/api/custom-tours/requests/${req.request_id}/start-design`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // Chuyển sang màn hình thiết kế
+            if (onStartDesign) {
+                onStartDesign({
+                    ...req,
+                    markup_percent: req.markup_percent || 20,
+                    staff_note: req.staff_note || '',
+                    quote_price: req.quoted_price || 0,
+                    base_cost: req.base_cost || 0
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Lỗi khi vào phòng thiết kế!');
+        }
+    };
+
     const handleSelect = (req) => {
+        if (mode === 'tour_requests') {
+            startDesignDirectly(req);
+            return;
+        }
+
         setSelectedReq(req);
         setTempMarkup(req.markup_percent || 20);
+        setManualGrandTotal(null);
         setCustomPrice(null);
         setConsultationNote(req.staff_note || '');
         setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
@@ -88,14 +161,80 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
 
     const handleMarkupChange = (e) => {
         setTempMarkup(e.target.value);
+        setManualGrandTotal(null);
         setCustomPrice(null);
     };
 
     const handlePriceChange = (val) => {
         const numericVal = Number(val);
         setCustomPrice(numericVal);
+        setManualGrandTotal(null);
         if (totalCost > 0) {
             setTempMarkup((((numericVal / totalCost) - 1) * 100).toFixed(1));
+        }
+    };
+
+    const childPrice = Math.round(suggestedPrice * (childPolicy.child.percent / 100) + Number(childPolicy.child.surcharge));
+    const toddlerPrice = Math.round(suggestedPrice * (childPolicy.toddler.percent / 100) + Number(childPolicy.toddler.surcharge));
+    const infantPrice = Math.round(suggestedPrice * (childPolicy.infant.percent / 100) + Number(childPolicy.infant.surcharge));
+
+    const numAdults = selectedReq?.preferences?.participantBreakdown?.adults || selectedReq?.people_count || 1;
+    const numChildren = selectedReq?.preferences?.participantBreakdown?.children || 0;
+    const numToddlers = selectedReq?.preferences?.participantBreakdown?.toddlers || 0;
+    const numInfants = selectedReq?.preferences?.participantBreakdown?.infants || 0;
+
+    const calculatedGrandTotal = (numAdults * suggestedPrice) + (numChildren * childPrice) + (numToddlers * toddlerPrice) + (numInfants * infantPrice);
+    const grandTotalPrice = manualGrandTotal !== null ? manualGrandTotal : calculatedGrandTotal;
+
+    const handleGrandTotalChange = (val) => {
+        const numericVal = Number(val);
+        setManualGrandTotal(numericVal);
+        
+        const C_pct = childPolicy.child.percent / 100;
+        const T_pct = childPolicy.toddler.percent / 100;
+        const I_pct = childPolicy.infant.percent / 100;
+        
+        const C_sur = Number(childPolicy.child.surcharge);
+        const T_sur = Number(childPolicy.toddler.surcharge);
+        const I_sur = Number(childPolicy.infant.surcharge);
+        
+        const totalMultiplier = numAdults + (numChildren * C_pct) + (numToddlers * T_pct) + (numInfants * I_pct);
+        const totalSurcharge = (numChildren * C_sur) + (numToddlers * T_sur) + (numInfants * I_sur);
+        
+        if (totalMultiplier > 0) {
+            const newSuggestedPrice = Math.round((numericVal - totalSurcharge) / totalMultiplier);
+            setCustomPrice(newSuggestedPrice);
+            if (totalCost > 0) {
+                setTempMarkup((((newSuggestedPrice / totalCost) - 1) * 100).toFixed(1));
+            }
+        }
+    };
+
+    const updatePolicy = (type, field, value) => {
+        setPolicyType('Custom');
+        setManualGrandTotal(null);
+        setChildPolicy(prev => ({
+            ...prev,
+            [type]: { ...prev[type], [field]: Number(value) }
+        }));
+    };
+
+    const handlePolicyTemplateChange = (e) => {
+        setManualGrandTotal(null);
+        const val = e.target.value;
+        setPolicyType(val);
+        if (val === 'Template1') {
+            setChildPolicy({
+                child: { percent: 50, surcharge: 0 },
+                toddler: { percent: 0, surcharge: 0 },
+                infant: { percent: 0, surcharge: 0 }
+            });
+        } else if (val === 'Template2') {
+            setChildPolicy({
+                child: { percent: 85, surcharge: 0 },
+                toddler: { percent: 50, surcharge: 0 },
+                infant: { percent: 0, surcharge: 0 }
+            });
         }
     };
 
@@ -104,14 +243,22 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
         if (!selectedReq) return;
         try {
             const token = localStorage.getItem('token');
+            const breakdown = {
+                adult: suggestedPrice,
+                child: childPrice,
+                toddler: toddlerPrice,
+                infant: infantPrice
+            };
+            
             await axios.post(`http://localhost:5000/api/custom-tours/requests/${selectedReq.request_id}/initial-quote`, {
-                quote_price: suggestedPrice,
-                note: consultationNote
+                quote_price: grandTotalPrice,
+                note: consultationNote,
+                price_breakdown: JSON.stringify(breakdown)
             }, { headers: { Authorization: `Bearer ${token}` } });
 
             alert('✅ Đã gửi báo giá sơ bộ cho khách hàng!');
             fetchRequests();
-            setSelectedReq({ ...selectedReq, status: 'Initial_Quoted' });
+            setSelectedReq(null);
         } catch (error) {
             console.error(error);
             alert('Lỗi gửi báo giá sơ bộ!');
@@ -175,7 +322,23 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
         }
     };
 
-    const [filterStatus, setFilterStatus] = useState('Tất cả');
+
+    const filteredRequests = requests.filter(req => {
+        if (filterStatus === 'Tất cả') return true;
+        if (filterStatus === 'Mới') return req.status === 'Pending';
+        if (filterStatus === 'Đã báo giá') return req.status === 'Initial_Quoted';
+        if (filterStatus === 'Đang thiết kế') return ['Initial_Accepted', 'Designing'].includes(req.status);
+        if (filterStatus === 'Khách đã chốt giá') return req.status === 'Initial_Accepted';
+        if (filterStatus === 'Cần chỉnh sửa') return req.status === 'Customer_Revision' || req.status === 'Manager_Rejected';
+        if (filterStatus === 'Tất cả cần sửa') return ['Customer_Revision', 'Manager_Rejected'].includes(req.status);
+        if (filterStatus === 'Sửa từ khách') return req.status === 'Customer_Revision';
+        if (filterStatus === 'Sửa từ quản lý') return req.status === 'Manager_Rejected';
+        if (filterStatus === 'Đang xử lý') return ['Initial_Quoted', 'Initial_Accepted', 'Designing'].includes(req.status);
+        if (filterStatus === 'Chờ duyệt') return ['Pending_Manager_Approval', 'Manager_Approved', 'Manager_Rejected', 'Sent_To_Customer'].includes(req.status);
+        if (filterStatus === 'Hoàn tất') return ['Customer_Accepted', 'Completed'].includes(req.status);
+        if (filterStatus === 'Đã hủy') return req.status === 'Canceled';
+        return true;
+    });
 
     return (
         <div className="request-manager-container">
@@ -185,7 +348,7 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <div>
                             <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>Quản lý Yêu cầu Thiết kế</h2>
-                            <p style={{ color: '#64748b', margin: 0 }}>Có tổng cộng {requests.length} yêu cầu từ khách hàng</p>
+                            <p style={{ color: '#64748b', margin: 0 }}>Đang hiển thị {filteredRequests.length} yêu cầu từ khách hàng</p>
                         </div>
                         <div style={{ width: '250px' }}>
                             <select 
@@ -193,33 +356,63 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                                 onChange={(e) => setFilterStatus(e.target.value)}
                                 style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', background: '#f8fafc', cursor: 'pointer' }}
                             >
-                                <option value="Tất cả">Tất cả yêu cầu</option>
-                                <option value="Mới">Mới yêu cầu (Pending)</option>
-                                <option value="Đang xử lý">Đang xử lý / Thiết kế</option>
-                                <option value="Chờ duyệt">Chờ duyệt / Gửi khách</option>
-                                <option value="Hoàn tất">Thành công (Chốt / Hoàn tất)</option>
-                                <option value="Đã hủy">Đã hủy</option>
+                                {mode === 'tour_requests_pending' ? (
+                                    <>
+                                        <option value="Mới">Mới yêu cầu</option>
+                                        <option value="Đã báo giá">Đã báo giá sơ bộ</option>
+                                        <option value="Đang thiết kế">Đang được thiết kế</option>
+                                    </>
+                                ) : mode === 'tour_requests_revision' ? (
+                                    <>
+                                        <option value="Tất cả cần sửa">Tất cả yêu cầu cần sửa</option>
+                                        <option value="Sửa từ khách">Khách yêu cầu chỉnh sửa</option>
+                                        <option value="Sửa từ quản lý">Quản lý yêu cầu chỉnh sửa</option>
+                                    </>
+                                ) : mode === 'tour_requests' ? (
+                                    <>
+                                        <option value="Khách đã chốt giá">Đã chốt giá sơ bộ (Chờ thiết kế)</option>
+                                        <option value="Đang thiết kế">Đang được thiết kế</option>
+                                        <option value="Chờ duyệt">Đã thiết kế (Chờ duyệt/Gửi)</option>
+                                        <option value="Tất cả">Tất cả trạng thái</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="Tất cả">Tất cả yêu cầu</option>
+                                        <option value="Mới">Mới yêu cầu</option>
+                                        <option value="Đã báo giá">Đã báo giá sơ bộ</option>
+                                        <option value="Đang thiết kế">Đang được thiết kế</option>
+                                        <option value="Đang xử lý">Đang xử lý (Gộp)</option>
+                                        <option value="Cần chỉnh sửa">Cần chỉnh sửa</option>
+                                        <option value="Chờ duyệt">Chờ duyệt (Gộp)</option>
+                                        <option value="Hoàn tất">Đã chốt/Hoàn tất</option>
+                                        <option value="Đã hủy">Đã hủy</option>
+                                    </>
+                                )}
                             </select>
                         </div>
                     </div>
 
-                    <div className="request-inbox-grid">
-                        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr 2fr 2fr 1fr', padding: '0 20px 12px 20px', color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #f1f5f9' }}>
-                            <div>Khách hàng</div>
-                            <div>Điểm đến</div>
-                            <div>Thời gian</div>
-                            <div>Ngân sách/Người</div>
-                            <div style={{ textAlign: 'right' }}>Trạng thái</div>
+                    {filteredRequests.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
+                            <h3 style={{ margin: '0 0 8px 0', color: '#334155', fontSize: '16px' }}>
+                                {filterStatus === 'Mới' ? 'Không có yêu cầu mới nào chờ xử lý.' :
+                                 ['Cần chỉnh sửa', 'Tất cả cần sửa', 'Sửa từ khách', 'Sửa từ quản lý'].includes(filterStatus) ? 'Không có yêu cầu nào cần chỉnh sửa.' :
+                                 filterStatus === 'Khách đã chốt giá' ? 'Không có yêu cầu nào khách đã chốt giá để thiết kế.' :
+                                 'Không có yêu cầu nào phù hợp với bộ lọc.'}
+                            </h3>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Các yêu cầu mới của khách hàng sẽ xuất hiện tại đây.</p>
                         </div>
-                        {requests.filter(req => {
-                            if (filterStatus === 'Tất cả') return true;
-                            if (filterStatus === 'Mới') return req.status === 'Pending';
-                            if (filterStatus === 'Đang xử lý') return ['Initial_Quoted', 'Initial_Accepted', 'Designing', 'Customer_Revision'].includes(req.status);
-                            if (filterStatus === 'Chờ duyệt') return ['Pending_Manager_Approval', 'Manager_Approved', 'Manager_Rejected', 'Sent_To_Customer'].includes(req.status);
-                            if (filterStatus === 'Hoàn tất') return ['Customer_Accepted', 'Completed'].includes(req.status);
-                            if (filterStatus === 'Đã hủy') return req.status === 'Canceled';
-                            return true;
-                        }).map(req => {
+                    ) : (
+                        <div className="request-inbox-grid">
+                            <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr 2fr 2fr 1fr', padding: '0 20px 12px 20px', color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #f1f5f9' }}>
+                                <div>Khách hàng</div>
+                                <div>Điểm đến</div>
+                                <div>Thời gian</div>
+                                <div>Số thành viên</div>
+                                <div style={{ textAlign: 'right' }}>Trạng thái</div>
+                            </div>
+                            {filteredRequests.map(req => {
                             const statusUI = getStatusUI(req);
                             return (
                                 <div key={req.request_id} className="request-inbox-row" onClick={() => handleSelect(req)}>
@@ -236,16 +429,47 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                                     <div style={{ fontSize: '14px', color: '#475569' }}>
                                         📅 {new Date(req.departure_date).toLocaleDateString('vi-VN')}
                                     </div>
-                                    <div style={{ color: '#059669', fontWeight: '700' }}>{formatMoney(req.budget)} đ</div>
-                                    <div style={{ textAlign: 'right' }}>
+                                    <div style={{ color: '#0f172a', fontWeight: '700' }}>👥 {req.people_count} người</div>
+                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                                         <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', backgroundColor: statusUI.bg, color: statusUI.color, whiteSpace: 'nowrap' }}>
                                             {statusUI.text}
                                         </span>
+                                        {mode === 'tour_requests_revision' && (
+                                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); handleSelect(req); }}
+                                                    style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                                                >
+                                                    👁️ Xem
+                                                </button>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); startDesignDirectly(req); }}
+                                                    style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', backgroundColor: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)' }}
+                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                                                >
+                                                    ✏️ Sửa
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
+                                    
+                                    {/* Hiển thị lý do chỉnh sửa trực tiếp ngoài danh sách */}
+                                    {mode === 'tour_requests_revision' && (req.status === 'Manager_Rejected' || req.status === 'Customer_Revision') && (
+                                        <div style={{ gridColumn: '1 / -1', marginTop: '16px', padding: '12px 16px', backgroundColor: '#fee2e2', borderLeft: '4px solid #ef4444', borderRadius: '0 8px 8px 0', fontSize: '14px', color: '#991b1b', lineHeight: '1.5' }}>
+                                            <strong style={{ color: '#b91c1c' }}>⚠️ Lý do yêu cầu chỉnh sửa: </strong> 
+                                            <span style={{ whiteSpace: 'pre-wrap' }}>
+                                                {req.status === 'Manager_Rejected' ? (req.manager_note || 'Không có ghi chú') : (req.customer_note || 'Không có ghi chú')}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
-                    </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 /* DETAIL VIEW: CHI TIẾT YÊU CẦU TRÀN VIỀN */
@@ -289,6 +513,20 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                             </div>
                         </div>
                     </div>
+
+                    {(selectedReq.status === 'Manager_Rejected' || selectedReq.status === 'Customer_Revision') && (
+                        <div style={{ marginBottom: '20px', padding: '16px', borderRadius: '12px', backgroundColor: '#fee2e2', border: '1px solid #fecaca', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                            <div style={{ fontSize: '24px' }}>⚠️</div>
+                            <div>
+                                <h4 style={{ margin: '0 0 8px 0', color: '#b91c1c', fontSize: '15px' }}>
+                                    {selectedReq.status === 'Manager_Rejected' ? 'Lý do Quản lý từ chối / Yêu cầu chỉnh sửa:' : 'Lý do Khách hàng yêu cầu chỉnh sửa:'}
+                                </h4>
+                                <p style={{ margin: 0, color: '#991b1b', fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                                    {selectedReq.status === 'Manager_Rejected' ? (selectedReq.manager_note || 'Không có ghi chú') : (selectedReq.customer_note || 'Không có ghi chú')}
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bento-grid">
                         <div className="bento-box">
@@ -480,6 +718,119 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                         </div>
                     </div>
 
+                    {/* CHÍNH SÁCH GIÁ TRẺ EM */}
+                    <div style={{ marginTop: '30px', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1d4ed8' }}>Chính sách giá trẻ em</h3>
+                            <select 
+                                value={policyType} 
+                                onChange={handlePolicyTemplateChange}
+                                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px' }}
+                            >
+                                <option value="Custom">Tùy chỉnh</option>
+                                <option value="Template1">Mẫu 1 (Đường bộ): 50% - 0% - 0%</option>
+                                <option value="Template2">Mẫu 2 (Hàng không): 85% - 50% - (0% + Phụ thu)</option>
+                            </select>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                            {/* Trẻ em */}
+                            <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>Trẻ em (5 - 11 tuổi)</div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Tỷ lệ % giá người lớn</div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <input type="text" value={childPolicy.child.percent} onChange={(e) => {
+                                            let val = e.target.value.replace(/\D/g, '');
+                                            updatePolicy('child', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                        }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
+                                        <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Phụ thu cố định</div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <FormattedMoneyInput value={childPolicy.child.surcharge} onChange={(val) => updatePolicy('child', 'surcharge', val)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
+                                        <span style={{ marginLeft: '8px', color: '#64748b' }}>đ</span>
+                                    </div>
+                                </div>
+                                <div style={{ paddingTop: '12px', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: '#64748b' }}>Giá bán:</span>
+                                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1d4ed8' }}>{formatMoney(childPrice)} đ</span>
+                                </div>
+                            </div>
+
+                            {/* Trẻ nhỏ */}
+                            <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>Trẻ nhỏ (2 - 4 tuổi)</div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Tỷ lệ % giá người lớn</div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <input type="text" value={childPolicy.toddler.percent} onChange={(e) => {
+                                            let val = e.target.value.replace(/\D/g, '');
+                                            updatePolicy('toddler', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                        }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
+                                        <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Phụ thu cố định</div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <FormattedMoneyInput value={childPolicy.toddler.surcharge} onChange={(val) => updatePolicy('toddler', 'surcharge', val)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
+                                        <span style={{ marginLeft: '8px', color: '#64748b' }}>đ</span>
+                                    </div>
+                                </div>
+                                <div style={{ paddingTop: '12px', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: '#64748b' }}>Giá bán:</span>
+                                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1d4ed8' }}>{formatMoney(toddlerPrice)} đ</span>
+                                </div>
+                            </div>
+
+                            {/* Em bé */}
+                            <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>Em bé (&lt; 2 tuổi)</div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Tỷ lệ % giá người lớn</div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <input type="text" value={childPolicy.infant.percent} onChange={(e) => {
+                                            let val = e.target.value.replace(/\D/g, '');
+                                            updatePolicy('infant', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                        }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
+                                        <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Phụ thu cố định</div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <FormattedMoneyInput value={childPolicy.infant.surcharge} onChange={(val) => updatePolicy('infant', 'surcharge', val)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
+                                        <span style={{ marginLeft: '8px', color: '#64748b' }}>đ</span>
+                                    </div>
+                                </div>
+                                <div style={{ paddingTop: '12px', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: '#64748b' }}>Giá bán:</span>
+                                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1d4ed8' }}>{formatMoney(infantPrice)} đ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TỔNG KẾT CHI PHÍ */}
+                        <div style={{ marginTop: '20px', padding: '16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #93c5fd', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1d4ed8' }}>Tổng kết chi phí cho đoàn:</div>
+                                <div style={{ fontSize: '13px', color: '#3b82f6', marginTop: '4px' }}>
+                                    {numAdults} Lớn, {numChildren} Trẻ em, {numToddlers} Trẻ nhỏ, {numInfants} Em bé
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <FormattedMoneyInput 
+                                    value={grandTotalPrice} 
+                                    onChange={handleGrandTotalChange}
+                                    style={{ fontSize: '24px', fontWeight: '800', color: '#1d4ed8', border: '1px solid #bfdbfe', background: '#fff', textAlign: 'right', width: '200px', outline: 'none', borderRadius: '6px', padding: '4px 8px' }}
+                                />
+                                <span>đ</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div style={{ marginTop: '30px' }}>
                         <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Ghi chú tư vấn (Chỉ nội bộ)</div>
                         <textarea
@@ -494,14 +845,14 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                 {/* FIXED ACTION BAR DƯỚI CÙNG */}
                 <div style={{ padding: '20px 30px', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', flexShrink: 0, zIndex: 10, borderRadius: '0 0 20px 20px' }}>
                     <div style={{ display: 'flex', gap: '16px', flexShrink: 0 }}>
-                        {selectedReq.status === 'Pending' && (
+                        {['Pending', 'Customer_Revision', 'Manager_Rejected'].includes(selectedReq.status) && (
                             <button 
                                 onClick={handleSendInitialQuote} 
                                 style={{ padding: "12px 20px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "14px", cursor: 'pointer', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                                 onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
                                 onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
                             >
-                                📤 Gửi Báo Giá Sơ Bộ
+                                📤 {selectedReq.status === 'Pending' ? 'Gửi Báo Giá Cho Khách' : 'Gửi Lại Báo Giá Mới'}
                             </button>
                         )}
                         {selectedReq.status === 'Manager_Approved' && (
@@ -509,15 +860,9 @@ const StaffTourRequestManager = ({ onStartDesign }) => {
                                 onClick={handleSendToCustomer}
                                 style={{ padding: "12px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "14px", cursor: "pointer", boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)', whiteSpace: 'nowrap' }}
                             >
-                                🚀 Gửi Cho Khách Hàng
+                                🚀 Gửi Bản Thiết Kế
                             </button>
                         )}
-                        <button
-                            onClick={handleStartDesign}
-                            style={{ padding: "12px 20px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "14px", cursor: "pointer", boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', whiteSpace: 'nowrap' }}
-                        >
-                            🛠️ Vào Phòng Thiết Kế ➔
-                        </button>
                     </div>
                     </div>
                 </div>
