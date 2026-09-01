@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th8 29, 2026 lúc 05:36 PM
+-- Thời gian đã tạo: Th9 01, 2026 lúc 08:35 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -205,8 +205,20 @@ CREATE TABLE `departure_updates` (
   `activity` varchar(100) NOT NULL,
   `description` text NOT NULL,
   `image_url` varchar(255) DEFAULT NULL,
-  `created_at` datetime DEFAULT current_timestamp()
+  `created_at` datetime DEFAULT current_timestamp(),
+  `itinerary_id` int(11) DEFAULT NULL,
+  `delay_minutes` int(11) DEFAULT 0,
+  `delay_reason` varchar(255) DEFAULT NULL,
+  `milestone_index` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `departure_updates`
+--
+
+INSERT INTO `departure_updates` (`update_id`, `departure_id`, `guide_id`, `location`, `activity`, `description`, `image_url`, `created_at`, `itinerary_id`, `delay_minutes`, `delay_reason`, `milestone_index`) VALUES
+(14, 3, 1, 'Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club', '🚌 Di chuyển', 'HDV đã xác nhận hoàn thành mốc: Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club (Ngày 1)', NULL, '2026-09-01 01:06:32', 36, 0, NULL, 0),
+(15, 3, 1, 'Phú Quốc', '🏞️ Tham quan', '[Mốc #2 - Ngày 1] ☀️ 10:00 - 12:00: Tham quan Cơ sở nuôi cấy Ngọc Trai Phú Quốc, lắng nghe quy trình nuôi cấy ngọc trai thiên nhiên biển Nam. HDV tư vấn đòn mua sắm ngọc trai chính hiệu.', NULL, '2026-09-01 01:34:53', 36, 0, NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -372,6 +384,40 @@ CREATE TABLE `itinerary_places` (
   `visit_order` int(11) DEFAULT 1 COMMENT 'Thứ tự tham quan trong ngày',
   `visit_time` time DEFAULT NULL COMMENT 'Giờ dự kiến (VD: 08:30:00)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `leave_requests`
+--
+
+CREATE TABLE `leave_requests` (
+  `request_id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `request_type` enum('Future_Leave','Past_Explanation') NOT NULL DEFAULT 'Future_Leave',
+  `leave_type` varchar(100) DEFAULT NULL,
+  `explanation_type` varchar(100) DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `target_date` date DEFAULT NULL,
+  `proposed_check_in` time DEFAULT NULL,
+  `proposed_check_out` time DEFAULT NULL,
+  `reason` text NOT NULL,
+  `attachment_url` varchar(255) DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+  `manager_id` int(11) DEFAULT NULL,
+  `manager_note` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `leave_requests`
+--
+
+INSERT INTO `leave_requests` (`request_id`, `employee_id`, `request_type`, `leave_type`, `explanation_type`, `start_date`, `end_date`, `target_date`, `proposed_check_in`, `proposed_check_out`, `reason`, `attachment_url`, `status`, `manager_id`, `manager_note`, `created_at`, `updated_at`) VALUES
+(1, 4, 'Past_Explanation', NULL, 'Quên Check-in', NULL, NULL, '2026-08-24', '08:00:00', '17:00:00', 'Giải trình test quên check in', NULL, 'Approved', 2, NULL, '2026-08-31 23:48:31', '2026-08-31 23:52:14'),
+(3, 4, 'Future_Leave', 'Nghỉ ốm', NULL, '2026-09-17', '2026-09-17', NULL, NULL, NULL, 'sdfdf', NULL, 'Pending', NULL, NULL, '2026-08-31 23:49:13', '2026-08-31 23:49:13');
 
 -- --------------------------------------------------------
 
@@ -836,7 +882,8 @@ INSERT INTO `timekeeping` (`timekeeping_id`, `employee_id`, `work_date`, `status
 (1, 2, '2026-08-04', 'Late', '14:35:57', '14:36:12', 10.83480407, 106.63652891, 'Hẻm 54/75 Bùi Quang Là, Khu phố 16, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71509, Việt Nam', 'Browser Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb', NULL, 1, 98.50, 'Định vị GPS chính xác ±124m | Định vị GPS chính xác ±124m'),
 (2, 5, '2026-08-04', 'Late', '20:59:42', '21:00:26', 10.83481648, 106.63652603, 'Hẻm 74 Bùi Quang Là, Khu phố 15, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71427, Việt Nam', 'Browser AI Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_5_1785851982704.jpg', 1, 98.50, 'Đã xác thực AI khuôn mặt (98.5%) + GPS ±117m | Đã xác thực AI khuôn mặt (98.5%) + GPS ±121m'),
 (3, 6, '2026-08-04', 'Late', '21:07:28', NULL, 10.83485025, 106.63647016, 'Hẻm 74 Bùi Quang Là, Khu phố 15, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71427, Việt Nam', 'Browser AI Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_6_1785852448081.jpg', 1, 98.50, 'Đã xác thực AI khuôn mặt (98.5%) + GPS ±115m'),
-(4, 4, '2026-08-22', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-24 đã được duyệt');
+(4, 4, '2026-08-22', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-24 đã được duyệt'),
+(5, 4, '2026-08-24', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Giải trình quên chấm công (Quên Check-in) theo đơn #1');
 
 -- --------------------------------------------------------
 
@@ -904,6 +951,37 @@ CREATE TABLE `tour_category_map` (
   `tour_id` int(11) DEFAULT NULL,
   `category_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `trip_reports`
+--
+
+CREATE TABLE `trip_reports` (
+  `report_id` int(11) NOT NULL,
+  `departure_id` int(11) NOT NULL,
+  `guide_id` int(11) NOT NULL,
+  `total_passengers` int(11) DEFAULT 0,
+  `checked_in_passengers` int(11) DEFAULT 0,
+  `incident_count` int(11) DEFAULT 0,
+  `vehicle_feedback` text DEFAULT NULL,
+  `hotel_feedback` text DEFAULT NULL,
+  `restaurant_feedback` text DEFAULT NULL,
+  `guide_notes` text NOT NULL,
+  `overall_rating` varchar(50) DEFAULT 'Xuất sắc',
+  `status` enum('Submitted','Approved') NOT NULL DEFAULT 'Submitted',
+  `admin_note` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `trip_reports`
+--
+
+INSERT INTO `trip_reports` (`report_id`, `departure_id`, `guide_id`, `total_passengers`, `checked_in_passengers`, `incident_count`, `vehicle_feedback`, `hotel_feedback`, `restaurant_feedback`, `guide_notes`, `overall_rating`, `status`, `admin_note`, `created_at`, `updated_at`) VALUES
+(1, 3, 1, 0, 0, 0, 'Xe 45 chỗ đời mới, lái xe nhiệt tình, đi an toàn.', 'Khách sạn sạch đẹp, nhận phòng nhanh chóng, nhân viên hỗ trợ tốt.', 'Thức ăn ngon, vừa miệng đoàn, chuẩn bị đúng giờ.', 'Chuyến đi hoàn thành tốt đẹp, khách hàng hài lòng.', 'Xuất sắc', 'Submitted', NULL, '2026-09-01 01:35:10', '2026-09-01 01:35:10');
 
 -- --------------------------------------------------------
 
@@ -1063,6 +1141,13 @@ ALTER TABLE `itinerary_places`
   ADD KEY `place_id` (`place_id`);
 
 --
+-- Chỉ mục cho bảng `leave_requests`
+--
+ALTER TABLE `leave_requests`
+  ADD PRIMARY KEY (`request_id`),
+  ADD KEY `employee_id` (`employee_id`);
+
+--
 -- Chỉ mục cho bảng `notifications`
 --
 ALTER TABLE `notifications`
@@ -1178,6 +1263,14 @@ ALTER TABLE `tour_category_map`
   ADD KEY `category_id` (`category_id`);
 
 --
+-- Chỉ mục cho bảng `trip_reports`
+--
+ALTER TABLE `trip_reports`
+  ADD PRIMARY KEY (`report_id`),
+  ADD KEY `departure_id` (`departure_id`),
+  ADD KEY `guide_id` (`guide_id`);
+
+--
 -- Chỉ mục cho bảng `users`
 --
 ALTER TABLE `users`
@@ -1235,7 +1328,7 @@ ALTER TABLE `departures`
 -- AUTO_INCREMENT cho bảng `departure_updates`
 --
 ALTER TABLE `departure_updates`
-  MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT cho bảng `destinations`
@@ -1278,6 +1371,12 @@ ALTER TABLE `itinerary_activities`
 --
 ALTER TABLE `itinerary_places`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+
+--
+-- AUTO_INCREMENT cho bảng `leave_requests`
+--
+ALTER TABLE `leave_requests`
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT cho bảng `notifications`
@@ -1355,7 +1454,7 @@ ALTER TABLE `service_requests`
 -- AUTO_INCREMENT cho bảng `timekeeping`
 --
 ALTER TABLE `timekeeping`
-  MODIFY `timekeeping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `timekeeping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT cho bảng `tours`
@@ -1374,6 +1473,12 @@ ALTER TABLE `tour_categories`
 --
 ALTER TABLE `tour_category_map`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT cho bảng `trip_reports`
+--
+ALTER TABLE `trip_reports`
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT cho bảng `users`
@@ -1476,6 +1581,12 @@ ALTER TABLE `itinerary_activities`
 ALTER TABLE `itinerary_places`
   ADD CONSTRAINT `fk_itinerary_places_itinerary` FOREIGN KEY (`itinerary_id`) REFERENCES `itineraries` (`itinerary_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_itinerary_places_place` FOREIGN KEY (`place_id`) REFERENCES `places` (`place_id`) ON DELETE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `leave_requests`
+--
+ALTER TABLE `leave_requests`
+  ADD CONSTRAINT `leave_requests_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Các ràng buộc cho bảng `notifications`
