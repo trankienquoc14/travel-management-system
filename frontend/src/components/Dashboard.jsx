@@ -33,7 +33,9 @@ import CustomerQuotes from './CustomerQuotes';
 import CustomerTourBuilder from './CustomerTourBuilder';
 import AdminUserManagement from './AdminUserManagement';
 import GPSCheckInWidget from './GPSCheckInWidget';
+import GeneralOverview from './GeneralOverview';
 import PersonalAttendance from './PersonalAttendance';
+import HRLeaveRequest from './HRLeaveRequest';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -206,7 +208,10 @@ const Dashboard = () => {
                   <li onClick={() => alert('Tính năng đang phát triển')}>
                     📋 Công việc cá nhân
                   </li>
-                  <li onClick={() => alert('Tính năng đang phát triển')}>
+                  <li
+                    className={activeTab === 'leave_requests' ? 'active' : ''}
+                    onClick={() => setActiveTab('leave_requests')}
+                  >
                     📝 Đơn xin nghỉ phép
                   </li>
                 </>
@@ -483,8 +488,8 @@ const Dashboard = () => {
             />
           )}
 
-          {/* Vùng chung */}
-          {activeTab === 'overview' && (isTourManager || isAdmin) && renderOverview()}
+          {/* Vùng chung: Trung tâm Báo cáo Tổng quan Tập trung */}
+          {activeTab === 'overview' && (isTourManager || isAdmin) && <GeneralOverview />}
 
           {/* Vùng Nhân viên văn phòng */}
           {['tour_requests', 'tour_requests_pending', 'tour_requests_revision'].includes(activeTab) && (isOfficeStaff || isAdmin) && (
@@ -543,6 +548,9 @@ const Dashboard = () => {
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
           {activeTab === 'partner_requests' && isPartner && <PartnerServiceRequests />}
+
+          {/* Đơn xin nghỉ phép & Giải trình chấm công */}
+          {activeTab === 'leave_requests' && isInternalStaff && <HRLeaveRequest mode="my_requests" />}
 
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}

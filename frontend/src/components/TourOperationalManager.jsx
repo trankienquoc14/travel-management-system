@@ -59,7 +59,6 @@ const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth }) => {
                                 {guide.full_name}
                             </div>
                             <div style={{ display: 'flex', flex: 1, minWidth: `${daysInMonth * 24}px`, position: 'relative', height: '32px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                                {/* Draw task bars */}
                                 {tasks.map(task => {
                                     const tStart = new Date(task.departure_date);
                                     const tEnd = new Date(task.return_date);
@@ -111,6 +110,138 @@ const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth }) => {
     );
 };
 
+const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedMonth, currentYear }) => {
+    const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    // Tính số tour/lịch trình thực tế cho từng tháng từ CSDL
+    const getMonthCount = (m) => {
+        if (!guideSchedules) return 0;
+        return guideSchedules.filter(sch => {
+            if (!sch.departure_date) return false;
+            const d = new Date(sch.departure_date);
+            return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
+        }).length;
+    };
+
+    const totalToursInYear = guideSchedules ? guideSchedules.filter(sch => {
+        if (!sch.departure_date) return false;
+        return new Date(sch.departure_date).getFullYear() === currentYear;
+    }).length : 0;
+
+    return (
+        <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            border: '1px solid #e2e8f0',
+            padding: '20px 24px',
+            marginBottom: '24px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
+        }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid #f1f5f9', paddingBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        📅 QUẢN LÝ LỊCH VẬN HÀNH 12 THÁNG NĂM {currentYear}
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                        Chọn Tháng để xem danh sách tour di chuyển được gắn trực tiếp vào khu vực từng tháng.
+                    </p>
+                </div>
+
+                <div style={{ background: '#f0f9ff', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: '#0284c7', border: '1px solid #bae6fd' }}>
+                    🚀 Tổng số đợt khởi hành: {totalToursInYear} tour
+                </div>
+            </div>
+
+            {/* THANH 12 THÁNG TRONG NĂM VỚI THỐNG KÊ TOUR THỰC TẾ */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px', overflowX: 'auto' }}>
+                
+                {/* TAB TẤT CẢ */}
+                <button
+                    onClick={() => setSelectedMonth('all')}
+                    style={{
+                        padding: '10px 6px',
+                        border: selectedMonth === 'all' ? 'none' : '1px solid #cbd5e1',
+                        borderRadius: '12px',
+                        background: selectedMonth === 'all' ? 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' : '#ffffff',
+                        color: selectedMonth === 'all' ? '#ffffff' : '#475569',
+                        fontWeight: '800',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        boxShadow: selectedMonth === 'all' ? '0 4px 12px rgba(15, 23, 42, 0.25)' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    <span>📅 Tất cả</span>
+                    <span style={{
+                        background: selectedMonth === 'all' ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                        color: selectedMonth === 'all' ? '#ffffff' : '#0284c7',
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: '800'
+                    }}>
+                        {totalToursInYear} tour
+                    </span>
+                </button>
+
+                {/* TAB THÁNG 1 ĐẾN THÁNG 12 */}
+                {monthsArray.map(m => {
+                    const count = getMonthCount(m);
+                    const monthKey = `${currentYear}-${String(m).padStart(2, '0')}`;
+                    const isSelected = selectedMonth === monthKey;
+                    const hasTours = count > 0;
+
+                    return (
+                        <button
+                            key={m}
+                            onClick={() => setSelectedMonth(monthKey)}
+                            style={{
+                                padding: '10px 6px',
+                                border: isSelected ? 'none' : (hasTours ? '1px solid #93c5fd' : '1px solid #e2e8f0'),
+                                borderRadius: '12px',
+                                background: isSelected 
+                                    ? 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%)' 
+                                    : (hasTours ? '#f0f9ff' : '#ffffff'),
+                                color: isSelected ? '#ffffff' : (hasTours ? '#0369a1' : '#64748b'),
+                                fontWeight: isSelected || hasTours ? '800' : '600',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                boxShadow: isSelected ? '0 4px 12px rgba(2, 132, 199, 0.3)' : 'none',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s ease',
+                                opacity: !hasTours && !isSelected ? 0.75 : 1
+                            }}
+                        >
+                            <span>Tháng {m}</span>
+                            <span style={{
+                                background: isSelected 
+                                    ? 'rgba(255,255,255,0.25)' 
+                                    : (hasTours ? '#0284c7' : '#e2e8f0'),
+                                color: isSelected 
+                                    ? '#ffffff' 
+                                    : (hasTours ? '#ffffff' : '#64748b'),
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                fontSize: '11px',
+                                fontWeight: '800'
+                            }}>
+                                {count} tour
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const TourOperationalManager = () => {
     const [tours, setTours] = useState([]);
     const [selectedTour, setSelectedTour] = useState(null);
@@ -128,6 +259,7 @@ const TourOperationalManager = () => {
     const [activeTourTab, setActiveTourTab] = useState('fixed'); // 'fixed' | 'custom'
     const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
 
+    const currentYear = new Date().getFullYear();
     const todayStr = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
@@ -210,7 +342,6 @@ const TourOperationalManager = () => {
     const handleSaveDepartures = async () => {
         if (!selectedTour) return;
 
-        // RÀNG BUỘC KIỂM TRA NGÀY VÀ SỐ KHÁCH TRƯỚC KHI LƯU
         for (let i = 0; i < departures.length; i++) {
             const dep = departures[i];
             if (!dep.departure_date) {
@@ -251,7 +382,7 @@ const TourOperationalManager = () => {
 
             if (res.data.success) {
                 alert(`🎉 Đã lưu cấu hình lịch trình & phân công Hướng dẫn viên thành công cho Tour: ${selectedTour.tour_name}`);
-                // Refresh data
+                fetchGuideSchedules();
                 handleSelectTour(selectedTour);
             }
         } catch (e) { 
@@ -286,7 +417,6 @@ const TourOperationalManager = () => {
         const up = [...departures];
         up[idx].departure_date = value;
         
-        // Tự động tính Ngày Về = Ngày Đi + (duration_days - 1)
         if (value && selectedTour?.duration_days) {
             const depDate = new Date(value);
             depDate.setDate(depDate.getDate() + (Number(selectedTour.duration_days) - 1));
@@ -296,12 +426,30 @@ const TourOperationalManager = () => {
         setDepartures(up);
     };
 
-    // Hàm format Date sang dạng dd/mm/yyyy thân thiện
     const formatDateStr = (dateStr) => {
         if (!dateStr) return 'Chưa chọn';
         const d = new Date(dateStr);
         return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
+
+    // Hàm lấy danh sách tour có đợt di chuyển thuộc Tháng m
+    const getToursForMonth = (m) => {
+        return tours
+            .filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (t.is_custom === 0 || !t.is_custom))
+            .filter(t => {
+                return guideSchedules.some(sch => {
+                    if (sch.tour_id !== t.tour_id && sch.tour_name !== t.tour_name) return false;
+                    if (!sch.departure_date) return false;
+                    const d = new Date(sch.departure_date);
+                    return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
+                });
+            });
+    };
+
+    // Xác định các tháng cần hiển thị
+    const monthsToRender = selectedMonth === 'all' 
+        ? Array.from({ length: 12 }, (_, i) => i + 1)
+        : [Number(selectedMonth.split('-')[1])];
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: '"Outfit", "Inter", sans-serif', background: '#f5f7fa', overflowY: 'auto' }}>
@@ -312,8 +460,8 @@ const TourOperationalManager = () => {
 
             <div style={{ flex: 1, padding: '0 24px 40px 24px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
                 
-                {/* Tabs */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: '#e2e8f0', padding: '6px', borderRadius: '14px', width: 'fit-content' }}>
+                {/* 1. THANH LOẠI TOUR (TOUR CỐ ĐỊNH & THIẾT KẾ RIÊNG) */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: '#e2e8f0', padding: '6px', borderRadius: '14px', width: 'fit-content' }}>
                     <button 
                         onClick={() => { setActiveTourTab('fixed'); setSelectedTour(null); }}
                         style={{ padding: '10px 24px', background: activeTourTab === 'fixed' ? '#fff' : 'transparent', color: activeTourTab === 'fixed' ? '#0194f3' : '#475569', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', boxShadow: activeTourTab === 'fixed' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}
@@ -328,196 +476,251 @@ const TourOperationalManager = () => {
                     </button>
                 </div>
 
-                {/* Accordion List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {tours.filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (t.is_custom === 0 || !t.is_custom)).map(t => {
-                        const isExpanded = selectedTour?.tour_id === t.tour_id;
+                {/* 2. THANH THỜI GIAN VẬN HÀNH 12 THÁNG TRONG NĂM */}
+                <MasterOperationalTimeline 
+                    guideSchedules={guideSchedules} 
+                    selectedMonth={selectedMonth} 
+                    setSelectedMonth={setSelectedMonth} 
+                    currentYear={currentYear}
+                />
+
+                {/* 3. KHU VỰC DANH SÁCH TOUR ĐƯỢC GẮN TRỰC TIẾP THEO TỪNG THÁNG */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {monthsToRender.map(m => {
+                        const toursInMonth = getToursForMonth(m);
+                        const monthSchedulesCount = guideSchedules ? guideSchedules.filter(sch => {
+                            if (!sch.departure_date) return false;
+                            const d = new Date(sch.departure_date);
+                            return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
+                        }).length : 0;
                         
+                        // Nếu đang chọn "Tất cả" và tháng này không có tour thì bỏ qua cho gọn giao diện
+                        if (selectedMonth === 'all' && toursInMonth.length === 0) return null;
+
                         return (
-                        <div key={t.tour_id} style={{ background: '#fff', borderRadius: '20px', border: isExpanded ? '2px solid #0194f3' : '1px solid #e2e8f0', overflow: 'hidden', boxShadow: isExpanded ? '0 12px 30px rgba(1, 148, 243, 0.15)' : '0 4px 15px rgba(0,0,0,0.03)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                            {/* Header */}
-                            <div 
-                                onClick={() => isExpanded ? setSelectedTour(null) : handleSelectTour(t)}
-                                style={{ padding: '24px 30px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isExpanded ? '#f8fafc' : '#fff', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}
-                            >
-                                <div>
-                                    <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '800', color: isExpanded ? '#0369a1' : '#111827' }}>{t.tour_name}</h3>
-                                    <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '500', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                        <span>🕒 {t.duration_days} Ngày</span>
-                                        <span>📍 {t.destination}</span>
-                                        <span style={{ color: '#0ea5e9' }}>💵 Tỷ suất LN: {t.markup_percent}%</span>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                                    <span style={{ 
-                                        fontSize: '13px', 
-                                        padding: '6px 14px', 
-                                        borderRadius: '20px', 
-                                        fontWeight: '700',
-                                        background: t.status === 'Active' ? '#ecfdf5' : '#fffbeb',
-                                        color: t.status === 'Active' ? '#059669' : '#d97706'
-                                    }}>
-                                        {t.status === 'Active' ? 'Đang mở bán' : 'Chờ mở bán'}
+                            <div key={m} style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #cbd5e1', padding: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+                                
+                                {/* HEADER KHU VỰC THÁNG M */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', paddingBottom: '14px' }}>
+                                    <h3 style={{ margin: 0, fontSize: '19px', color: '#1e3a8a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span>📅</span> THÁNG {m} / {currentYear}
+                                    </h3>
+                                    <span style={{ background: monthSchedulesCount > 0 ? '#0284c7' : '#94a3b8', color: '#ffffff', padding: '4px 14px', borderRadius: '14px', fontSize: '12px', fontWeight: '800' }}>
+                                        🚀 {monthSchedulesCount} lịch trình ({toursInMonth.length} tour)
                                     </span>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: isExpanded ? '#e0f2fe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s' }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isExpanded ? '#0ea5e9' : '#94a3b8'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Body (Expanded Content) */}
-                            {isExpanded && (
-                                <div style={{ padding: '30px', background: '#fff' }}>
-                                    
-                                    {/* Toolbar */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                        <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
-                                            <button onClick={() => setSelectedMonth('all')} style={{ padding: '8px 16px', background: selectedMonth === 'all' ? '#fff' : 'transparent', color: selectedMonth === 'all' ? '#0f172a' : '#64748b', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: selectedMonth === 'all' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>Tất cả</button>
-                                            {[...Array(6)].map((_, i) => {
-                                                const d = new Date(); d.setMonth(d.getMonth() + i);
-                                                const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                                                const label = `Tháng ${d.getMonth() + 1}`;
-                                                return (
-                                                    <button key={val} onClick={() => setSelectedMonth(val)} style={{ padding: '8px 16px', background: selectedMonth === val ? '#fff' : 'transparent', color: selectedMonth === val ? '#0f172a' : '#64748b', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: selectedMonth === val ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>{label}</button>
-                                                )
-                                            })}
-                                        </div>
-                                        {activeTourTab !== 'custom' && (
-                                            <button onClick={() => setDepartures([...departures, { departure_date: '', return_date: '', max_slots: 30, guide_id: null, status: 'Open' }])} disabled={loading} style={{ padding: '10px 20px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                                Thêm Đợt Mới
-                                            </button>
-                                        )}
+                                {/* NẾU KHÔNG CÓ TOUR TRONG THÁNG NÀY */}
+                                {toursInMonth.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '36px', background: '#f8fafc', borderRadius: '14px', border: '2px dashed #cbd5e1', color: '#64748b', fontSize: '14px', fontWeight: '600' }}>
+                                        🗓️ Chưa có tour trong tháng này
                                     </div>
+                                ) : (
+                                    /* DANH SÁCH TOUR VÀ LỊCH CHẠY GẮN TRỰC TIẾP TRONG THÁNG NÀY */
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        {toursInMonth.map(t => {
+                                            const isExpanded = selectedTour?.tour_id === t.tour_id;
 
-                                    {/* Departures List */}
-                                    {departures.length === 0 ? (
-                                        <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #e2e8f0' }}>
-                                            <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📅</div>
-                                            <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#374151' }}>Chưa có lịch chạy nào cho thời gian này</h4>
-                                            <p style={{ color: '#6b7280', fontSize: '15px', margin: 0 }}>Vui lòng thêm đợt mới hoặc chọn tháng khác.</p>
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            {departures.map((dep, idx) => {
-                                                if (selectedMonth !== 'all' && dep.departure_date && !dep.departure_date.startsWith(selectedMonth)) return null;
-                                                
-                                                const parsedDesign = selectedTour?.design_data ? (typeof selectedTour.design_data === 'string' ? JSON.parse(selectedTour.design_data) : selectedTour.design_data) : null;
-                                                const minPax = parsedDesign?.costConfig?.minimumPax || 15;
-                                                
-                                                const status = dep.status || 'Open';
-                                                const statusBg = status === 'Open' ? '#dcfce7' : (status === 'Closed' ? '#f3f4f6' : '#111827');
-                                                const statusColor = status === 'Open' ? '#166534' : (status === 'Closed' ? '#4b5563' : '#f9fafb');
-
-                                                return (
-                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '16px', border: '1px solid #e5e7eb', padding: '16px 20px', gap: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', transition: 'transform 0.2s' }}>
+                                            return (
+                                                <div key={t.tour_id} style={{ background: '#fff', borderRadius: '18px', border: isExpanded ? '2px solid #0194f3' : '1px solid #e2e8f0', overflow: 'hidden', boxShadow: isExpanded ? '0 12px 30px rgba(1, 148, 243, 0.15)' : '0 2px 8px rgba(0,0,0,0.02)', transition: 'all 0.3s ease' }}>
                                                     
-                                                    {/* Khu vực 1: THỜI GIAN */}
-                                                    <div style={{ flex: '0 0 180px' }}>
-                                                        <input 
-                                                            type="date" 
-                                                            min={todayStr}
-                                                            value={dep.departure_date} 
-                                                            onChange={e => handleDepartureDateChange(idx, e.target.value)} 
-                                                            disabled={activeTourTab === 'custom'}
-                                                            style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#f9fafb', width: '100%', fontFamily: 'inherit', color: activeTourTab === 'custom' ? '#9ca3af' : '#111827', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: activeTourTab === 'custom' ? 'not-allowed' : 'pointer', marginBottom: '6px' }} 
-                                                        />
-                                                        <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500', paddingLeft: '4px' }}>
-                                                            Ngày về: <span style={{ color: dep.return_date ? '#374151' : '#9ca3af', fontWeight: '600' }}>{dep.return_date ? formatDateStr(dep.return_date) : '...'}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Khu vực 2: TIẾN ĐỘ & HÒA VỐN */}
-                                                    <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <div style={{ fontSize: '14px', color: '#374151', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                Khách: <span style={{ color: '#0ea5e9' }}>0</span> / 
-                                                                <input 
-                                                                    type="number" 
-                                                                    min="1" 
-                                                                    value={dep.max_slots || ''} 
-                                                                    onChange={e => { const up = [...departures]; up[idx].max_slots = e.target.value ? Number(e.target.value) : ''; setDepartures(up); }} 
-                                                                    onBlur={e => { if(!e.target.value) { const up = [...departures]; up[idx].max_slots = 1; setDepartures(up); } }}
-                                                                    disabled={activeTourTab === 'custom'} 
-                                                                    style={{ width: '64px', padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: activeTourTab === 'custom' ? '#f1f5f9' : '#fff', outline: 'none', transition: 'border-color 0.2s' }} 
-                                                                    title="Sửa max slots"
-                                                                    onFocus={e => e.target.style.borderColor = '#0ea5e9'}
-                                                                />
-                                                                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>(Hòa vốn: {minPax})</span>
+                                                    {/* TOUR HEADER (CLICK ĐỂ MỞ RỘNG / THU GỌN) */}
+                                                    <div 
+                                                        onClick={() => isExpanded ? setSelectedTour(null) : handleSelectTour(t)}
+                                                        style={{ padding: '20px 24px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isExpanded ? '#f8fafc' : '#fff', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}
+                                                    >
+                                                        <div>
+                                                            <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800', color: isExpanded ? '#0369a1' : '#111827' }}>
+                                                                🚩 {t.tour_name}
+                                                            </h4>
+                                                            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                                <span>🕒 {t.duration_days} Ngày</span>
+                                                                <span>📍 {t.destination}</span>
+                                                                <span style={{ color: '#0ea5e9' }}>💵 Tỷ suất LN: {t.markup_percent}%</span>
                                                             </div>
                                                         </div>
-                                                        <div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-                                                            <div style={{ width: '0%', height: '100%', background: '#0ea5e9', borderRadius: '4px' }}></div>
+
+                                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                                            <span style={{ 
+                                                                fontSize: '12px', 
+                                                                padding: '6px 12px', 
+                                                                borderRadius: '20px', 
+                                                                fontWeight: '700',
+                                                                background: t.status === 'Active' ? '#ecfdf5' : '#fffbeb',
+                                                                color: t.status === 'Active' ? '#059669' : '#d97706'
+                                                            }}>
+                                                                {t.status === 'Active' ? 'Đang mở bán' : 'Chờ mở bán'}
+                                                            </span>
+                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: isExpanded ? '#e0f2fe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s' }}>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isExpanded ? '#0ea5e9' : '#94a3b8'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Khu vực 3: ĐIỀU HÀNH & ACTION */}
-                                                    <div style={{ flex: '0 0 350px', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                        <select 
-                                                            value={dep.guide_id || ''} 
-                                                            onChange={e => { const up = [...departures]; up[idx].guide_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
-                                                            style={{ flex: '1', padding: '10px 12px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #e5e7eb', background: dep.guide_id ? '#e0f2fe' : '#fff', borderRadius: '10px', color: dep.guide_id ? '#0369a1' : '#4b5563', fontSize: '14px', fontWeight: '600', outline: 'none', cursor: 'pointer' }}
-                                                        >
-                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>Chưa phân công HDV</option>
-                                                            {guides.map(g => (
-                                                                <option key={g.user_id} value={g.user_id} style={{ background: '#fff', color: '#111827' }}>{g.full_name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <select 
-                                                            value={status} 
-                                                            onChange={e => { const up = [...departures]; up[idx].status = e.target.value; setDepartures(up); }} 
-                                                            style={{ flex: '0 0 110px', padding: '10px 12px', border: 'none', background: statusBg, borderRadius: '10px', color: statusColor, fontSize: '14px', fontWeight: '700', outline: 'none', cursor: 'pointer', textAlign: 'center', appearance: 'none' }}
-                                                        >
-                                                            <option value="Open" style={{ background: '#fff', color: '#111827' }}>Mở Bán</option>
-                                                            <option value="Closed" style={{ background: '#fff', color: '#111827' }}>Khóa</option>
-                                                            <option value="Completed" style={{ background: '#fff', color: '#111827' }}>Hoàn Tất</option>
-                                                        </select>
-                                                        {activeTourTab !== 'custom' && (
-                                                            <button 
-                                                                onClick={() => setDepartures(departures.filter((_, i) => i !== idx))} 
-                                                                style={{ flex: '0 0 40px', height: '40px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
-                                                                onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
-                                                                onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
-                                                                title="Xóa Đợt Chạy"
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    {/* NỘI DUNG MỞ RỘNG (ĐỢT KHỞI HÀNH & ĐIỀU HÀNH) */}
+                                                    {isExpanded && (
+                                                        <div style={{ padding: '24px', background: '#fff' }}>
+                                                            
+                                                            {/* TOOLBAR NÚT THÊM ĐỢT MỚI */}
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                                                <div style={{ fontWeight: '700', fontSize: '14px', color: '#1e3a8a' }}>
+                                                                    📋 Thiết Lập Ngày Khởi Hành & Phân Công Hướng Dẫn Viên:
+                                                                </div>
+                                                                {activeTourTab !== 'custom' && (
+                                                                    <button onClick={() => setDepartures([...departures, { departure_date: '', return_date: '', max_slots: 30, guide_id: null, status: 'Open' }])} disabled={loading} style={{ padding: '8px 16px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                                        Thêm Đợt Mới
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* DANH SÁCH ĐỢT KHỞI HÀNH CỦA THÁNG M */}
+                                                            {(() => {
+                                                                const monthDepartures = departures
+                                                                    .map((dep, realIdx) => ({ ...dep, realIdx }))
+                                                                    .filter(dep => {
+                                                                        if (!dep.departure_date) return true;
+                                                                        const d = new Date(dep.departure_date);
+                                                                        return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
+                                                                    });
+
+                                                                if (monthDepartures.length === 0) {
+                                                                    return (
+                                                                        <div style={{ textAlign: 'center', padding: '24px', background: '#f8fafc', borderRadius: '14px', border: '2px dashed #cbd5e1', color: '#64748b', fontSize: '13px', fontWeight: '600' }}>
+                                                                            🗓️ Tour này chưa có đợt khởi hành nào trong Tháng {m}/{currentYear}
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                return (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                                                        {monthDepartures.map((dep) => {
+                                                                            const idx = dep.realIdx;
+                                                                            const parsedDesign = selectedTour?.design_data ? (typeof selectedTour.design_data === 'string' ? JSON.parse(selectedTour.design_data) : selectedTour.design_data) : null;
+                                                                            const minPax = parsedDesign?.costConfig?.minimumPax || 15;
+                                                                            
+                                                                            const status = dep.status || 'Open';
+                                                                            const statusBg = status === 'Open' ? '#dcfce7' : (status === 'Closed' ? '#f3f4f6' : '#111827');
+                                                                            const statusColor = status === 'Open' ? '#166534' : (status === 'Closed' ? '#4b5563' : '#f9fafb');
+
+                                                                            return (
+                                                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '14px 18px', gap: '20px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', flexWrap: 'wrap' }}>
+                                                                                    
+                                                                                    {/* NGÀY ĐI & NGÀY VỀ */}
+                                                                                    <div style={{ flex: '0 0 170px' }}>
+                                                                                        <input 
+                                                                                            type="date" 
+                                                                                            min={todayStr}
+                                                                                            value={dep.departure_date} 
+                                                                                            onChange={e => handleDepartureDateChange(idx, e.target.value)} 
+                                                                                            disabled={activeTourTab === 'custom'}
+                                                                                            style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#f9fafb', width: '100%', fontFamily: 'inherit', color: activeTourTab === 'custom' ? '#9ca3af' : '#111827', fontSize: '14px', fontWeight: '600', outline: 'none', cursor: activeTourTab === 'custom' ? 'not-allowed' : 'pointer', marginBottom: '4px' }} 
+                                                                                        />
+                                                                                        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
+                                                                                            Ngày về: <span style={{ color: dep.return_date ? '#374151' : '#9ca3af', fontWeight: '600' }}>{dep.return_date ? formatDateStr(dep.return_date) : '...'}</span>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* KHÁCH HÀNG & SLOT */}
+                                                                                    <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' }}>
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                            <div style={{ fontSize: '13px', color: '#374151', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                                Khách: <span style={{ color: '#0ea5e9', fontWeight: '700' }}>0</span> / 
+                                                                                                <input 
+                                                                                                    type="number" 
+                                                                                                    min="1" 
+                                                                                                    value={dep.max_slots || ''} 
+                                                                                                    onChange={e => { const up = [...departures]; up[idx].max_slots = e.target.value ? Number(e.target.value) : ''; setDepartures(up); }} 
+                                                                                                    onBlur={e => { if(!e.target.value) { const up = [...departures]; up[idx].max_slots = 1; setDepartures(up); } }}
+                                                                                                    disabled={activeTourTab === 'custom'} 
+                                                                                                    style={{ width: '56px', padding: '3px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: activeTourTab === 'custom' ? '#f1f5f9' : '#fff', outline: 'none' }} 
+                                                                                                />
+                                                                                                <span style={{ color: '#64748b', fontSize: '12px' }}>(Hòa vốn: {minPax})</span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div style={{ height: '6px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden' }}>
+                                                                                            <div style={{ width: '0%', height: '100%', background: '#0ea5e9', borderRadius: '3px' }}></div>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* PHÂN CÔNG HDV & TRẠNG THÁI */}
+                                                                                    <div style={{ flex: '0 0 320px', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                                                        <select 
+                                                                                            value={dep.guide_id || ''} 
+                                                                                            onChange={e => { const up = [...departures]; up[idx].guide_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
+                                                                                            style={{ flex: '1', padding: '8px 10px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #cbd5e1', background: dep.guide_id ? '#e0f2fe' : '#fff', borderRadius: '8px', color: dep.guide_id ? '#0369a1' : '#4b5563', fontSize: '13px', fontWeight: '600', outline: 'none', cursor: 'pointer' }}
+                                                                                        >
+                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>Chưa phân công HDV</option>
+                                                                                            {guides.map(g => (
+                                                                                                <option key={g.user_id} value={g.user_id} style={{ background: '#fff', color: '#111827' }}>{g.full_name}</option>
+                                                                                            ))}
+                                                                                        </select>
+
+                                                                                        <select 
+                                                                                            value={status} 
+                                                                                            onChange={e => { const up = [...departures]; up[idx].status = e.target.value; setDepartures(up); }} 
+                                                                                            style={{ flex: '0 0 95px', padding: '8px 10px', border: 'none', background: statusBg, borderRadius: '8px', color: statusColor, fontSize: '13px', fontWeight: '700', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                                                                                        >
+                                                                                            <option value="Open" style={{ background: '#fff', color: '#111827' }}>Mở Bán</option>
+                                                                                            <option value="Closed" style={{ background: '#fff', color: '#111827' }}>Khóa</option>
+                                                                                            <option value="Completed" style={{ background: '#fff', color: '#111827' }}>Hoàn Tất</option>
+                                                                                        </select>
+
+                                                                                        {activeTourTab !== 'custom' && (
+                                                                                            <button 
+                                                                                                onClick={() => setDepartures(departures.filter((_, i) => i !== idx))} 
+                                                                                                style={{ width: '34px', height: '34px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                                                                title="Xóa Đợt Chạy"
+                                                                                            >
+                                                                                                ✕
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                );
+                                                            })()}
+
+                                                            {/* ACTION BUTTONS LƯU LỊCH & MỞ BÁN */}
+                                                            {departures.length > 0 && (
+                                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+                                                                    <button onClick={handleSaveDepartures} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#111827', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(17, 24, 39, 0.2)' }}>
+                                                                        💾 Lưu Lịch Trình
+                                                                    </button>
+                                                                    {selectedTour.status === 'Approved' && (
+                                                                        <button onClick={handleActivateTour} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(1, 148, 243, 0.3)' }}>
+                                                                            🚀 Mở Bán Tour
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* BIỂU ĐỒ NGHẼN LỊCH HDV */}
+                                                            <div style={{ marginTop: '30px' }}>
+                                                                <GuideTimelineCalendar 
+                                                                    guides={guides}
+                                                                    guideSchedules={guideSchedules}
+                                                                    selectedMonth={selectedMonth}
+                                                                />
+                                                            </div>
+
+                                                        </div>
+                                                    )}
+
                                                 </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {/* Action Buttons at the Bottom */}
-                                    {departures.length > 0 && (
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
-                                            <button onClick={handleSaveDepartures} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 28px', background: '#111827', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(17, 24, 39, 0.2)' }}>
-                                                💾 Lưu Lịch Trình
-                                            </button>
-                                            {selectedTour.status === 'Approved' && (
-                                                <button onClick={handleActivateTour} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 28px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(1, 148, 243, 0.3)' }}>
-                                                    🚀 Mở Bán Tour
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                    
-                                    <div style={{ marginTop: '40px' }}>
-                                        <GuideTimelineCalendar 
-                                            guides={guides}
-                                            guideSchedules={guideSchedules}
-                                            selectedMonth={selectedMonth}
-                                        />
+                                            );
+                                        })}
                                     </div>
+                                )}
 
-                                </div>
-                            )}
-                        </div>
-                        )
+                            </div>
+                        );
                     })}
                 </div>
+
             </div>
         </div>
     );

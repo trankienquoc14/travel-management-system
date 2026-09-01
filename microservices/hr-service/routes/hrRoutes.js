@@ -40,4 +40,13 @@ router.put('/incidents/:id', protect, restrictTo(1, 3), guideController.updateIn
 router.get('/users', protect, restrictTo(1), hrController.getAllUsers);
 router.put('/users/:id/role', protect, restrictTo(1), hrController.updateUserRole);
 
+// Các tuyến đường Đơn xin nghỉ phép & Giải trình quên chấm công
+const upload = require('../middleware/upload');
+router.post('/leave-requests', protect, upload.single('attachment'), hrController.createLeaveRequest);
+router.get('/leave-requests/my-requests', protect, hrController.getMyLeaveRequests);
+router.get('/leave-requests/all', protect, restrictTo(1, 2, 3), hrController.getAllLeaveRequests);
+router.put('/leave-requests/:id/review', protect, restrictTo(1, 2), hrController.reviewLeaveRequest);
+router.delete('/leave-requests/:id', protect, hrController.deleteLeaveRequest);
+
 module.exports = router;
+

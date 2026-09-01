@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import GPSCheckInWidget from './GPSCheckInWidget';
+import HRLeaveRequest from './HRLeaveRequest';
 
 const HRAttendance = () => {
   const [activeSubTab, setActiveSubTab] = useState('summary'); // Mặc định là 'summary' (Tổng hợp theo nhân viên dạng lưới tháng)
@@ -621,59 +622,7 @@ const HRAttendance = () => {
       )}
 
       {activeSubTab === 'requests' && (
-        <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#1e293b' }}>Danh sách đơn xin nghỉ phép chờ duyệt:</h3>
-          
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Nhân viên</th>
-                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Loại đơn</th>
-                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Thời gian nghỉ</th>
-                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Lý do</th>
-                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Trạng thái</th>
-                  <th style={{ padding: '14px 16px', color: '#475569', fontWeight: '600' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaveRequests.map(req => (
-                  <tr key={req.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: '600', color: '#1e293b' }}>{req.name}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>{req.role}</div>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontWeight: '600', color: '#0f766e' }}>{req.type}</td>
-                    <td style={{ padding: '14px 16px' }}>Từ {req.fromDate} đến {req.toDate}</td>
-                    <td style={{ padding: '14px 16px', color: '#475569' }}>{req.reason}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        background: req.status === 'Pending' ? '#fff3cd' : req.status === 'Approved' ? '#e2fbe8' : '#fde2e2',
-                        color: req.status === 'Pending' ? '#854d0e' : req.status === 'Approved' ? '#15803d' : '#b91c1c'
-                      }}>
-                        {req.status === 'Pending' ? 'Chờ duyệt' : req.status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      {req.status === 'Pending' ? (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => approveLeave(req.id)} style={{ padding: '6px 12px', background: '#166534', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Duyệt</button>
-                          <button onClick={() => rejectLeave(req.id)} style={{ padding: '6px 12px', background: '#991b1b', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Từ chối</button>
-                        </div>
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontSize: '13px' }}>Không có thao tác</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <HRLeaveRequest mode="approval" />
       )}
 
       {/* ========================================================= */}

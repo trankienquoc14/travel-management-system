@@ -38,5 +38,11 @@ router.post('/departures/:departureId/updates', protect, upload.single('image'),
 // Hỗ trợ cập nhật giải quyết sự cố
 router.put('/incidents/:id', protect, guideController.updateIncidentStatus);
 
+// Hỗ trợ Báo cáo tổng kết chuyến đi (Trip Execution Reports)
+router.post('/departures/:departureId/reports', protect, guideController.submitTripReport);
+router.get('/departures/:departureId/report-detail', protect, guideController.getTripReportDetail);
+router.get('/all-reports', protect, guideController.getAllTripReports);
+router.put('/reports/:reportId/approve', protect, guideController.approveTripReport);
+
 module.exports = router;
 

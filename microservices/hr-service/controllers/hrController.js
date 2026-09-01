@@ -964,3 +964,293 @@ exports.getMyAttendanceStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// =========================================================================
+// QUẢN LÝ ĐƠN XIN NGHỈ PHÉP (TƯƠNG LAI) & GIẢI TRÌNH QUÊN CHẤM CÔNG (QUÁ KHỨ)
+// =========================================================================
+
+// 1. Tạo mới đơn nghỉ phép / giải trình
+exports.createLeaveRequest = async (req, res) => {
+  try {
+    const userId = req.user?.user_id || req.user?.id || req.user?.userId;
+    const userRole = Number(req.user?.role_id || req.user?.role);
+
+    if (userRole === 6 || userRole === 7) {
+      return res.status(403).json({ success: false, message: 'Khách hàng và Đối tác không có quyền thực hiện chức năng này!' });
+    }
+
+    const {
+      request_type = 'Future_Leave',
+      leave_type,
+      explanation_type,
+      start_date,
+      end_date,
+      target_date,
+      proposed_check_in,
+      proposed_check_out,
+      reason
+    } = req.body;
+
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do xin nghỉ hoặc giải trình!' });
+    }
+
+    let attachment_url = null;
+    if (req.file) {
+      attachment_url = `/uploads/${req.file.filename}`;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let final_leave_type = null;
+    let final_explanation_type = null;
+    let final_start_date = null;
+    let final_end_date = null;
+    let final_target_date = null;
+    let final_check_in = null;
+    let final_check_out = null;
+
+    if (request_type === 'Future_Leave') {
+      if (!start_date || !end_date) {
+        return res.status(400).json({ success: false, message: 'Vui lòng chọn Từ ngày và Đến ngày xin nghỉ phép!' });
+      }
+      if (start_date < todayStr) {
+        return res.status(400).json({ success: false, message: 'Ngày bắt đầu xin nghỉ phép tương lai phải từ hôm nay trở đi!' });
+      }
+      if (end_date < start_date) {
+        return res.status(400).json({ success: false, message: 'Ngày kết thúc không được nhỏ hơn ngày bắt đầu!' });
+      }
+      final_leave_type = leave_type || 'Nghỉ phép năm';
+      final_start_date = start_date;
+      final_end_date = end_date;
+    } else if (request_type === 'Past_Explanation') {
+      if (!target_date) {
+        return res.status(400).json({ success: false, message: 'Vui lòng chọn ngày cần giải trình trong quá khứ!' });
+      }
+      if (target_date > todayStr) {
+        return res.status(400).json({ success: false, message: 'Ngày giải trình quên chấm công phải là ngày trong quá khứ (hoặc hôm nay)!' });
+      }
+      final_explanation_type = explanation_type || 'Quên Check-in';
+      final_target_date = target_date;
+      
+      const formatTime = (t, defaultVal) => {
+        if (!t || typeof t !== 'string' || t.trim() === '' || t === ':00') return defaultVal;
+        if (t.length === 5) return t + ':00';
+        return t;
+      };
+      
+      final_check_in = formatTime(proposed_check_in, '08:00:00');
+      final_check_out = formatTime(proposed_check_out, '17:00:00');
+    }
+
+    await sequelize.query(`
+      INSERT INTO leave_requests (
+        employee_id, request_type, leave_type, explanation_type,
+        start_date, end_date, target_date, proposed_check_in, proposed_check_out,
+        reason, attachment_url, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+    `, {
+      replacements: [
+        userId,
+        request_type,
+        final_leave_type,
+        final_explanation_type,
+        final_start_date,
+        final_end_date,
+        final_target_date,
+        final_check_in,
+        final_check_out,
+        reason,
+        attachment_url
+      ]
+    });
+
+    res.status(201).json({
+      success: true,
+      message: request_type === 'Future_Leave' ? '🎉 Đã gửi đơn xin nghỉ phép tương lai thành công!' : '🎉 Đã gửi giải trình quên chấm công quá khứ thành công!'
+    });
+  } catch (error) {
+    console.error("Lỗi createLeaveRequest:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 2. Lấy danh sách đơn của chính tài khoản đăng nhập ("Đơn của tôi")
+exports.getMyLeaveRequests = async (req, res) => {
+  try {
+    const userId = req.user?.user_id || req.user?.id || req.user?.userId;
+    const [requests] = await sequelize.query(`
+      SELECT lr.*, u.full_name as employee_name, r.role_name as employee_role,
+             m.full_name as manager_name
+      FROM leave_requests lr
+      JOIN users u ON lr.employee_id = u.user_id
+      JOIN roles r ON u.role_id = r.role_id
+      LEFT JOIN users m ON lr.manager_id = m.user_id
+      WHERE lr.employee_id = ?
+      ORDER BY lr.request_id DESC
+    `, { replacements: [userId] });
+
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    console.error("Lỗi getMyLeaveRequests:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 3. Lấy danh sách đơn toàn công ty (Dành cho HR Manager & Admin)
+exports.getAllLeaveRequests = async (req, res) => {
+  try {
+    const { status, request_type } = req.query;
+    let whereClause = 'WHERE 1=1';
+    const replacements = [];
+
+    if (status && status !== 'All') {
+      whereClause += ' AND lr.status = ?';
+      replacements.push(status);
+    }
+    if (request_type && request_type !== 'All') {
+      whereClause += ' AND lr.request_type = ?';
+      replacements.push(request_type);
+    }
+
+    const [requests] = await sequelize.query(`
+      SELECT lr.*, u.full_name as employee_name, u.email as employee_email, r.role_name as employee_role,
+             m.full_name as manager_name
+      FROM leave_requests lr
+      JOIN users u ON lr.employee_id = u.user_id
+      JOIN roles r ON u.role_id = r.role_id
+      LEFT JOIN users m ON lr.manager_id = m.user_id
+      ${whereClause}
+      ORDER BY CASE WHEN lr.status = 'Pending' THEN 1 ELSE 2 END, lr.request_id DESC
+    `, { replacements });
+
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    console.error("Lỗi getAllLeaveRequests:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 4. Duyệt hoặc Từ chối đơn (Tự động ghi nhận vào bảng chấm công timekeeping khi duyệt)
+exports.reviewLeaveRequest = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { status, manager_note } = req.body; // 'Approved' hoặc 'Rejected'
+    const managerId = req.user?.user_id || req.user?.id || req.user?.userId;
+
+    if (!['Approved', 'Rejected'].includes(status)) {
+      await transaction.rollback();
+      return res.status(400).json({ success: false, message: 'Trạng thái xử lý không hợp lệ!' });
+    }
+
+    const [existing] = await sequelize.query(`
+      SELECT * FROM leave_requests WHERE request_id = ?
+    `, { replacements: [id], transaction });
+
+    if (existing.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn!' });
+    }
+
+    const reqData = existing[0];
+
+    // Cập nhật trạng thái đơn
+    await sequelize.query(`
+      UPDATE leave_requests
+      SET status = ?, manager_id = ?, manager_note = ?, updated_at = NOW()
+      WHERE request_id = ?
+    `, { replacements: [status, managerId, manager_note || null, id], transaction });
+
+    // Nếu Phê duyệt (Approved), tự động đồng bộ sang bảng công timekeeping
+    if (status === 'Approved') {
+      if (reqData.request_type === 'Future_Leave') {
+        const start = new Date(reqData.start_date);
+        const end = new Date(reqData.end_date);
+        let curr = new Date(start);
+
+        while (curr <= end) {
+          const dateStr = curr.toISOString().split('T')[0];
+          await sequelize.query(`
+            INSERT INTO timekeeping (employee_id, work_date, status, notes)
+            VALUES (?, ?, 'Leave', ?)
+            ON DUPLICATE KEY UPDATE
+              status = 'Leave',
+              notes = VALUES(notes)
+          `, {
+            replacements: [
+              reqData.employee_id,
+              dateStr,
+              `Nghỉ phép (${reqData.leave_type || 'Được duyệt'}) theo đơn #${reqData.request_id}`
+            ],
+            transaction
+          });
+          curr.setDate(curr.getDate() + 1);
+        }
+      } else if (reqData.request_type === 'Past_Explanation') {
+        const targetDate = reqData.target_date;
+        const checkIn = reqData.proposed_check_in || '08:00:00';
+        const checkOut = reqData.proposed_check_out || '17:00:00';
+        const attStatus = checkIn <= '08:15:00' ? 'Present' : 'Late';
+
+        await sequelize.query(`
+          INSERT INTO timekeeping (employee_id, work_date, status, check_in, check_out, notes)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            status = VALUES(status),
+            check_in = VALUES(check_in),
+            check_out = VALUES(check_out),
+            notes = VALUES(notes)
+        `, {
+          replacements: [
+            reqData.employee_id,
+            targetDate,
+            attStatus,
+            checkIn,
+            checkOut,
+            `Giải trình quên chấm công (${reqData.explanation_type || 'Được duyệt'}) theo đơn #${reqData.request_id}`
+          ],
+          transaction
+        });
+      }
+    }
+
+    await transaction.commit();
+    res.status(200).json({
+      success: true,
+      message: status === 'Approved' ? '✅ Đã duyệt đơn và cập nhật bảng công thành công!' : '❌ Đã từ chối đơn!'
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Lỗi reviewLeaveRequest:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 5. Rút lại / Xóa đơn (Khi đơn đang ở trạng thái Pending)
+exports.deleteLeaveRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.user_id || req.user?.id || req.user?.userId;
+
+    const [existing] = await sequelize.query(`
+      SELECT * FROM leave_requests WHERE request_id = ? AND employee_id = ?
+    `, { replacements: [id, userId] });
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hoặc bạn không có quyền hủy đơn này!' });
+    }
+
+    if (existing[0].status !== 'Pending') {
+      return res.status(400).json({ success: false, message: 'Chỉ có thể rút lại đơn khi ở trạng thái Chờ duyệt!' });
+    }
+
+    await sequelize.query(`DELETE FROM leave_requests WHERE request_id = ?`, { replacements: [id] });
+
+    res.status(200).json({ success: true, message: 'Rút lại đơn thành công!' });
+  } catch (error) {
+    console.error("Lỗi deleteLeaveRequest:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

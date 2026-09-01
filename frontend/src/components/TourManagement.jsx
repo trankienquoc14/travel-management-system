@@ -468,82 +468,197 @@ const TourManagement = () => {
                                             </span>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                                Điểm đến: {viewingTourDetail.destination}
+                                                Điểm đến: {(() => {
+                                                    let dName = viewingTourDetail.destination || 'Chưa xác định';
+                                                    if (destinations && destinations.length > 0) {
+                                                        const found = destinations.find(x => String(x.destination_id) === String(viewingTourDetail.destination));
+                                                        if (found) dName = found.destination_name;
+                                                    }
+                                                    return dName;
+                                                })()}
                                             </span>
                                         </div>
                                     </div>                                    
                                     {(() => {
-                                        const itineraryData = viewingTourDetail.design_data || viewingTourDetail.proposed_itinerary;
-                                        if (!itineraryData) return <div style={{ padding: '20px', background: '#fff', borderRadius: '12px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>Chưa có thông tin lịch trình chi tiết.</div>;
-                                        try {
-                                            const parsedItinerary = JSON.parse(itineraryData);
-                                            const itineraryDays = parsedItinerary.itineraryDays || (parsedItinerary.dragDropState && parsedItinerary.dragDropState.itineraryDays);
-                                            const fixedServices = parsedItinerary.fixedServices || (parsedItinerary.dragDropState && parsedItinerary.dragDropState.fixedServices);
-                                            
-                                            if (itineraryDays) {
-                                                return (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                        {/* Thông tin Dịch vụ cố định */}
-                                                        {fixedServices && (
-                                                            <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
-                                                                <div style={{ flex: 1, background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                                                                    <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏨 Dịch vụ Lưu trú</strong>
-                                                                    {fixedServices.accommodation?.length > 0 ?
-                                                                        fixedServices.accommodation.map(a => <div key={a.id} style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#0ea5e9' }}>•</span> {a.name}</div>)
-                                                                        : <span style={{ fontSize: '14px', color: '#94a3b8', fontStyle: 'italic' }}>Chưa cập nhật thông tin khách sạn</span>
-                                                                    }
-                                                                </div>
-                                                                <div style={{ flex: 1, background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                                                                    <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>✈️ Phương tiện Di chuyển</strong>
-                                                                    {fixedServices.transport?.length > 0 ?
-                                                                        fixedServices.transport.map(t => <div key={t.id} style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#0ea5e9' }}>•</span> {t.name}</div>)
-                                                                        : <span style={{ fontSize: '14px', color: '#94a3b8', fontStyle: 'italic' }}>Chưa cập nhật phương tiện</span>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        )}
+                                         // 1. Lấy tên địa điểm điểm đến chuẩn
+                                         let destName = viewingTourDetail.destination || 'Chưa xác định';
+                                         if (destinations && destinations.length > 0) {
+                                             const destObj = destinations.find(x => String(x.destination_id) === String(viewingTourDetail.destination));
+                                             if (destObj) destName = destObj.destination_name;
+                                         }
 
-                                                        {/* Chi tiết từng ngày */}
-                                                        {itineraryDays.map((day) => (
-                                                            <div key={day.dayIndex} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                                                        <div style={{ background: '#eff6ff', padding: '12px 20px', borderBottom: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <span style={{ fontWeight: '800', color: '#1d4ed8', fontSize: '15px' }}>NGÀY {day.dayIndex}</span>
-                                                            {day.dateString && <span style={{ fontSize: '13px', color: '#3b82f6', fontWeight: '600' }}>🗓️ {day.dateString}</span>}
-                                                        </div>
-                                                        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                            {['morning', 'noon', 'evening'].map(slot => {
-                                                                if (!day.slots[slot] || day.slots[slot].length === 0) return null;
-                                                                const slotConfig = {
-                                                                    morning: { icon: '🌅', name: 'BUỔI SÁNG', color: '#d97706', border: '#fde68a' },
-                                                                    noon: { icon: '☀️', name: 'BUỔI TRƯA', color: '#ea580c', border: '#fdba74' },
-                                                                    evening: { icon: '🌙', name: 'BUỔI TỐI', color: '#4f46e5', border: '#a5b4fc' }
-                                                                }[slot];
-                                                                return (
-                                                                    <div key={slot} style={{ display: 'flex', gap: '16px' }}>
-                                                                        <div style={{ width: '110px', flexShrink: 0, color: slotConfig.color, fontSize: '13px', fontWeight: '800', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                            <span style={{ fontSize: '18px' }}>{slotConfig.icon}</span> <span>{slotConfig.name}</span>
-                                                                        </div>
-                                                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: `3px solid ${slotConfig.border}`, paddingLeft: '20px' }}>
-                                                                            {day.slots[slot].map((item, idx) => (
-                                                                                <div key={idx} style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '14px', color: '#334155', border: '1px solid #f1f5f9', fontWeight: '500' }}>
-                                                                                    {item.name}
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                </div>
-                                            );
-                                            }
-                                            if (parsedItinerary.textVersion) return <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'pre-line', fontSize: '15px', color: '#334155', lineHeight: '1.6' }}>{parsedItinerary.textVersion}</div>;
-                                        } catch (e) {
-                                            return <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'pre-line', fontSize: '15px', color: '#334155', lineHeight: '1.6' }}>{itineraryData}</div>;
-                                        }
-                                    })()}
+                                         // 2. Parse thông tin lịch trình
+                                         const itineraryData = viewingTourDetail.design_data || viewingTourDetail.proposed_itinerary;
+                                         let parsedDays = null;
+                                         let fixedServices = null;
+
+                                         if (itineraryData) {
+                                             try {
+                                                 const parsed = typeof itineraryData === 'string' ? JSON.parse(itineraryData) : itineraryData;
+                                                 
+                                                 // Dạng A: Multi-day drag-drop format (itineraryDays & fixedServices)
+                                                 if (parsed.itineraryDays) {
+                                                     parsedDays = parsed.itineraryDays;
+                                                     fixedServices = parsed.fixedServices || (parsed.dragDropState && parsed.dragDropState.fixedServices);
+                                                 } 
+                                                 // Dạng B: DDD Custom Tour format (days & costConfig)
+                                                 else if (parsed.days && Array.isArray(parsed.days)) {
+                                                     // Trích xuất thông tin khách sạn
+                                                     const hotelList = [];
+                                                     parsed.days.forEach(d => {
+                                                         if (d.accommodation && d.accommodation.name && !hotelList.some(h => h.name === d.accommodation.name)) {
+                                                             hotelList.push({ name: d.accommodation.name });
+                                                         }
+                                                     });
+
+                                                     // Trích xuất thông tin xe/phương tiện
+                                                     const transportList = [];
+                                                     const transportName = parsed.costConfig?.selectedTransport?.service_name || parsed.selectedTransport?.service_name;
+                                                     if (transportName) {
+                                                         transportList.push({ name: transportName });
+                                                     }
+
+                                                     if (hotelList.length > 0 || transportList.length > 0) {
+                                                         fixedServices = {
+                                                             accommodation: hotelList,
+                                                             transport: transportList
+                                                         };
+                                                     }
+
+                                                     // Chuyển đổi mảng `days` thành `parsedDays` chuẩn hóa
+                                                     parsedDays = parsed.days.map((d, idx) => {
+                                                         const acts = d.activities || [];
+                                                         const morning = [];
+                                                         const noon = [];
+                                                         const evening = [];
+
+                                                         acts.forEach((act, aIdx) => {
+                                                             const actName = act.name || act.title || 'Hoạt động tham quan';
+                                                             const actObj = { name: actName };
+                                                             if (aIdx === 0 || aIdx < Math.ceil(acts.length / 3)) {
+                                                                 morning.push(actObj);
+                                                             } else if (aIdx < Math.ceil((acts.length * 2) / 3)) {
+                                                                 noon.push(actObj);
+                                                             } else {
+                                                                 evening.push(actObj);
+                                                             }
+                                                         });
+
+                                                         return {
+                                                             dayIndex: d.dayIndex || idx + 1,
+                                                             title: d.route_title ? `NGÀY ${d.dayIndex || idx + 1}: ${d.route_title}` : `NGÀY ${d.dayIndex || idx + 1}`,
+                                                             description: d.description || '',
+                                                             slots: { morning, noon, evening },
+                                                             rawActivities: acts
+                                                         };
+                                                     });
+                                                 }
+                                                 else if (parsed.dragDropState && parsed.dragDropState.itineraryDays) {
+                                                     parsedDays = parsed.dragDropState.itineraryDays;
+                                                     fixedServices = parsed.dragDropState.fixedServices;
+                                                 }
+                                             } catch (e) {}
+                                         }
+
+                                         // Nếu không có design_data nhưng có itineraries / itineraryDays từ DB
+                                         if ((!parsedDays || parsedDays.length === 0) && (viewingTourDetail.itineraryDays || viewingTourDetail.itineraries)) {
+                                             const rawDays = viewingTourDetail.itineraryDays || viewingTourDetail.itineraries || [];
+                                             if (rawDays.length > 0) {
+                                                 parsedDays = rawDays.map((d, idx) => ({
+                                                     dayIndex: d.day_number || idx + 1,
+                                                     title: d.title || `NGÀY ${d.day_number || idx + 1}`,
+                                                     description: d.description || '',
+                                                     slots: {
+                                                         morning: (d.places || []).filter(p => !p.visit_time || Number(String(p.visit_time).split(':')[0]) < 12).map(p => ({ name: p.place_name || p.name || 'Điểm tham quan' })),
+                                                         noon: (d.places || []).filter(p => p.visit_time && Number(String(p.visit_time).split(':')[0]) >= 12 && Number(String(p.visit_time).split(':')[0]) < 17).map(p => ({ name: p.place_name || p.name || 'Địa điểm' })),
+                                                         evening: (d.places || []).filter(p => p.visit_time && Number(String(p.visit_time).split(':')[0]) >= 17).map(p => ({ name: p.place_name || p.name || 'Địa điểm' }))
+                                                     },
+                                                     rawPlaces: d.places || []
+                                                 }));
+                                                 
+                                                 parsedDays.forEach(day => {
+                                                     if (day.slots.morning.length === 0 && day.slots.noon.length === 0 && day.slots.evening.length === 0 && day.rawPlaces.length > 0) {
+                                                         day.slots.morning = day.rawPlaces.map(p => ({ name: p.place_name || p.name || 'Điểm tham quan' }));
+                                                     }
+                                                 });
+                                             }
+                                         }
+
+                                         if (!parsedDays || parsedDays.length === 0) {
+                                             if (viewingTourDetail.description) {
+                                                 return (
+                                                     <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', color: '#334155', lineHeight: '1.6' }}>
+                                                         <h5 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#1e293b', fontWeight: '800' }}>📄 Mô tả chi tiết Tour:</h5>
+                                                         <div style={{ whiteSpace: 'pre-line', fontSize: '15px' }}>{viewingTourDetail.description}</div>
+                                                     </div>
+                                                 );
+                                             }
+                                             return <div style={{ padding: '24px', background: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b', fontWeight: '600' }}>🗓️ Chưa có thông tin lịch trình chi tiết.</div>;
+                                         }
+
+                                         return (
+                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                 {/* Thông tin Dịch vụ cố định */}
+                                                 {fixedServices && (
+                                                     <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
+                                                         <div style={{ flex: 1, background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                                                             <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏨 Dịch vụ Lưu trú</strong>
+                                                             {fixedServices.accommodation?.length > 0 ?
+                                                                 fixedServices.accommodation.map((a, i) => <div key={a.id || i} style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#0ea5e9' }}>•</span> {a.name}</div>)
+                                                                 : <span style={{ fontSize: '14px', color: '#94a3b8', fontStyle: 'italic' }}>Chưa cập nhật thông tin khách sạn</span>
+                                                             }
+                                                         </div>
+                                                         <div style={{ flex: 1, background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                                                             <strong style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>✈️ Phương tiện Di chuyển</strong>
+                                                             {fixedServices.transport?.length > 0 ?
+                                                                 fixedServices.transport.map((t, i) => <div key={t.id || i} style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#0ea5e9' }}>•</span> {t.name}</div>)
+                                                                 : <span style={{ fontSize: '14px', color: '#94a3b8', fontStyle: 'italic' }}>Chưa cập nhật phương tiện</span>
+                                                             }
+                                                         </div>
+                                                     </div>
+                                                 )}
+
+                                                 {/* Chi tiết từng ngày */}
+                                                 {parsedDays.map((day, idx) => (
+                                                     <div key={day.dayIndex || idx} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                                                         <div style={{ background: '#eff6ff', padding: '12px 20px', borderBottom: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                             <span style={{ fontWeight: '800', color: '#1d4ed8', fontSize: '15px' }}>{day.title || `NGÀY ${day.dayIndex}`}</span>
+                                                             {day.dateString && <span style={{ fontSize: '13px', color: '#3b82f6', fontWeight: '600' }}>🗓️ {day.dateString}</span>}
+                                                         </div>
+                                                         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                             {day.description && (
+                                                                 <div style={{ fontSize: '14px', color: '#475569', fontStyle: 'italic', marginBottom: '4px' }}>
+                                                                     {day.description}
+                                                                 </div>
+                                                             )}
+                                                             {['morning', 'noon', 'evening'].map(slot => {
+                                                                 if (!day.slots || !day.slots[slot] || day.slots[slot].length === 0) return null;
+                                                                 const slotConfig = {
+                                                                     morning: { icon: '🌅', name: 'BUỔI SÁNG', color: '#d97706', border: '#fde68a' },
+                                                                     noon: { icon: '☀️', name: 'BUỔI TRƯA', color: '#ea580c', border: '#fdba74' },
+                                                                     evening: { icon: '🌙', name: 'BUỔI TỐI', color: '#4f46e5', border: '#a5b4fc' }
+                                                                 }[slot];
+                                                                 return (
+                                                                     <div key={slot} style={{ display: 'flex', gap: '16px' }}>
+                                                                         <div style={{ width: '110px', flexShrink: 0, color: slotConfig.color, fontSize: '13px', fontWeight: '800', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                             <span style={{ fontSize: '18px' }}>{slotConfig.icon}</span> <span>{slotConfig.name}</span>
+                                                                         </div>
+                                                                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: `3px solid ${slotConfig.border}`, paddingLeft: '20px' }}>
+                                                                             {day.slots[slot].map((item, iIdx) => (
+                                                                                 <div key={iIdx} style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', fontSize: '14px', color: '#334155', border: '1px solid #f1f5f9', fontWeight: '500' }}>
+                                                                                     {item.name}
+                                                                                 </div>
+                                                                             ))}
+                                                                         </div>
+                                                                     </div>
+                                                                 )
+                                                             })}
+                                                         </div>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         );
+                                     })()}
                                 </div>
                             ) : (
                                 <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>Không tìm thấy dữ liệu.</div>

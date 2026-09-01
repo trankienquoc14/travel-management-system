@@ -473,12 +473,41 @@ exports.getFixedTourById = async (req, res) => {
         `, { replacements: [id] });
 
         if (tours.length === 0) {
-            return res.status(404).json({ success: false, message: 'KhÄ‚Â´ng tÄ‚Â¬m thĂ¡ÂºÂ¥y tour' });
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tour' });
+        }
+        const tour = tours[0];
+
+        // Query đầy đủ lịch trình chi tiết từ CSDL
+        const [days] = await sequelize.query(`SELECT * FROM itineraries WHERE tour_id = ? ORDER BY day_number ASC`, { replacements: [id] });
+        for (let day of days) {
+            const [activities] = await sequelize.query(`
+                SELECT ia.activity_id as id, ia.itinerary_id, ia.activity_type, ia.reference_id as place_id, ia.order_index as visit_order, ia.start_time as visit_time,
+                       CASE 
+                         WHEN ia.activity_type = 'Place' THEN p.place_name
+                         WHEN ia.activity_type = 'Accommodation' THEN s.service_name
+                         WHEN ia.activity_type = 'Transport' THEN s.service_name
+                         ELSE NULL
+                       END as place_name,
+                       CASE 
+                         WHEN ia.activity_type = 'Place' THEN p.estimated_price
+                         WHEN ia.activity_type IN ('Accommodation', 'Transport') THEN ps.unit_price
+                         ELSE 0
+                       END as estimated_price
+                FROM itinerary_activities ia
+                LEFT JOIN places p ON ia.activity_type = 'Place' AND ia.reference_id = p.place_id
+                LEFT JOIN partner_services ps ON ia.activity_type IN ('Accommodation', 'Transport') AND ia.reference_id = ps.partner_service_id
+                LEFT JOIN services s ON ps.service_id = s.service_id
+                WHERE ia.itinerary_id = ?
+                ORDER BY ia.order_index ASC, ia.start_time ASC
+            `, { replacements: [day.itinerary_id] });
+            day.places = activities;
         }
 
-        res.status(200).json({ success: true, data: tours[0] });
+        const [departures] = await sequelize.query(`SELECT * FROM departures WHERE tour_id = ? ORDER BY departure_date ASC`, { replacements: [id] });
+
+        res.status(200).json({ success: true, data: { ...tour, itineraryDays: days, departures, itineraries: days } });
     } catch (error) {
-        console.error("LĂ¡Â»â€”i lĂ¡ÂºÂ¥y chi tiĂ¡ÂºÂ¿t tour:", error);
+        console.error("Lỗi lấy chi tiết tour:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

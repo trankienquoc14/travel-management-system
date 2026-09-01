@@ -378,11 +378,11 @@ exports.getDepartureUpdates = async (req, res) => {
   }
 };
 
-// 10. Tạo mới cập nhật nhật ký hành trình
+// 10. Tạo mới cập nhật nhật ký hành trình (Có gắn mốc lịch trình, chỉ số điểm & trễ giờ)
 exports.createDepartureUpdate = async (req, res) => {
   try {
     const { departureId } = req.params;
-    const { location, activity, description } = req.body;
+    const { location, activity, description, itinerary_id, milestone_index, delay_minutes, delay_reason } = req.body;
     const userId = req.user.user_id;
 
     const [guide] = await sequelize.query('SELECT guide_id FROM guides WHERE user_id = ?', {
@@ -395,26 +395,26 @@ exports.createDepartureUpdate = async (req, res) => {
     const image_url = req.file ? '/uploads/' + req.file.filename : null;
 
     await sequelize.query(`
-      INSERT INTO departure_updates (departure_id, guide_id, location, activity, description, image_url, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW())
-    `, { replacements: [departureId, guideId, location, activity, description, image_url] });
+      INSERT INTO departure_updates (departure_id, guide_id, location, activity, description, image_url, itinerary_id, milestone_index, delay_minutes, delay_reason, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, { 
+      replacements: [
+        departureId, 
+        guideId, 
+        location, 
+        activity, 
+        description, 
+        image_url, 
+        itinerary_id || null, 
+        milestone_index !== undefined ? parseInt(milestone_index) : 0,
+        parseInt(delay_minutes) || 0, 
+        delay_reason || null
+      ] 
+    });
 
-    res.status(201).json({ success: true, message: 'Cập nhật hành trình thành công!' });
+    res.status(201).json({ success: true, message: '🎉 Cập nhật mốc hành trình thành công!' });
   } catch (error) {
-    if (error.parent && error.parent.errno === 1146) {
-      return res.status(200).json({
-        success: true,
-        needs_db_migration: true,
-        message: 'Lưu ở chế độ mô phỏng thành công!',
-        data: {
-          location,
-          activity,
-          description,
-          image_url: req.file ? '/uploads/' + req.file.filename : null,
-          created_at: new Date().toISOString()
-        }
-      });
-    }
+    console.error('Lỗi createDepartureUpdate:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -431,6 +431,117 @@ exports.updateIncidentStatus = async (req, res) => {
     `, { replacements: [status, resolution_notes || null, id] });
 
     res.status(200).json({ success: true, message: 'Cập nhật xử lý sự cố thành công!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 12. Nộp Báo cáo Tổng kết Chuyến đi (HDV)
+exports.submitTripReport = async (req, res) => {
+  try {
+    const { departureId } = req.params;
+    const {
+      total_passengers,
+      checked_in_passengers,
+      incident_count,
+      vehicle_feedback,
+      hotel_feedback,
+      restaurant_feedback,
+      guide_notes,
+      overall_rating
+    } = req.body;
+    const userId = req.user.user_id;
+
+    const [guide] = await sequelize.query('SELECT guide_id FROM guides WHERE user_id = ?', {
+      replacements: [userId]
+    });
+    const guideId = guide.length > 0 ? guide[0].guide_id : 1;
+
+    await sequelize.query(`
+      INSERT INTO trip_reports (
+        departure_id, guide_id, total_passengers, checked_in_passengers, incident_count,
+        vehicle_feedback, hotel_feedback, restaurant_feedback, guide_notes, overall_rating, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', NOW())
+    `, {
+      replacements: [
+        departureId,
+        guideId,
+        total_passengers || 0,
+        checked_in_passengers || 0,
+        incident_count || 0,
+        vehicle_feedback || null,
+        hotel_feedback || null,
+        restaurant_feedback || null,
+        guide_notes || 'Hoàn thành chuyến đi suôn sẻ.',
+        overall_rating || 'Xuất sắc'
+      ]
+    });
+
+    res.status(201).json({ success: true, message: '🎉 Nộp báo cáo chuyến đi thành công! Ban Quản lý đã được thông báo.' });
+  } catch (error) {
+    console.error('Lỗi submitTripReport:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 13. Lấy chi tiết báo cáo chuyến đi
+exports.getTripReportDetail = async (req, res) => {
+  try {
+    const { departureId } = req.params;
+    const [reports] = await sequelize.query(`
+      SELECT tr.*, u.full_name as guide_name, u.email as guide_email, u.phone as guide_phone,
+             t.tour_name, d.departure_date, t.destination
+      FROM trip_reports tr
+      JOIN guides g ON tr.guide_id = g.guide_id
+      JOIN users u ON g.user_id = u.user_id
+      JOIN departures d ON tr.departure_id = d.departure_id
+      JOIN tours t ON d.tour_id = t.tour_id
+      WHERE tr.departure_id = ?
+    `, { replacements: [departureId] });
+
+    if (reports.length === 0) {
+      return res.status(200).json({ success: true, data: null });
+    }
+
+    res.status(200).json({ success: true, data: reports[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 14. Lấy danh sách toàn bộ báo cáo chuyến đi (Dành cho Admin / Manager)
+exports.getAllTripReports = async (req, res) => {
+  try {
+    const [reports] = await sequelize.query(`
+      SELECT tr.*, u.full_name as guide_name, u.email as guide_email, u.phone as guide_phone,
+             t.tour_name, d.departure_date, t.destination, d.status as departure_status
+      FROM trip_reports tr
+      JOIN guides g ON tr.guide_id = g.guide_id
+      JOIN users u ON g.user_id = u.user_id
+      JOIN departures d ON tr.departure_id = d.departure_id
+      JOIN tours t ON d.tour_id = t.tour_id
+      ORDER BY tr.report_id DESC
+    `);
+
+    res.status(200).json({ success: true, data: reports });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 15. Phê duyệt báo cáo chuyến đi (Admin / Manager)
+exports.approveTripReport = async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const { admin_note } = req.body;
+
+    await sequelize.query(`
+      UPDATE trip_reports 
+      SET status = 'Approved', admin_note = ? 
+      WHERE report_id = ?
+    `, { replacements: [admin_note || 'Đã duyệt báo cáo thành công', reportId] });
+
+    res.status(200).json({ success: true, message: '⚡ Đã phê duyệt báo cáo chuyến đi thành công!' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -33,6 +33,37 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   const [guidesList, setGuidesList] = useState([]);
   const [selectedGuideId, setSelectedGuideId] = useState('all');
 
+  // Trạng thái Tick mốc hành trình
+  const [showTickModal, setShowTickModal] = useState(null);
+  const [tickForm, setTickForm] = useState({
+    location: '',
+    activity: '🏞️ Tham quan',
+    description: '',
+    delay_minutes: 0,
+    delay_reason: '',
+    image_file: null
+  });
+  const [isSubmittingTick, setIsSubmittingTick] = useState(false);
+
+  // Trạng thái Báo cáo Chuyến đi (HDV & Admin)
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportForm, setReportForm] = useState({
+    vehicle_feedback: 'Xe 45 chỗ đời mới, lái xe nhiệt tình, đi an toàn.',
+    hotel_feedback: 'Khách sạn sạch đẹp, nhận phòng nhanh chóng, nhân viên hỗ trợ tốt.',
+    restaurant_feedback: 'Thức ăn ngon, vừa miệng đoàn, chuẩn bị đúng giờ.',
+    guide_notes: 'Chuyến đi hoàn thành tốt đẹp, khách hàng hài lòng.',
+    overall_rating: 'Xuất sắc'
+  });
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [tripReportData, setTripReportData] = useState(null);
+
+  // Trạng thái Xem Báo cáo Chuyến đi dành cho Admin / Manager
+  const [showAdminReportsModal, setShowAdminReportsModal] = useState(false);
+  const [allTripReports, setAllTripReports] = useState([]);
+  const [adminReportSubTab, setAdminReportSubTab] = useState('kpis'); // 'kpis', 'list', 'incidents', 'partners'
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [adminStatusFilter, setAdminStatusFilter] = useState('all');
+
   const storedUser = localStorage.getItem('user');
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
   const isAdminOrManager = currentUser && [1, 2, 3, '1', '2', '3'].includes(currentUser.role);
@@ -51,6 +82,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
       fetchPassengersAndIncidents(selectedDeparture.departure_id);
       fetchItinerary(selectedDeparture.tour_id);
       fetchTripUpdates(selectedDeparture.departure_id);
+      fetchTripReportDetail(selectedDeparture.departure_id);
     }
   }, [selectedDeparture]);
 
@@ -335,6 +367,161 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
+  const handleOpenTickModal = (it, blk_text, idx) => {
+    let defaultActivity = '🏞️ Tham quan';
+    if (blk_text.includes('🚌') || blk_text.toLowerCase().includes('di chuyển') || blk_text.toLowerCase().includes('xe')) defaultActivity = '🚌 Di chuyển';
+    else if (blk_text.includes('🏨') || blk_text.toLowerCase().includes('khách sạn') || blk_text.toLowerCase().includes('nhận phòng')) defaultActivity = '🏨 Nghỉ ngơi';
+    else if (blk_text.includes('🍽️') || blk_text.toLowerCase().includes('ăn')) defaultActivity = '🍽️ Ăn uống';
+
+    const pointTitle = blk_text.length > 50 ? blk_text.substring(0, 50) + '...' : blk_text;
+    const locationName = selectedDeparture?.destination || 'Địa điểm tour';
+
+    setShowTickModal({
+      itinerary_id: it.itinerary_id,
+      day_number: it.day_number,
+      title: it.title,
+      blk_text,
+      pointTitle,
+      idx
+    });
+
+    setTickForm({
+      location: locationName,
+      activity: defaultActivity,
+      description: `[Mốc #${idx + 1} - Ngày ${it.day_number}] ${blk_text}`,
+      delay_minutes: 0,
+      delay_reason: '',
+      image_file: null
+    });
+  };
+
+  const handlePostTickMilestone = async (e) => {
+    e.preventDefault();
+    if (!selectedDeparture || !showTickModal) return;
+
+    setIsSubmittingTick(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('location', tickForm.location);
+      formData.append('activity', tickForm.activity);
+      
+      let fullDescription = tickForm.description;
+      if (tickForm.delay_minutes > 0 && tickForm.delay_reason) {
+        fullDescription += ` (⚠️ Trễ ${tickForm.delay_minutes} phút - Lý do: ${tickForm.delay_reason})`;
+      }
+      formData.append('description', fullDescription);
+      formData.append('itinerary_id', showTickModal.itinerary_id);
+      formData.append('milestone_index', showTickModal.idx);
+      formData.append('delay_minutes', tickForm.delay_minutes);
+      if (tickForm.delay_reason) {
+        formData.append('delay_reason', tickForm.delay_reason);
+      }
+      if (tickForm.image_file) {
+        formData.append('image', tickForm.image_file);
+      }
+
+      const res = await axios.post(
+        `http://localhost:5000/api/guide/departures/${selectedDeparture.departure_id}/updates`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (res.data.success) {
+        alert(res.data.message || '🎉 Đã xác nhận điểm hành trình này!');
+        setShowTickModal(null);
+        fetchTripUpdates(selectedDeparture.departure_id);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi xác nhận mốc: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmittingTick(false);
+    }
+  };
+
+  const handleSubmitTripReport = async (e) => {
+    e.preventDefault();
+    if (!selectedDeparture) return;
+
+    setIsSubmittingReport(true);
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        total_passengers: passengers.length,
+        checked_in_passengers: checkedInCount,
+        incident_count: incidents.length,
+        ...reportForm
+      };
+
+      const res = await axios.post(
+        `http://localhost:5000/api/guide/departures/${selectedDeparture.departure_id}/reports`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data.success) {
+        alert(res.data.message);
+        setShowReportModal(false);
+        fetchTripReportDetail(selectedDeparture.departure_id);
+      }
+    } catch (err) {
+      alert('Lỗi nộp báo cáo: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const fetchTripReportDetail = async (deptId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/guide/departures/${deptId}/report-detail`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setTripReportData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Lỗi tải báo cáo chuyến đi:', err);
+    }
+  };
+
+  const fetchAdminTripReports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/guide/all-reports`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setAllTripReports(res.data.data || []);
+        setShowAdminReportsModal(true);
+      }
+    } catch (err) {
+      alert('Lỗi tải danh sách báo cáo Admin: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleApproveReport = async (reportId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`http://localhost:5000/api/guide/reports/${reportId}/approve`, {
+        admin_note: 'Đã kiểm tra và phê duyệt hoàn tất chuyến đi.'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        alert(res.data.message);
+        fetchAdminTripReports();
+      }
+    } catch (err) {
+      alert('Lỗi phê duyệt: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const getStatusText = (status, startDateStr) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -454,6 +641,14 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
             style={{ padding: '8px 14px', background: '#166534', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}
           >
             ✅ Hoàn thành Tour
+          </button>
+        )}
+        {selectedDeparture && (
+          <button
+            onClick={() => setShowReportModal(true)}
+            style={{ padding: '8px 14px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            📋 Nộp Báo Cáo Tour {tripReportData && '✅'}
           </button>
         )}
       </div>
@@ -592,6 +787,26 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={fetchAdminTripReports}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: 'none',
+                background: '#0284c7',
+                color: '#ffffff',
+                fontWeight: '700',
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              📊 Tổng Quan Báo Cáo Chuyến Đi
+            </button>
           </div>
         </div>
       )}
@@ -895,6 +1110,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       {itineraries.map((it) => {
                         const blocks = (it.description || '').split('\n\n').filter(Boolean);
+                        const dayCompletedCount = blocks.filter((b, i) => tripUpdates.some(u => Number(u.itinerary_id) === Number(it.itinerary_id) && (Number(u.milestone_index) === i || (u.description && u.description.includes(`[Mốc #${i + 1}]`))))).length;
 
                         return (
                           <div key={it.itinerary_id} style={{ border: '1px solid #cbd5e1', borderRadius: '14px', overflow: 'hidden', background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
@@ -909,8 +1125,8 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                                   {it.title}
                                 </h5>
                               </div>
-                              <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '12px', fontWeight: '600' }}>
-                                📌 Ngày {it.day_number} / {selectedDeparture?.duration_days}
+                              <span style={{ fontSize: '12px', background: dayCompletedCount === blocks.length && blocks.length > 0 ? '#10b981' : 'rgba(255,255,255,0.15)', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontWeight: '700' }}>
+                                📌 Tiến độ: {dayCompletedCount}/{blocks.length} điểm đã xong
                               </span>
                             </div>
 
@@ -948,11 +1164,52 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                                     const badgeText = isSang ? '#92400e' : isTrua ? '#0369a1' : isChieu ? '#c2410c' : '#6b21a8';
                                     const borderColor = isSang ? '#fde68a' : isTrua ? '#bae6fd' : isChieu ? '#fed7aa' : '#e9d5ff';
 
+                                    const completedLog = tripUpdates.find(u => 
+                                      Number(u.itinerary_id) === Number(it.itinerary_id) && 
+                                      (Number(u.milestone_index) === idx || (u.description && u.description.includes(`[Mốc #${idx + 1}]`)))
+                                    );
+
                                     return (
-                                      <div key={idx} style={{ background: '#f8fafc', border: `1px solid ${borderColor}`, borderRadius: '10px', padding: '14px 18px', borderLeft: `5px solid ${badgeText}` }}>
-                                        <p style={{ margin: 0, color: '#1e293b', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-line', fontWeight: '500' }}>
-                                          {blk}
-                                        </p>
+                                      <div key={idx} style={{ background: completedLog ? '#f0fdf4' : '#f8fafc', border: `1px solid ${completedLog ? '#bbf7d0' : borderColor}`, borderRadius: '10px', padding: '14px 18px', borderLeft: `5px solid ${completedLog ? '#16a34a' : badgeText}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                                        <div style={{ flex: 1, minWidth: '240px' }}>
+                                          <p style={{ margin: 0, color: '#1e293b', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-line', fontWeight: '500' }}>
+                                            {blk}
+                                          </p>
+                                          {completedLog && (
+                                            <div style={{ marginTop: '6px', fontSize: '11px', color: '#15803d', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <span>✅ Đã xác nhận mốc này vào lúc {new Date(completedLog.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({new Date(completedLog.created_at).toLocaleDateString('vi-VN')})</span>
+                                              {completedLog.delay_minutes > 0 && <span style={{ color: '#c2410c', background: '#ffedd5', padding: '2px 6px', borderRadius: '4px' }}>⚠️ Trễ {completedLog.delay_minutes} phút ({completedLog.delay_reason || 'Kẹt xe/Khách muộn'})</span>}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div>
+                                          {completedLog ? (
+                                            <span style={{ padding: '6px 12px', background: '#dcfce7', color: '#15803d', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>
+                                              ✓ ĐÃ HOÀN THÀNH
+                                            </span>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleOpenTickModal(it, blk, idx)}
+                                              style={{
+                                                padding: '8px 14px',
+                                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                color: '#ffffff',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                fontWeight: '700',
+                                                fontSize: '12px',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                              }}
+                                            >
+                                              📌 Xác Nhận Mốc Này
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
                                     );
                                   })
@@ -1369,6 +1626,525 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL 2: XÁC NHẬN MỐC HÀNH TRÌNH (TICK & AUTO CAP NHAT) */}
+      {showTickModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            background: '#fff', padding: '26px', borderRadius: '16px',
+            width: '90%', maxWidth: '520px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📌 Xác Nhận Hoàn Thành Mốc Ngày {showTickModal.day_number}
+              </h3>
+              <button onClick={() => setShowTickModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+
+            <form onSubmit={handlePostTickMilestone}>
+              <div style={{ background: '#f0fdf4', padding: '12px 16px', borderRadius: '8px', border: '1px solid #bbf7d0', marginBottom: '16px', fontSize: '13px', color: '#166534' }}>
+                <strong>📌 Nội dung mốc:</strong> {showTickModal.title}
+                <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.9 }}>
+                  Nội dung: {showTickModal.blk_text.substring(0, 80)}...
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>📍 Địa điểm thực tế *</label>
+                  <input
+                    type="text"
+                    value={tickForm.location}
+                    onChange={(e) => setTickForm({ ...tickForm, location: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>📋 Trạng thái hoạt động *</label>
+                  <select
+                    value={tickForm.activity}
+                    onChange={(e) => setTickForm({ ...tickForm, activity: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    <option value="🏞️ Tham quan">🏞️ Tham quan địa danh</option>
+                    <option value="🚌 Di chuyển">🚌 Di chuyển đường dài</option>
+                    <option value="🍽️ Ăn uống">🍽️ Ăn sáng/trưa/tối</option>
+                    <option value="🏨 Nghỉ ngơi">🏨 Nhận phòng/Nghỉ ngơi</option>
+                    <option value="📋 Check-in">📋 Tập trung/Check-in</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tùy chọn xử lý trễ giờ */}
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '12px 14px', borderRadius: '8px', marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#b45309', display: 'block', marginBottom: '6px' }}>⏱️ Thời gian thực tế so với kế hoạch:</label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <select
+                    value={tickForm.delay_minutes}
+                    onChange={(e) => setTickForm({ ...tickForm, delay_minutes: parseInt(e.target.value) || 0 })}
+                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #fcd34d', fontSize: '12px', background: '#fff', color: '#92400e', fontWeight: '700' }}
+                  >
+                    <option value={0}>🟢 Đúng giờ / Trong kế hoạch</option>
+                    <option value={15}>🟡 Trễ nhẹ (15 phút)</option>
+                    <option value={30}>🟧 Trễ vừa (30 phút)</option>
+                    <option value={45}>🔴 Trễ nhiều (45 phút)</option>
+                    <option value={60}>🚨 Trễ trên 1 tiếng</option>
+                  </select>
+
+                  {tickForm.delay_minutes > 0 && (
+                    <input
+                      type="text"
+                      placeholder="Chọn/Nhập lý do trễ (kẹt xe, thời tiết...)"
+                      value={tickForm.delay_reason}
+                      onChange={(e) => setTickForm({ ...tickForm, delay_reason: e.target.value })}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #fcd34d', fontSize: '12px' }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>📷 Ảnh chụp thực tế (Không bắt buộc):</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setTickForm({ ...tickForm, image_file: e.target.files[0] || null })}
+                  style={{ fontSize: '12px', color: '#475569' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowTickModal(null)}
+                  style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', color: '#475569', cursor: 'pointer' }}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingTick}
+                  style={{ padding: '8px 20px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  {isSubmittingTick ? 'Đang lưu...' : '🚀 Lưu & Tự Động Đăng Nhật Ký'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL 3: BÁO CÁO TỔNG KẾT CHUYẾN ĐỊ (HDV NỘP) */}
+      {showReportModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff', padding: '28px', borderRadius: '16px',
+            width: '90%', maxWidth: '600px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '800' }}>
+                📋 Báo Cáo Tổng Kết Chuyến Đi (Gửi Admin/Quản lý)
+              </h3>
+              <button onClick={() => setShowReportModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitTripReport}>
+              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '16px', fontSize: '13px' }}>
+                <div><strong>Tour:</strong> {selectedDeparture?.tour_name}</div>
+                <div style={{ marginTop: '4px', color: '#64748b' }}><strong>Đoàn #{selectedDeparture?.departure_id}</strong> • Khởi hành: {new Date(selectedDeparture?.departure_date).toLocaleDateString('vi-VN')}</div>
+                <div style={{ marginTop: '4px', color: '#166534', fontWeight: '700' }}>Sĩ số điểm danh: {checkedInCount}/{passengers.length} khách • Số sự cố: {incidents.length}</div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>🚌 Đánh giá Xe & Tài xế:</label>
+                <input
+                  type="text"
+                  value={reportForm.vehicle_feedback}
+                  onChange={(e) => setReportForm({ ...reportForm, vehicle_feedback: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>🏨 Đánh giá Khách sạn & Phòng ở:</label>
+                <input
+                  type="text"
+                  value={reportForm.hotel_feedback}
+                  onChange={(e) => setReportForm({ ...reportForm, hotel_feedback: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>🍽️ Đánh giá Nhà hàng & Suất ăn:</label>
+                <input
+                  type="text"
+                  value={reportForm.restaurant_feedback}
+                  onChange={(e) => setReportForm({ ...reportForm, restaurant_feedback: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>⭐ Đánh giá tổng quan chuyến đi:</label>
+                <select
+                  value={reportForm.overall_rating}
+                  onChange={(e) => setReportForm({ ...reportForm, overall_rating: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0284c7' }}
+                >
+                  <option value="Xuất sắc">🌟 Xuất sắc (Khách rất hài lòng)</option>
+                  <option value="Tốt">👍 Tốt (Đạt yêu cầu kế hoạch)</option>
+                  <option value="Trung bình">😐 Trung bình (Có một vài trục trặc)</option>
+                  <option value="Cần rút kinh nghiệm">⚠️ Cần rút kinh nghiệm</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>📝 Nhận xét & Đề xuất của HDV (*):</label>
+                <textarea
+                  value={reportForm.guide_notes}
+                  onChange={(e) => setReportForm({ ...reportForm, guide_notes: e.target.value })}
+                  rows="3"
+                  required
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', color: '#475569', cursor: 'pointer' }}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  style={{ padding: '8px 20px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  {isSubmittingReport ? 'Đang gửi...' : '📋 Nộp Báo Cáo Tour'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL 4: TỔNG QUAN BÁO CÁO CHUYẾN ĐỊ DÀNH CHO ADMIN & QUẢN LÝ (CHIA 4 MỤC) */}
+      {showAdminReportsModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '20px',
+            width: '95%', maxWidth: '1000px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden'
+          }}>
+            
+            {/* HEADER DASHBOARD BÁO CÁO TỔNG QUAN */}
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  📊 HỆ THỐNG ĐỀU HÀNH & GIÁM SÁT VIETTRAVEL ERP
+                </div>
+                <h3 style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '800', color: '#ffffff' }}>
+                  📊 Tổng Quan Báo Cáo Chuyến Đi HDV & Chất Lượng Vận Hành
+                </h3>
+              </div>
+              <button onClick={() => setShowAdminReportsModal(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '36px', height: '36px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+
+            {/* THANH MENU PHÂN CHIA 4 MỤC BÁO CÁO (SUB-TABS) */}
+            <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '0 24px', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+              <button
+                onClick={() => setAdminReportSubTab('kpis')}
+                style={{
+                  padding: '14px 18px', border: 'none', background: 'transparent',
+                  fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+                  color: adminReportSubTab === 'kpis' ? '#0284c7' : '#64748b',
+                  borderBottom: adminReportSubTab === 'kpis' ? '3px solid #0284c7' : '3px solid transparent'
+                }}
+              >
+                📊 Mục 1: Thống Kê KPIs Vận Hành
+              </button>
+              <button
+                onClick={() => setAdminReportSubTab('list')}
+                style={{
+                  padding: '14px 18px', border: 'none', background: 'transparent',
+                  fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+                  color: adminReportSubTab === 'list' ? '#0284c7' : '#64748b',
+                  borderBottom: adminReportSubTab === 'list' ? '3px solid #0284c7' : '3px solid transparent'
+                }}
+              >
+                📋 Mục 2: Danh Sách Báo Cáo Tour ({allTripReports.length})
+              </button>
+              <button
+                onClick={() => setAdminReportSubTab('incidents')}
+                style={{
+                  padding: '14px 18px', border: 'none', background: 'transparent',
+                  fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+                  color: adminReportSubTab === 'incidents' ? '#0284c7' : '#64748b',
+                  borderBottom: adminReportSubTab === 'incidents' ? '3px solid #0284c7' : '3px solid transparent'
+                }}
+              >
+                🚨 Mục 3: Nhật Ký Sự Cố Vận Hành
+              </button>
+              <button
+                onClick={() => setAdminReportSubTab('partners')}
+                style={{
+                  padding: '14px 18px', border: 'none', background: 'transparent',
+                  fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+                  color: adminReportSubTab === 'partners' ? '#0284c7' : '#64748b',
+                  borderBottom: adminReportSubTab === 'partners' ? '3px solid #0284c7' : '3px solid transparent'
+                }}
+              >
+                ⭐ Mục 4: Đánh Giá Chất Lượng Dịch Vụ
+              </button>
+            </div>
+
+            {/* NỘI DUNG CHÍNH CỦA BÁO CÁO CÓ NỐI DỮ LIỆU */}
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, background: '#ffffff' }}>
+
+              {/* ======================================================== */}
+              {/* MỤC 1: THỐNG KÊ KPIS VẬN HÀNH                            */}
+              {/* ======================================================== */}
+              {adminReportSubTab === 'kpis' && (
+                <div>
+                  {/* HÀNG STAT CARDS KPIS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '18px', borderRadius: '14px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1' }}>🚀 TỔNG BÁO CÁO TOUR</div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', marginTop: '4px' }}>{allTripReports.length}</div>
+                      <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px' }}>Đã hoàn thành và nộp lên</div>
+                    </div>
+
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '18px', borderRadius: '14px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#b45309' }}>⏳ CHỜ ADMIN DỤYỆT</div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: '#92400e', marginTop: '4px' }}>
+                        {allTripReports.filter(r => r.status !== 'Approved').length}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#b45309', marginTop: '4px' }}>Cần Admin kiểm tra nghiệm thu</div>
+                    </div>
+
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '18px', borderRadius: '14px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>✅ ĐÃ PHÊ DUYỆT</div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: '#166534', marginTop: '4px' }}>
+                        {allTripReports.filter(r => r.status === 'Approved').length}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#16532d', marginTop: '4px' }}>Nghiệm thu chuyến đi thành công</div>
+                    </div>
+
+                    <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', padding: '18px', borderRadius: '14px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#6b21a8' }}>🌟 TỶ LỆ HÀI LÒNG</div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: '#581c87', marginTop: '4px' }}>
+                        {allTripReports.length > 0 ? Math.round((allTripReports.filter(r => ['Xuất sắc', 'Tốt'].includes(r.overall_rating)).length / allTripReports.length) * 100) : 100}%
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b21a8', marginTop: '4px' }}>Đánh giá Xuất sắc & Tốt</div>
+                    </div>
+                  </div>
+
+                  {/* BẢNG PHÂN BỔ ĐÁNH GIÁ CHẤT LƯỢNG */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
+                    <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
+                      📊 Phân Bổ Xếp Loại Chất Lượng Chuyến Đi
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                      <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '12px 16px', borderRadius: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#166534', fontWeight: '700' }}>🌟 Xuất sắc:</span>
+                        <strong style={{ float: 'right', fontSize: '14px' }}>{allTripReports.filter(r => r.overall_rating === 'Xuất sắc').length} đoàn</strong>
+                      </div>
+                      <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '12px 16px', borderRadius: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: '700' }}>👍 Tốt:</span>
+                        <strong style={{ float: 'right', fontSize: '14px' }}>{allTripReports.filter(r => r.overall_rating === 'Tốt').length} đoàn</strong>
+                      </div>
+                      <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '12px 16px', borderRadius: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#b45309', fontWeight: '700' }}>😐 Trung bình:</span>
+                        <strong style={{ float: 'right', fontSize: '14px' }}>{allTripReports.filter(r => r.overall_rating === 'Trung bình').length} đoàn</strong>
+                      </div>
+                      <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '12px 16px', borderRadius: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700' }}>⚠️ Cần rút kinh nghiệm:</span>
+                        <strong style={{ float: 'right', fontSize: '14px' }}>{allTripReports.filter(r => r.overall_rating === 'Cần rút kinh nghiệm').length} đoàn</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* MỤC 2: DANH SÁCH BÁO CÁO TOUR HDV & DUYỆT                 */}
+              {/* ======================================================== */}
+              {adminReportSubTab === 'list' && (
+                <div>
+                  {/* BỘ LỌC TÌM KIẾM BÁO CÁO */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                    <input
+                      type="text"
+                      placeholder="🔍 Tìm kiếm theo tên Tour, Hướng dẫn viên..."
+                      value={adminSearchQuery}
+                      onChange={(e) => setAdminSearchQuery(e.target.value)}
+                      style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', width: '280px' }}
+                    />
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setAdminStatusFilter('all')}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: adminStatusFilter === 'all' ? '#0f172a' : '#fff', color: adminStatusFilter === 'all' ? '#fff' : '#475569', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Tất cả ({allTripReports.length})
+                      </button>
+                      <button
+                        onClick={() => setAdminStatusFilter('pending')}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #fcd34d', background: adminStatusFilter === 'pending' ? '#d97706' : '#fff', color: adminStatusFilter === 'pending' ? '#fff' : '#b45309', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        ⏳ Chờ duyệt ({allTripReports.filter(r => r.status !== 'Approved').length})
+                      </button>
+                      <button
+                        onClick={() => setAdminStatusFilter('approved')}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #86efac', background: adminStatusFilter === 'approved' ? '#166534' : '#fff', color: adminStatusFilter === 'approved' ? '#fff' : '#15803d', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        ✅ Đã duyệt ({allTripReports.filter(r => r.status === 'Approved').length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DANH SÁCH BÁO CÁO LỌC THEO ĐIỀU KIỆN */}
+                  {allTripReports.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', color: '#64748b' }}>
+                      Chưa có báo cáo chuyến đi nào được nộp.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {allTripReports
+                        .filter(rp => {
+                          const matchesQuery = rp.tour_name?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || rp.guide_name?.toLowerCase().includes(adminSearchQuery.toLowerCase());
+                          if (adminStatusFilter === 'pending') return matchesQuery && rp.status !== 'Approved';
+                          if (adminStatusFilter === 'approved') return matchesQuery && rp.status === 'Approved';
+                          return matchesQuery;
+                        })
+                        .map((rp) => (
+                          <div key={rp.report_id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                              <div>
+                                <h4 style={{ margin: 0, color: '#1e3a8a', fontSize: '16px', fontWeight: '700' }}>
+                                  🚩 Tour: {rp.tour_name} (Đoàn #{rp.departure_id})
+                                </h4>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                                  👤 HDV Báo cáo: <strong>{rp.guide_name}</strong> ({rp.guide_phone}) • 📅 Ngày đi: <strong>{new Date(rp.departure_date).toLocaleDateString('vi-VN')}</strong> • 📍 Điểm đến: <strong>{rp.destination}</strong>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+                                  ✅ ĐÃ HOÀN THÀNH TOUR
+                                </span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '12px', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', marginBottom: '10px' }}>
+                              <div><strong>Sĩ số điểm danh:</strong> {rp.checked_in_passengers}/{rp.total_passengers} khách</div>
+                              <div><strong>Số sự cố:</strong> <span style={{ color: rp.incident_count > 0 ? '#dc2626' : '#166534', fontWeight: '700' }}>{rp.incident_count}</span></div>
+                              <div><strong>Đánh giá chung:</strong> <span style={{ color: '#0284c7', fontWeight: '700' }}>{rp.overall_rating}</span></div>
+                            </div>
+
+                            <div style={{ fontSize: '13px', lineHeight: '1.6', color: '#334155' }}>
+                              {rp.vehicle_feedback && <div><strong>🚌 Xe & Tài xế:</strong> {rp.vehicle_feedback}</div>}
+                              {rp.hotel_feedback && <div><strong>🏨 Khách sạn:</strong> {rp.hotel_feedback}</div>}
+                              {rp.restaurant_feedback && <div><strong>🍽️ Nhà hàng:</strong> {rp.restaurant_feedback}</div>}
+                              <div style={{ marginTop: '4px' }}><strong>📝 Nhận xét HDV:</strong> {rp.guide_notes}</div>
+                              {rp.admin_note && <div style={{ marginTop: '6px', color: '#15803d', background: '#f0fdf4', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }}><strong>💬 Ghi chú Admin:</strong> {rp.admin_note}</div>}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* MỤC 3: NHẬT KÝ SỰ CỐ VẬN HÀNH (INCIDENTS LOG)             */}
+              {/* ======================================================== */}
+              {adminReportSubTab === 'incidents' && (
+                <div>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700', color: '#991b1b' }}>
+                    🚨 Nhật Ký Sự Cố & Xử Lý Khẩn Cấp Dẫn Đoàn
+                  </h4>
+                  {incidents.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', color: '#64748b' }}>
+                      Chưa ghi nhận sự cố nào phát sinh trong quá trình vận hành tour.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {incidents.map(inc => (
+                        <div key={inc.incident_id} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', background: inc.status === 'Resolved' ? '#f0fdf4' : '#fff8f8', borderLeft: `5px solid ${inc.status === 'Resolved' ? '#10b981' : '#dc2626'}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <strong style={{ color: '#0f172a', fontSize: '14px' }}>🚨 {inc.title}</strong>
+                            <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700', background: inc.status === 'Resolved' ? '#dcfce7' : '#fee2e2', color: inc.status === 'Resolved' ? '#15803d' : '#991b1b' }}>
+                              {inc.status === 'Resolved' ? '✅ Đã xử lý xong' : '⏳ Đang theo dõi'}
+                            </span>
+                          </div>
+                          {inc.location && <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '4px' }}>📍 Vị trí: {inc.location}</div>}
+                          <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#475569' }}>{inc.description}</p>
+                          {inc.resolution_notes && (
+                            <div style={{ background: '#fff', border: '1px dashed #bbf7d0', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', color: '#166534' }}>
+                              💡 <strong>Ghi chú xử lý điều hành:</strong> {inc.resolution_notes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* MỤC 4: ĐÁNH GIÁ CHẤT LƯỢNG DỊCH VỤ ĐỐI TÁC                 */}
+              {/* ======================================================== */}
+              {adminReportSubTab === 'partners' && (
+                <div>
+                  <h4 style={{ margin: '0 0 14px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
+                    ⭐ Báo Cáo Chất Lượng Dịch Vụ Xe, Khách Sạn & Nhà Hàng Đối Tác
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {allTripReports.map(rp => (
+                      <div key={rp.report_id} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', background: '#f8fafc' }}>
+                        <div style={{ fontWeight: '700', color: '#1e3a8a', fontSize: '14px', marginBottom: '8px' }}>
+                          🚩 Tour: {rp.tour_name} (Đoàn #{rp.departure_id}) - HDV {rp.guide_name}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', fontSize: '12px' }}>
+                          <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <strong>🚌 Xe & Lái xe:</strong>
+                            <p style={{ margin: '4px 0 0 0', color: '#475569' }}>{rp.vehicle_feedback || 'Đạt yêu cầu'}</p>
+                          </div>
+                          <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <strong>🏨 Khách sạn lưu trú:</strong>
+                            <p style={{ margin: '4px 0 0 0', color: '#475569' }}>{rp.hotel_feedback || 'Đạt yêu cầu'}</p>
+                          </div>
+                          <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <strong>🍽️ Nhà hàng & Suất ăn:</strong>
+                            <p style={{ margin: '4px 0 0 0', color: '#475569' }}>{rp.restaurant_feedback || 'Đạt yêu cầu'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       )}
