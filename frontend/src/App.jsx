@@ -13,6 +13,7 @@ import StaffTourRequestManager from './components/StaffTourRequestManager';
 import CustomerQuotes from './components/CustomerQuotes';
 import StaffFixedTourDesigner from './components/StaffFixedTourDesigner'; // Thêm trang thiết kế tour
 import ServicesPage from './components/ServicesPage'; // Trang Dịch vụ Độc lập
+import ArticlePage from './components/ArticlePage'; // Trang Bài viết Footer
 
 // 1. Bảo vệ cơ bản: Chỉ cần có đăng nhập
 const ProtectedRoute = ({ children }) => {
@@ -69,6 +70,7 @@ function App() {
             ========================================= */}
         <Route path="/home" element={<HomePage />} />
         <Route path="/services" element={<ServicesPage />} />
+        <Route path="/article/:slug" element={<ArticlePage />} />
         <Route path="/tour/:id" element={<TourDetail />} />
         <Route path="/booking-form" element={<ProtectedRoute><BookingForm /></ProtectedRoute>} />
         <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />

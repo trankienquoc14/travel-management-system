@@ -14,6 +14,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   const [profile, setProfile] = useState(null);
   const [itineraries, setItineraries] = useState([]);
   const [groupLocation, setGroupLocation] = useState('Khách sạn nghỉ ngơi');
+  const [mapMode, setMapMode] = useState('google'); // 'google' | 'osm' | 'radar'
 
   // Trạng thái báo cáo sự cố
   const [showIncidentModal, setShowIncidentModal] = useState(false);
@@ -1228,25 +1229,125 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
               {/* CHI TIẾT: Bản đồ & Định vị */}
               {activeTab === 'guide_map' && (
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700' }}>📍 Bản đồ số định vị đoàn</h4>
-                  <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Đang theo dõi vùng địa bàn: <strong>{selectedDeparture.destination}</strong></p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700' }}>📍 Bản đồ số định vị đoàn</h4>
+                      <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                        Đang theo dõi vùng địa bàn: <strong>{selectedDeparture.destination}</strong>
+                      </p>
+                    </div>
+
+                    {/* Bộ chuyển đổi nguồn Bản đồ */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setMapMode('google')}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: mapMode === 'google' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                          background: mapMode === 'google' ? '#e0f2fe' : '#fff',
+                          color: mapMode === 'google' ? '#0369a1' : '#475569',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🗺️ Google Maps
+                      </button>
+                      <button
+                        onClick={() => setMapMode('osm')}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: mapMode === 'osm' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                          background: mapMode === 'osm' ? '#e0f2fe' : '#fff',
+                          color: mapMode === 'osm' ? '#0369a1' : '#475569',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🌐 OpenStreetMap
+                      </button>
+                      <button
+                        onClick={() => setMapMode('radar')}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: mapMode === 'radar' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                          background: mapMode === 'radar' ? '#e0f2fe' : '#fff',
+                          color: mapMode === 'radar' ? '#0369a1' : '#475569',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📡 Ra-đa GPS
+                      </button>
+                      <button
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedDeparture.destination || 'Việt Nam')}`, '_blank')}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #0284c7',
+                          background: '#0284c7',
+                          color: '#fff',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🔗 Mở Tab Mới
+                      </button>
+                    </div>
+                  </div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '16px' }}>
-                    <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', height: '320px' }}>
-                      <iframe 
-                        title="LiveMap"
-                        width="100%" 
-                        height="100%" 
-                        frameBorder="0" 
-                        src={
-                          selectedDeparture.destination?.includes('Phú Quốc') 
-                            ? "https://www.openstreetmap.org/export/embed.html?bbox=103.85%2C10.10%2C104.05%2C10.35&layer=mapnik&marker=10.2198%2C103.9568"
-                            : selectedDeparture.destination?.includes('Sapa')
-                            ? "https://www.openstreetmap.org/export/embed.html?bbox=103.78%2C22.28%2C103.90%2C22.38&layer=mapnik&marker=22.3364%2C103.8438"
-                            : "https://www.openstreetmap.org/export/embed.html?bbox=108.4287%2C11.9164%2C108.4878%2C11.9602&layer=mapnik&marker=11.9404%2C108.4583"
-                        }
-                        style={{ border: 'none' }}
-                      />
+                    <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', height: '360px', position: 'relative', background: '#f8fafc' }}>
+                      {mapMode === 'google' && (
+                        <iframe 
+                          title="GoogleLiveMap"
+                          width="100%" 
+                          height="100%" 
+                          frameBorder="0" 
+                          src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedDeparture.destination || 'Việt Nam')}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                          style={{ border: 'none' }}
+                        />
+                      )}
+
+                      {mapMode === 'osm' && (
+                        <iframe 
+                          title="OSMLiveMap"
+                          width="100%" 
+                          height="100%" 
+                          frameBorder="0" 
+                          src={
+                            selectedDeparture.destination?.includes('Phú Quốc') 
+                              ? "https://www.openstreetmap.org/export/embed.html?bbox=103.85%2C10.10%2C104.05%2C10.35&layer=mapnik&marker=10.2198%2C103.9568"
+                              : selectedDeparture.destination?.includes('Sapa')
+                              ? "https://www.openstreetmap.org/export/embed.html?bbox=103.78%2C22.28%2C103.90%2C22.38&layer=mapnik&marker=22.3364%2C103.8438"
+                              : "https://www.openstreetmap.org/export/embed.html?bbox=108.4287%2C11.9164%2C108.4878%2C11.9602&layer=mapnik&marker=11.9404%2C108.4583"
+                          }
+                          style={{ border: 'none' }}
+                        />
+                      )}
+
+                      {mapMode === 'radar' && (
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, #0f172a 0%, #020617 100%)', color: '#38bdf8', padding: '20px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '48px', marginBottom: '12px', animation: 'spin 10s linear infinite' }}>📡</div>
+                          <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', color: '#f8fafc', fontWeight: '800' }}>
+                            RA-ĐÀ ĐỊNH VỊ TỌA ĐỘ REALTIME
+                          </h4>
+                          <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '14px' }}>
+                            Địa bàn: <strong style={{ color: '#38bdf8' }}>{selectedDeparture.destination}</strong> • Tín hiệu GPS: <strong style={{ color: '#4ade80' }}>🟢 Mạnh (±5m)</strong>
+                          </div>
+                          <div style={{ display: 'flex', gap: '16px', background: 'rgba(255,255,255,0.05)', padding: '10px 18px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '12px' }}>
+                            <div>👥 Tổng đoàn: <strong style={{ color: '#fff' }}>{passengers.length} người</strong></div>
+                            <div>✅ Đã có mặt: <strong style={{ color: '#4ade80' }}>{passengers.filter(p => p.is_checked_in === 1).length} người</strong></div>
+                            <div>📍 Trạng thái: <strong style={{ color: '#f59e0b' }}>{groupLocation}</strong></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -190,7 +190,7 @@ const TourDetail = () => {
             if (!imagePath.startsWith('uploads/')) {
                 imagePath = `uploads/${imagePath}`;
             }
-            finalImageUrl = `http://localhost:5000/${imagePath}`;
+            finalImageUrl = `http://localhost:5000/${encodeURI(imagePath)}`;
         }
     }
     const bgImage = finalImageUrl;

@@ -593,3 +593,83 @@ exports.getGuideSchedule = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// 🚀 4. LƯU CẤU TRÚC NGUYỆN VỌNG DU LỊCH KHÁCH HÀNG (FOR AI RECOMMENDATION)
+exports.saveCustomerPreferences = async (req, res) => {
+    try {
+        const userId = req.user?.user_id || req.user?.id || null;
+        const {
+            session_id,
+            destinations,
+            trip_purposes,
+            companions,
+            budget_range,
+            interests,
+            pace_preference,
+            accommodation_level,
+            transport_type,
+            key_priorities
+        } = req.body;
+
+        const sessionKey = session_id || req.headers['x-session-id'] || 'guest_session_' + Date.now();
+
+        const [result] = await sequelize.query(`
+            INSERT INTO customer_travel_preferences (
+                user_id, session_id, destinations, trip_purposes, companions,
+                budget_range, interests, pace_preference, accommodation_level,
+                transport_type, key_priorities
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, {
+            replacements: [
+                userId,
+                sessionKey,
+                JSON.stringify(destinations || []),
+                JSON.stringify(trip_purposes || []),
+                JSON.stringify(companions || []),
+                budget_range || null,
+                JSON.stringify(interests || []),
+                pace_preference || null,
+                accommodation_level || null,
+                JSON.stringify(transport_type || []),
+                JSON.stringify(key_priorities || [])
+            ]
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Đã lưu cấu trúc nguyện vọng du lịch (Travel Preference Profile) thành công!',
+            preference_id: result.insertId || result
+        });
+    } catch (error) {
+        console.error('Lỗi lưu Travel Preference Profile:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 🚀 5. GHI NHẬN HÀNH VI KHÁCH HÀNG AI (Search -> View -> Click -> Favorite -> Booking -> Cancel -> Rating)
+exports.logCustomerBehavior = async (req, res) => {
+    try {
+        const userId = req.user?.user_id || req.user?.id || null;
+        const { session_id, event_type, tour_id, metadata } = req.body;
+
+        const sessionKey = session_id || req.headers['x-session-id'] || 'guest_session_' + Date.now();
+
+        await sequelize.query(`
+            INSERT INTO customer_behavior_logs (user_id, session_id, event_type, tour_id, metadata)
+            VALUES (?, ?, ?, ?, ?)
+        `, {
+            replacements: [
+                userId,
+                sessionKey,
+                event_type || 'SEARCH',
+                tour_id || null,
+                JSON.stringify(metadata || {})
+            ]
+        });
+
+        res.status(200).json({ success: true, message: 'Đã ghi nhận nhật ký hành vi AI.' });
+    } catch (error) {
+        console.error('Lỗi ghi nhận behavior log:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

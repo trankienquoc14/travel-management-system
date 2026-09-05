@@ -24,8 +24,10 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// 1. CÁC ROUTE KHÁCH HÀNG (PUBLIC API)
+// 1. CÁC ROUTE KHÁCH HÀNG (PUBLIC API & AI DATA COLLECTOR)
 router.get('/', tourController.getAllTours);
+router.post('/preferences', tourController.saveCustomerPreferences);
+router.post('/behavior-log', tourController.logCustomerBehavior);
 router.get('/:id', tourController.getTourById);
 
 // 2. CÁC ROUTE QUẢN LÝ VẬN HÀNH (Chỉ Staff, Manager, Admin)

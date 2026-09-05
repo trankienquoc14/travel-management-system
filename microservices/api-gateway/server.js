@@ -11,8 +11,9 @@ const app = express();
 app.use(cors());
 app.use(morgan('dev'));
 
-// Serve static uploads folder from the shared location
+// Serve static uploads folder from the shared location and tour-service uploads
 app.use('/uploads', express.static(path.join(__dirname, '../shared-uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../tour-service/uploads')));
 
 // Routing configuration for microservices
 const services = {

@@ -572,43 +572,189 @@ body {
   border-color: #cbd5e1;
 }
 
-/* Hero & Search Widget (Phong cách OTA Hiện đại) */
+/* Hero & Search Widget (Phong cách OTA Hiện đại kèm Hiệu ứng Ken Burns) */
+@keyframes kenBurnsZoom {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(-1%, -1%);
+  }
+  100% {
+    transform: scale(1.15) translate(1%, 0);
+  }
+}
+
 .hero-wrapper {
   position: relative;
   margin-bottom: 80px;
 }
 
-.home-hero {
-  height: 600px;
-  background: url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2000') center/cover no-repeat;
+.home-hero-slider {
   position: relative;
+  height: 620px;
+  overflow: hidden;
+  background: #0f172a;
 }
 
-.hero-overlay {
-  background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%);
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 1.2s ease-in-out, visibility 1.2s ease-in-out;
+  z-index: 1;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
+}
+
+.hero-slide-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.5s ease;
+}
+
+.hero-slide.active .hero-slide-bg {
+  animation: kenBurnsZoom 9s infinite alternate ease-in-out;
+}
+
+.hero-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg, 
+    rgba(15, 23, 42, 0.35) 0%, 
+    rgba(15, 23, 42, 0.6) 50%, 
+    rgba(15, 23, 42, 0.88) 100%
+  );
+  z-index: 3;
+}
+
+.hero-content-box {
+  position: relative;
+  z-index: 4;
   height: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 20px 100px 20px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  color: white;
-  padding-bottom: 80px;
+  color: #ffffff;
 }
 
-.hero-overlay h1 {
-  font-size: 48px;
+.hero-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 22px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.hero-title-main {
+  font-size: 52px;
   font-weight: 900;
-  margin-bottom: 15px;
-  text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  line-height: 1.2;
+  margin-bottom: 18px;
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   letter-spacing: -1px;
 }
 
-.hero-overlay p {
+.hero-subtitle-desc {
   font-size: 20px;
   font-weight: 500;
-  opacity: 0.95;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
+  max-width: 760px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  margin-bottom: 24px;
+}
+
+/* Slider Controls */
+.hero-slider-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-60%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 35px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.hero-nav-btn {
+  pointer-events: auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.hero-nav-btn:hover {
+  background: rgba(1, 148, 243, 0.9);
+  border-color: #0194f3;
+  transform: scale(1.12);
+}
+
+.hero-dots-container {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.hero-dot-item {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hero-dot-item.active {
+  width: 34px;
+  border-radius: 12px;
+  background: #0194f3;
+  border-color: #0194f3;
+  box-shadow: 0 0 12px rgba(1, 148, 243, 0.9);
 }
 
 .search-widget-container {
@@ -1300,6 +1446,8 @@ body {
 /* Tour Slider (Nằm ngang) */
 .tour-slider-container {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 .tour-slider {
   display: flex;
@@ -1315,8 +1463,8 @@ body {
   display: none; /* Chrome, Safari, Opera */
 }
 .tour-slider .tour-card {
-  min-width: 320px;
-  max-width: 320px;
+  min-width: 300px;
+  max-width: 300px;
   flex: 0 0 auto;
   scroll-snap-align: start;
 }
@@ -1344,10 +1492,10 @@ body {
   color: white;
 }
 .slider-btn.left {
-  left: -20px;
+  left: -12px;
 }
 .slider-btn.right {
-  right: -20px;
+  right: -12px;
 }
 
 .tour-card {
@@ -2720,3 +2868,34 @@ body {
   align-items: center;
   z-index: 100;
 }
+
+/* =========================================
+   TRAVELOKA STYLE HOME REDESIGN ANIMATIONS
+   ========================================= */
+.destination-card-hover:hover > div:first-child {
+  transform: scale(1.08) !important;
+}
+
+.destination-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.15) !important;
+}
+
+.tour-card-modern:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.1) !important;
+  border-color: #cbd5e1 !important;
+}
+
+@media (max-width: 768px) {
+  .hero-wrapper header {
+    height: 420px !important;
+  }
+  .hero-content-box h1 {
+    font-size: 26px !important;
+  }
+  .hero-content-box p {
+    font-size: 13.5px !important;
+  }
+}
+

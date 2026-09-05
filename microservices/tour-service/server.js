@@ -9,6 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../shared-uploads')));
+app.use('/uploads', express.static(path.join(__dirname, './uploads')));
 
 const sequelize = require('./config/database');
 const tourRoutes = require('./routes/tourRoutes');
