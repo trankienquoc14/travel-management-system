@@ -582,7 +582,7 @@ exports.getGuideSchedule = async (req, res) => {
                 t.tour_name, t.is_custom 
             FROM departures d
             JOIN tours t ON d.tour_id = t.tour_id
-            WHERE d.guide_id IS NOT NULL
+            WHERE (t.status = 'Approved' OR t.status = 'Active')
               AND d.status != 'Completed'
             ORDER BY d.departure_date ASC
         `);

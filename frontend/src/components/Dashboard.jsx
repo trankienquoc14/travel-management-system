@@ -41,8 +41,16 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [isPersonalOpen, setIsPersonalOpen] = useState(true);
   const [isWorkOpen, setIsWorkOpen] = useState(true);
-  const [isRequestManagerOpen, setIsRequestManagerOpen] = useState(true);
-  const [isTourManagerOpen, setIsTourManagerOpen] = useState(true);
+
+  // States toggle cho từng cụm menu trong Sidebar
+  const [isOverviewGroupOpen, setIsOverviewGroupOpen] = useState(true);
+  const [isSalesGroupOpen, setIsSalesGroupOpen] = useState(true);
+  const [isRequestManagerOpen, setIsRequestManagerOpen] = useState(false);
+  const [isOperationsGroupOpen, setIsOperationsGroupOpen] = useState(true);
+  const [isHRGroupOpen, setIsHRGroupOpen] = useState(true);
+  const [isGuideGroupOpen, setIsGuideGroupOpen] = useState(true);
+  const [isSystemGroupOpen, setIsSystemGroupOpen] = useState(true);
+
   const [stats, setStats] = useState({ revenue: 0, activeTours: 0, pendingRequests: 0 });
   const navigate = useNavigate();
 
@@ -236,201 +244,339 @@ const Dashboard = () => {
           {isWorkOpen && (
             <ul className="sidebar-menu" style={{ flex: 'none', overflowY: 'visible', paddingRight: 0 }}>
 
-          {/* ========================================================= */}
-          {/* 1. MENU CHUNG (Admin được xem mọi thứ)                    */}
-          {/* ========================================================= */}
-
-          {/* Xem báo cáo thống kê (Dành cho Quản lý Tour và Admin) */}
-          {(isTourManager || isAdmin) && (
-            <li className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>📊 Tổng quan & Báo cáo</li>
-          )}
-
-          {/* ========================================================= */}
-          {/* 2. NGHIỆP VỤ NHÂN VIÊN VĂN PHÒNG (Tour Operator)          */}
-          {/* ========================================================= */}
-          {(isOfficeStaff || isAdmin) && (
-            <>
-              <li 
-                onClick={() => setIsRequestManagerOpen(!isRequestManagerOpen)}
-                style={{ cursor: 'pointer', background: 'transparent', padding: '15px 15px 5px 15px', fontSize: '13px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>📦 QUẢN LÝ YÊU CẦU</span>
-                <span>{isRequestManagerOpen ? '▲' : '▼'}</span>
-              </li>
-              {isRequestManagerOpen && (
+              {/* ========================================================= */}
+              {/* 1. TỔNG QUAN & PHÊ DUYỆT (Quản lý Tour & Admin)           */}
+              {/* ========================================================= */}
+              {(isTourManager || isAdmin) && (
                 <>
                   <li 
-                    className={activeTab === 'tour_requests_pending' ? 'active' : ''}
-                    onClick={() => setActiveTab('tour_requests_pending')} 
-                    style={{ paddingLeft: '35px' }}
+                    onClick={() => setIsOverviewGroupOpen(!isOverviewGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '8px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #3b82f6'
+                    }}
                   >
-                    ⏳ Yêu cầu chờ báo giá
+                    <span>📊 TỔNG QUAN & PHÊ DUYỆT</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isOverviewGroupOpen ? '▲' : '▼'}</span>
                   </li>
-                  <li 
-                    className={activeTab === 'tour_requests_revision' ? 'active' : ''}
-                    onClick={() => setActiveTab('tour_requests_revision')} 
-                    style={{ paddingLeft: '35px' }}
-                  >
-                    ✏️ Yêu cầu cần chỉnh sửa
-                  </li>
-                  <li
-                    className={activeTab === 'tour_requests' ? 'active' : ''}
-                    onClick={() => setActiveTab('tour_requests')}
-                    style={{ paddingLeft: '35px' }}
-                  >
-                    🛎️ Thiết kế tour theo yêu cầu
-                  </li>
+                  {isOverviewGroupOpen && (
+                    <>
+                      <li className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
+                        📊 Tổng quan & Báo cáo
+                      </li>
+                      <li className={activeTab === 'approve_quotes' ? 'active' : ''} onClick={() => setActiveTab('approve_quotes')}>
+                        📝 Phê duyệt Thiết kế
+                      </li>
+                    </>
+                  )}
                 </>
               )}
 
-              <li 
-                onClick={() => setIsTourManagerOpen(!isTourManagerOpen)}
-                style={{ cursor: 'pointer', background: 'transparent', padding: '15px 15px 5px 15px', fontSize: '13px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>🗺️ QUẢN LÝ TOUR</span>
-                <span>{isTourManagerOpen ? '▲' : '▼'}</span>
-              </li>
-              {isTourManagerOpen && (
+              {/* ========================================================= */}
+              {/* 2. THIẾT KẾ TOUR & BÁN HÀNG (Nhân viên VP & Admin)         */}
+              {/* ========================================================= */}
+              {(isOfficeStaff || isAdmin) && (
                 <>
-                  <li
-                    className={activeTab === 'fixed_tours' ? 'active' : ''}
-                    onClick={() => setActiveTab('fixed_tours')}
-                    style={{ paddingLeft: '35px' }}
+                  <li 
+                    onClick={() => setIsSalesGroupOpen(!isSalesGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #10b981'
+                    }}
                   >
-                    ➕ Tạo tour mới
+                    <span>🏷️ KINH DOANH & ĐẶT TOUR</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isSalesGroupOpen ? '▲' : '▼'}</span>
                   </li>
-                  <li
-                    className={activeTab === 'approved_tours' ? 'active' : ''}
-                    onClick={() => setActiveTab('approved_tours')}
-                    style={{ paddingLeft: '35px' }}
-                  >
-                    📋 Tour đã thiết kế
-                  </li>
+                  {isSalesGroupOpen && (
+                    <>
+                      <li 
+                        onClick={() => setIsRequestManagerOpen(!isRequestManagerOpen)}
+                        style={{ cursor: 'pointer', background: 'transparent', padding: '10px 15px 5px 15px', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>📦 Xử Lý Yêu Cầu</span>
+                        <span style={{ fontSize: '10px' }}>{isRequestManagerOpen ? '▲' : '▼'}</span>
+                      </li>
+                      {isRequestManagerOpen && (
+                        <>
+                          <li 
+                            className={activeTab === 'tour_requests_pending' ? 'active' : ''}
+                            onClick={() => setActiveTab('tour_requests_pending')} 
+                            style={{ paddingLeft: '35px' }}
+                          >
+                            ⏳ Yêu cầu chờ báo giá
+                          </li>
+                          <li 
+                            className={activeTab === 'tour_requests_revision' ? 'active' : ''}
+                            onClick={() => setActiveTab('tour_requests_revision')} 
+                            style={{ paddingLeft: '35px' }}
+                          >
+                            ✏️ Yêu cầu cần chỉnh sửa
+                          </li>
+                          <li
+                            className={activeTab === 'tour_requests' ? 'active' : ''}
+                            onClick={() => setActiveTab('tour_requests')}
+                            style={{ paddingLeft: '35px' }}
+                          >
+                            🛎️ Thiết kế tour theo yêu cầu
+                          </li>
+                        </>
+                      )}
+
+                      <li
+                        className={activeTab === 'fixed_tours' ? 'active' : ''}
+                        onClick={() => setActiveTab('fixed_tours')}
+                      >
+                        ➕ Tạo tour cố định mới
+                      </li>
+                      <li
+                        className={activeTab === 'approved_tours' ? 'active' : ''}
+                        onClick={() => setActiveTab('approved_tours')}
+                      >
+                        📋 Tour đã thiết kế
+                      </li>
+                      <li
+                        className={activeTab === 'orders' ? 'active' : ''}
+                        onClick={() => setActiveTab('orders')}
+                      >
+                        🛒 Quản Lý Booking Tour
+                      </li>
+                      <li
+                        className={activeTab === 'payments' ? 'active' : ''}
+                        onClick={() => setActiveTab('payments')}
+                      >
+                        💳 Xác Nhận Thanh Toán
+                      </li>
+                      <li
+                        className={activeTab === 'change_request' ? 'active' : ''}
+                        onClick={() => setActiveTab('change_request')}
+                      >
+                        🔄 Xử Lý Hủy / Đổi Lịch
+                      </li>
+                      <li
+                        className={activeTab === 'hr_customers' ? 'active' : ''}
+                        onClick={() => setActiveTab('hr_customers')}
+                      >
+                        👥 Quản lý Khách hàng
+                      </li>
+                    </>
+                  )}
                 </>
               )}
 
-              {/* Booking */}
-              <li
-                className={activeTab === 'orders' ? 'active' : ''}
-                onClick={() => setActiveTab('orders')}
-              >
-                🛒 Quản Lý Booking Tour
-              </li>
+              {/* ========================================================= */}
+              {/* 3. VẬN HÀNH & NGUỒN LỰC TOUR (Quản lý Tour & Admin)       */}
+              {/* ========================================================= */}
+              {(isTourManager || isAdmin) && (
+                <>
+                  <li 
+                    onClick={() => setIsOperationsGroupOpen(!isOperationsGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #f59e0b'
+                    }}
+                  >
+                    <span>⚙️ VẬN HÀNH & NGUỒN LỰC</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isOperationsGroupOpen ? '▲' : '▼'}</span>
+                  </li>
+                  {isOperationsGroupOpen && (
+                    <>
+                      <li className={activeTab === 'tours' || activeTab === 'tour_form' ? 'active' : ''} onClick={() => setActiveTab('tours')}>
+                        🗺️ Danh Mục Tour
+                      </li>
+                      <li className={activeTab === 'operational_manager' ? 'active' : ''} onClick={() => setActiveTab('operational_manager')}>
+                        ⚙️ Vận hành Tour
+                      </li>
+                      <li className={activeTab === 'services' || activeTab === 'service_form' ? 'active' : ''} onClick={() => setActiveTab('services')}>
+                        🏨 Quản lý Dịch vụ
+                      </li>
+                      <li className={activeTab === 'places' ? 'active' : ''} onClick={() => setActiveTab('places')}>
+                        📍 Quản lý Địa điểm
+                      </li>
+                      <li className={activeTab === "partners" || activeTab === "partner_form" ? "active" : ""} onClick={() => setActiveTab("partners")}>
+                        🤝 Quản lý Đối tác
+                      </li>
+                      <li className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>
+                        ⚠️ Xử lý sự cố Tour
+                      </li>
+                    </>
+                  )}
+                </>
+              )}
 
-              {/* Thanh toán */}
-              <li
-                className={activeTab === 'payments' ? 'active' : ''}
-                onClick={() => setActiveTab('payments')}
-              >
-                💳 Xác Nhận Thanh Toán
-              </li>
+              {/* ========================================================= */}
+              {/* 4. QUẢN LÝ NHÂN SỰ (HR Manager & Admin)                   */}
+              {/* ========================================================= */}
+              {(isHRManager || isAdmin) && (
+                <>
+                  <li 
+                    onClick={() => setIsHRGroupOpen(!isHRGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #8b5cf6'
+                    }}
+                  >
+                    <span>👥 QUẢN LÝ NHÂN SỰ</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isHRGroupOpen ? '▲' : '▼'}</span>
+                  </li>
+                  {isHRGroupOpen && (
+                    <>
+                      <li className={activeTab === 'hr_employees' ? 'active' : ''} onClick={() => setActiveTab('hr_employees')}>👥 Quản lý Nhân sự</li>
+                      <li className={activeTab === 'hr_attendance' ? 'active' : ''} onClick={() => setActiveTab('hr_attendance')}>📅 Quản lý Chấm công</li>
+                      <li className={activeTab === 'hr_payroll' ? 'active' : ''} onClick={() => setActiveTab('hr_payroll')}>💰 Tính lương Nhân sự</li>
+                      <li className={activeTab === 'hr_performance' ? 'active' : ''} onClick={() => setActiveTab('hr_performance')}>⭐ Đánh giá Hiệu suất</li>
+                    </>
+                  )}
+                </>
+              )}
 
-              {/* Hủy đổi lịch */}
-              <li
-                className={activeTab === 'change_request' ? 'active' : ''}
-                onClick={() => setActiveTab('change_request')}
-              >
-                🔄 Xử Lý Hủy / Đổi Lịch
-              </li>
-              <li
-                className={activeTab === 'hr_customers' ? 'active' : ''}
-                onClick={() => setActiveTab('hr_customers')}
-              >
-                👥 Quản lý Khách hàng
-              </li>
-            </>
-          )}
+              {/* ========================================================= */}
+              {/* 5. KHÔNG GIAN HƯỚNG DẪN VIÊN (Tour Guide & Admin)          */}
+              {/* ========================================================= */}
+              {(isTourGuide || isAdmin) && (
+                <>
+                  <li 
+                    onClick={() => setIsGuideGroupOpen(!isGuideGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #ec4899'
+                    }}
+                  >
+                    <span>💼 HƯỚNG DẪN VIÊN</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isGuideGroupOpen ? '▲' : '▼'}</span>
+                  </li>
+                  {isGuideGroupOpen && (
+                    <>
+                      <li className={activeTab === 'guide_work' ? 'active' : ''} onClick={() => setActiveTab('guide_work')}>💼 Lịch trình Dẫn đoàn</li>
+                      <li className={activeTab === 'guide_passengers' ? 'active' : ''} onClick={() => setActiveTab('guide_passengers')}>📋 Điểm danh hành khách</li>
+                      <li className={activeTab === 'guide_itinerary' ? 'active' : ''} onClick={() => setActiveTab('guide_itinerary')}>🗺️ Lịch trình chi tiết</li>
+                      <li className={activeTab === 'guide_map' ? 'active' : ''} onClick={() => setActiveTab('guide_map')}>📍 Bản đồ & Định vị</li>
+                      <li className={activeTab === 'guide_updates' ? 'active' : ''} onClick={() => setActiveTab('guide_updates')}>📝 Cập nhật hành trình</li>
+                      <li className={activeTab === 'guide_incidents' ? 'active' : ''} onClick={() => setActiveTab('guide_incidents')}>🚨 Báo cáo sự cố</li>
+                    </>
+                  )}
+                </>
+              )}
 
-          {/* ========================================================= */}
-          {/* 3. NGHIỆP VỤ QUẢN LÝ TOUR (Kèm Admin)                     */}
-          {/* Quản lý dịch vụ/tour, Phê duyệt thiết kế, Quản lý đối tác */}
-          {/* ========================================================= */}
-          {(isTourManager || isAdmin) && (
-            <>
-              <li className={activeTab === 'approve_quotes' ? 'active' : ''} onClick={() => setActiveTab('approve_quotes')}>
-                📝 Phê duyệt Thiết kế
-              </li>
-              <li className={activeTab === 'tours' || activeTab === 'tour_form' ? 'active' : ''} onClick={() => setActiveTab('tours')}>
-                🗺️ Quản lý Tour
-              </li>
-              <li className={activeTab === 'operational_manager' ? 'active' : ''} onClick={() => setActiveTab('operational_manager')}>
-                ⚙️ Vận hành Tour
-              </li>
-              <li className={activeTab === 'services' || activeTab === 'service_form' ? 'active' : ''} onClick={() => setActiveTab('services')}>
-                🏨 Quản lý Dịch vụ
-              </li>
-              <li className={activeTab === 'places' ? 'active' : ''} onClick={() => setActiveTab('places')}>
-                📍 Quản lý Địa điểm
-              </li>
-              <li className={activeTab === "partners" || activeTab === "partner_form" ? "active" : ""} onClick={() => setActiveTab("partners")}>
-                🤝 Quản lý Đối tác
-              </li>
-              <li className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>
-                ⚠️ Xử lý sự cố Tour
-              </li>
-            </>
-          )}
+              {/* ========================================================= */}
+              {/* 6. QUẢN TRỊ HỆ THỐNG (Dành riêng Admin)                   */}
+              {/* ========================================================= */}
+              {isAdmin && (
+                <>
+                  <li 
+                    onClick={() => setIsSystemGroupOpen(!isSystemGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #64748b'
+                    }}
+                  >
+                    <span>🛠️ QUẢN TRỊ HỆ THỐNG</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isSystemGroupOpen ? '▲' : '▼'}</span>
+                  </li>
+                  {isSystemGroupOpen && (
+                    <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>
+                      👥 Quản lý Người dùng
+                    </li>
+                  )}
+                </>
+              )}
 
-          {/* ========================================================= */}
-          {/* 4. NGHIỆP VỤ ĐỐI TÁC                                      */}
-          {/* Quản lý thông tin dịch vụ, Xử lý yêu cầu cung cấp DV      */}
-          {/* ========================================================= */}
-          {isPartner && (
-            <>
-              <li className={activeTab === 'partner_inventory' ? 'active' : ''} onClick={() => setActiveTab('partner_inventory')}>🏪 Kho Dịch vụ của tôi</li>
-              <li className={activeTab === 'partner_requests' ? 'active' : ''} onClick={() => setActiveTab('partner_requests')}>📩 Xử lý Yêu cầu dịch vụ</li>
-            </>
-          )}
+              {/* ========================================================= */}
+              {/* 7. DÀNH CHO ĐỐI TÁC                                       */}
+              {/* ========================================================= */}
+              {isPartner && (
+                <>
+                  <li className={activeTab === 'partner_inventory' ? 'active' : ''} onClick={() => setActiveTab('partner_inventory')}>🏪 Kho Dịch vụ của tôi</li>
+                  <li className={activeTab === 'partner_requests' ? 'active' : ''} onClick={() => setActiveTab('partner_requests')}>📩 Xử lý Yêu cầu dịch vụ</li>
+                </>
+              )}
 
-          {/* ========================================================= */}
-          {/* 5. NGHIỆP VỤ QUẢN LÝ NHÂN SỰ (Kèm Admin)                  */}
-          {/* ========================================================= */}
-          {(isHRManager || isAdmin) && (
-            <>
-              <li className={activeTab === 'hr_employees' ? 'active' : ''} onClick={() => setActiveTab('hr_employees')}>👥 Quản lý Nhân sự</li>
-              <li className={activeTab === 'hr_attendance' ? 'active' : ''} onClick={() => setActiveTab('hr_attendance')}>📅 Quản lý Chấm công</li>
-              <li className={activeTab === 'hr_payroll' ? 'active' : ''} onClick={() => setActiveTab('hr_payroll')}>💰 Tính lương Nhân sự</li>
-              <li className={activeTab === 'hr_performance' ? 'active' : ''} onClick={() => setActiveTab('hr_performance')}>⭐ Đánh giá Hiệu suất</li>
-            </>
-          )}
-
-          {/* ========================================================= */}
-          {/* 6. NGHIỆP VỤ HƯỚNG DẪN VIÊN (Kèm Admin)                  */}
-          {/* ========================================================= */}
-          {(isTourGuide || isAdmin) && (
-            <>
-              <li className={activeTab === 'guide_work' ? 'active' : ''} onClick={() => setActiveTab('guide_work')}>💼 Lịch trình Dẫn đoàn</li>
-              <li className={activeTab === 'guide_passengers' ? 'active' : ''} onClick={() => setActiveTab('guide_passengers')}>📋 Điểm danh hành khách</li>
-              <li className={activeTab === 'guide_itinerary' ? 'active' : ''} onClick={() => setActiveTab('guide_itinerary')}>🗺️ Lịch trình chi tiết</li>
-              <li className={activeTab === 'guide_map' ? 'active' : ''} onClick={() => setActiveTab('guide_map')}>📍 Bản đồ & Định vị</li>
-              <li className={activeTab === 'guide_updates' ? 'active' : ''} onClick={() => setActiveTab('guide_updates')}>📝 Cập nhật hành trình</li>
-              <li className={activeTab === 'guide_incidents' ? 'active' : ''} onClick={() => setActiveTab('guide_incidents')}>🚨 Báo cáo sự cố</li>
-            </>
-          )}
-
-          {/* ========================================================= */}
-          {/* 7. NGHIỆP VỤ QUẢN TRỊ VIÊN HỆ THỐNG                       */}
-          {/* ========================================================= */}
-          {isAdmin && (
-            <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>
-              👥 Quản lý Người dùng
-            </li>
-          )}
-
-          {/* ========================================================= */}
-          {/* 8. NGHIỆP VỤ KHÁCH HÀNG (Customer)                        */}
-          {/* ========================================================= */}
-          {isCustomer && (
-            <>
-              <li className={activeTab === 'my_bookings' ? 'active' : ''} onClick={() => setActiveTab('my_bookings')}>
-                🛒 Đơn Đặt Tour Của Tôi
-              </li>
-              <li className={activeTab === 'customer_quotes' ? 'active' : ''} onClick={() => setActiveTab('customer_quotes')}>
-                🛎️ Tour Thiết Kế Theo Yêu Cầu
-              </li>
-              <li className={activeTab === 'customer_builder' ? 'active' : ''} onClick={() => setActiveTab('customer_builder')}>
-                ✨ Gửi Yêu Cầu Thiết Kế Tour
-              </li>
-            </>
-          )}
+              {/* ========================================================= */}
+              {/* 8. DÀNH CHO KHÁCH HÀNG                                    */}
+              {/* ========================================================= */}
+              {isCustomer && (
+                <>
+                  <li className={activeTab === 'my_bookings' ? 'active' : ''} onClick={() => setActiveTab('my_bookings')}>
+                    🛒 Đơn Đặt Tour Của Tôi
+                  </li>
+                  <li className={activeTab === 'customer_quotes' ? 'active' : ''} onClick={() => setActiveTab('customer_quotes')}>
+                    🛎️ Tour Thiết Kế Theo Yêu Cầu
+                  </li>
+                  <li className={activeTab === 'customer_builder' ? 'active' : ''} onClick={() => setActiveTab('customer_builder')}>
+                    ✨ Gửi Yêu Cầu Thiết Kế Tour
+                  </li>
+                </>
+              )}
 
             </ul>
           )}

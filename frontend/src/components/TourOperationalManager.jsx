@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../index.css';
 
-const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth }) => {
+const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth, currentYear }) => {
     let year, month;
     if (selectedMonth === 'all' || !selectedMonth) {
-        const d = new Date();
-        year = d.getFullYear();
-        month = d.getMonth() + 1;
+        year = currentYear || new Date().getFullYear();
+        month = new Date().getMonth() + 1;
     } else {
-        [year, month] = selectedMonth.split('-').map(Number);
+        const parts = selectedMonth.split('-');
+        year = Number(parts[0]) || currentYear || new Date().getFullYear();
+        month = Number(parts[1]) || (new Date().getMonth() + 1);
     }
 
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -110,14 +111,38 @@ const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth }) => {
     );
 };
 
-const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedMonth, currentYear }) => {
+const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedMonth, currentYear, onYearChange, tours = [], activeTourTab = 'fixed' }) => {
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
-    // Tính số tour/lịch trình thực tế cho từng tháng từ CSDL
+    // Dynamic available years list
+    const yearSet = new Set([new Date().getFullYear(), currentYear]);
+    if (guideSchedules) {
+        guideSchedules.forEach(sch => {
+            if (sch.departure_date) {
+                const y = new Date(sch.departure_date).getFullYear();
+                if (y >= 2020 && y <= 2035) yearSet.add(y);
+            }
+        });
+    }
+    const thisYear = new Date().getFullYear();
+    yearSet.add(thisYear - 1);
+    yearSet.add(thisYear);
+    yearSet.add(thisYear + 1);
+    yearSet.add(thisYear + 2);
+    const availableYears = Array.from(yearSet).sort((a, b) => a - b);
+
+    const activeTourIds = new Set(
+        tours
+            .filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (!t.is_custom || t.is_custom === 0))
+            .map(t => t.tour_id)
+    );
+
+    // Tính số tour/lịch trình thực tế cho từng tháng từ CSDL (chỉ đếm tour Active/Approved trong tab hiện tại)
     const getMonthCount = (m) => {
         if (!guideSchedules) return 0;
         return guideSchedules.filter(sch => {
             if (!sch.departure_date) return false;
+            if (sch.tour_id && !activeTourIds.has(sch.tour_id)) return false;
             const d = new Date(sch.departure_date);
             return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
         }).length;
@@ -125,6 +150,7 @@ const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedM
 
     const totalToursInYear = guideSchedules ? guideSchedules.filter(sch => {
         if (!sch.departure_date) return false;
+        if (sch.tour_id && !activeTourIds.has(sch.tour_id)) return false;
         return new Date(sch.departure_date).getFullYear() === currentYear;
     }).length : 0;
 
@@ -139,16 +165,38 @@ const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedM
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid #f1f5f9', paddingBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                    <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        📅 QUẢN LÝ LỊCH VẬN HÀNH 12 THÁNG NĂM {currentYear}
-                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            📅 QUẢN LÝ LỊCH VẬN HÀNH 12 THÁNG
+                        </h3>
+                        <select
+                            value={currentYear}
+                            onChange={(e) => onYearChange && onYearChange(Number(e.target.value))}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '15px',
+                                fontWeight: '800',
+                                color: '#1e3a8a',
+                                background: '#eff6ff',
+                                border: '2px solid #3b82f6',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)'
+                            }}
+                        >
+                            {availableYears.map(y => (
+                                <option key={y} value={y}>Năm {y}</option>
+                            ))}
+                        </select>
+                    </div>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
                         Chọn Tháng để xem danh sách tour di chuyển được gắn trực tiếp vào khu vực từng tháng.
                     </p>
                 </div>
 
                 <div style={{ background: '#f0f9ff', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: '#0284c7', border: '1px solid #bae6fd' }}>
-                    🚀 Tổng số đợt khởi hành: {totalToursInYear} tour
+                    🚀 Tổng số đợt khởi hành năm {currentYear}: {totalToursInYear} tour
                 </div>
             </div>
 
@@ -259,8 +307,16 @@ const TourOperationalManager = () => {
     const [activeTourTab, setActiveTourTab] = useState('fixed'); // 'fixed' | 'custom'
     const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
 
-    const currentYear = new Date().getFullYear();
+    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const todayStr = new Date().toISOString().split('T')[0];
+
+    const handleYearChange = (newYear) => {
+        setCurrentYear(newYear);
+        if (selectedMonth && selectedMonth !== 'all') {
+            const monthNum = selectedMonth.split('-')[1] || '01';
+            setSelectedMonth(`${newYear}-${monthNum}`);
+        }
+    };
 
     useEffect(() => {
         fetchInitialData();
@@ -482,14 +538,19 @@ const TourOperationalManager = () => {
                     selectedMonth={selectedMonth} 
                     setSelectedMonth={setSelectedMonth} 
                     currentYear={currentYear}
+                    onYearChange={handleYearChange}
+                    tours={tours}
+                    activeTourTab={activeTourTab}
                 />
 
                 {/* 3. KHU VỰC DANH SÁCH TOUR ĐƯỢC GẮN TRỰC TIẾP THEO TỪNG THÁNG */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {monthsToRender.map(m => {
                         const toursInMonth = getToursForMonth(m);
+                        const tourIdsInMonth = new Set(toursInMonth.map(t => t.tour_id));
                         const monthSchedulesCount = guideSchedules ? guideSchedules.filter(sch => {
                             if (!sch.departure_date) return false;
+                            if (sch.tour_id && !tourIdsInMonth.has(sch.tour_id)) return false;
                             const d = new Date(sch.departure_date);
                             return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
                         }).length : 0;
@@ -704,6 +765,7 @@ const TourOperationalManager = () => {
                                                                     guides={guides}
                                                                     guideSchedules={guideSchedules}
                                                                     selectedMonth={selectedMonth}
+                                                                    currentYear={currentYear}
                                                                 />
                                                             </div>
 

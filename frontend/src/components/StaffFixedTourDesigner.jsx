@@ -252,16 +252,40 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                         const parsed = typeof tourData.design_data === 'string' ? JSON.parse(tourData.design_data) : tourData.design_data;
                         if (parsed.categories) setFormData(prev => ({...prev, categories: parsed.categories}));
                         if (parsed.highlights) setFormData(prev => ({...prev, highlights: parsed.highlights}));
-                        if (parsed.days) {
-                            setDays(parsed.days.map((d, i) => ({
-                                dayIndex: i + 1,
-                                start_destination_id: d.start_destination_id || '',
-                                end_destination_id: d.end_destination_id || '',
-                                route_title: d.route_title || '',
-                                activities: d.activities || [],
-                                accommodation: d.accommodation || null,
-                                meals: d.meals || { breakfast: false, lunch: false, dinner: false }
-                            })));
+                        if (parsed.days || parsed.itinerary) {
+                            const rawDays = parsed.days || parsed.itinerary || [];
+                            setDays(rawDays.map((d, i) => {
+                                let accomm = null;
+                                if (d.accommodation) {
+                                    accomm = {
+                                        service_id: d.accommodation.service_id !== undefined ? d.accommodation.service_id : (d.hotel_id || 'existing'),
+                                        name: d.accommodation.name || d.accommodation.hotel || d.accommodation.hotel_name || 'Khách sạn',
+                                        price: d.accommodation.price !== undefined ? d.accommodation.price : (d.hotel_price || 0)
+                                    };
+                                } else if (d.hotel_id || d.hotel || d.hotel_name) {
+                                    accomm = {
+                                        service_id: d.hotel_id || 'existing',
+                                        name: d.hotel || d.hotel_name || `Khách sạn (ID: ${d.hotel_id})`,
+                                        price: d.hotel_price || 0
+                                    };
+                                } else if (parsed.fixedServices?.accommodation?.[0]) {
+                                    accomm = {
+                                        service_id: 'existing',
+                                        name: parsed.fixedServices.accommodation[0].name,
+                                        price: parsed.fixedServices.accommodation[0].price
+                                    };
+                                }
+
+                                return {
+                                    dayIndex: d.dayIndex || d.day || (i + 1),
+                                    start_destination_id: d.start_destination_id || '',
+                                    end_destination_id: d.end_destination_id || '',
+                                    route_title: d.route_title || d.title || '',
+                                    activities: d.activities || [],
+                                    accommodation: accomm,
+                                    meals: d.meals || { breakfast: false, lunch: false, dinner: false }
+                                };
+                            }));
                         }
                         if (parsed.costConfig) {
                             let parsedAgeMult = parsed.costConfig.ageMultiplier || {};

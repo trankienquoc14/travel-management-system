@@ -373,7 +373,57 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                             {(() => {
                                 if (!viewingFixedTour.design_data) return <span style={{ color: '#64748b' }}>Chưa có chi tiết lịch trình.</span>;
                                 try {
-                                    const parsedDesign = typeof viewingFixedTour.design_data === 'string' ? JSON.parse(viewingFixedTour.design_data) : viewingFixedTour.design_data;
+                                    let parsedDesign = typeof viewingFixedTour.design_data === 'string' ? JSON.parse(viewingFixedTour.design_data) : viewingFixedTour.design_data;
+                                    
+                                    // Fallback / normalization for legacy design format
+                                    if ((!parsedDesign.days || !parsedDesign.costConfig || !parsedDesign.computed) && parsedDesign.itineraryDays) {
+                                        const days = parsedDesign.itineraryDays.map((d, idx) => {
+                                            const activities = [];
+                                            if (d.slots) {
+                                                ['morning', 'noon', 'evening'].forEach(slotKey => {
+                                                    if (Array.isArray(d.slots[slotKey])) {
+                                                        d.slots[slotKey].forEach(act => {
+                                                            activities.push({
+                                                                type: 'Tham quan',
+                                                                name: act.name,
+                                                                price: Number(act.price || 0)
+                                                            });
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                            return {
+                                                dayIndex: d.dayIndex || idx + 1,
+                                                route_title: d.dateString || `Ngày ${d.dayIndex || idx + 1}`,
+                                                activities: activities,
+                                                accommodation: parsedDesign.fixedServices?.accommodation?.[0] ? {
+                                                    name: parsedDesign.fixedServices.accommodation[0].name,
+                                                    price: parsedDesign.fixedServices.accommodation[0].price
+                                                } : null,
+                                                meals: { breakfast: true, lunch: true, dinner: true }
+                                            };
+                                        });
+
+                                        const transport = parsedDesign.fixedServices?.transport?.[0];
+                                        parsedDesign = {
+                                            days,
+                                            costConfig: {
+                                                minimumPax: 15, margin: 18,
+                                                selectedTransport: transport ? { name: transport.name, price: transport.price } : null,
+                                                transportTimes: { startD: '07:00', endD: '11:30', startR: '13:00', endR: '18:00' },
+                                                fixed: { guidePerDay: 500000 },
+                                                variable: { breakfast: 100000, lunch: 150000, dinner: 200000 }
+                                            },
+                                            computed: {
+                                                netCost: Number(viewingFixedTour.base_cost || 3500000),
+                                                sellingPrice: Number(viewingFixedTour.base_price || 4200000),
+                                                totalDays: days.length,
+                                                totalNights: Math.max(1, days.length - 1)
+                                            },
+                                            dayImages: parsedDesign.dayImages || {}
+                                        };
+                                    }
+
                                     const { days, costConfig, computed, dayImages } = parsedDesign;
                                     if (!days || !costConfig || !computed) return <span style={{ color: '#64748b' }}>Dữ liệu thiết kế không đầy đủ.</span>;
                                     

@@ -21,7 +21,7 @@ const HomePage = () => {
     // Floating Travel Search Inputs
     const [searchLocation, setSearchLocation] = useState('');
     const [searchDate, setSearchDate] = useState('');
-    const [searchGuests, setSearchGuests] = useState('2');
+    const [searchGuests, setSearchGuests] = useState('All');
 
     // Structured travel preferences state (syncs with Top Bar & Left Sidebar)
     const [preferences, setPreferences] = useState(() => {
@@ -367,10 +367,17 @@ const HomePage = () => {
     }, [isHeroPaused, heroSlides.length]);
 
     const handleApplyFloatingSearch = () => {
+        let companionFilter = [];
+        if (searchGuests === '1') companionFilter = ['Đi một mình'];
+        else if (searchGuests === '2') companionFilter = ['Cặp đôi'];
+        else if (searchGuests === '4') companionFilter = ['Gia đình có trẻ nhỏ'];
+        else if (searchGuests === '8') companionFilter = ['Đoàn công ty', 'Nhóm bạn trẻ'];
+
         setPreferences(prev => ({
             ...prev,
             searchTerm: searchLocation,
-            departureDate: searchDate
+            departureDate: searchDate,
+            companions: companionFilter
         }));
         trackBehavior('SEARCH', null, { location: searchLocation, date: searchDate, guests: searchGuests });
         scrollToShowcase();
@@ -525,6 +532,7 @@ const HomePage = () => {
                                     onChange={(e) => setSearchGuests(e.target.value)}
                                     style={{ width: '100%', height: '46px', padding: '0 12px', borderRadius: '14px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', fontWeight: '700', color: '#0f172a', background: '#f8fafc', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
                                 >
+                                    <option value="All">✨ Tất cả số lượng</option>
                                     <option value="1">👤 1 Khách (Solo)</option>
                                     <option value="2">👩‍❤️‍👨 2 Khách (Cặp đôi)</option>
                                     <option value="4">👨‍👩‍👧‍👦 Gia đình (3-4 Khách)</option>

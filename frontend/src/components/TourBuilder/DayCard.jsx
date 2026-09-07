@@ -274,42 +274,121 @@ const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayIma
             {/* Accommodation Section */}
             <div style={{ padding: '15px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '15px' }}>
                 <h4 style={{ fontSize: '14px', margin: '0 0 10px 0', color: '#0f172a' }}>🏨 Nơi lưu trú tại {(() => {
-    const endD = destinations.find(d => String(d.destination_id) === String(day.end_destination_id));
-    return endD ? endD.destination_name : 'Điểm đến';
-})()}</h4>
-                <select 
-                    value={day.accommodation?.service_id || ''} 
-                    onChange={e => {
-                        const val = e.target.value;
-                        if (!val) {
-                            updateDay('accommodation', null);
-                            return;
-                        }
-                        const service = (allServices || []).find(s => String(s.service_id) === String(val));
-                        if (service) {
-                            updateDay('accommodation', {
-                                service_id: service.service_id,
-                                name: `${service.service_name} (hoặc tương đương)`,
-                                price: service.base_cost || 0
-                            });
-                        }
-                    }}
-                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', marginBottom: '10px' }}
-                >
-                    <option value="">-- Không chọn / Tự túc --</option>
-                    {day.accommodation?.service_id === 'custom' && (
-                        <option value="custom">{day.accommodation.name} (Tự động từ yêu cầu: {Number(day.accommodation.price).toLocaleString('vi-VN')}đ)</option>
-                    )}
-                    {(allServices || []).filter(s => 
-                        (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') && 
-                        String(s.destination_id) === String(day.end_destination_id)
-                    ).map(h => (
-                        <option key={h.service_id} value={h.service_id}>{h.service_name} (Từ {Number(h.base_cost).toLocaleString('vi-VN')}đ)</option>
-                    ))}
-                </select>
+                    const endD = destinations.find(d => String(d.destination_id) === String(day.end_destination_id));
+                    return endD ? endD.destination_name : 'Điểm đến';
+                })()}</h4>
+                {(() => {
+                    const REGION_MAP = {
+                        // Miền Bắc
+                        8: 'Miền Bắc', 19: 'Miền Bắc', 4: 'Miền Bắc', 9: 'Miền Bắc', 15: 'Miền Bắc',
+                        // Miền Trung & Tây Nguyên
+                        1: 'Miền Trung & Tây Nguyên', 2: 'Miền Trung & Tây Nguyên', 5: 'Miền Trung & Tây Nguyên', 
+                        6: 'Miền Trung & Tây Nguyên', 7: 'Miền Trung & Tây Nguyên', 10: 'Miền Trung & Tây Nguyên', 
+                        11: 'Miền Trung & Tây Nguyên', 16: 'Miền Trung & Tây Nguyên', 20: 'Miền Trung & Tây Nguyên', 21: 'Miền Trung & Tây Nguyên',
+                        // Miền Nam & Miền Tây
+                        3: 'Miền Nam & Miền Tây', 12: 'Miền Nam & Miền Tây', 13: 'Miền Nam & Miền Tây', 
+                        14: 'Miền Nam & Miền Tây', 18: 'Miền Nam & Miền Tây', 22: 'Miền Nam & Miền Tây', 
+                        23: 'Miền Nam & Miền Tây', 24: 'Miền Nam & Miền Tây', 25: 'Miền Nam & Miền Tây'
+                    };
 
+                    const currentServiceId = day.accommodation?.service_id !== undefined && day.accommodation?.service_id !== null
+                        ? String(day.accommodation.service_id)
+                        : (day.accommodation?.name ? 'existing' : '');
 
+                    const targetDestId = day.end_destination_id || day.start_destination_id;
+                    const targetDestObj = destinations.find(d => String(d.destination_id) === String(targetDestId));
+                    const targetRegion = REGION_MAP[Number(targetDestId)];
 
+                    // 1. Khách sạn thuộc điểm đến trực tiếp
+                    const exactHotels = (allServices || []).filter(s => 
+                        (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') &&
+                        String(s.service_id) !== currentServiceId &&
+                        targetDestId && String(s.destination_id) === String(targetDestId)
+                    );
+
+                    // 2. Khách sạn thuộc khu vực lân cận cùng Miền
+                    const nearbyHotels = (allServices || []).filter(s => 
+                        (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') &&
+                        String(s.service_id) !== currentServiceId &&
+                        (!targetDestId || String(s.destination_id) !== String(targetDestId)) &&
+                        (targetRegion && REGION_MAP[Number(s.destination_id)] === targetRegion)
+                    );
+
+                    // 3. Các khách sạn thuộc khu vực khác
+                    const otherHotels = (allServices || []).filter(s => 
+                        (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') &&
+                        String(s.service_id) !== currentServiceId &&
+                        (!targetDestId || String(s.destination_id) !== String(targetDestId)) &&
+                        (!targetRegion || REGION_MAP[Number(s.destination_id)] !== targetRegion)
+                    );
+
+                    return (
+                        <select 
+                            value={currentServiceId} 
+                            onChange={e => {
+                                const val = e.target.value;
+                                if (!val) {
+                                    updateDay('accommodation', null);
+                                    return;
+                                }
+                                if (val === currentServiceId && day.accommodation) {
+                                    return; // Giữ nguyên thông tin lưu trú hiện tại
+                                }
+                                const service = (allServices || []).find(s => String(s.service_id) === String(val));
+                                if (service) {
+                                    updateDay('accommodation', {
+                                        service_id: service.service_id,
+                                        name: `${service.service_name} (hoặc tương đương)`,
+                                        price: service.base_cost || 0
+                                    });
+                                }
+                            }}
+                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', marginBottom: '10px' }}
+                        >
+                            <option value="">-- Không chọn / Tự túc --</option>
+                            
+                            {/* Luôn hiển thị nơi lưu trú hiện tại của tour nếu có */}
+                            {day.accommodation && day.accommodation.name && (
+                                <option value={currentServiceId}>
+                                    {day.accommodation.name} ({Number(day.accommodation.price || 0).toLocaleString('vi-VN')}đ)
+                                </option>
+                            )}
+                            
+                            {/* Nhóm 1: Khách sạn đúng điểm đến trực tiếp */}
+                            {exactHotels.length > 0 && (
+                                <optgroup label={`🏨 Khách sạn tại ${targetDestObj ? targetDestObj.destination_name : 'Địa điểm này'}`}>
+                                    {exactHotels.map(h => (
+                                        <option key={h.service_id} value={h.service_id}>
+                                            {h.service_name} ({Number(h.base_cost).toLocaleString('vi-VN')}đ)
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            )}
+
+                            {/* Nhóm 2: Khách sạn thuộc Khu vực lân cận cùng Miền */}
+                            {nearbyHotels.length > 0 && (
+                                <optgroup label={`🏞️ Khách sạn khu vực lân cận (${targetRegion || 'Cùng miền'})`}>
+                                    {nearbyHotels.map(h => (
+                                        <option key={h.service_id} value={h.service_id}>
+                                            {h.service_name} ({Number(h.base_cost).toLocaleString('vi-VN')}đ)
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            )}
+
+                            {/* Nhóm 3: Các khu vực khác */}
+                            {otherHotels.length > 0 && (
+                                <optgroup label="🌐 Khách sạn thuộc các khu vực khác">
+                                    {otherHotels.map(h => (
+                                        <option key={h.service_id} value={h.service_id}>
+                                            {h.service_name} ({Number(h.base_cost).toLocaleString('vi-VN')}đ)
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            )}
+                        </select>
+                    );
+                })()}
             </div>
 
 
