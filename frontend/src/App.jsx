@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import HomePage from './components/HomePage';
+import TourListPage from './components/TourListPage';
 import TourDetail from './components/TourDetail';
 import MyBookings from './components/MyBookings';
 import BookingForm from './components/BookingForm';
@@ -47,15 +48,8 @@ const StaffProtectedRoute = ({ children }) => {
 
 // 3. Phân luồng lúc mới vào web
 const RootRedirect = () => {
-  const userStr = localStorage.getItem('user');
-  const token = localStorage.getItem('token');
-  
-  if (!userStr || !token) return <Navigate to="/home" replace />;
-  
-  const user = JSON.parse(userStr);
-  const userRole = Number(user.role_id || user.role); 
-
-  return userRole === 6 ? <Navigate to="/home" replace /> : <Navigate to="/dashboard" replace />;
+  // LUÔN LUÔN mặc định vào trang chủ, bất kể có đăng nhập hay chưa
+  return <Navigate to="/home" replace />;
 };
 
 function App() {
@@ -69,6 +63,7 @@ function App() {
             KHU VỰC DÀNH CHO KHÁCH HÀNG (MỌI ROLE ĐỀU VÀO ĐƯỢC) 
             ========================================= */}
         <Route path="/home" element={<HomePage />} />
+        <Route path="/tours" element={<TourListPage />} />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/article/:slug" element={<ArticlePage />} />
         <Route path="/tour/:id" element={<TourDetail />} />

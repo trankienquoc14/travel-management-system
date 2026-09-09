@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
@@ -16,6 +17,7 @@ const HomePage = () => {
 
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
     const [trendingTab, setTrendingTab] = useState('Tất cả');
+    const [selectedRegion, setSelectedRegion] = useState('Tất cả');
     const [showSidebar, setShowSidebar] = useState(true);
 
     // Floating Travel Search Inputs
@@ -46,6 +48,7 @@ const HomePage = () => {
     });
 
     const tourSliderRef = useRef(null);
+    const discountSliderRef = useRef(null);
     const serviceSliderRef = useRef(null);
     const showcaseRef = useRef(null);
     const navigate = useNavigate();
@@ -91,7 +94,7 @@ const HomePage = () => {
     };
 
     const getImageUrl = (url) => {
-        if (!url) return 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2000';
+        if (!url || url === 'undefined' || url === 'null') return 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2000';
         if (url.startsWith('http')) return url;
 
         let imagePath = url.startsWith('/') ? url.substring(1) : url;
@@ -263,9 +266,28 @@ const HomePage = () => {
 
         const matchPromoTab = !trendingTab.includes('Ưu đãi') || Number(tour.base_price || 0) <= 4500000;
 
+        let matchRegion = true;
+        if (selectedRegion !== 'Tất cả') {
+            const mienBac = ['Hà Nội', 'Sapa', 'Hạ Long', 'Hà Giang', 'Ninh Bình', 'Cát Bà', 'Mộc Châu', 'Lào Cai'];
+            const mienTrung = ['Đà Nẵng', 'Quy Nhơn', 'Phú Yên', 'Nha Trang', 'Huế', 'Hội An', 'Quảng Nam', 'Quảng Bình', 'Ninh Thuận', 'Bình Thuận', 'Bình Định'];
+            const mienNam = ['Phú Quốc', 'Cần Thơ', 'Tây Ninh', 'Hồ Chí Minh', 'Vũng Tàu', 'Bến Tre', 'Sài Gòn', 'Cà Mau', 'Kiên Giang'];
+            const tayNguyen = ['Đà Lạt', 'Tây Nguyên', 'Buôn Ma Thuột', 'Đắk Lắk', 'Pleiku'];
+            
+            const dest = tour.destination?.toLowerCase() || '';
+            if (selectedRegion === 'Miền Bắc') {
+                matchRegion = mienBac.some(d => dest.includes(d.toLowerCase()));
+            } else if (selectedRegion === 'Miền Trung') {
+                matchRegion = mienTrung.some(d => dest.includes(d.toLowerCase()));
+            } else if (selectedRegion === 'Miền Nam') {
+                matchRegion = mienNam.some(d => dest.includes(d.toLowerCase()));
+            } else if (selectedRegion === 'Tây Nguyên') {
+                matchRegion = tayNguyen.some(d => dest.includes(d.toLowerCase()));
+            }
+        }
+
         return matchSearch && matchCat && matchDestArr && matchDuration && matchBudget && 
                matchPurposes && matchInterests && matchCompanions && 
-               matchTransports && matchPriorities && matchPace && matchAccommodation && matchPromoTab;
+               matchTransports && matchPriorities && matchPace && matchAccommodation && matchPromoTab && matchRegion;
     }).map(tour => ({
         ...tour,
         _aiMatchScore: calculateMatchScore(tour, preferences)
@@ -451,11 +473,11 @@ const HomePage = () => {
                     <div style={{ position: 'absolute', top: '50%', width: '100%', display: 'flex', justifyContent: 'space-between', padding: '0 20px', transform: 'translateY(-50%)', zIndex: 15, pointerEvents: 'none' }}>
                         <button 
                             onClick={() => setCurrentSlide((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1))}
-                            style={{ pointerEvents: 'auto', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', border: 'none', color: '#fff', width: '42px', height: '42px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                            style={{ pointerEvents: 'auto', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', border: 'none', color: '#fff', width: '42px', height: '64px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                         >❮</button>
                         <button 
                             onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
-                            style={{ pointerEvents: 'auto', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', border: 'none', color: '#fff', width: '42px', height: '42px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                            style={{ pointerEvents: 'auto', background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', border: 'none', color: '#fff', width: '42px', height: '64px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                         >❯</button>
                     </div>
 
@@ -647,175 +669,364 @@ const HomePage = () => {
                     </div>
                 </div>
 
-                {/* DESTINATION CARDS BENTO GRID */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: '20px'
-                }}>
-                    {featuredDestinations.map((dest, i) => {
-                        const isTop = i === 0 || i === 1;
-                        return (
-                            <div 
-                                key={i}
-                                onClick={() => {
-                                    setPreferences(prev => ({ ...prev, destinations: [dest.name] }));
-                                    scrollToShowcase();
-                                }}
-                                style={{
-                                    position: 'relative',
-                                    height: '240px',
-                                    borderRadius: '24px',
-                                    overflow: 'hidden',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
-                                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
-                                }}
-                                className="destination-card-hover"
-                            >
-                                {/* Background Image */}
+                {/* DESTINATION CARDS SLIDER */}
+                <div style={{ position: 'relative' }}>
+                    <button 
+                        onClick={() => { const slider = document.getElementById('dest-slider'); if(slider) slider.scrollBy({ left: -320, behavior: 'smooth' }); }}
+                        style={{
+                            position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+
+                    <button 
+                        onClick={() => { const slider = document.getElementById('dest-slider'); if(slider) slider.scrollBy({ left: 320, behavior: 'smooth' }); }}
+                        style={{
+                            position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <ChevronRight size={24} />
+                    </button>
+
+                    <div 
+                        id="dest-slider"
+                        style={{
+                            display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory',
+                            gap: '20px', paddingBottom: '10px'
+                        }}
+                        className="hide-scrollbar"
+                    >
+                        {featuredDestinations.map((dest, i) => {
+                            const isTop = i === 0 || i === 1;
+                            return (
                                 <div 
-                                    style={{
-                                        backgroundImage: `url(${getImageUrl(dest.image)})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        width: '100%',
-                                        height: '100%',
-                                        transition: 'transform 0.6s ease'
+                                    key={i}
+                                    onClick={() => {
+                                        setPreferences(prev => ({ ...prev, destinations: [dest.name] }));
+                                        scrollToShowcase();
                                     }}
-                                />
+                                    style={{
+                                        position: 'relative',
+                                        minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', flex: '0 0 auto', scrollSnapAlign: 'start',
+                                        height: '240px',
+                                        borderRadius: '24px',
+                                        overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
+                                        transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}
+                                    className="destination-card-hover"
+                                >
+                                    {/* Background Image */}
+                                    <div 
+                                        style={{
+                                            backgroundImage: `url(${getImageUrl(dest.image)})`,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center',
+                                            width: '100%',
+                                            height: '100%',
+                                            transition: 'transform 0.6s ease'
+                                        }}
+                                    />
 
-                                {/* Subtle Overlay */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0, left: 0, width: '100%', height: '100%',
-                                    background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.88) 100%)'
-                                }} />
+                                    {/* Subtle Overlay */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, width: '100%', height: '100%',
+                                        background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.88) 100%)'
+                                    }} />
 
-                                {/* Top Badges */}
-                                <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    {isTop ? (
-                                        <span style={{ fontSize: '11px', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', padding: '4px 10px', borderRadius: '12px', fontWeight: '800', boxShadow: '0 4px 12px rgba(239,68,68,0.4)' }}>
-                                            🔥 TOP {i + 1} THỊNH HÀNH
-                                        </span>
-                                    ) : (
-                                        <span style={{ fontSize: '11px', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', color: '#ffffff', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>
-                                            📍 Điểm Đến HOT
-                                        </span>
-                                    )}
+                                    {/* Top Badges */}
+                                    <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        {isTop ? (
+                                            <span style={{ fontSize: '11px', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#ffffff', padding: '4px 10px', borderRadius: '12px', fontWeight: '800', boxShadow: '0 4px 12px rgba(239,68,68,0.4)' }}>
+                                                🔥 TOP {i + 1} THỊNH HÀNH
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: '11px', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', color: '#ffffff', padding: '4px 10px', borderRadius: '12px', fontWeight: '700' }}>
+                                                📍 Điểm Đến HOT
+                                            </span>
+                                        )}
 
-                                    <span style={{ fontSize: '11px', background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(8px)', color: '#ffffff', padding: '4px 10px', borderRadius: '12px', fontWeight: '800' }}>
-                                        {dest.count} Tour
-                                    </span>
-                                </div>
-
-                                {/* Bottom Info Box */}
-                                <div style={{ position: 'absolute', bottom: '18px', left: '20px', right: '20px', color: '#ffffff' }}>
-                                    <h3 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.3px', color: '#ffffff' }}>
-                                        {dest.name}
-                                    </h3>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
-                                            Giá từ <strong style={{ color: '#38bdf8', fontSize: '15px', fontWeight: '800' }}>{formatCurrency(dest.minPrice)}</strong>
-                                        </span>
-                                        <span style={{
-                                            fontSize: '12px', fontWeight: '800', color: '#0194f3', background: '#ffffff',
-                                            padding: '5px 12px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-                                            transition: 'all 0.2s'
-                                        }}>
-                                            Khám phá ➡️
+                                        <span style={{ fontSize: '11px', background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(8px)', color: '#ffffff', padding: '4px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                            {dest.count} Tour
                                         </span>
                                     </div>
+
+                                    {/* Bottom Info Box */}
+                                    <div style={{ position: 'absolute', bottom: '18px', left: '20px', right: '20px', color: '#ffffff' }}>
+                                        <h3 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.3px', color: '#ffffff' }}>
+                                            {dest.name}
+                                        </h3>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
+                                                Giá từ <strong style={{ color: '#38bdf8', fontSize: '15px', fontWeight: '800' }}>{formatCurrency(dest.minPrice)}</strong>
+                                            </span>
+                                            <span style={{
+                                                fontSize: '12px', fontWeight: '800', color: '#0194f3', background: '#ffffff',
+                                                padding: '5px 12px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                                                transition: 'all 0.2s'
+                                            }}>
+                                                Khám phá ➡️
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             </section>
 
 
+            {/* 6. ƯU ĐÃI ĐẶC BIỆT (PROMOTIONS SLIDER) */}
+            <section style={{ padding: '0 5%', marginBottom: '60px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#ef4444', margin: 0 }}>
+                            💯 Ưu Đãi Đặc Biệt
+                        </h2>
+                        <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px', margin: 0 }}>
+                            Các chuyến đi đang được giảm giá tốt nhất
+                        </p>
+                    </div>
+                </div>
 
-            {/* 7. MAIN CONTENT: TOUR ĐANG ĐƯỢC QUAN TÂM & STICKY SIDEBAR */}
-            <section ref={showcaseRef} style={{ padding: '0 5%', marginBottom: '60px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: showSidebar ? 'minmax(260px, 290px) 1fr' : '1fr', gap: '28px', alignItems: 'start' }}>
-                    
-                    {/* LEFT STICKY SIDEBAR FILTER */}
-                    {showSidebar && (
-                        <TravelPreferenceSidebar 
-                            preferences={preferences}
-                            onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
-                        />
-                    )}
+                <div style={{ position: 'relative' }}>
+                    <button 
+                        onClick={() => scrollSlider(discountSliderRef, 'left')}
+                        style={{
+                            position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
 
-                    {/* MAIN TOURS DISPLAY */}
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                            <div>
-                                <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                                    🔥 Tour Đang Được Quan Tâm
-                                </h2>
-                                <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px' }}>
-                                    Hiển thị {filteredTours.length} chuyến đi phù hợp nhất theo tiêu chí tìm kiếm
-                                </p>
-                            </div>
+                    <button 
+                        onClick={() => scrollSlider(discountSliderRef, 'right')}
+                        style={{
+                            position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <ChevronRight size={24} />
+                    </button>
 
-                            {/* TAB SORTING */}
-                            <div style={{ display: 'flex', gap: '6px', background: '#e2e8f0', padding: '4px', borderRadius: '14px' }}>
-                                {['Tất cả', 'Ưu đãi đặc quyền', 'Bán chạy', 'Giá tốt'].map(tab => (
-                                    <button 
-                                        key={tab}
-                                        onClick={() => setTrendingTab(tab)}
-                                        style={{
-                                            padding: '6px 14px', borderRadius: '10px', border: 'none',
-                                            background: trendingTab === tab ? '#ffffff' : 'transparent',
-                                            color: trendingTab === tab ? (tab === 'Ưu đãi đặc quyền' ? '#0284c7' : '#0f172a') : '#64748b',
-                                            fontWeight: trendingTab === tab ? '800' : '600', fontSize: '13px',
-                                            cursor: 'pointer', boxShadow: trendingTab === tab ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        {tab}
-                                    </button>
-                                ))}
-                            </div>
+                    <div 
+                        ref={discountSliderRef}
+                        style={{
+                            display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory',
+                            gap: '20px', paddingBottom: '20px'
+                        }}
+                        className="hide-scrollbar"
+                    >
+                        {loadingTours ? (
+                            Array(4).fill(0).map((_, i) => (
+                                <div key={i} style={{ minWidth: '300px', background: '#ffffff', borderRadius: '20px', height: '320px', border: '1px solid #e2e8f0', padding: '16px', flex: '0 0 auto' }} />
+                            ))
+                        ) : promoTours.map(tour => {
+                            let img = null;
+                            try {
+                                img = tour.images ? JSON.parse(tour.images)[0] : null;
+                            } catch (e) {
+                                img = tour.images;
+                            }
+                            const oldPrice = Number(tour.base_price || 0) * 1.25; // fake 20% discount
+                            return (
+                                <div 
+                                    key={tour.tour_id}
+                                    onClick={() => {
+                                        trackBehavior('CLICK_TOUR', tour.tour_id, { tour_name: tour.tour_name });
+                                        navigate(`/tour/${tour.tour_id}`);
+                                    }}
+                                    style={{
+                                        minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', flex: '0 0 auto', scrollSnapAlign: 'start', height: '380px',
+                                        background: '#fff0f2', borderRadius: '20px', border: '1.5px solid #fecdd3',
+                                        overflow: 'hidden', cursor: 'pointer', boxShadow: '0 10px 25px rgba(225, 29, 72, 0.05)',
+                                        transition: 'all 0.25s ease', display: 'flex', flexDirection: 'column'
+                                    }}
+                                    className="tour-card-modern"
+                                >
+                                    <div style={{ position: 'relative', height: '170px' }}>
+                                        <div style={{ backgroundImage: `url(${getImageUrl(tour.image_url || img)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
+                                        <span style={{ position: 'absolute', top: '12px', right: '12px', background: '#ef4444', color: '#fff', fontSize: '13px', fontWeight: '900', padding: '6px 10px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.4)' }}>
+                                            -20%
+                                        </span>
+                                        <span style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '11px', fontWeight: '700', padding: '4px 8px', borderRadius: '8px' }}>
+                                            ⏱️ {tour.duration_days} Ngày
+                                        </span>
+                                    </div>
+
+                                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+                                            <span style={{ color: '#0284c7', fontWeight: '700' }}>📍 {tour.destination}</span>
+                                            <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ 4.9 (128)</span>
+                                        </div>
+
+                                        <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '64px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                                            {tour.tour_name}
+                                        </h3>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #fecdd3', paddingTop: '12px', marginTop: 'auto' }}>
+                                            <div>
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', textDecoration: 'line-through', display: 'block' }}>
+                                                    {formatCurrency(oldPrice)}
+                                                </span>
+                                                <strong style={{ fontSize: '16px', color: '#ef4444' }}>{formatCurrency(tour.base_price)}</strong>
+                                            </div>
+                                            <button style={{ padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>
+                                                Mua Ngay ➔
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </section>
+
+
+            {/* 7. MAIN CONTENT: TOUR TRỌN GÓI */}
+            <section ref={showcaseRef} style={{ padding: '0 5%', marginBottom: '80px', position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                            🌍 Tour Trọn Gói
+                        </h2>
+                        <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px', margin: 0 }}>
+                            Các chuyến đi trọn gói tốt nhất hiện nay
+                        </p>
+                    </div>
+
+                    {/* FILTER TABS */}
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        
+                        {/* REGION FILTER */}
+                        <div style={{ display: 'flex', gap: '6px', background: '#e0f2fe', padding: '4px', borderRadius: '14px' }}>
+                            {['Tất cả', 'Miền Bắc', 'Miền Trung', 'Miền Nam', 'Tây Nguyên'].map(region => (
+                                <button 
+                                    key={region}
+                                    onClick={() => setSelectedRegion(region)}
+                                    style={{
+                                        padding: '6px 14px', borderRadius: '10px', border: 'none',
+                                        background: selectedRegion === region ? '#0284c7' : 'transparent',
+                                        color: selectedRegion === region ? '#ffffff' : '#0369a1',
+                                        fontWeight: selectedRegion === region ? '800' : '600', fontSize: '13px',
+                                        cursor: 'pointer', boxShadow: selectedRegion === region ? '0 2px 6px rgba(2, 132, 199, 0.3)' : 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {region}
+                                </button>
+                            ))}
                         </div>
 
-                        {/* TOUR GRID */}
+                        {/* TAB SORTING */}
+                        <div style={{ display: 'flex', gap: '6px', background: '#e2e8f0', padding: '4px', borderRadius: '14px' }}>
+                            {['Tất cả', 'Ưu đãi đặc quyền', 'Bán chạy', 'Giá tốt'].map(tab => (
+                                <button 
+                                    key={tab}
+                                    onClick={() => setTrendingTab(tab)}
+                                    style={{
+                                        padding: '6px 14px', borderRadius: '10px', border: 'none',
+                                        background: trendingTab === tab ? '#ffffff' : 'transparent',
+                                        color: trendingTab === tab ? (tab === 'Ưu đãi đặc quyền' ? '#0284c7' : '#0f172a') : '#64748b',
+                                        fontWeight: trendingTab === tab ? '800' : '600', fontSize: '13px',
+                                        cursor: 'pointer', boxShadow: trendingTab === tab ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* TOUR SLIDER CONTAINER */}
+                <div style={{ position: 'relative' }}>
+                    <button 
+                        onClick={() => scrollSlider(tourSliderRef, 'left')}
+                        style={{
+                            position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+
+                    <button 
+                        onClick={() => scrollSlider(tourSliderRef, 'right')}
+                        style={{
+                            position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
+                            color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <ChevronRight size={24} />
+                    </button>
+
+                    <div 
+                        ref={tourSliderRef}
+                        style={{
+                            display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory',
+                            gap: '20px', paddingBottom: '20px'
+                        }}
+                        className="hide-scrollbar"
+                    >
                         {loadingTours ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '20px' }}>
-                                {Array(6).fill(0).map((_, i) => (
-                                    <div key={i} style={{ background: '#ffffff', borderRadius: '20px', height: '320px', border: '1px solid #e2e8f0', padding: '16px' }}>
-                                        <div style={{ background: '#e2e8f0', height: '160px', borderRadius: '14px', marginBottom: '14px' }} />
-                                        <div style={{ background: '#e2e8f0', height: '18px', width: '60%', borderRadius: '6px', marginBottom: '8px' }} />
-                                        <div style={{ background: '#e2e8f0', height: '24px', width: '90%', borderRadius: '6px' }} />
-                                    </div>
-                                ))}
-                            </div>
+                            Array(6).fill(0).map((_, i) => (
+                                <div key={i} style={{ minWidth: '300px', background: '#ffffff', borderRadius: '20px', height: '320px', border: '1px solid #e2e8f0', padding: '16px', flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+                                    <div style={{ background: '#e2e8f0', height: '160px', borderRadius: '14px', marginBottom: '14px' }} />
+                                    <div style={{ background: '#e2e8f0', height: '18px', width: '60%', borderRadius: '6px', marginBottom: '8px' }} />
+                                    <div style={{ background: '#e2e8f0', height: '24px', width: '90%', borderRadius: '6px' }} />
+                                </div>
+                            ))
                         ) : filteredTours.length === 0 ? (
-                            <div style={{ background: '#ffffff', borderRadius: '24px', padding: '50px 20px', textAlign: 'center', border: '1.5px solid #e2e8f0' }}>
+                            <div style={{ minWidth: '100%', background: '#ffffff', borderRadius: '24px', padding: '50px 20px', textAlign: 'center', border: '1.5px solid #e2e8f0', flex: '0 0 auto', scrollSnapAlign: 'start' }}>
                                 <div style={{ fontSize: '50px', marginBottom: '12px' }}>🔍</div>
                                 <h3 style={{ fontSize: '18px', color: '#0f172a', fontWeight: '800' }}>Không tìm thấy tour phù hợp</h3>
                                 <p style={{ fontSize: '14px', color: '#64748b', maxWidth: '500px', margin: '8px auto 20px auto' }}>
-                                    Không có chuyến đi nào thỏa mãn toàn bộ tiêu chí lọc hiện tại. Vui lòng đặt lại hoặc chọn tiêu chí linh hoạt hơn.
+                                    Không có chuyến đi nào thỏa mãn toàn bộ tiêu chí lọc hiện tại.
                                 </p>
-                                <button
-                                    onClick={() => {
-                                        setPreferences({
-                                            destinations: [], duration: 'All', tripPurposes: [], companions: [], budgetRange: 'All',
-                                            interests: [], pace: 'All', accommodationLevel: 'All', transportTypes: [],
-                                            keyPriorities: [], searchTerm: '', departureDate: ''
-                                        });
-                                        setSearchLocation('');
-                                        setSelectedCategory('Tất cả');
-                                    }}
-                                    style={{ padding: '10px 24px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}
-                                >
-                                    🔄 Đặt lại tất cả bộ lọc
-                                </button>
                             </div>
                         ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '20px' }}>
-                                {filteredTours.map(tour => (
+                            filteredTours.map(tour => {
+                                let img = null;
+                                try {
+                                    img = tour.images ? JSON.parse(tour.images)[0] : null;
+                                } catch (e) {
+                                    img = tour.images;
+                                }
+                                return (
                                     <div 
                                         key={tour.tour_id}
                                         onClick={() => {
@@ -823,14 +1034,15 @@ const HomePage = () => {
                                             navigate(`/tour/${tour.tour_id}`);
                                         }}
                                         style={{
+                                            minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', flex: '0 0 auto', scrollSnapAlign: 'start', height: '380px',
                                             background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0',
                                             overflow: 'hidden', cursor: 'pointer', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.04)',
-                                            transition: 'all 0.25s ease'
+                                            transition: 'all 0.25s ease', display: 'flex', flexDirection: 'column'
                                         }}
                                         className="tour-card-modern"
                                     >
                                         <div style={{ position: 'relative', height: '170px' }}>
-                                            <div style={{ backgroundImage: `url(${getImageUrl(tour.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
+                                            <div style={{ backgroundImage: `url(${getImageUrl(tour.image_url || img)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
                                             {Number(tour.base_price || 0) <= 4000000 && (
                                                 <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: '800', padding: '4px 8px', borderRadius: '8px' }}>
                                                     🔥 Giá Cực Tốt
@@ -841,35 +1053,33 @@ const HomePage = () => {
                                             </span>
                                         </div>
 
-                                        <div style={{ padding: '16px' }}>
+                                        <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                                                 <span style={{ color: '#0284c7', fontWeight: '700' }}>📍 {tour.destination}</span>
                                                 <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ 4.9 (128)</span>
                                             </div>
 
-                                            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '42px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '64px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                                                 {tour.tour_name}
                                             </h3>
 
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: 'auto' }}>
                                                 <div>
                                                     <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Giá từ</span>
                                                     <strong style={{ fontSize: '16px', color: '#ef4444' }}>{formatCurrency(tour.base_price)}</strong>
                                                 </div>
                                                 <button style={{ padding: '8px 16px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>
-                                                    Khám phá ➡️
+                                                    Khám phá ➔
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                );
+                            })
                         )}
                     </div>
-
                 </div>
             </section>
-
 
             {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (BALANCED 2-COLUMN DESIGN) */}
             <section style={{ padding: '0 5%', marginBottom: '60px' }}>

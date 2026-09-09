@@ -128,7 +128,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    navigate('/login');
+    navigate('/home');
   };
 
   const formatCurrency = (amount) => {
@@ -190,7 +190,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
-        <div className="sidebar-logo"><h2>Travel<span>ERP</span></h2></div>
+        <div className="sidebar-logo"><h2 style={{ color: '#0f172a' }}>TravelVN<span style={{ color: '#0194f3' }}> ERP</span></h2></div>
         <div className="sidebar-scrollable" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
           <div 
             className="sidebar-subtitle" 

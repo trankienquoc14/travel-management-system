@@ -25,7 +25,7 @@ const services = {
 
 // Set up proxy using router option to preserve paths
 app.use('/', createProxyMiddleware({
-  target: 'http://localhost:5000', // Default dummy target, will be overridden by router
+  target: 'http://127.0.0.1:9999', // Fail fast instead of infinite loop
   changeOrigin: true,
   router: {
     '/api/auth': services.auth,

@@ -80,24 +80,11 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
         localStorage.removeItem('user');
         setUser(null);
         setShowDropdown(false);
-        navigate('/login');
+        navigate('/home');
     };
 
     const handleExploreClick = () => {
-        if (location.pathname === '/home') {
-            const section = document.getElementById('tour-showcase');
-            if (section) {
-                section.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                window.scrollTo({ top: 600, behavior: 'smooth' });
-            }
-        } else {
-            navigate('/home');
-            setTimeout(() => {
-                const section = document.getElementById('tour-showcase');
-                if (section) section.scrollIntoView({ behavior: 'smooth' });
-            }, 350);
-        }
+        navigate('/tours');
     };
 
     const unreadCount = notifications.filter(n => !n.read).length;
@@ -140,8 +127,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                         gap: '4px'
                     }}
                 >
-                    VietTravel<span style={{ color: '#0194f3' }}>ERP</span>
-                    <span style={{ fontSize: '10px', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '12px', fontWeight: '800', marginLeft: '6px' }}>TRAVEL</span>
+                    TravelVN<span style={{ color: '#0194f3' }}> ERP</span>
                 </div>
 
                 {/* MENU HEADER CHÍNH (Chức năng sử dụng thường xuyên) */}

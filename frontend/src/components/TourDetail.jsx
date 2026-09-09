@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CustomerFooter from './CustomerFooter';
+import CustomerNavbar from './CustomerNavbar';
 import '../index.css';
 
 
@@ -212,12 +213,7 @@ const TourDetail = () => {
 
     return (
         <div className="tour-detail-page">
-            <nav className="home-navbar">
-                <div className="home-logo" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>
-                    Travel<span className="text-primary">ERP</span>
-                </div>
-                <button onClick={() => navigate('/home')} className="btn-outline">Quay lại</button>
-            </nav>
+            <CustomerNavbar activeTab="explore" />
 
             <div className="detail-hero" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${bgImage})` }}>
                 <div className="detail-hero-content">

@@ -11,7 +11,7 @@ const CustomerFooter = () => {
                 {/* COL 1: GIỚI THIỆU VIETTRAVEL ERP */}
                 <div className="footer-col">
                     <h2 className="footer-logo" style={{ fontSize: '24px', fontWeight: '900', color: '#ffffff', margin: 0, cursor: 'pointer' }} onClick={() => navigate('/home')}>
-                        VietTravel<span style={{ color: '#0194f3' }}>ERP</span>
+                        TravelVN<span style={{ color: '#0194f3' }}> ERP</span>
                     </h2>
                     <p style={{ color: '#94a3b8', fontSize: '13.5px', lineHeight: '1.6', marginTop: '12px' }}>
                         Hệ thống quản trị du lịch & lữ hành hàng đầu Việt Nam. Cung cấp giải pháp trải nghiệm du lịch cá nhân hóa, đặt tour trực tuyến & tự thiết kế tour thông minh.
@@ -26,7 +26,7 @@ const CustomerFooter = () => {
 
                 {/* COL 2: VỀ CHÚNG TÔI (ĐIỀU HƯỚNG TRANG BÀI VIẾT ĐỘC LẬP) */}
                 <div className="footer-col">
-                    <h4 style={{ color: '#ffffff', fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>Về VietTravel ERP</h4>
+                    <h4 style={{ color: '#ffffff', fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>Về TravelVN ERP</h4>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
                         <li 
                             onClick={() => navigate('/article/about')}
@@ -118,14 +118,14 @@ const CustomerFooter = () => {
                     <div style={{ color: '#94a3b8', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <span>📞 Hotline: <strong style={{ color: '#0194f3', fontSize: '15px' }}>1900 1234</strong> (24/7)</span>
                         <span>✉️ Email: <strong>cskh@viettravel-erp.vn</strong></span>
-                        <span>🏢 Trụ sở: Tòa nhà VietTravel ERP, Quận 1, TP. Hồ Chí Minh</span>
+                        <span>🏢 Trụ sở: Tòa nhà TravelVN ERP, Quận 1, TP. Hồ Chí Minh</span>
                     </div>
                 </div>
 
             </div>
 
             <div className="footer-bottom" style={{ borderTop: '1px solid #1e293b', marginTop: '40px', paddingTop: '20px', textAlign: 'center', fontSize: '12.5px', color: '#64748b' }}>
-                <p>© 2026 VietTravel ERP System. Tự hào mang đến những hành trình du lịch kỷ niệm vô giá.</p>
+                <p>© 2026 TravelVN ERP System. Tự hào mang đến những hành trình du lịch kỷ niệm vô giá.</p>
             </div>
         </footer>
     );
