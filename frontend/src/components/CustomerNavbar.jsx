@@ -5,6 +5,7 @@ import UserProfile from './UserProfile';
 const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [user, setUser] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [showDropdownHome, setShowDropdownHome] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
 
     // Modals
@@ -142,7 +143,6 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                     {/* 1. Trang chủ */}
                     <li 
                         className={activeTab === 'home' ? 'active' : ''} 
-                        onClick={() => navigate('/home')} 
                         style={{ 
                             cursor: 'pointer', 
                             fontWeight: activeTab === 'home' ? '800' : '600',
@@ -151,8 +151,44 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                             transition: 'color 0.2s ease',
                             position: 'relative'
                         }}
+                        onMouseEnter={() => setShowDropdownHome && setShowDropdownHome(true)}
+                        onMouseLeave={() => setShowDropdownHome && setShowDropdownHome(false)}
                     >
-                        Trang chủ
+                        <span onClick={() => navigate('/home')} style={{ display: 'inline-block', padding: '10px 0' }}>Trang chủ</span>
+                        {showDropdownHome && (
+                            <div 
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    background: '#ffffff',
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                    borderRadius: '12px',
+                                    padding: '8px 0',
+                                    minWidth: '160px',
+                                    zIndex: 9999,
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}
+                            >
+                                <div 
+                                    onClick={() => navigate('/article/about')}
+                                    style={{ padding: '10px 20px', color: '#475569', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0194f3'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                                >
+                                    Về chúng tôi
+                                </div>
+                                <div 
+                                    onClick={() => navigate('/contact')}
+                                    style={{ padding: '10px 20px', color: '#475569', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0194f3'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                                >
+                                    Liên hệ
+                                </div>
+                            </div>
+                        )}
                     </li>
 
                     {/* 2. Dịch vụ */}
@@ -186,8 +222,8 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                     </li>
 
                     {/* 4. Tự thiết kế Tour */}
-                    <li 
-                        className={activeTab === 'build-tour' ? 'active' : ''} 
+                    {user && (
+                    <li className={activeTab === 'build-tour' ? 'active' : ''} 
                         onClick={() => {
                             if (!user) {
                                 navigate('/login');
@@ -212,6 +248,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                     >
                         ✨ Tự thiết kế Tour
                     </li>
+                    )}
 
                 </ul>
 

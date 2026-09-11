@@ -218,12 +218,31 @@ const CustomerQuotes = () => {
             });
 
             if (response.data.success) {
-                alert(newStatus === 'Customer_Accepted' ? '🎉 Đã chốt tour thành công!' : 'Đã gửi yêu cầu chỉnh sửa!');
+                let alertMsg = '';
+                if (newStatus === 'Customer_Accepted') alertMsg = '🎉 Đã chốt tour thành công!';
+                else if (newStatus === 'Initial_Accepted') alertMsg = '✅ Đã đồng ý mức giá sơ bộ! Chuyên viên sẽ tiến hành lên lịch trình chi tiết.';
+                else alertMsg = 'Đã gửi yêu cầu chỉnh sửa!';
+                
+                alert(alertMsg);
 
-                // Cập nhật lại UI ngay lập tức (Cập nhật vào approval_status của bản quote hiện tại)
-                const updatedQuote = { ...selectedQuote, approval_status: newStatus };
-                setSelectedQuote(updatedQuote);
-                setQuotes(quotes.map(q => q.request_id === updatedQuote.request_id ? updatedQuote : q));
+                // Fetch fresh data from server to guarantee 100% sync
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    const userId = user.id || user.userId || user.user_id;
+                    const token = localStorage.getItem('token');
+                    const fetchRes = await axios.get(`http://localhost:5000/api/custom-tours/requests/customer/${userId}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (fetchRes.data.success) {
+                        const newQuotes = fetchRes.data.data || [];
+                        setQuotes(newQuotes);
+                        // Update selected quote
+                        const updated = newQuotes.find(q => q.request_id === selectedQuote.request_id);
+                        if (updated) setSelectedQuote(updated);
+                    }
+                }
+                
                 setShowRevisionInput(false);
             }
         } catch (error) {
@@ -523,7 +542,16 @@ const CustomerQuotes = () => {
                                         </div>
 
                                         {/* CHI TIẾT HÀNH TRÌNH VÀ DỊCH VỤ TỪ BẢNG QUOTE */}
-                                        <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px' }}>
+                                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                                            <div>
+                                                <h3 style={{ fontSize: '20px', color: '#0f172a', paddingBottom: '15px', borderBottom: '1px solid #f1f5f9', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <span style={{ fontSize: '24px' }}>🛎️</span> Dịch vụ đã chốt
+                                                </h3>
+                                                <div style={{ backgroundColor: '#fff', borderRadius: '12px' }}>
+                                                    {renderFixedServices(selectedQuote.proposed_itinerary || selectedQuote.itinerary)}
+                                                </div>
+                                            </div>
+
                                             <div>
                                                 <h3 style={{ fontSize: '20px', color: '#0f172a', paddingBottom: '15px', borderBottom: '1px solid #f1f5f9', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <span style={{ fontSize: '24px' }}>🗺️</span> Chi tiết hành trình
@@ -532,15 +560,9 @@ const CustomerQuotes = () => {
                                                     {renderModernItinerary(selectedQuote.proposed_itinerary || selectedQuote.itinerary)}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <h3 style={{ fontSize: '20px', color: '#0f172a', paddingBottom: '15px', borderBottom: '1px solid #f1f5f9', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <span style={{ fontSize: '24px' }}>🛎️</span> Dịch vụ đã chốt
-                                                </h3>
-                                                <div style={{ backgroundColor: '#fff', borderRadius: '12px' }}>
-                                                    {renderFixedServices(selectedQuote.proposed_itinerary || selectedQuote.itinerary)}
-                                                </div>
 
-                                            {/* BẢNG CHI PHÍ */}
+                                            <div style={{ width: '100%' }}>
+                                                {/* BẢNG CHI PHÍ */}
                                             {(() => {
                                                 const costConfig = (typeof (selectedQuote.proposed_itinerary || selectedQuote.itinerary) === 'string' 
                                                     ? JSON.parse(selectedQuote.proposed_itinerary || selectedQuote.itinerary) 

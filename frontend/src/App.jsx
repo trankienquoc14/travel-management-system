@@ -14,6 +14,7 @@ import StaffTourRequestManager from './components/StaffTourRequestManager';
 import CustomerQuotes from './components/CustomerQuotes';
 import StaffFixedTourDesigner from './components/StaffFixedTourDesigner'; // Thêm trang thiết kế tour
 import ServicesPage from './components/ServicesPage'; // Trang Dịch vụ Độc lập
+import ContactPage from './components/ContactPage';
 import ArticlePage from './components/ArticlePage'; // Trang Bài viết Footer
 
 // 1. Bảo vệ cơ bản: Chỉ cần có đăng nhập
@@ -48,7 +49,16 @@ const StaffProtectedRoute = ({ children }) => {
 
 // 3. Phân luồng lúc mới vào web
 const RootRedirect = () => {
-  // LUÔN LUÔN mặc định vào trang chủ, bất kể có đăng nhập hay chưa
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      const userRole = Number(user.role_id || user.role);
+      if (userRole !== 6) {
+        return <Navigate to="/dashboard" replace />;
+      }
+    } catch (e) {}
+  }
   return <Navigate to="/home" replace />;
 };
 
@@ -65,6 +75,8 @@ function App() {
         <Route path="/home" element={<HomePage />} />
         <Route path="/tours" element={<TourListPage />} />
         <Route path="/services" element={<ServicesPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        
         <Route path="/article/:slug" element={<ArticlePage />} />
         <Route path="/tour/:id" element={<TourDetail />} />
         <Route path="/booking-form" element={<ProtectedRoute><BookingForm /></ProtectedRoute>} />

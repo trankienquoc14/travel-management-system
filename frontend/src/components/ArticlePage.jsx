@@ -256,71 +256,92 @@ const ArticlePage = () => {
             </div>
 
             {/* ARTICLE CONTENT BODY WITH SIDEBAR NAVIGATION */}
-            <main style={{ maxWidth: '1200px', width: '100%', margin: '40px auto', padding: '0 5%', flex: 1 }}>
+            <main style={{ maxWidth: '100%', width: '100%', margin: '40px auto', padding: '0 5%', flex: 1 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 280px) 1fr', gap: '36px', alignItems: 'start' }}>
                     
                     {/* LEFT ARTICLE NAVIGATION SIDEBAR */}
-                    <aside style={{ background: '#ffffff', borderRadius: '20px', padding: '20px', border: '1.5px solid #e2e8f0', position: 'sticky', top: '90px' }}>
-                        <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 14px 0', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                            📚 Danh Mục Bài Viết
+                    <aside style={{ background: '#ffffff', borderRadius: '24px', padding: '28px 24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.04)', position: 'sticky', top: '90px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            📑 Danh Mục Bài Viết
                         </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div 
                                 onClick={() => navigate('/article/about')}
                                 style={{
-                                    padding: '10px 14px', borderRadius: '12px', cursor: 'pointer', fontSize: '14px', fontWeight: currentKey === 'about' ? '800' : '600',
-                                    background: currentKey === 'about' ? '#f0f9ff' : 'transparent',
+                                    padding: '12px 16px', borderRadius: '14px', cursor: 'pointer', fontSize: '14.5px', fontWeight: currentKey === 'about' ? '700' : '500',
+                                    background: currentKey === 'about' ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : 'transparent',
                                     color: currentKey === 'about' ? '#0284c7' : '#475569',
-                                    border: currentKey === 'about' ? '1px solid #bae6fd' : '1px solid transparent',
-                                    transition: 'all 0.2s'
+                                    boxShadow: currentKey === 'about' ? '0 4px 10px rgba(2, 132, 199, 0.1)' : 'none',
+                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px'
                                 }}
                             >
-                                📄 Giới thiệu thương hiệu
+                                <span style={{ opacity: currentKey === 'about' ? 1 : 0.6, fontSize: '18px' }}>🏢</span>
+                                Về chúng tôi
                             </div>
                             <div 
                                 onClick={() => navigate('/article/guides')}
                                 style={{
-                                    padding: '10px 14px', borderRadius: '12px', cursor: 'pointer', fontSize: '14px', fontWeight: currentKey === 'guides' ? '800' : '600',
-                                    background: currentKey === 'guides' ? '#f0f9ff' : 'transparent',
+                                    padding: '12px 16px', borderRadius: '14px', cursor: 'pointer', fontSize: '14.5px', fontWeight: currentKey === 'guides' ? '700' : '500',
+                                    background: currentKey === 'guides' ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : 'transparent',
                                     color: currentKey === 'guides' ? '#0284c7' : '#475569',
-                                    border: currentKey === 'guides' ? '1px solid #bae6fd' : '1px solid transparent',
-                                    transition: 'all 0.2s'
+                                    boxShadow: currentKey === 'guides' ? '0 4px 10px rgba(2, 132, 199, 0.1)' : 'none',
+                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px'
                                 }}
                             >
-                                🚩 Đội ngũ Hướng dẫn viên
+                                <span style={{ opacity: currentKey === 'guides' ? 1 : 0.6, fontSize: '18px' }}>🚩</span>
+                                Đội ngũ Hướng dẫn viên
                             </div>
                             <div 
                                 onClick={() => navigate('/article/privacy')}
                                 style={{
-                                    padding: '10px 14px', borderRadius: '12px', cursor: 'pointer', fontSize: '14px', fontWeight: currentKey === 'privacy' ? '800' : '600',
-                                    background: currentKey === 'privacy' ? '#f0f9ff' : 'transparent',
+                                    padding: '12px 16px', borderRadius: '14px', cursor: 'pointer', fontSize: '14.5px', fontWeight: currentKey === 'privacy' ? '700' : '500',
+                                    background: currentKey === 'privacy' ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : 'transparent',
                                     color: currentKey === 'privacy' ? '#0284c7' : '#475569',
-                                    border: currentKey === 'privacy' ? '1px solid #bae6fd' : '1px solid transparent',
-                                    transition: 'all 0.2s'
+                                    boxShadow: currentKey === 'privacy' ? '0 4px 10px rgba(2, 132, 199, 0.1)' : 'none',
+                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px'
                                 }}
                             >
-                                🔒 Chính sách bảo mật
+                                <span style={{ opacity: currentKey === 'privacy' ? 1 : 0.6, fontSize: '18px' }}>🔒</span>
+                                Chính sách bảo mật
                             </div>
                             <div 
                                 onClick={() => navigate('/article/terms')}
                                 style={{
-                                    padding: '10px 14px', borderRadius: '12px', cursor: 'pointer', fontSize: '14px', fontWeight: currentKey === 'terms' ? '800' : '600',
-                                    background: currentKey === 'terms' ? '#f0f9ff' : 'transparent',
+                                    padding: '12px 16px', borderRadius: '14px', cursor: 'pointer', fontSize: '14.5px', fontWeight: currentKey === 'terms' ? '700' : '500',
+                                    background: currentKey === 'terms' ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : 'transparent',
                                     color: currentKey === 'terms' ? '#0284c7' : '#475569',
-                                    border: currentKey === 'terms' ? '1px solid #bae6fd' : '1px solid transparent',
-                                    transition: 'all 0.2s'
+                                    boxShadow: currentKey === 'terms' ? '0 4px 10px rgba(2, 132, 199, 0.1)' : 'none',
+                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px'
                                 }}
                             >
-                                📜 Điều khoản & Quy định
+                                <span style={{ opacity: currentKey === 'terms' ? 1 : 0.6, fontSize: '18px' }}>📜</span>
+                                Điều khoản & Quy định
+                            </div>
+                        <div 
+                                onClick={() => navigate('/contact')}
+                                style={{
+                                    padding: '12px 16px', borderRadius: '14px', cursor: 'pointer', fontSize: '14.5px', fontWeight: '500',
+                                    background: 'transparent',
+                                    color: '#475569',
+                                    boxShadow: 'none',
+                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#0284c7'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#475569'}
+                            >
+                                <span style={{ opacity: 0.6, fontSize: '18px' }}>📞</span>
+                                Liên hệ
                             </div>
                         </div>
 
                         {/* HOTLINE ASSISTANCE CARD */}
-                        <div style={{ marginTop: '24px', padding: '16px', background: '#eff6ff', borderRadius: '14px', border: '1px solid #dbeafe', textAlign: 'center' }}>
-                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>📞</div>
-                            <strong style={{ fontSize: '13px', color: '#1e3a8a', display: 'block' }}>Cần hỗ trợ tư vấn?</strong>
-                            <div style={{ fontSize: '16px', color: '#0194f3', fontWeight: '900', marginTop: '4px' }}>1900 1234</div>
-                            <span style={{ fontSize: '11px', color: '#64748b' }}>Phục vụ 24/7 (Cước 1.000đ/phút)</span>
+                        <div style={{ marginTop: '32px', padding: '24px 20px', background: 'linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)', borderRadius: '18px', border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: 'inset 0 2px 4px rgba(255,255,255,1)' }}>
+                            <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', boxShadow: '0 6px 12px rgba(2, 132, 199, 0.3)' }}>
+                                <span style={{ fontSize: '20px', color: '#fff' }}>📞</span>
+                            </div>
+                            <strong style={{ fontSize: '14px', color: '#334155', display: 'block', fontWeight: '800' }}>Cần hỗ trợ tư vấn?</strong>
+                            <div style={{ fontSize: '24px', color: '#0369a1', fontWeight: '900', marginTop: '6px', letterSpacing: '-0.5px' }}>1900 1234</div>
+                            <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginTop: '8px' }}>Phục vụ 24/7 (Cước 1.000đ/phút)</span>
                         </div>
                     </aside>
 

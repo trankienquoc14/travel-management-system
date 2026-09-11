@@ -41,9 +41,13 @@ const Login = () => {
       localStorage.setItem('user', JSON.stringify(user));
       
       // Chuyển hướng mượt mà
-      navigate('/'); 
-
-    } catch (err) {
+      const userRole = Number(user.role_id || user.role);
+      if (userRole !== 6) {
+        navigate('/dashboard');
+      } else {
+        navigate('/home');
+      }
+      } catch (err) {
       if (err.response && err.response.data.message) {
         setError(err.response.data.message);
       } else {
