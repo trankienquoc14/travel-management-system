@@ -17,6 +17,7 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
 
     return (
         <div style={{ flex: '2', background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+            {setTourName && (
             <div style={{ marginBottom: '25px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0' }}>
                 <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Thông tin chung</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -41,6 +42,7 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
                     </div>
                 </div>
             </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px' }}>Chi tiết Lịch trình</h3>

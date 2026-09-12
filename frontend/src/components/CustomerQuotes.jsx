@@ -61,12 +61,14 @@ const DayItem = ({ day, isOldFormat, index, parsedDesign, destinations }) => {
     img = img || 'https://images.unsplash.com/photo-1542314831-c6a4d14d8373?q=80&w=2000';
 
     return (
-        <div style={{ position: 'relative', marginBottom: isExpanded ? '40px' : '20px' }}>
+        <div style={{ position: 'relative',
+                                                flexShrink: 0, marginBottom: isExpanded ? '40px' : '20px' }}>
             <div style={{ position: 'absolute', left: '-36px', top: isExpanded ? '60px' : '36px', width: '18px', height: '18px', borderRadius: '50%', background: '#0ea5e9', border: '4px solid #fff', zIndex: 2, transform: 'translateY(-50%)', transition: 'all 0.3s', boxShadow: '0 0 0 1px #cbd5e1' }}></div>
             
             {isExpanded ? (
                 <div style={{ transition: 'all 0.3s' }}>
-                    <div onClick={() => ReactSetIsExpanded(false)} style={{ display: 'flex', background: '#eff6ff', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', minHeight: '160px' }}>
+                    <div onClick={() => ReactSetIsExpanded(false)} style={{ display: 'flex', background: '#eff6ff', borderRadius: '20px', overflow: 'hidden',
+                                                flexShrink: 0, cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', minHeight: '160px' }}>
                         <div style={{ flex: 1, padding: '32px' }}>
                             <h3 style={{ color: '#0ea5e9', fontSize: '24px', marginBottom: '12px', fontWeight: 'bold' }}>Ngày {day.dayIndex}</h3>
                             <strong style={{ fontSize: '18px', color: '#0f172a', display: 'block', marginBottom: '12px', lineHeight: '1.5' }}>{title || `Khám phá ngày ${day.dayIndex}`}</strong>
@@ -80,7 +82,7 @@ const DayItem = ({ day, isOldFormat, index, parsedDesign, destinations }) => {
                         <ul style={{ paddingLeft: '24px', color: '#1e293b', fontSize: '15.5px', lineHeight: '2' }}>
                             {activities.map((act, idx) => (
                                 <li key={idx} style={{ marginBottom: '12px' }}>
-                                    <strong style={{color: '#0f172a'}}>{act.name}</strong> {act.type ? `- ${act.type}` : ''}{act.description && <div style={{marginTop: '4px', color: '#64748b', fontSize: '14px', lineHeight: '1.4'}}>{act.description}</div>}
+                                    <strong style={{color: '#0f172a'}}>{act.name}</strong> {act.description && <div style={{marginTop: '4px', color: '#64748b', fontSize: '14px', lineHeight: '1.4'}}>{act.description}</div>}
                                 </li>
                             ))}
                             {activities.length === 0 && <li>Tự do tham quan và nghỉ ngơi theo lịch trình.</li>}
@@ -393,7 +395,8 @@ const CustomerQuotes = () => {
                                                 borderColor: isSelected ? '#0ea5e9' : '#f1f5f9',
                                                 boxShadow: isSelected ? '0 12px 24px -8px rgba(14, 165, 233, 0.25)' : 'none',
                                                 position: 'relative',
-                                                overflow: 'hidden'
+                                                overflow: 'hidden',
+                                                flexShrink: 0
                                             }}
                                         >
                                             {isSelected && (
@@ -542,7 +545,7 @@ const CustomerQuotes = () => {
                                         </div>
 
                                         {/* CHI TIẾT HÀNH TRÌNH VÀ DỊCH VỤ TỪ BẢNG QUOTE */}
-                                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '0' }}>
                                             <div>
                                                 <h3 style={{ fontSize: '20px', color: '#0f172a', paddingBottom: '15px', borderBottom: '1px solid #f1f5f9', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <span style={{ fontSize: '24px' }}>🛎️</span> Dịch vụ đã chốt
@@ -599,7 +602,8 @@ const CustomerQuotes = () => {
                                                         <h3 style={{ fontSize: '20px', color: '#0f172a', paddingBottom: '15px', borderBottom: '1px solid #f1f5f9', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                             <span style={{ fontSize: '24px' }}>💰</span> Tổng Kết Chi Phí Toàn Đoàn
                                                         </h3>
-                                                        <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                                        <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden',
+                                                flexShrink: 0 }}>
                                                             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                                                 <thead>
                                                                     <tr style={{ background: '#f8fafc', color: '#475569', fontSize: '14px' }}>
@@ -645,7 +649,7 @@ const CustomerQuotes = () => {
                                                         </div>
                                                         {selectedQuote.staff_note && (
                                                             <div style={{ marginTop: '20px', backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                                                <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>📝 Mô tả & Ghi chú từ nhân viên</h4>
+                                                                <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>💌 Lời nhắn từ chuyên viên thiết kế</h4>
                                                                 <p style={{ margin: 0, color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{selectedQuote.staff_note}</p>
                                                             </div>
                                                         )}
@@ -684,7 +688,8 @@ const CustomerQuotes = () => {
                                                         const totalPassengers = breakdownData.reduce((sum, item) => sum + item.count, 0);
                                                         
                                                         return (
-                                                            <div style={{ backgroundColor: '#fff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '16px', marginBottom: '15px', overflow: 'hidden' }}>
+                                                            <div style={{ backgroundColor: '#fff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '16px', marginBottom: '15px', overflow: 'hidden',
+                                                flexShrink: 0 }}>
                                                                 <div style={{ fontSize: '15px', color: '#0369a1', marginBottom: '12px', fontWeight: '600' }}>Chi tiết ước tính chi phí cho đoàn:</div>
                                                                 <div style={{ overflowX: 'auto' }}>
                                                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>

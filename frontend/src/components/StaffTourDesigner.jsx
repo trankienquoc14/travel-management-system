@@ -595,11 +595,11 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                     </div>
 
                     <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                        <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>Ghi chú nội bộ</h3>
+                        <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>Lời nhắn cho khách hàng</h3>
                         <textarea
                             value={staffNote}
                             onChange={(e) => setStaffNote(e.target.value)}
-                            placeholder="Ghi chú lại các thỏa thuận..."
+                            placeholder="Ví dụ: Dạ em gửi anh chị bản lịch trình thiết kế chi tiết, anh chị xem qua nhé..."
                             style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'vertical' }}
                         />
                     </div>
