@@ -263,7 +263,11 @@ const TourDetail = () => {
                             }
                             
                             const grouped = {};
-                            const deps = tour.departures || [];
+                            const deps = (tour.departures || []).filter(dep => {
+                                const isFuture = new Date(dep.departure_date) > new Date();
+                                const hasSlots = dep.available_slots > 0;
+                                return isFuture && hasSlots && dep.status !== 'Cancelled';
+                            });
                             deps.forEach(dep => {
                                 const d = new Date(dep.departure_date);
                                 const k = `Tháng ${d.getMonth() + 1}_${d.getFullYear()}`;

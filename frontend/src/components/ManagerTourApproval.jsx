@@ -298,7 +298,7 @@ const ManagerApproveTours = () => {
                             </div>
                             <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#1e293b' }}>{tour.tour_name}</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', color: '#475569', flex: 1 }}>
-                                <div>📍 Điểm đến: <strong>{getDestString(tour)}</strong></div>
+                                <div>📍 Chuyến hành trình: <strong>{getDestString(tour)}</strong></div>
                                 <div>⏱️ Thời gian: <strong>{tour.duration_days} Ngày {Math.max(0, tour.duration_days - 1)} Đêm</strong></div>
                                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontSize: '13px', color: '#64748b' }}>📝 {tour.description || 'Chưa có mô tả'}</div>
                                 <div>💰 Giá bán dự kiến: <strong style={{ color: '#ea580c' }}>{formatMoney(tour.base_price || 0)}đ</strong></div>

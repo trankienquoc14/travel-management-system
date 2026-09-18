@@ -52,12 +52,25 @@ const BookingFormInner = () => {
     const [privacyConsent, setPrivacyConsent] = useState(false);
 
     // Passenger quantities
-    const [pax, setPax] = useState({
+    const [paxWarning, setPaxWarning] = useState('');
+    let initialPax = {
         adults: bookingData?.numPeople || 1,
         children: 0,
         toddlers: 0,
         infants: 0
-    });
+    };
+    if (bookingData?.isCustomTour && bookingData?.quoteData) {
+        try {
+            const req = typeof bookingData.quoteData.requirements === 'string' ? JSON.parse(bookingData.quoteData.requirements) : bookingData.quoteData.requirements;
+            if (req?.participantBreakdown) {
+                initialPax = { ...initialPax, ...req.participantBreakdown };
+            }
+        } catch (e) {
+            console.error("Error parsing quote requirements", e);
+        }
+    }
+
+    const [pax, setPax] = useState(initialPax);
     
     // Expanded sections
     const [showPassengerModal, setShowPassengerModal] = useState(false);
@@ -100,7 +113,9 @@ const BookingFormInner = () => {
     const tour = bookingData.tour;
     const selDep = bookingData.selectedDeparture; // Might be passed from TourDetail? Actually let's just use what's available.
 
-    const parsedDesign = tour?.design_data ? (typeof tour.design_data === 'string' ? JSON.parse(tour.design_data) : tour.design_data) : null;
+    const parsedDesign = isCustom
+        ? (quote?.proposed_itinerary || quote?.itinerary ? (typeof (quote.proposed_itinerary || quote.itinerary) === 'string' ? JSON.parse(quote.proposed_itinerary || quote.itinerary) : (quote.proposed_itinerary || quote.itinerary)) : null)
+        : (tour?.design_data ? (typeof tour.design_data === 'string' ? JSON.parse(tour.design_data) : tour.design_data) : null);
     
     let depDateStr = 'Đang cập nhật';
     let retDateStr = 'Đang cập nhật';
@@ -117,8 +132,8 @@ const BookingFormInner = () => {
             }
         }
     } else if (isCustom && quote) {
-        depDateStr = quote.start_date ? new Date(quote.start_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
-        retDateStr = quote.end_date ? new Date(quote.end_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
+        depDateStr = quote.departure_date ? new Date(quote.departure_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
+        retDateStr = quote.return_date ? new Date(quote.return_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
     }
 
     const transportType = parsedDesign?.costConfig?.selectedTransport?.service_type;
@@ -161,11 +176,30 @@ const BookingFormInner = () => {
         : finalImageUrl;
 
     // Calculate Prices
-    const adultPrice = basePrice || 0;
-    let childPrice = isCustom ? adultPrice : adultPrice * 0.75;
-    let toddlerPrice = isCustom ? adultPrice : adultPrice * 0.5;
-    let infantPrice = 0;
-    let singleSupp = 0;
+    let adultPrice = basePrice || 0;
+    
+    // Extract age multiplier from parsedDesign if available
+    const ageMultiplier = parsedDesign?.costConfig?.ageMultiplier || {};
+    const childPercent = ageMultiplier.child?.percent !== undefined ? ageMultiplier.child.percent : 75;
+    const toddlerPercent = ageMultiplier.toddler?.percent !== undefined ? ageMultiplier.toddler.percent : 50;
+    const infantPercent = ageMultiplier.infant?.percent !== undefined ? ageMultiplier.infant.percent : 0;
+    
+    let childPrice = (adultPrice * childPercent) / 100 + Number(ageMultiplier.child?.fixed_surcharge || 0);
+    let toddlerPrice = (adultPrice * toddlerPercent) / 100 + Number(ageMultiplier.toddler?.fixed_surcharge || 0);
+    let infantPrice = (adultPrice * infantPercent) / 100 + Number(ageMultiplier.infant?.fixed_surcharge || 0);
+    let singleSupp = parsedDesign?.costConfig?.variable?.singleSupplement || 0;
+
+    if (isCustom && quote?.price_breakdown) {
+        try {
+            const pb = typeof quote.price_breakdown === 'string' ? JSON.parse(quote.price_breakdown) : quote.price_breakdown;
+            if (pb.adult !== undefined) adultPrice = pb.adult;
+            if (pb.child !== undefined) childPrice = pb.child;
+            if (pb.toddler !== undefined) toddlerPrice = pb.toddler;
+            if (pb.infant !== undefined) infantPrice = pb.infant;
+        } catch (e) {
+            console.error("Error parsing price_breakdown", e);
+        }
+    }
 
     if (!isCustom && parsedDesign) {
         const ageMult = parsedDesign?.costConfig?.ageMultiplier || {};
@@ -209,11 +243,30 @@ const BookingFormInner = () => {
     };
 
     const updatePax = (type, delta) => {
+        if (isCustom) return;
         setPax(prev => {
             const newVal = prev[type] + delta;
             // Prevent going below 0, and ensure at least 1 adult
             if (newVal < 0) return prev;
             if (type === 'adults' && newVal < 1) return prev;
+            
+            // Validate against available seats
+            if (delta > 0 && !isCustom && tour?.departures && bookingData?.departureId) {
+                const dep = tour.departures.find(d => d.departure_id === bookingData.departureId);
+                if (dep && dep.available_slots !== undefined) {
+                    // Đếm số chỗ thực tế (không tính em bé dưới 2 tuổi)
+                    const currentTotal = prev.adults + prev.children + prev.toddlers;
+                    const increment = (type === 'infants') ? 0 : 1; 
+                    
+                    if (increment > 0 && currentTotal + increment > dep.available_slots) {
+                        setPaxWarning(`Rất tiếc! Số chỗ còn lại của chuyến này chỉ còn: ${dep.available_slots} chỗ.`);
+                        return prev; // Reject the increment
+                    } else {
+                        setPaxWarning(''); // Clear warning if valid
+                    }
+                }
+            }
+
             return { ...prev, [type]: newVal };
         });
     };
@@ -236,11 +289,21 @@ const BookingFormInner = () => {
         setIsSubmitting(true);
         const token = localStorage.getItem('token');
 
+        const passengersArray = [];
+        ['adults', 'children', 'toddlers'].forEach(type => {
+            for (let i = 0; i < pax[type]; i++) {
+                const pObj = passengerDetails[`${type}_${i}`];
+                if (pObj && pObj.name && pObj.name.trim() !== '') {
+                    passengersArray.push({ full_name: pObj.name.trim() });
+                }
+            }
+        });
+
         try {
             if (isCustom) {
                 const response = await axios.post(
                     `http://localhost:5000/api/custom-tours/quotes/${quote.quote_id}/book`,
-                    { payment_method: paymentMethod, notes: contactInfo.notes },
+                    { payment_method: paymentMethod, notes: contactInfo.notes, passengers: passengersArray },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (response.data.success) {
@@ -254,8 +317,10 @@ const BookingFormInner = () => {
                     departure_id: bookingData.departureId,
                     num_people: totalPax, // Gửi tổng số người xuống backend
                     total_amount: totalAmount,
+                    breakdown: pax,
                     payment_method: paymentMethod,
-                    notes: contactInfo.notes
+                    notes: contactInfo.notes,
+                    passengers: passengersArray
                 }, { headers: { Authorization: `Bearer ${token}` } });
 
                 if (response.data.success) {
@@ -318,7 +383,10 @@ const BookingFormInner = () => {
 
                     {/* Khối Hành khách (Số lượng) */}
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '20px' }}>Hành khách</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '20px', color: '#0f172a', margin: 0 }}>Hành khách</h2>
+                            {paxWarning && <span style={{ color: '#ef4444', fontSize: '14px', fontWeight: '500', background: '#fef2f2', padding: '6px 12px', borderRadius: '6px' }}>{paxWarning}</span>}
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             {/* Người lớn */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
@@ -327,9 +395,9 @@ const BookingFormInner = () => {
                                     <span style={{ fontSize: '13px', color: '#64748b' }}>Từ 12 tuổi trở lên</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <button onClick={() => updatePax('adults', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('adults', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
                                     <span style={{ fontSize: '16px', fontWeight: '600', width: '20px', textAlign: 'center' }}>{pax.adults}</span>
-                                    <button onClick={() => updatePax('adults', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('adults', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                 </div>
                             </div>
                             
@@ -340,9 +408,9 @@ const BookingFormInner = () => {
                                     <span style={{ fontSize: '13px', color: '#64748b' }}>Từ 5 - 11 tuổi</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <button onClick={() => updatePax('children', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('children', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
                                     <span style={{ fontSize: '16px', fontWeight: '600', width: '20px', textAlign: 'center' }}>{pax.children}</span>
-                                    <button onClick={() => updatePax('children', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('children', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                 </div>
                             </div>
                             
@@ -353,9 +421,9 @@ const BookingFormInner = () => {
                                     <span style={{ fontSize: '13px', color: '#64748b' }}>Từ 2 - 4 tuổi</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <button onClick={() => updatePax('toddlers', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('toddlers', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
                                     <span style={{ fontSize: '16px', fontWeight: '600', width: '20px', textAlign: 'center' }}>{pax.toddlers}</span>
-                                    <button onClick={() => updatePax('toddlers', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('toddlers', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                 </div>
                             </div>
 
@@ -366,9 +434,9 @@ const BookingFormInner = () => {
                                     <span style={{ fontSize: '13px', color: '#64748b' }}>Dưới 2 tuổi</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <button onClick={() => updatePax('infants', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('infants', -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
                                     <span style={{ fontSize: '16px', fontWeight: '600', width: '20px', textAlign: 'center' }}>{pax.infants}</span>
-                                    <button onClick={() => updatePax('infants', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                    <button disabled={isCustom} onClick={() => updatePax('infants', 1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #cbd5e1', background: isCustom ? '#f1f5f9' : '#fff', cursor: isCustom ? 'not-allowed' : 'pointer', opacity: isCustom ? 0.6 : 1, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                 </div>
                             </div>
                         </div>
@@ -377,11 +445,6 @@ const BookingFormInner = () => {
                     {/* Khối Thông tin hành khách (Dynamic Forms) */}
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '16px' }}>Thông tin hành khách</h2>
-                        
-                        <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <input type="radio" checked readOnly style={{ accentColor: '#dc2626' }} />
-                            <span style={{ fontSize: '14px', color: '#b91c1c' }}>Tôi cần nhân viên tư vấn trợ giúp nhập thông tin đăng ký dịch vụ</span>
-                        </div>
 
                         {['adults', 'children', 'toddlers'].map(type => {
                             if (pax[type] === 0) return null;
@@ -400,7 +463,11 @@ const BookingFormInner = () => {
                                             <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '500', width: '20px' }}>#{idx + 1}</span>
                                             <div onClick={() => setShowPassengerModal(true)} style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '24px', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                                                 <span style={{ fontSize: '14px', color: '#64748b' }}>{typeName} <span style={{color: '#dc2626'}}>*</span></span>
-                                                <span style={{ fontSize: '14px', color: '#dc2626', fontWeight: '500' }}>Nhập thông tin ➔</span>
+                                                {passengerDetails[`${type}_${idx}`]?.name ? (
+                                                    <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{passengerDetails[`${type}_${idx}`].name}</span>
+                                                ) : (
+                                                    <span style={{ fontSize: '14px', color: '#dc2626', fontWeight: '500' }}>Nhập thông tin ➔</span>
+                                                )}
                                             </div>
                                             {type === 'adults' && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>

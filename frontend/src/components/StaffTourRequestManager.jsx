@@ -405,9 +405,9 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter = 'Tất cả', 
                         </div>
                     ) : (
                         <div className="request-inbox-grid">
-                            <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr 2fr 2fr 1fr', padding: '0 20px 12px 20px', color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #f1f5f9' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 3.5fr 1.5fr 1.5fr 1.5fr', padding: '0 20px 12px 20px', color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #f1f5f9' }}>
                                 <div>Khách hàng</div>
-                                <div>Điểm đến</div>
+                                <div>Chuyến hành trình</div>
                                 <div>Thời gian</div>
                                 <div>Số thành viên</div>
                                 <div style={{ textAlign: 'right' }}>Trạng thái</div>
@@ -425,7 +425,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter = 'Tất cả', 
                                             <div style={{ fontSize: '13px', color: '#64748b' }}>{req.customer_phone}</div>
                                         </div>
                                     </div>
-                                    <div style={{ fontWeight: '600', color: '#334155' }}>📍 {req.destination}</div>
+                                    <div style={{ fontWeight: '600', color: '#334155' }}>📍 {(() => { try { const r = typeof req.requirements === 'string' ? JSON.parse(req.requirements) : (req.requirements || {}); return r.pickup_location ? r.pickup_location + ' - ' + req.destination : req.destination; } catch(e) { return req.destination; } })()}</div>
                                     <div style={{ fontSize: '14px', color: '#475569' }}>
                                         📅 {new Date(req.departure_date).toLocaleDateString('vi-VN')}
                                     </div>

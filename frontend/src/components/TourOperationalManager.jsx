@@ -111,7 +111,7 @@ const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth, currentY
     );
 };
 
-const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedMonth, currentYear, onYearChange, tours = [], activeTourTab = 'fixed' }) => {
+const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedMonth, currentYear, onYearChange, tours = [], activeTourTab = 'fixed', uniqueDestinations = [], selectedDestination = 'all', setSelectedDestination }) => {
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
     // Dynamic available years list
@@ -187,6 +187,26 @@ const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedM
                         >
                             {availableYears.map(y => (
                                 <option key={y} value={y}>Năm {y}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={selectedDestination}
+                            onChange={(e) => setSelectedDestination && setSelectedDestination(e.target.value)}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '15px',
+                                fontWeight: '800',
+                                color: '#1e3a8a',
+                                background: '#f8fafc',
+                                border: '2px solid #cbd5e1',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                outline: 'none'
+                            }}
+                        >
+                            <option value="all">Tất cả tỉnh thành</option>
+                            {uniqueDestinations.map(d => (
+                                <option key={d} value={d}>{d}</option>
                             ))}
                         </select>
                     </div>
@@ -292,6 +312,7 @@ const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedM
 
 const TourOperationalManager = () => {
     const [tours, setTours] = useState([]);
+    const [selectedDestination, setSelectedDestination] = useState('all');
     const [selectedTour, setSelectedTour] = useState(null);
     const [loading, setLoading] = useState(false);
     
@@ -305,7 +326,9 @@ const TourOperationalManager = () => {
     const [baseCost, setBaseCost] = useState(0);
     const [basePrice, setBasePrice] = useState(0);
     const [activeTourTab, setActiveTourTab] = useState('fixed'); // 'fixed' | 'custom'
-    const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
+    const _currentDate = new Date();
+    const _currentMonthStr = `${_currentDate.getFullYear()}-${String(_currentDate.getMonth() + 1).padStart(2, '0')}`;
+    const [selectedMonth, setSelectedMonth] = useState(_currentMonthStr); // default to current month instead of 'all'
 
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const todayStr = new Date().toISOString().split('T')[0];
@@ -359,7 +382,7 @@ const TourOperationalManager = () => {
             if (res.data.success) {
                 const d = res.data.data;
                 setSelectedTour(d);
-                setDepartures(d.departures || []);
+                setDepartures((d.departures || []).map(dep => ({ ...dep, original_max_slots: dep.max_slots, original_available_slots: dep.available_slots })));
                 
                 // Preserve existing design configuration
                 setItineraryDays(d.itineraryDays || []);
@@ -398,13 +421,19 @@ const TourOperationalManager = () => {
     const handleSaveDepartures = async () => {
         if (!selectedTour) return;
 
+        // Lấy tất cả lịch trình của CÁC tour khác để kiểm tra trùng lịch / khoảng nghỉ
+        const otherSchedules = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
+
+        // THIẾT LẬP: Số tour tối đa 1 HDV có thể nhận trong 1 tháng
+        const MAX_TOURS_PER_MONTH = 4; // Bạn có thể thay đổi con số này sau
+
         for (let i = 0; i < departures.length; i++) {
             const dep = departures[i];
             if (!dep.departure_date) {
                 alert(`⚠️ Đợt #${i + 1}: Vui lòng chọn Ngày khởi hành!`);
                 return;
             }
-            if (dep.departure_date < todayStr) {
+            if (!dep.departure_id && dep.departure_date < todayStr) {
                 alert(`⚠️ Đợt #${i + 1}: Ngày khởi hành (${formatDateStr(dep.departure_date)}) không được ở quá khứ! Vui lòng chọn từ ngày hôm nay (${formatDateStr(todayStr)}) trở đi.`);
                 return;
             }
@@ -415,6 +444,83 @@ const TourOperationalManager = () => {
             if (!dep.max_slots || dep.max_slots <= 0) {
                 alert(`⚠️ Đợt #${i + 1}: Số lượng khách tối đa phải lớn hơn 0!`);
                 return;
+            }
+            if (dep.departure_id && dep.original_max_slots !== undefined && dep.original_available_slots !== undefined) {
+                const bSlots = dep.original_max_slots - dep.original_available_slots;
+                if (dep.max_slots < bSlots) {
+                    alert(`⚠️ Đợt #${i + 1}: Không thể đặt tổng số chỗ nhỏ hơn số lượng khách đã đặt (${bSlots} khách)!`);
+                    return;
+                }
+            }
+
+            // KIỂM TRA RÀNG BUỘC HƯỚNG DẪN VIÊN
+            if (dep.guide_id) {
+                const assignedGuideId = Number(dep.guide_id);
+                const guideName = guides.find(g => g.user_id === assignedGuideId)?.full_name || 'HDV';
+                
+                const depStart = new Date(dep.departure_date).getTime();
+                const depEnd = new Date(dep.return_date).getTime();
+                const depMonth = new Date(dep.departure_date).getMonth();
+                const depYear = new Date(dep.departure_date).getFullYear();
+                
+                // Lịch từ các tour khác của HDV này
+                const guideOtherSchs = otherSchedules.filter(s => s.guide_id === assignedGuideId && s.departure_date && s.return_date);
+                
+                // Lịch từ CÁC ĐỢT KHÁC trong CÙNG tour này mà HDV này được phân công
+                const guideSameTourSchs = departures.filter((d, idx) => idx !== i && Number(d.guide_id) === assignedGuideId && d.departure_date && d.return_date);
+                
+                const allToCheck = [
+                    ...guideOtherSchs.map(s => ({
+                        tour_name: s.tour_name || 'Tour khác',
+                        start: new Date(s.departure_date).getTime(),
+                        end: new Date(s.return_date).getTime()
+                    })),
+                    ...guideSameTourSchs.map(d => ({
+                        tour_name: 'một đợt khởi hành khác của tour này',
+                        start: new Date(d.departure_date).getTime(),
+                        end: new Date(d.return_date).getTime()
+                    }))
+                ];
+                
+                const ONE_DAY = 24 * 60 * 60 * 1000;
+
+                for (const sch of allToCheck) {
+                    // 1. Ràng buộc KHÔNG TRÙNG LỊCH (Overlap)
+                    if (depStart <= sch.end && depEnd >= sch.start) {
+                        alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn HDV khác hoặc đổi ngày!`);
+                        return;
+                    }
+                    
+                    // 2. Ràng buộc KHOẢNG NGHỈ >= 2 ngày
+                    if (depEnd < sch.start) {
+                        const gapDays = (sch.start - depEnd) / ONE_DAY;
+                        if (gapDays < 2) {
+                            alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} không đủ thời gian nghỉ ngơi trước khi chạy "${sch.tour_name}". (Cần nghỉ ít nhất 2 ngày)\nVui lòng xếp lại!`);
+                            return;
+                        }
+                    } else if (depStart > sch.end) {
+                        const gapDays = (depStart - sch.end) / ONE_DAY;
+                        if (gapDays < 2) {
+                            alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} không đủ thời gian nghỉ ngơi sau khi chạy "${sch.tour_name}". (Cần nghỉ ít nhất 2 ngày)\nVui lòng xếp lại!`);
+                            return;
+                        }
+                    }
+                }
+
+                // 3. Ràng buộc SỐ TOUR TỐI ĐA TRONG THÁNG
+                let toursInThisMonth = 1; // Tính cả tour đang xét
+                for (const sch of allToCheck) {
+                    const schMonth = new Date(sch.start).getMonth();
+                    const schYear = new Date(sch.start).getFullYear();
+                    if (schMonth === depMonth && schYear === depYear) {
+                        toursInThisMonth++;
+                    }
+                }
+
+                if (toursInThisMonth > MAX_TOURS_PER_MONTH) {
+                    alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} đã vượt quá giới hạn nhận tour trong Tháng ${depMonth + 1}/${depYear} (Tối đa ${MAX_TOURS_PER_MONTH} tour/tháng).\nVui lòng phân công cho HDV khác!`);
+                    return;
+                }
             }
         }
 
@@ -447,7 +553,7 @@ const TourOperationalManager = () => {
             setLoading(false); 
         }
     };
-
+    
     const handleActivateTour = async () => {
         if (!window.confirm('Bạn có chắc chắn muốn mở bán Tour này ra website không?')) return;
         setLoading(true);
@@ -489,8 +595,11 @@ const TourOperationalManager = () => {
     };
 
     // Hàm lấy danh sách tour có đợt di chuyển thuộc Tháng m
+    const uniqueDestinations = Array.from(new Set(tours.map(t => t.destination).filter(Boolean))).sort();
+    const filteredTours = tours.filter(t => selectedDestination === 'all' || t.destination === selectedDestination);
+
     const getToursForMonth = (m) => {
-        return tours
+        return filteredTours
             .filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (t.is_custom === 0 || !t.is_custom))
             .filter(t => {
                 return guideSchedules.some(sch => {
@@ -539,8 +648,11 @@ const TourOperationalManager = () => {
                     setSelectedMonth={setSelectedMonth} 
                     currentYear={currentYear}
                     onYearChange={handleYearChange}
-                    tours={tours}
+                    tours={filteredTours}
                     activeTourTab={activeTourTab}
+                    uniqueDestinations={uniqueDestinations}
+                    selectedDestination={selectedDestination}
+                    setSelectedDestination={setSelectedDestination}
                 />
 
                 {/* 3. KHU VỰC DANH SÁCH TOUR ĐƯỢC GẮN TRỰC TIẾP THEO TỪNG THÁNG */}
@@ -641,6 +753,8 @@ const TourOperationalManager = () => {
                                                                     .map((dep, realIdx) => ({ ...dep, realIdx }))
                                                                     .filter(dep => {
                                                                         if (!dep.departure_date) return true;
+                                                                        if (!dep.departure_id) return true;
+                                                                        if (selectedMonth === "all") return true;
                                                                         const d = new Date(dep.departure_date);
                                                                         return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
                                                                     });
@@ -648,7 +762,7 @@ const TourOperationalManager = () => {
                                                                 if (monthDepartures.length === 0) {
                                                                     return (
                                                                         <div style={{ textAlign: 'center', padding: '24px', background: '#f8fafc', borderRadius: '14px', border: '2px dashed #cbd5e1', color: '#64748b', fontSize: '13px', fontWeight: '600' }}>
-                                                                            🗓️ Tour này chưa có đợt khởi hành nào trong Tháng {m}/{currentYear}
+                                                                            {selectedMonth === 'all' ? `🗓️ Tour này chưa có đợt khởi hành nào trong năm ${currentYear}` : `🗓️ Tour này chưa có đợt khởi hành nào trong Tháng ${m}/${currentYear}`}
                                                                         </div>
                                                                     );
                                                                 }
@@ -657,6 +771,54 @@ const TourOperationalManager = () => {
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                                                                         {monthDepartures.map((dep) => {
                                                                             const idx = dep.realIdx;
+
+
+                                                                            const bookedSlots = (dep.departure_id && dep.original_max_slots !== undefined && dep.original_available_slots !== undefined) ? (dep.original_max_slots - dep.original_available_slots) : 0;
+                                                                            const hasBookings = bookedSlots > 0;
+                                                                            const isPastTour = dep.departure_id && dep.departure_date && dep.departure_date < todayStr;
+                                                                            const disableDate = activeTourTab === 'custom' || isPastTour || hasBookings;
+                                                                            const disableSlot = activeTourTab === 'custom' || isPastTour;
+                                                                            const availableGuides = guides.filter(g => {
+                                                                                if (!dep.departure_date || !dep.return_date) return true;
+                                                                                
+                                                                                const depStart = new Date(dep.departure_date).getTime();
+                                                                                const depEnd = new Date(dep.return_date).getTime();
+                                                                                const depMonth = new Date(dep.departure_date).getMonth();
+                                                                                const depYear = new Date(dep.departure_date).getFullYear();
+                                                                                
+                                                                                const otherSchedules = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
+                                                                                const guideOtherSchs = otherSchedules.filter(s => s.guide_id === g.user_id && s.departure_date && s.return_date);
+                                                                                const guideSameTourSchs = departures.filter((d, i) => i !== idx && Number(d.guide_id) === g.user_id && d.departure_date && d.return_date);
+                                                                                
+                                                                                const allToCheck = [
+                                                                                    ...guideOtherSchs.map(s => ({ start: new Date(s.departure_date).getTime(), end: new Date(s.return_date).getTime() })),
+                                                                                    ...guideSameTourSchs.map(d => ({ start: new Date(d.departure_date).getTime(), end: new Date(d.return_date).getTime() }))
+                                                                                ];
+                                                                                
+                                                                                const ONE_DAY = 24 * 60 * 60 * 1000;
+                                                                                let toursInThisMonth = 1;
+                                                                                
+                                                                                for (const sch of allToCheck) {
+                                                                                    if (depStart <= sch.end && depEnd >= sch.start) return false;
+                                                                                    if (depEnd < sch.start && (sch.start - depEnd) / ONE_DAY < 2) return false;
+                                                                                    if (depStart > sch.end && (depStart - sch.end) / ONE_DAY < 2) return false;
+                                                                                    if (new Date(sch.start).getMonth() === depMonth && new Date(sch.start).getFullYear() === depYear) {
+                                                                                        toursInThisMonth++;
+                                                                                    }
+                                                                                }
+                                                                                
+                                                                                // Always allow the currently selected guide to appear so the dropdown doesn't break, 
+                                                                                // but wait, the user requested to hide them. So we hide them.
+                                                                                if (toursInThisMonth > 4) return false;
+                                                                                return true;
+                                                                            });
+                                                                            
+                                                                            // Add the currently selected guide if they are not in the list, just to prevent React select from breaking, but add a warning label
+                                                                            const currentGuide = guides.find(g => g.user_id === Number(dep.guide_id));
+                                                                            if (currentGuide && !availableGuides.some(g => g.user_id === currentGuide.user_id)) {
+                                                                                availableGuides.push({ ...currentGuide, full_name: currentGuide.full_name + ' (Không đủ điều kiện)' });
+                                                                            }
+
                                                                             const parsedDesign = selectedTour?.design_data ? (typeof selectedTour.design_data === 'string' ? JSON.parse(selectedTour.design_data) : selectedTour.design_data) : null;
                                                                             const minPax = parsedDesign?.costConfig?.minimumPax || 15;
                                                                             
@@ -674,8 +836,9 @@ const TourOperationalManager = () => {
                                                                                             min={todayStr}
                                                                                             value={dep.departure_date} 
                                                                                             onChange={e => handleDepartureDateChange(idx, e.target.value)} 
-                                                                                            disabled={activeTourTab === 'custom'}
-                                                                                            style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#f9fafb', width: '100%', fontFamily: 'inherit', color: activeTourTab === 'custom' ? '#9ca3af' : '#111827', fontSize: '14px', fontWeight: '600', outline: 'none', cursor: activeTourTab === 'custom' ? 'not-allowed' : 'pointer', marginBottom: '4px' }} 
+                                                                                            disabled={disableDate}
+                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi ngày" : (hasBookings ? "Tour đã có khách đặt không thể đổi ngày" : "")}
+                                                                                            style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: disableDate ? '#f1f5f9' : '#f9fafb', width: '100%', fontFamily: 'inherit', color: disableDate ? '#9ca3af' : '#111827', fontSize: '14px', fontWeight: '600', outline: 'none', cursor: disableDate ? 'not-allowed' : 'pointer', marginBottom: '4px' }} 
                                                                                         />
                                                                                         <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
                                                                                             Ngày về: <span style={{ color: dep.return_date ? '#374151' : '#9ca3af', fontWeight: '600' }}>{dep.return_date ? formatDateStr(dep.return_date) : '...'}</span>
@@ -686,21 +849,36 @@ const TourOperationalManager = () => {
                                                                                     <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' }}>
                                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                                             <div style={{ fontSize: '13px', color: '#374151', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                                                Khách: <span style={{ color: '#0ea5e9', fontWeight: '700' }}>0</span> / 
+                                                                                                Khách: <span style={{ color: '#0ea5e9', fontWeight: '700' }}>{bookedSlots}</span> / 
                                                                                                 <input 
                                                                                                     type="number" 
-                                                                                                    min="1" 
+                                                                                                    min={hasBookings ? Math.max(1, bookedSlots) : 1} 
                                                                                                     value={dep.max_slots || ''} 
-                                                                                                    onChange={e => { const up = [...departures]; up[idx].max_slots = e.target.value ? Number(e.target.value) : ''; setDepartures(up); }} 
-                                                                                                    onBlur={e => { if(!e.target.value) { const up = [...departures]; up[idx].max_slots = 1; setDepartures(up); } }}
-                                                                                                    disabled={activeTourTab === 'custom'} 
-                                                                                                    style={{ width: '56px', padding: '3px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: activeTourTab === 'custom' ? '#f1f5f9' : '#fff', outline: 'none' }} 
+                                                                                                    onChange={e => { 
+                                                                                                        let val = e.target.value ? Number(e.target.value) : '';
+                                                                                                        const up = [...departures]; 
+                                                                                                        up[idx].max_slots = val; 
+                                                                                                        setDepartures(up); 
+                                                                                                    }} 
+                                                                                                    onBlur={e => { 
+                                                                                                        let val = e.target.value ? Number(e.target.value) : 1;
+                                                                                                        if (hasBookings && val < bookedSlots) {
+                                                                                                            alert('⚠️ Không thể giảm số chỗ xuống thấp hơn số lượng khách đã đặt (' + bookedSlots + ' khách)!');
+                                                                                                            val = Math.max(val, bookedSlots);
+                                                                                                        }
+                                                                                                        const up = [...departures]; 
+                                                                                                        up[idx].max_slots = val; 
+                                                                                                        setDepartures(up); 
+                                                                                                    }}
+                                                                                                    disabled={disableSlot} 
+                                                                                                    title={isPastTour ? "Tour trong quá khứ không thể đổi số chỗ" : ""}
+                                                                                                    style={{ width: '56px', padding: '3px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: disableSlot ? '#f1f5f9' : '#fff', outline: 'none' }} 
                                                                                                 />
                                                                                                 <span style={{ color: '#64748b', fontSize: '12px' }}>(Hòa vốn: {minPax})</span>
                                                                                             </div>
                                                                                         </div>
                                                                                         <div style={{ height: '6px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden' }}>
-                                                                                            <div style={{ width: '0%', height: '100%', background: '#0ea5e9', borderRadius: '3px' }}></div>
+                                                                                            <div style={{ width: `${Math.min(100, (bookedSlots / (dep.max_slots || 1)) * 100)}%`, height: '100%', background: '#0ea5e9', borderRadius: '3px' }}></div>
                                                                                         </div>
                                                                                     </div>
 
@@ -709,10 +887,12 @@ const TourOperationalManager = () => {
                                                                                         <select 
                                                                                             value={dep.guide_id || ''} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].guide_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
-                                                                                            style={{ flex: '1', padding: '8px 10px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #cbd5e1', background: dep.guide_id ? '#e0f2fe' : '#fff', borderRadius: '8px', color: dep.guide_id ? '#0369a1' : '#4b5563', fontSize: '13px', fontWeight: '600', outline: 'none', cursor: 'pointer' }}
+                                                                                            disabled={isPastTour}
+                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi hướng dẫn viên" : ""}
+                                                                                            style={{ flex: '1', padding: '8px 10px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.guide_id ? '#e0f2fe' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.guide_id ? '#0369a1' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
                                                                                         >
                                                                                             <option value="" style={{ background: '#fff', color: '#111827' }}>Chưa phân công HDV</option>
-                                                                                            {guides.map(g => (
+                                                                                            {availableGuides.map(g => (
                                                                                                 <option key={g.user_id} value={g.user_id} style={{ background: '#fff', color: '#111827' }}>{g.full_name}</option>
                                                                                             ))}
                                                                                         </select>
@@ -720,7 +900,9 @@ const TourOperationalManager = () => {
                                                                                         <select 
                                                                                             value={status} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].status = e.target.value; setDepartures(up); }} 
-                                                                                            style={{ flex: '0 0 95px', padding: '8px 10px', border: 'none', background: statusBg, borderRadius: '8px', color: statusColor, fontSize: '13px', fontWeight: '700', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                                                                                            disabled={isPastTour}
+                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi trạng thái" : ""}
+                                                                                            style={{ flex: '0 0 95px', padding: '8px 10px', border: 'none', background: isPastTour ? '#f1f5f9' : statusBg, borderRadius: '8px', color: isPastTour ? '#9ca3af' : statusColor, fontSize: '13px', fontWeight: '700', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer', textAlign: 'center' }}
                                                                                         >
                                                                                             <option value="Open" style={{ background: '#fff', color: '#111827' }}>Mở Bán</option>
                                                                                             <option value="Closed" style={{ background: '#fff', color: '#111827' }}>Khóa</option>

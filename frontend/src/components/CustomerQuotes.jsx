@@ -256,8 +256,47 @@ const CustomerQuotes = () => {
     const handleBookCustomTour = () => {
         if (!selectedQuote) return;
 
-        const price = selectedQuote.quoted_price || selectedQuote.quote_price;
-        if (!window.confirm(`Xác nhận tiến hành đặt tour đi ${selectedQuote.destination} với chi phí ${formatMoney(price)} đ?`)) {
+        let grandTotal = 0;
+        try {
+            let pA=0, pC=0, pT=0, pI=0;
+            const req = typeof selectedQuote.requirements === 'string' ? JSON.parse(selectedQuote.requirements) : (selectedQuote.requirements || {});
+            const breakdown = req.participantBreakdown || { adults: 1, children: 0, toddlers: 0, infants: 0 };
+            pA = breakdown.adults || 0;
+            pC = breakdown.children || 0;
+            pT = breakdown.toddlers || 0;
+            pI = breakdown.infants || 0;
+
+            let costConfig = {};
+            let it = selectedQuote.proposed_itinerary || selectedQuote.itinerary;
+            if (it) {
+                const parsed = typeof it === 'string' ? JSON.parse(it) : it;
+                costConfig = parsed.costConfig || {};
+            }
+
+            // Dùng đúng fallback của UI
+            const sC = costConfig.ageMultiplier?.child || { percent: 0, fixed_surcharge: 0 };
+            const sT = costConfig.ageMultiplier?.toddler || { percent: 0, fixed_surcharge: 0 };
+            const sI = costConfig.ageMultiplier?.infant || { percent: 0, fixed_surcharge: 0 };
+
+            const sellingPrice = selectedQuote.quoted_price || selectedQuote.quote_price || 0;
+            const prA = sellingPrice;
+            const prC = (sellingPrice * (sC.percent || 0) / 100) + Number(sC.fixed_surcharge || 0);
+            const prT = (sellingPrice * (sT.percent || 0) / 100) + Number(sT.fixed_surcharge || 0);
+            const prI = (sellingPrice * (sI.percent || 0) / 100) + Number(sI.fixed_surcharge || 0);
+
+            grandTotal = (pA * prA) + (pC * prC) + (pT * prT) + (pI * prI);
+            
+            // Check if price_breakdown exists, prefer it
+            if (selectedQuote.price_breakdown) {
+                const pb = typeof selectedQuote.price_breakdown === 'string' ? JSON.parse(selectedQuote.price_breakdown) : selectedQuote.price_breakdown;
+                grandTotal = (pA * (pb.adult || 0)) + (pC * (pb.child || 0)) + (pT * (pb.toddler || 0)) + (pI * (pb.infant || 0));
+            }
+        } catch (e) {
+            console.error(e);
+            grandTotal = selectedQuote.quoted_price || selectedQuote.quote_price || 0;
+        }
+
+        if (!window.confirm(`Xác nhận tiến hành đặt tour đi ${selectedQuote.destination} với tổng chi phí ${formatMoney(grandTotal)} đ?`)) {
             return;
         }
 

@@ -288,7 +288,7 @@ exports.saveTourOperationalSchedule = async (req, res) => {
               UPDATE departures 
               SET departure_date=?, return_date=?, max_slots=?, guide_id=? 
               WHERE departure_id=?
-            `, { replacements: [dep.departure_date, dep.return_date, dep.max_slots || 30, dep.guide_id || null, targetDepId], transaction });
+            `, { replacements: [dep.departure_date, dep.return_date, dep.max_slots || 30, dep.max_slots || 30, dep.guide_id || null, targetDepId], transaction });
         } else {
             const [insRes] = await sequelize.query(`
               INSERT INTO departures (tour_id, departure_date, return_date, max_slots, available_slots, status, guide_id)

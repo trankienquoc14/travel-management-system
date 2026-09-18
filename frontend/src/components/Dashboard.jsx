@@ -317,13 +317,13 @@ const Dashboard = () => {
                   {isRequestGroupOpen && (
                     <>
                       <li className={activeTab === 'tour_requests_pending' ? 'active' : ''} onClick={() => setActiveTab('tour_requests_pending')}>
-                        ⏳ Yêu cầu chờ báo giá
+                        ⏳ Nhận yêu cầu báo giá
                       </li>
                       <li className={activeTab === 'tour_requests_revision' ? 'active' : ''} onClick={() => setActiveTab('tour_requests_revision')}>
-                        ✏️ Yêu cầu cần chỉnh sửa
+                        ✏️ Chỉnh sửa yêu cầu
                       </li>
                       <li className={activeTab === 'tour_requests' ? 'active' : ''} onClick={() => setActiveTab('tour_requests')}>
-                        🛎️ Thiết kế tour theo yêu cầu
+                        🛎️ Thiết kế tour đã báo giá
                       </li>
                     </>
                   )}

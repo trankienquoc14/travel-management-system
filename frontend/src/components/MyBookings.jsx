@@ -1,8 +1,80 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import html2pdf from 'html2pdf.js';
 import CustomerNavbar from './CustomerNavbar';
 
 const GATEWAY_URL = 'http://localhost:5000';
+
+
+const renderPaxSummary = (b) => {
+    let p = null;
+    try {
+        if (b.breakdown) p = typeof b.breakdown === 'string' ? JSON.parse(b.breakdown) : b.breakdown;
+        else if (b.requirements) {
+            const r = typeof b.requirements === 'string' ? JSON.parse(b.requirements) : b.requirements;
+            if (r.participantBreakdown) p = r.participantBreakdown;
+        }
+    } catch(e) {}
+    if (p) {
+        const parts = [];
+        if (p.adults > 0) parts.push(`${p.adults} NL`);
+        if (p.children > 0) parts.push(`${p.children} TE`);
+        if (p.toddlers > 0) parts.push(`${p.toddlers} TN`);
+        if (p.infants > 0) parts.push(`${p.infants} EB`);
+        return parts.join(', ');
+    }
+    return `${b.num_people || 1} Khách`;
+};
+const getPassengerName = (b, idx) => {
+    try {
+        if (b.passengers_list) {
+            if (typeof b.passengers_list === 'string') {
+                if (b.passengers_list.includes('||')) {
+                    const list = b.passengers_list.split('||');
+                    if (list[idx]) return list[idx];
+                } else if (b.passengers_list.startsWith('[')) {
+                    const list = JSON.parse(b.passengers_list);
+                    if (list && list[idx]) {
+                        if (list[idx].name) return list[idx].name;
+                        if (list[idx].full_name) return list[idx].full_name;
+                    }
+                }
+            } else if (Array.isArray(b.passengers_list)) {
+                if (b.passengers_list[idx]) {
+                    if (b.passengers_list[idx].name) return b.passengers_list[idx].name;
+                    if (b.passengers_list[idx].full_name) return b.passengers_list[idx].full_name;
+                }
+            }
+        }
+        if (b.breakdown) {
+            const parsed = typeof b.breakdown === 'string' ? JSON.parse(b.breakdown) : b.breakdown;
+            if (parsed && parsed.passengers && parsed.passengers[idx]) {
+                if (parsed.passengers[idx].full_name) return parsed.passengers[idx].full_name;
+                if (parsed.passengers[idx].name) return parsed.passengers[idx].name;
+            }
+        }
+        if (b.requirements) {
+            const req = typeof b.requirements === 'string' ? JSON.parse(b.requirements) : b.requirements;
+            if (req && req.passengers && req.passengers[idx]) {
+                if (req.passengers[idx].full_name) return req.passengers[idx].full_name;
+                if (req.passengers[idx].name) return req.passengers[idx].name;
+            }
+        }
+        if (b.design_data) {
+            const d = typeof b.design_data === 'string' ? JSON.parse(b.design_data) : b.design_data;
+            if (d && d.passengers && d.passengers[idx]) {
+                if (d.passengers[idx].full_name) return d.passengers[idx].full_name;
+                if (d.passengers[idx].name) return d.passengers[idx].name;
+            }
+        }
+    } catch(e) {}
+    
+    // If no specific names found, use customer name + index
+    if (b.num_people > 1) {
+        return idx === 0 ? `${b.customer_name || 'Khách hàng'} (Đại diện)` : `${b.customer_name || 'Khách hàng'} (Khách ${idx + 1})`;
+    }
+    return b.customer_name || 'Khách hàng';
+};
 
 const MyBookings = () => {
     const [bookings, setBookings] = useState([]);
@@ -13,7 +85,69 @@ const MyBookings = () => {
     
     // Modal states
     const [detailBooking, setDetailBooking] = useState(null); // Modal Xem chi tiết
-    const [selectedBooking, setSelectedBooking] = useState(null); // Modal Yêu cầu Hủy/Đổi lịch
+    const [ticketBooking, setTicketBooking] = useState(null);
+    const [itineraryModalBooking, setItineraryModalBooking] = useState(null);
+    const [remoteDays, setRemoteDays] = useState(null);
+    const [loadingRemote, setLoadingRemote] = useState(false);
+    
+    useEffect(() => {
+        const fetchRemote = async () => {
+            if (!itineraryModalBooking) return;
+            let localDays = [];
+            try {
+                if (itineraryModalBooking.design_data) {
+                    const parsed = typeof itineraryModalBooking.design_data === 'string' ? JSON.parse(itineraryModalBooking.design_data) : itineraryModalBooking.design_data;
+                    if (parsed.itineraryDays) localDays = parsed.itineraryDays;
+                } else if (itineraryModalBooking.requirements) {
+                    const reqs = typeof itineraryModalBooking.requirements === 'string' ? JSON.parse(itineraryModalBooking.requirements) : itineraryModalBooking.requirements;
+                    if (reqs.itinerary) localDays = reqs.itinerary;
+                }
+            } catch(e) {}
+            if (localDays && localDays.length > 0) {
+                setRemoteDays(localDays);
+                setLoadingRemote(false);
+                return;
+            }
+            setLoadingRemote(true);
+            setRemoteDays(null);
+            try {
+                let tId = itineraryModalBooking.tour_id;
+                if (!tId) {
+                    const res1 = await axios.get(`${GATEWAY_URL}/api/tours`);
+                    const matched = res1.data.data.find(t => t.tour_name === itineraryModalBooking.tour_name);
+                    if (matched) tId = matched.tour_id;
+                }
+                if (tId) {
+                    const res2 = await axios.get(`${GATEWAY_URL}/api/tours/${tId}`);
+                    if (res2.data.success && res2.data.data.itineraries) {
+                        const fetched = res2.data.data.itineraries.map(it => ({
+                            day: it.day_number, title: it.title, description: it.description,
+                            activities: it.activities ? (typeof it.activities === 'string' ? JSON.parse(it.activities) : it.activities) : [],
+                            meals: it.meals ? (typeof it.meals === 'string' ? JSON.parse(it.meals) : it.meals) : [],
+                            accommodation: it.accommodation
+                        }));
+                        setRemoteDays(fetched);
+                    } else { setRemoteDays([]); }
+                } else { setRemoteDays([]); }
+            } catch(e) { setRemoteDays([]); } finally { setLoadingRemote(false); }
+        };
+        fetchRemote();
+    }, [itineraryModalBooking]);
+
+    const handleDownloadPDF = () => {
+        const element = document.getElementById('ticket-content-to-pdf');
+        if (!element) return;
+        const opt = {
+          margin: [0.5, 0.5, 0.5, 0.5], pagebreak: { mode: ['css', 'legacy'] },
+          filename: `Ve_Dien_Tu_${ticketBooking.booking_id}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0, y: 0, windowWidth: 900 },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    };
+
+    const [selectedBooking, setSelectedBooking] = useState(null);
     const [requestType, setRequestType] = useState('Cancel');
     const [reason, setReason] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -128,6 +262,68 @@ const MyBookings = () => {
         return true;
     });
 
+    
+const renderTimeline = (bookingStatus, paymentStatus) => {
+    let currentStep = 2; // Mặc định là đã xác nhận
+    let isCancelled = bookingStatus === 'Cancelled';
+
+    if (isCancelled) {
+        // Special render for cancelled
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 0', width: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 0 0 6px #fee2e2' }}>
+                        <i className="fas fa-times"></i>
+                    </div>
+                    <span style={{ color: '#ef4444', fontWeight: '700', fontSize: '14px' }}>Đã hủy</span>
+                </div>
+            </div>
+        );
+    }
+    if (paymentStatus === 'Paid') currentStep = 3;
+    if (bookingStatus === 'Completed') currentStep = 4;
+
+    // Steps definition
+    const steps = [
+        { label: 'Đã đặt' },
+        { label: 'Đã xác nhận' },
+        { label: 'Đã thanh toán' },
+        { label: 'Hoàn thành' }
+    ];
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 40px', width: '100%', boxSizing: 'border-box' }}>
+            {steps.map((step, index) => {
+                const stepNum = index + 1;
+                const isCompleted = currentStep >= stepNum;
+                const isPastCompleted = currentStep > stepNum;
+                
+                return (
+                    <React.Fragment key={index}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', zIndex: 2, width: '80px' }}>
+                            {isCompleted ? (
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#588b6b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', boxShadow: '0 0 0 6px #eefdf4' }}>
+                                    ✓
+                                </div>
+                            ) : (
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#cbd5e1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700' }}>
+                                    {stepNum}
+                                </div>
+                            )}
+                            <span style={{ color: isCompleted ? '#588b6b' : '#94a3b8', fontWeight: '700', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                {step.label}
+                            </span>
+                        </div>
+                        {index < steps.length - 1 && (
+                            <div style={{ flex: 1, height: '2px', backgroundColor: isPastCompleted ? '#588b6b' : '#e2e8f0', margin: '0 8px', transform: 'translateY(-16px)' }}></div>
+                        )}
+                    </React.Fragment>
+                );
+            })}
+        </div>
+    );
+};
+
     const renderStatusBadge = (status) => {
         switch (status) {
             case 'Confirmed':
@@ -156,9 +352,9 @@ const MyBookings = () => {
 
     return (
         <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: '"Outfit", "Inter", sans-serif' }}>
-            <CustomerNavbar activeTab="my-bookings" />
+            <div className="no-print"><CustomerNavbar activeTab="my-bookings" /></div>
 
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 20px' }}>
+            <div className="no-print" style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 20px' }}>
                 
                 {/* 1. Header Banner & KPI Summary */}
                 <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '24px', padding: '32px', color: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.15)', marginBottom: '32px' }}>
@@ -448,16 +644,9 @@ const MyBookings = () => {
                         {/* Detail Modal Body */}
                         <div style={{ padding: '32px' }}>
                             
-                            {/* Status Bar */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: '#f8fafc', borderRadius: '16px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
-                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: '700', fontSize: '14px', color: '#475569' }}>TRẠNG THÁI:</span>
-                                    {renderStatusBadge(detailBooking.isService ? detailBooking.status : detailBooking.booking_status)}
-                                </div>
-                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: '700', fontSize: '14px', color: '#475569' }}>THANH TOÁN:</span>
-                                    {renderPaymentBadge(detailBooking.payment_status)}
-                                </div>
+                            {/* Status Bar Timeline */}
+                            <div style={{ background: '#ffffff', borderRadius: '16px', marginBottom: '24px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                {renderTimeline(detailBooking.isService ? detailBooking.status : detailBooking.booking_status, detailBooking.payment_status)}
                             </div>
 
                             {/* 2-Column Info Sections */}
@@ -468,49 +657,88 @@ const MyBookings = () => {
                                     <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a', fontWeight: '800', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                                         {detailBooking.isService ? '🛎️ Thông Tin Dịch Vụ' : '🗺️ Thông Tin Lịch Trình'}
                                     </h4>
-
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
-                                        {detailBooking.isService ? (
-                                            <>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>LOẠI DỊCH VỤ</span>
-                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.service_type}</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY SỬ DỤNG</span>
-                                                    <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.usage_date)}</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>SỐ LƯỢNG YÊU CẦU</span>
-                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.quantity} {detailBooking.unit}</strong>
-                                                </div>
-                                                {detailBooking.voucher_code && (
+                                        {(() => {
+                                            if (detailBooking.isService) {
+                                                return (
+                                                    <>
+                                                        <div>
+                                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Loại dịch vụ</span>
+                                                            <strong style={{ color: '#0f172a' }}>{detailBooking.service_type}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Ngày sử dụng</span>
+                                                            <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.usage_date)}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Số lượng yêu cầu</span>
+                                                            <strong style={{ color: '#0f172a' }}>{detailBooking.quantity} {detailBooking.unit}</strong>
+                                                        </div>
+                                                    </>
+                                                );
+                                            }
+
+                                            let departureLocation = null;
+                                            let departureTime = null;
+                                            try {
+                                                if (detailBooking.design_data) {
+                                                    const d = typeof detailBooking.design_data === 'string' ? JSON.parse(detailBooking.design_data) : detailBooking.design_data;
+                                                    if (d.departureCity) departureLocation = d.departureCity;
+                                                    if (d.startTime) departureTime = d.startTime;
+                                                } else if (detailBooking.requirements) {
+                                                    const r = typeof detailBooking.requirements === 'string' ? JSON.parse(detailBooking.requirements) : detailBooking.requirements;
+                                                    if (r.departureCity) departureLocation = r.departureCity;
+                                                    if (r.startTime) departureTime = r.startTime;
+                                                }
+                                            } catch(e) {}
+                                            
+                                            // Fallbacks if backend doesn't have it, hardcode as requested
+                                            if (!departureLocation) departureLocation = 'Hồ Chí Minh';
+                                            if (!departureTime) departureTime = '06:00 AM';
+
+                                            return (
+                                                <>
                                                     <div>
-                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>MÃ VOUCHER</span>
-                                                        <strong style={{ color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>{detailBooking.voucher_code}</strong>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Địa điểm xuất phát</span>
+                                                        <strong style={{ color: '#1e293b' }}>{departureLocation}</strong>
                                                     </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>ĐIỂM ĐẾN</span>
-                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.destination || 'Việt Nam'}</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY KHỞI HÀNH</span>
-                                                    <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.departure_date)}</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>NGÀY KẾT THÚC DỰ KIẾN</span>
-                                                    <strong style={{ color: '#0f172a' }}>{formatDate(detailBooking.return_date)}</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>SỐ HÀNH KHÁCH</span>
-                                                    <strong style={{ color: '#0f172a' }}>{detailBooking.num_people} Người lớn / Trẻ em</strong>
-                                                </div>
-                                            </>
-                                        )}
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Giờ khởi hành</span>
+                                                        <strong style={{ color: '#1e293b' }}>{departureTime}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Điểm đến</span>
+                                                        <strong style={{ color: '#1e293b' }}>{detailBooking.destination || 'Việt Nam'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Ngày khởi hành</span>
+                                                        <strong style={{ color: '#0284c7' }}>{formatDate(detailBooking.departure_date)}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Ngày kết thúc dự kiến</span>
+                                                        <strong style={{ color: '#1e293b' }}>{formatDate(detailBooking.return_date)}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px', textTransform: 'uppercase' }}>Số hành khách</span>
+                                                        <strong style={{ color: '#1e293b' }}>{renderPaxSummary(detailBooking)}</strong>
+                                                    </div>
+                                                    
+                                                    {detailBooking.departure_id && (
+                                                        <div style={{ marginTop: '16px' }}>
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setItineraryModalBooking(detailBooking);
+                                                                }}
+                                                                style={{ display: 'inline-block', width: '100%', padding: '10px 0', textAlign: 'center', background: '#f8fafc', color: '#0284c7', borderRadius: '8px', fontWeight: '700', border: '1px solid #cbd5e1', cursor: 'pointer' }} 
+                                                            >
+                                                                <i className="fas fa-external-link-alt" style={{ marginRight: '6px' }}></i> Xem chi tiết lịch trình
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
 
@@ -519,51 +747,319 @@ const MyBookings = () => {
                                     <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a', fontWeight: '800', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                                         💳 Chi Tiết Bảng Tính Tiền
                                     </h4>
-
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#64748b' }}>Đơn giá {detailBooking.isService ? `(${detailBooking.unit})` : '1 hành khách'}:</span>
-                                            <strong style={{ color: '#0f172a' }}>{formatCurrency(detailBooking.isService ? (detailBooking.total_amount / (detailBooking.quantity || 1)) : detailBooking.price_per_person)}</strong>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#64748b' }}>Số lượng:</span>
-                                            <strong style={{ color: '#0f172a' }}>x {detailBooking.isService ? detailBooking.quantity : detailBooking.num_people}</strong>
-                                        </div>
-                                        {!detailBooking.isService && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: '#64748b' }}>Bảo hiểm du lịch:</span>
-                                                <strong style={{ color: '#10b981' }}>Đã bao gồm (Free)</strong>
-                                            </div>
-                                        )}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '10px', marginTop: '4px' }}>
-                                            <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '15px' }}>TỔNG TIỀN THANH TOÁN:</span>
-                                            <strong style={{ fontSize: '20px', color: '#059669', fontWeight: '800' }}>{formatCurrency(detailBooking.total_amount)}</strong>
+                                        {(() => {
+                                            if (detailBooking.isService) {
+                                                return (
+                                                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', width: '100%' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                            <span style={{ color: '#64748b' }}>Đơn giá ({detailBooking.unit}):</span>
+                                                            <strong style={{ color: '#0f172a' }}>{formatCurrency(detailBooking.total_amount / (detailBooking.quantity || 1))}</strong>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                            <span style={{ color: '#64748b' }}>Số lượng:</span>
+                                                            <strong style={{ color: '#0f172a' }}>x {detailBooking.quantity}</strong>
+                                                        </div>
+                                                        <div style={{ borderTop: '1px dashed #cbd5e1', margin: '16px 0' }}></div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ textTransform: 'uppercase', fontWeight: '800', color: '#0f172a' }}>TỔNG THANH TOÁN</div>
+                                                            <div style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>{formatCurrency(detailBooking.total_amount)}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+
+                                            let adults = 1, children = 0, toddlers = 0, infants = 0;
+                                            let p = null;
+                                            if (detailBooking.breakdown) {
+                                                p = typeof detailBooking.breakdown === 'string' ? JSON.parse(detailBooking.breakdown) : detailBooking.breakdown;
+                                            } else if (detailBooking.requirements) {
+                                                const reqs = typeof detailBooking.requirements === 'string' ? JSON.parse(detailBooking.requirements) : detailBooking.requirements;
+                                                if (reqs.participantBreakdown) p = reqs.participantBreakdown;
+                                            }
+                                            if (p) {
+                                                adults = p.adults || 0; children = p.children || 0; toddlers = p.toddlers || 0; infants = p.infants || 0;
+                                            } else { adults = detailBooking.num_people || 1; }
+
+                                            let adultPrice = 0, childPrice = 0, toddlerPrice = 0, infantPrice = 0;
+                                            const basePr = Number(detailBooking.base_price) || 0;
+                                            let itConfig = {};
+                                            try {
+                                                if (detailBooking.design_data) {
+                                                    const parsed = typeof detailBooking.design_data === 'string' ? JSON.parse(detailBooking.design_data) : detailBooking.design_data;
+                                                    if (parsed.costConfig) itConfig = parsed.costConfig;
+                                                }
+                                            } catch(e) {}
+                                            
+                                            const sC = itConfig.ageMultiplier?.child || { percent: 75, fixed_surcharge: 0 };
+                                            const sT = itConfig.ageMultiplier?.toddler || { percent: 50, fixed_surcharge: 0 };
+                                            const sI = itConfig.ageMultiplier?.infant || { percent: 0, fixed_surcharge: 0 };
+
+                                            adultPrice = basePr;
+                                            childPrice = (basePr * (sC.percent !== undefined ? sC.percent : 75) / 100) + Number(sC.fixed_surcharge || 0);
+                                            toddlerPrice = (basePr * (sT.percent !== undefined ? sT.percent : 50) / 100) + Number(sT.fixed_surcharge || 0);
+                                            infantPrice = (basePr * (sI.percent !== undefined ? sI.percent : 0) / 100) + Number(sI.fixed_surcharge || 0);
+
+                                            const totalCalc = (adults * adultPrice) + (children * childPrice) + (toddlers * toddlerPrice) + (infants * infantPrice);
+                                            let discount = detailBooking.discount_amount || 0;
+                                            
+                                            if (!detailBooking.discount_amount && totalCalc > detailBooking.total_amount) {
+                                                discount = totalCalc - detailBooking.total_amount;
+                                            }
+
+                                            return (
+                                                <div style={{ width: '100%' }}>
+                                                    {adults > 0 && (
+                                                        <div style={{ marginBottom: '16px' }}>
+                                                            <div style={{ marginBottom: '4px', fontWeight: '700', color: '#0f172a' }}>Người lớn</div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                                                                <span>{adults} × {formatCurrency(adultPrice)}</span>
+                                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(adults * adultPrice)}</strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {children > 0 && (
+                                                        <div style={{ marginBottom: '16px' }}>
+                                                            <div style={{ marginBottom: '4px', fontWeight: '700', color: '#0f172a' }}>Trẻ em</div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                                                                <span>{children} × {formatCurrency(childPrice)}</span>
+                                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(children * childPrice)}</strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {toddlers > 0 && (
+                                                        <div style={{ marginBottom: '16px' }}>
+                                                            <div style={{ marginBottom: '4px', fontWeight: '700', color: '#0f172a' }}>Trẻ nhỏ</div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                                                                <span>{toddlers} × {formatCurrency(toddlerPrice)}</span>
+                                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(toddlers * toddlerPrice)}</strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {infants > 0 && (
+                                                        <div style={{ marginBottom: '16px' }}>
+                                                            <div style={{ marginBottom: '4px', fontWeight: '700', color: '#0f172a' }}>Em bé</div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                                                                <span>{infants} × {formatCurrency(infantPrice)}</span>
+                                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(infants * infantPrice)}</strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div style={{ borderTop: '1px dashed #cbd5e1', margin: '20px 0 16px 0' }}></div>
+                                                    
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontWeight: '600' }}>
+                                                        <span style={{ color: '#0f172a' }}>Tiền tour</span>
+                                                        <span style={{ color: '#0f172a' }}>{formatCurrency(totalCalc)}</span>
+                                                    </div>
+                                                    
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontWeight: '600' }}>
+                                                        <span style={{ color: '#0f172a' }}>Bảo hiểm</span>
+                                                        <span style={{ color: '#0f172a' }}>Đã bao gồm</span>
+                                                    </div>
+                                                    
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontWeight: '600' }}>
+                                                        <span style={{ color: '#0f172a' }}>Khuyến mãi</span>
+                                                        <span style={{ color: '#0f172a' }}>{discount > 0 ? `-${formatCurrency(discount)}` : '0 ₫'}</span>
+                                                    </div>
+                                                    
+                                                    <div style={{ borderTop: '1px dashed #cbd5e1', margin: '16px 0' }}></div>
+                                                    
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ textTransform: 'uppercase', fontWeight: '800', color: '#0f172a' }}>TỔNG THANH TOÁN</div>
+                                                        <div style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>{formatCurrency(detailBooking.total_amount)}</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '16px' }}>
+                                            <span style={{ color: '#64748b' }}>Phương thức thanh toán:</span>
+                                            <strong style={{ color: '#0f172a' }}>
+                                                {(() => {
+                                                    const m = String(detailBooking.payment_method || '').toLowerCase();
+                                                    if (m === 'bank_transfer') return 'Chuyển khoản';
+                                                    if (m === 'momo') return 'Ví MoMo';
+                                                    if (m === 'cash') return 'Tiền mặt';
+                                                    if (m === 'vnpay') return 'VNPay';
+                                                    return detailBooking.payment_method || (detailBooking.payment_status === 'Paid' ? 'Đã thanh toán (N/A)' : 'Chưa thanh toán');
+                                                })()}
+                                            </strong>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Ticket Pass Container Design */}
-                            <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', borderRadius: '20px', padding: '20px', border: '1px dashed #94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>VÉ ĐIỆN TỬ E-TICKET PASS</div>
-                                    <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginTop: '4px' }}>Hành khách: {detailBooking.customer_name || 'Khách hàng'}</div>
-                                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>SĐT liên hệ: {detailBooking.customer_phone || 'N/A'}</div>
+                            {/* Thông Tin Hành Khách Design */}
+                            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <h4 style={{ margin: 0, fontSize: '18px', color: '#1e293b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+                                    <span style={{ fontSize: '20px', color: '#312e81' }}>👤</span> Thông Tin Hành Khách
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>HỌ VÀ TÊN</div>
+                                        <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{detailBooking.customer_name || 'Khách hàng'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>SỐ ĐIỆN THOẠI</div>
+                                        <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{detailBooking.customer_phone || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>EMAIL LIÊN HỆ</div>
+                                        <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{detailBooking.customer_email || 'N/A'}</div>
+                                    </div>
                                 </div>
-                                <button onClick={() => window.print()} style={{ padding: '10px 18px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
-                                    🖨️ In Vé Điện Tử
-                                </button>
                             </div>
 
                         </div>
 
                         {/* Detail Modal Footer */}
                         <div style={{ padding: '20px 32px', background: '#f8fafc', borderBottomLeftRadius: '28px', borderBottomRightRadius: '28px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            {!detailBooking.isService && detailBooking.payment_status === 'Paid' && (
+                                <button onClick={() => setTicketBooking(detailBooking)} style={{ padding: '10px 24px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <i className="fas fa-print"></i> In Vé Điện Tử
+                                </button>
+                            )}
                             <button onClick={() => setDetailBooking(null)} style={{ padding: '10px 24px', background: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
                                 Đóng cửa sổ
                             </button>
                         </div>
 
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL 3: XEM CHI TIẾT LỊCH TRÌNH */}
+            {itineraryModalBooking && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', width: '800px', maxWidth: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <div style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                                🗺️ Lịch trình: {itineraryModalBooking.tour_name}
+                            </h3>
+                            <button onClick={() => setItineraryModalBooking(null)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' }}>&times;</button>
+                        </div>
+                        <div style={{ padding: '32px', overflowY: 'auto', flex: 1, backgroundColor: '#f8fafc' }}>
+                            {(() => {
+                                if (loadingRemote || remoteDays === null) return <div style={{ textAlign: 'center', padding: '40px' }}>⏳ Đang tải dữ liệu lịch trình...</div>;
+                                const days = remoteDays;
+                                if (!days || days.length === 0) return <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>Không tìm thấy chi tiết lịch trình.</div>;
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        {days.map((day, idx) => (
+                                            <div key={idx} style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                                                <h4 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#0284c7', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ background: '#e0f2fe', padding: '4px 12px', borderRadius: '20px', fontSize: '14px' }}>Ngày {day.day}</span>
+                                                    {day.title}
+                                                </h4>
+                                                <div style={{ color: '#475569', fontSize: '15px', lineHeight: '1.6', marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
+                                                    {day.description}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL 4: E-TICKET DOWNLOAD MODAL */}
+            {ticketBooking && (
+                <div className="ticket-modal-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+                    <div className="ticket-modal-content" style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', alignItems: 'center', maxHeight: '100vh', overflowY: 'auto', padding: '20px' }}>
+                        
+                        <div id="ticket-content-to-pdf" style={{ display: 'block', width: '100%' }}>
+                            {Array.from({ length: ticketBooking.num_people || 1 }).map((_, idx) => {
+                                let depLoc = 'Hồ Chí Minh';
+                                let depTime = '06:00 AM';
+                                try {
+                                    if (ticketBooking.design_data) {
+                                        const d = typeof ticketBooking.design_data === 'string' ? JSON.parse(ticketBooking.design_data) : ticketBooking.design_data;
+                                        if (d.departureCity) depLoc = d.departureCity;
+                                        if (d.startTime) depTime = d.startTime;
+                                    } else if (ticketBooking.requirements) {
+                                        const r = typeof ticketBooking.requirements === 'string' ? JSON.parse(ticketBooking.requirements) : ticketBooking.requirements;
+                                        if (r.departureCity) depLoc = r.departureCity;
+                                        if (r.startTime) depTime = r.startTime;
+                                    }
+                                } catch(e) {}
+
+                                return (
+                                    <React.Fragment key={idx}>
+                                        {idx > 0 && idx % 2 === 0 && <div className="html2pdf__page-break" style={{ pageBreakBefore: 'always', height: '0', margin: '0' }}></div>}
+                                        <div className="print-modal" style={{ display: 'flex', background: '#fff', borderRadius: '20px', overflow: 'hidden', width: '100%', maxWidth: '800px', margin: '0 auto 32px auto', border: '2px solid #cbd5e1', boxShadow: '0 15px 35px rgba(0,0,0,0.1)' }}>
+                                        {/* Left Side */}
+                                        <div style={{ width: '560px', padding: '32px 36px', display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '30px', fontWeight: '900', color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1 }}>TravelVN</div>
+                                                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', letterSpacing: '1.2px', marginTop: '6px' }}>E-TICKET PASS</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>HẠNG VÉ / CLASS</div>
+                                                    <div style={{ fontSize: '18px', color: '#0f172a', fontWeight: '900' }}>STANDARD</div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ marginBottom: '28px' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>HÀNH TRÌNH / JOURNEY</div>
+                                                <div style={{ fontSize: '22px', color: '#0f172a', fontWeight: '800' }}>{ticketBooking.tour_name}</div>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px', marginBottom: '28px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>KHỞI HÀNH / DEPARTURE</div>
+                                                    <div style={{ fontSize: '16px', color: '#3b82f6', fontWeight: '700', whiteSpace: 'nowrap' }}>{depTime} | {formatDate(ticketBooking.departure_date)}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>XUẤT PHÁT TẠI / FROM</div>
+                                                    <div style={{ fontSize: '16px', color: '#0f172a', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{depLoc}</div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ borderTop: '1px solid #f1f5f9', margin: '0 0 20px 0' }}></div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>HÀNH KHÁCH / PASSENGER</div>
+                                                    <div style={{ fontSize: '19px', color: '#0f172a', fontWeight: '800' }}>{getPassengerName(ticketBooking, idx)}</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>MÃ ĐƠN / ORDER ID</div>
+                                                    <div style={{ fontSize: '19px', color: '#0f172a', fontWeight: '800' }}>#{ticketBooking.booking_id}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Dotted Divider */}
+                                        <div style={{ width: '0', borderLeft: '3px dashed #cbd5e1' }}></div>
+
+                                        {/* Right Side */}
+                                        <div style={{ width: '240px', padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', boxSizing: 'border-box' }}>
+                                            <div style={{ background: '#fff', padding: '10px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '20px' }}>
+                                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BKG-${ticketBooking.booking_id}-PAX-${idx}`} alt="QR Code" style={{ width: '130px', height: '130px', display: 'block' }} />
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>MÃ ĐẶT CHỖ / PNR</div>
+                                            <div style={{ fontSize: '28px', color: '#0f172a', fontWeight: '900', marginBottom: '16px' }}>#{ticketBooking.booking_id}-{idx + 1}</div>
+                                            <div style={{ padding: '6px 16px', background: '#dcfce7', color: '#166534', borderRadius: '24px', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ĐÃ THANH TOÁN</div>
+                                        </div>
+                                    </div></React.Fragment>);})}
+                        </div>
+
+                        {/* Buttons Footer */}
+                        <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '32px' }}>
+                            <button onClick={() => setTicketBooking(null)} style={{ padding: '12px 28px', background: '#ffffff', color: '#334155', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                                Đóng cửa sổ
+                            </button>
+                            <button onClick={() => window.print()} style={{ padding: '12px 28px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(59,130,246,0.3)' }}>
+                                <i className="fas fa-print"></i> In vé
+                            </button>
+                            <button onClick={handleDownloadPDF} style={{ padding: '12px 28px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(15,23,42,0.3)' }}>
+                                <i className="fas fa-download"></i> Tải PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -624,7 +1120,7 @@ const MyBookings = () => {
                 </div>
             )}
 
-            <footer className="home-footer" style={{ marginTop: 'auto' }}>
+            <footer className="home-footer no-print" style={{ marginTop: 'auto' }}>
                 <div className="footer-container">
                     <div className="footer-col">
                         <h2 className="footer-logo">Travel<span className="text-primary">ERP</span></h2>

@@ -21,8 +21,10 @@ exports.getMyBookings = async (req, res) => {
         b.payment_status,
         b.booking_date,
         b.notes,
+        b.breakdown,
         b.quote_id,
         b.departure_id,
+        (SELECT GROUP_CONCAT(p.full_name SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
         
         COALESCE(t.tour_name, CONCAT('Tour ', cr.destination)) AS tour_name,
         COALESCE(t.destination, cr.destination, 'Việt Nam') AS destination,
@@ -32,11 +34,14 @@ exports.getMyBookings = async (req, res) => {
         COALESCE(t.duration_days, DATEDIFF(cr.return_date, cr.departure_date) + 1, 3) AS duration_days,
         
         ROUND(b.total_amount / GREATEST(b.num_people, 1)) AS price_per_person,
-        COALESCE(t.image_url, 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1000') AS image_url,
+        t.base_price, COALESCE(t.image_url, 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1000') AS image_url,
+        t.design_data,
+        cr.requirements,
         
         u.full_name AS customer_name,
         u.phone AS customer_phone,
-        u.email AS customer_email
+        u.email AS customer_email,
+        p_method.payment_method
 
       FROM bookings b
       LEFT JOIN users u ON b.customer_id = u.user_id
@@ -44,6 +49,7 @@ exports.getMyBookings = async (req, res) => {
       LEFT JOIN tours t ON d.tour_id = t.tour_id
       LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
       LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+      LEFT JOIN (SELECT booking_id, MAX(payment_method) as payment_method FROM payments GROUP BY booking_id) p_method ON b.booking_id = p_method.booking_id
       WHERE b.customer_id = ?
       ORDER BY b.booking_id DESC
     `, {
@@ -72,10 +78,10 @@ exports.createBooking = async (req, res) => {
 
     // 1. Tạo đơn đặt hàng (Dùng dấu ? an toàn chống SQL Injection)
     const [result] = await sequelize.query(`
-      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
-      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?)
+      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown)
+      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?, ?)
     `, {
-      replacements: [customer_id, departure_id, count, amount, notes || null],
+      replacements: [customer_id, departure_id, count, amount, notes || null, req.body.breakdown ? JSON.stringify(req.body.breakdown) : null],
       transaction
     });
 

@@ -376,7 +376,7 @@ exports.bookCustomTourQuote = async (req, res) => {
         }
 
         const [quotes] = await sequelize.query(`
-            SELECT q.*, r.people_count, r.destination, r.departure_date, r.return_date
+            SELECT q.*, r.people_count, r.destination, r.departure_date, r.return_date, r.requirements
             FROM custom_tour_quotes q
             INNER JOIN custom_tour_requests r ON q.request_id = r.request_id
             WHERE q.quote_id = ?
@@ -416,11 +416,41 @@ exports.bookCustomTourQuote = async (req, res) => {
 
         // 5. TẠO ĐƠN HÀNG TRONG BẢNG BOOKINGS
         const noteText = notes || `Tour thiết kế riêng: ${quote.destination} (${quote.departure_date} - ${quote.return_date})`;
+        
+        let exactTotalAmount = quote.quote_price; // Default fallback
+        try {
+            const reqData = typeof quote.requirements === 'string' ? JSON.parse(quote.requirements) : quote.requirements;
+            if (reqData && reqData.participantBreakdown) {
+                const adults = reqData.participantBreakdown.adults || 0;
+                const children = reqData.participantBreakdown.children || 0;
+                const toddlers = reqData.participantBreakdown.toddlers || 0;
+                const infants = reqData.participantBreakdown.infants || 0;
+                
+                let itConfig = {};
+                if (quote.itinerary) {
+                    const parsedIt = typeof quote.itinerary === 'string' ? JSON.parse(quote.itinerary) : quote.itinerary;
+                    itConfig = parsedIt.costConfig || {};
+                }
+                const sC = itConfig.ageMultiplier?.child || { percent: 75, fixed_surcharge: 0 };
+                const sT = itConfig.ageMultiplier?.toddler || { percent: 25, fixed_surcharge: 0 };
+                const sI = itConfig.ageMultiplier?.infant || { percent: 0, fixed_surcharge: 0 };
+
+                const prA = quote.quote_price;
+                const prC = (quote.quote_price * (sC.percent || 0) / 100) + Number(sC.fixed_surcharge || 0);
+                const prT = (quote.quote_price * (sT.percent || 0) / 100) + Number(sT.fixed_surcharge || 0);
+                const prI = (quote.quote_price * (sI.percent || 0) / 100) + Number(sI.fixed_surcharge || 0);
+
+                exactTotalAmount = (adults * prA) + (children * prC) + (toddlers * prT) + (infants * prI);
+            }
+        } catch (e) {
+            console.error("Error calculating exact total amount:", e);
+        }
+
         const [bookingInsert] = await sequelize.query(`
             INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
             VALUES (?, ?, ?, ?, NOW(), ?, 'Confirmed', 'Unpaid', ?)
         `, {
-            replacements: [customerId, newDepartureId, quoteId, quote.people_count, quote.quote_price * quote.people_count, noteText],
+            replacements: [customerId, newDepartureId, quoteId, quote.people_count, exactTotalAmount, noteText],
             transaction
         });
         const newBookingId = bookingInsert?.insertId ?? (typeof bookingInsert === 'number' ? bookingInsert : bookingInsert[0]);
@@ -443,12 +473,25 @@ exports.bookCustomTourQuote = async (req, res) => {
             console.warn("Lưu ý: Không thể parse JSON để trừ chỗ tự động, tiếp tục tạo booking.", err);
         }
 
+        // 6.5 TẠO DANH SÁCH HÀNH KHÁCH NẾU CÓ
+        if (req.body.passengers && Array.isArray(req.body.passengers)) {
+            for (const p of req.body.passengers) {
+                await sequelize.query(`
+                    INSERT INTO booking_passengers (booking_id, full_name, gender, is_checked_in)
+                    VALUES (?, ?, 'Other', 0)
+                `, {
+                    replacements: [newBookingId, p.full_name],
+                    transaction
+                });
+            }
+        }
+
         // 7. TẠO PHIẾU CHỜ THANH TOÁN
         const txnCode = 'TXN_' + Date.now();
         await sequelize.query(`
             INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status)
             VALUES (?, ?, ?, ?, 'Pending')
-        `, { replacements: [newBookingId, payment_method, quote.quote_price * quote.people_count, txnCode], transaction });
+        `, { replacements: [newBookingId, payment_method, exactTotalAmount, txnCode], transaction });
 
         await transaction.commit();
 

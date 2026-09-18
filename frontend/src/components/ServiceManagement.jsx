@@ -19,7 +19,7 @@ const ServiceManagement = () => {
     const [editId, setEditId] = useState(null);
     const [formData, setFormData] = useState({
         service_name: '',
-        service_type: 'Khách sạn',
+        service_type: 'Xe vận chuyển',
         description: '',
         partner_id: '',
         destination_id: '',
@@ -29,11 +29,12 @@ const ServiceManagement = () => {
         capacity: 0,
         status: 'Active'
     });
+    const [focusedField, setFocusedField] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [mainTab, setMainTab] = useState('Active'); // 'Active' or 'Pending'
 
-    const categories = ['Tất cả', 'Khách sạn', 'Nhà hàng', 'Xe vận chuyển', 'Vé máy bay', 'Vé tham quan', 'Khác'];
+    const categories = ['Tất cả', 'Xe 16 chỗ', 'Xe 29 chỗ', 'Xe 45 chỗ', 'Xe Giường Nằm', 'Xe Limousine', 'Khác'];
 
     useEffect(() => {
         fetchData();
@@ -101,8 +102,8 @@ const ServiceManagement = () => {
             partner_id: service.partner_id || '',
             destination_id: service.destination_id || '',
             unit: service.unit || '',
-            base_cost: service.base_cost || 0,
-            selling_price: service.selling_price || 0,
+            base_cost: service.base_cost ? parseInt(service.base_cost, 10) : 0,
+            selling_price: service.selling_price ? parseInt(service.selling_price, 10) : 0,
             capacity: service.capacity || 0,
             status: service.status || 'Active',
             existing_image_url: service.image_url || '',
@@ -114,6 +115,13 @@ const ServiceManagement = () => {
         setShowForm(true);
     };
 
+    
+    const handleCurrencyChange = (e) => {
+        const { name, value } = e.target;
+        if (!/^\d*$/.test(value)) return;
+        setFormData({ ...formData, [name]: value });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -121,6 +129,8 @@ const ServiceManagement = () => {
             const config = { headers: { Authorization: `Bearer ${token}` } }; 
 
             const data = new FormData();
+            if (formData.selling_price) formData.selling_price = parseInt(formData.selling_price, 10);
+            if (formData.base_cost) formData.base_cost = parseInt(formData.base_cost, 10);
             Object.keys(formData).forEach(key => {
                 if (formData[key] !== null && formData[key] !== "") {
                     let value = formData[key];
@@ -148,7 +158,7 @@ const ServiceManagement = () => {
     };
 
     const handleDelete = async (service_id) => {
-        if (window.confirm('Bạn có chắc chắn muốn gỡ đăng bán dịch vụ này? Dịch vụ sẽ không còn hiển thị cho khách hàng.')) {
+        if (window.confirm('Bạn có chắc chắn muốn gỡ đăng bán phương tiện này? Dịch vụ sẽ không còn hiển thị cho khách hàng.')) {
             try {
                 const token = localStorage.getItem('token');
                 await axios.delete(`http://localhost:5000/api/services/${service_id}`, {
@@ -164,6 +174,10 @@ const ServiceManagement = () => {
 
     // Filter logic
     const filteredServices = services.filter(service => {
+        // Chỉ hiển thị phương tiện nội bộ (không có đối tác)
+        if (service.partner_id || service.partner_name) return false;
+        if (service.service_type !== 'Xe vận chuyển') return false;
+
         if (mainTab === 'Active' && service.status === 'Pending') return false;
         if (mainTab === 'Pending' && service.status !== 'Pending') return false;
 
@@ -212,8 +226,8 @@ const ServiceManagement = () => {
             {/* Header Section */}
             <div className="pm-header">
                 <div>
-                    <h2>Quản Lý Yêu Cầu Dịch Vụ</h2>
-                    <p>Xét duyệt và cập nhật giá bán cho các dịch vụ do Đối tác cung cấp.</p>
+                    <h2>Quản Lý Đội Xe Nội Bộ</h2>
+                    <p>Quản lý thông tin phương tiện vận chuyển và đội xe của công ty.</p>
                 </div>
             </div>
 
@@ -224,13 +238,13 @@ const ServiceManagement = () => {
                         onClick={() => setMainTab('Active')} 
                         style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: mainTab === 'Active' ? '#3b82f6' : '#e2e8f0', color: mainTab === 'Active' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
                     >
-                        ✅ Dịch Vụ Đang Bán
+                        ✅ Xe Đang Hoạt Động
                     </button>
                     <button 
                         onClick={() => setMainTab('Pending')} 
                         style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: mainTab === 'Pending' ? '#f59e0b' : '#e2e8f0', color: mainTab === 'Pending' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
                     >
-                        ⏳ Yêu Cầu Chờ Duyệt
+                        ⏳ Xe Tạm Ngưng
                     </button>
                 </div>
             )}
@@ -249,10 +263,10 @@ const ServiceManagement = () => {
                         <div className="pm-form-grid">
                             
                             <div className="pm-form-group full">
-                                <label className="pm-form-label">Tên Dịch Vụ (Do đối tác cung cấp) <span>*</span></label>
+                                <label className="pm-form-label">Tên Phương Tiện <span>*</span></label>
                                 <input 
                                     type="text" name="service_name" value={formData.service_name} onChange={handleInputChange} required 
-                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
+                                    className="pm-form-input"
                                 />
                             </div>
                             
@@ -260,7 +274,7 @@ const ServiceManagement = () => {
                                 <label className="pm-form-label">Phân Loại</label>
                                 <select 
                                     name="service_type" value={formData.service_type} onChange={handleInputChange} required
-                                    className="pm-form-select" disabled style={{ backgroundColor: '#f1f5f9' }}
+                                    className="pm-form-select"
                                 >
                                     {categories.filter(c => c !== 'Tất cả').map(c => (
                                         <option key={c} value={c}>{c}</option>
@@ -268,42 +282,15 @@ const ServiceManagement = () => {
                                 </select>
                             </div>
 
-                            <div className="pm-form-group">
-                                <label className="pm-form-label">Đối Tác Cung Cấp</label>
-                                <select 
-                                    name="partner_id" value={formData.partner_id} onChange={handleInputChange}
-                                    className="pm-form-select" disabled style={{ backgroundColor: '#f1f5f9' }}
-                                >
-                                    <option value="">-- Nội bộ công ty / Tự túc --</option>
-                                    {partners.map(p => (
-                                        <option key={p.partner_id} value={p.partner_id}>{p.partner_name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            
 
-                            {!isGlobalService && (
-                                <div className="pm-form-group">
-                                    <label className="pm-form-label">Điểm Đến {formData.service_type !== 'Xe vận chuyển' && ' *'}</label>
-                                    <select 
-                                        name="destination_id" 
-                                        value={formData.destination_id || ''} 
-                                        onChange={handleInputChange} 
-                                        required={formData.service_type !== 'Xe vận chuyển'}
-                                        className="pm-form-select"
-                                    >
-                                        <option value="">-- Toàn cục / Không yêu cầu --</option>
-                                        {destinations.map(d => (
-                                            <option key={d.destination_id} value={d.destination_id}>{d.destination_name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
+                            
 
                             <div className="pm-form-group">
                                 <label className="pm-form-label">Đơn Vị Tính</label>
                                 <input 
                                     type="text" name="unit" value={formData.unit} onChange={handleInputChange} 
-                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
+                                    className="pm-form-input"
                                 />
                             </div>
 
@@ -311,41 +298,45 @@ const ServiceManagement = () => {
                                 <label className="pm-form-label">Sức Chứa / Số Lượng</label>
                                 <input 
                                     type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} 
-                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
-                                />
-                            </div>
-
-                            <div className="pm-form-group">
-                                <label className="pm-form-label">Giá Gốc Tham Khảo (VNĐ)</label>
-                                <input 
-                                    type="number" name="base_cost" value={formData.base_cost} onChange={handleInputChange} 
                                     className="pm-form-input"
                                 />
                             </div>
-                            
+
                             <div className="pm-form-group">
-                                <label className="pm-form-label" style={{ color: '#d97706' }}>👉 Giá Đối Tác Đề Xuất</label>
-                                <input 
-                                    type="text" value={formData.proposed_cost ? Number(formData.proposed_cost).toLocaleString('vi-VN') + ' đ' : 'Chưa có dữ liệu'} 
-                                    className="pm-form-input" disabled 
-                                    style={{ backgroundColor: '#fffbeb', color: '#d97706', fontWeight: 'bold', border: '1px solid #fcd34d' }}
+                                <label className="pm-form-label">Giá Vốn (Net) (VNĐ)</label>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input 
+                                    type="text" name="base_cost" 
+                                    value={formData.base_cost ? Number(formData.base_cost).toLocaleString('vi-VN') : ''} 
+                                    className="pm-form-input" disabled style={{ backgroundColor: '#f1f5f9' }}
                                 />
+                                    <span style={{ position: 'absolute', right: '15px', color: '#64748b', fontWeight: 'bold' }}>đ</span>
+                                </div>
                             </div>
+                            
+                            
 
                             <div className="pm-form-group full">
                                 <label className="pm-form-label" style={{ color: '#10b981', fontSize: '15px' }}>💰 Giá Bán Chính Thức (Niêm Yết Cho Khách) <span>*</span></label>
-                                <input 
-                                    type="number" name="selling_price" value={formData.selling_price} onChange={handleInputChange} 
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input 
+                                    type="text" name="selling_price" 
+                                    value={focusedField === 'selling_price' ? (formData.selling_price || '') : (formData.selling_price ? Number(formData.selling_price).toLocaleString('vi-VN') : '')} 
+                                    onFocus={() => setFocusedField('selling_price')}
+                                    onBlur={() => setFocusedField(null)}
+                                    onChange={handleCurrencyChange} 
                                     className="pm-form-input" required
                                     style={{ border: '2px solid #10b981', fontSize: '16px', fontWeight: 'bold' }}
                                 />
+                                    <span style={{ position: 'absolute', right: '15px', color: '#64748b', fontWeight: 'bold' }}>đ</span>
+                                </div>
                             </div>
 
                             <div className="pm-form-group full">
-                                <label className="pm-form-label">Mô Tả Nhanh (Do đối tác cung cấp)</label>
+                                <label className="pm-form-label">Mô Tả Nhanh</label>
                                 <textarea 
                                     name="description" value={formData.description} onChange={handleInputChange} rows="3"
-                                    className="pm-form-textarea" disabled style={{ backgroundColor: '#f1f5f9' }}
+                                    className="pm-form-textarea"
                                 ></textarea>
                             </div>
 
@@ -396,7 +387,7 @@ const ServiceManagement = () => {
                                 <Search size={20} />
                                 <input 
                                     type="text"
-                                    placeholder="Tìm kiếm dịch vụ hoặc đối tác..."
+                                    placeholder="Tìm kiếm phương tiện hoặc đối tác..."
                                     className="pm-search-input"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -436,7 +427,7 @@ const ServiceManagement = () => {
                             <div className="pm-empty-icon">
                                 <Package size={32} />
                             </div>
-                            <h3>Không tìm thấy dịch vụ</h3>
+                            <h3>Không tìm thấy phương tiện</h3>
                             <p>Thử thay đổi từ khóa hoặc bộ lọc của bạn.</p>
                         </div>
                     ) : (
@@ -476,20 +467,11 @@ const ServiceManagement = () => {
                                         </div>
 
                                         {/* Partner Badge */}
-                                        <div className="pm-partner-info">
-                                            <div className="pm-partner-label">Cung cấp bởi</div>
-                                            <div className="pm-partner-name">
-                                                {service.partner_id ? (
-                                                    <><Building2 size={16} color="#10b981" /> {service.partner_name}</>
-                                                ) : (
-                                                    <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 'normal' }}>Nội bộ công ty</span>
-                                                )}
-                                            </div>
-                                        </div>
+                                        
                                         
                                         {/* Cost Info */}
                                         <div className="pm-partner-info" style={{ marginTop: '8px', borderTop: 'none', paddingTop: '0' }}>
-                                            <div className="pm-partner-label">Giá đối tác đề xuất (Net)</div>
+                                            <div className="pm-partner-label">Giá vốn (Net)</div>
                                             <div style={{ color: '#d97706', fontWeight: 'bold' }}>
                                                 {service.proposed_cost ? Number(service.proposed_cost).toLocaleString('vi-VN') : Number(service.base_cost).toLocaleString('vi-VN')} đ 
                                                 <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#64748b' }}>

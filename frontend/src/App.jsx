@@ -8,6 +8,7 @@ import HomePage from './components/HomePage';
 import TourListPage from './components/TourListPage';
 import TourDetail from './components/TourDetail';
 import MyBookings from './components/MyBookings';
+import ErrorBoundary from './components/ErrorBoundary';
 import BookingForm from './components/BookingForm';
 import CustomerTourBuilder from './components/CustomerTourBuilder';
 import StaffTourRequestManager from './components/StaffTourRequestManager';
@@ -80,7 +81,7 @@ function App() {
         <Route path="/article/:slug" element={<ArticlePage />} />
         <Route path="/tour/:id" element={<TourDetail />} />
         <Route path="/booking-form" element={<ProtectedRoute><BookingForm /></ProtectedRoute>} />
-        <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
+        <Route path="/my-bookings" element={<ProtectedRoute><ErrorBoundary><MyBookings /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/my-quotes" element={<ProtectedRoute><CustomerQuotes /></ProtectedRoute>} />
 
         
