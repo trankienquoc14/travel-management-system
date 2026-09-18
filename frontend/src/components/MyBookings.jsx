@@ -97,7 +97,15 @@ const MyBookings = () => {
             try {
                 if (itineraryModalBooking.design_data) {
                     const parsed = typeof itineraryModalBooking.design_data === 'string' ? JSON.parse(itineraryModalBooking.design_data) : itineraryModalBooking.design_data;
-                    if (parsed.itineraryDays) localDays = parsed.itineraryDays;
+                    if (parsed.itineraryDays) {
+                        localDays = parsed.itineraryDays;
+                    } else if (parsed.days) {
+                        localDays = parsed.days.map(d => ({
+                            day: d.dayIndex,
+                            title: d.route_title || `Ngày ${d.dayIndex}`,
+                            description: d.activities ? d.activities.map(a => `• ${a.name}`).join('\n') : ''
+                        }));
+                    }
                 } else if (itineraryModalBooking.requirements) {
                     const reqs = typeof itineraryModalBooking.requirements === 'string' ? JSON.parse(itineraryModalBooking.requirements) : itineraryModalBooking.requirements;
                     if (reqs.itinerary) localDays = reqs.itinerary;
@@ -931,32 +939,130 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
 
             {/* MODAL 3: XEM CHI TIẾT LỊCH TRÌNH */}
             {itineraryModalBooking && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', width: '800px', maxWidth: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-                        <div style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                                🗺️ Lịch trình: {itineraryModalBooking.tour_name}
-                            </h3>
-                            <button onClick={() => setItineraryModalBooking(null)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' }}>&times;</button>
+                <div className="printable-modal-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+                    <div className="printable-modal-content" style={{ backgroundColor: '#ffffff', borderRadius: '24px', width: '800px', maxWidth: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <div className="no-print" style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>🗺️ Lịch trình</h3>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <i className="fas fa-print"></i> In lịch trình
+                                </button>
+                                <button onClick={() => setItineraryModalBooking(null)} style={{ background: 'transparent', border: 'none', fontSize: '28px', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' }}>&times;</button>
+                            </div>
                         </div>
                         <div style={{ padding: '32px', overflowY: 'auto', flex: 1, backgroundColor: '#f8fafc' }}>
                             {(() => {
                                 if (loadingRemote || remoteDays === null) return <div style={{ textAlign: 'center', padding: '40px' }}>⏳ Đang tải dữ liệu lịch trình...</div>;
                                 const days = remoteDays;
                                 if (!days || days.length === 0) return <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>Không tìm thấy chi tiết lịch trình.</div>;
+                                
+                                let depLoc = 'Hồ Chí Minh';
+                                let depTime = '06:00 AM';
+                                try {
+                                    if (itineraryModalBooking.design_data) {
+                                        const d = typeof itineraryModalBooking.design_data === 'string' ? JSON.parse(itineraryModalBooking.design_data) : itineraryModalBooking.design_data;
+                                        if (d.departureCity) depLoc = d.departureCity;
+                                        if (d.startTime) depTime = d.startTime;
+                                    } else if (itineraryModalBooking.requirements) {
+                                        const r = typeof itineraryModalBooking.requirements === 'string' ? JSON.parse(itineraryModalBooking.requirements) : itineraryModalBooking.requirements;
+                                        if (r.departureCity) depLoc = r.departureCity;
+                                        if (r.startTime) depTime = r.startTime;
+                                    }
+                                } catch(e) {}
+
                                 return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                        {days.map((day, idx) => (
-                                            <div key={idx} style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                                <h4 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#0284c7', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ background: '#e0f2fe', padding: '4px 12px', borderRadius: '20px', fontSize: '14px' }}>Ngày {day.day}</span>
-                                                    {day.title}
-                                                </h4>
-                                                <div style={{ color: '#475569', fontSize: '15px', lineHeight: '1.6', marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
-                                                    {day.description}
+                                    <div className="itinerary-print-area" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                        {/* Brand Header (Prints beautifully) */}
+                                        <div style={{ textAlign: 'center', paddingBottom: '16px', borderBottom: '2px dashed #e2e8f0' }}>
+                                            <h1 style={{ margin: '0', fontSize: '32px', fontWeight: '900', color: '#3b82f6', letterSpacing: '-1px' }}>Travel<span style={{ color: '#0f172a' }}>VN</span></h1>
+                                            <p style={{ margin: '8px 0 0 0', color: '#64748b', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '700' }}>Hành Trình Chi Tiết</p>
+                                            <h2 style={{ margin: '16px 0 0 0', fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>{itineraryModalBooking.tour_name}</h2>
+                                        </div>
+                                        {/* Overview Card */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                                                    <i className="far fa-calendar-alt"></i>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Khởi hành</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{depTime} <br/> <span style={{ color: '#3b82f6' }}>{formatDate(itineraryModalBooking.departure_date)}</span></div>
                                                 </div>
                                             </div>
-                                        ))}
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                                                    <i className="fas fa-map-marker-alt"></i>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Xuất phát</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{depLoc}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0fdf4', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                                                    <i className="far fa-clock"></i>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Thời lượng</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{itineraryModalBooking.duration_days} ngày</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fdf4ff', color: '#d946ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                                                    <i className="fas fa-route"></i>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Điểm đến</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{itineraryModalBooking.destination || 'Nhiều điểm'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Itinerary Cards (No vertical connecting lines for seamless printing) */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '16px' }}>
+                                            {days.map((day, idx) => {
+                                                const cleanTitle = (day.title || `Ngày ${day.day}`).replace(new RegExp(`^Ngày ${day.day}:\\s*`), '').replace(new RegExp(`^Ngày ${day.day}\\s*`), '');
+                                                return (
+                                                    <div key={idx} className="print-modal-day" style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', position: 'relative', overflow: 'hidden' }}>
+                                                        
+                                                        {/* Header of the Card */}
+                                                        <div style={{ background: 'linear-gradient(to right, #eff6ff, #ffffff)', padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                                                            {/* Day Badge */}
+                                                            <div style={{ background: '#3b82f6', color: '#fff', padding: '10px 24px', borderRadius: '14px', fontSize: '15px', fontWeight: '800', letterSpacing: '1px', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}>
+                                                                NGÀY {day.day}
+                                                            </div>
+                                                            
+                                                            {/* Title */}
+                                                            <h4 style={{ margin: 0, fontSize: '20px', color: '#0f172a', fontWeight: '800', flex: 1, minWidth: '200px' }}>
+                                                                {cleanTitle}
+                                                            </h4>
+
+                                                            {/* Watermark */}
+                                                            <div style={{ fontSize: '50px', fontWeight: '900', color: '#e2e8f0', lineHeight: 1, userSelect: 'none' }}>
+                                                                {String(day.day).padStart(2, '0')}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Content of the Card */}
+                                                        <div style={{ padding: '32px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                                                {day.description.split('\n').filter(line => line.trim() !== '').map((line, lIdx) => (
+                                                                    <div key={lIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                                                                        <div style={{ marginTop: '4px', minWidth: '28px', height: '28px', borderRadius: '50%', background: '#f8fafc', border: '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#3b82f6' }}></div>
+                                                                        </div>
+                                                                        <div style={{ color: '#334155', fontSize: '16px', lineHeight: '1.6', paddingTop: '3px' }}>
+                                                                            {line.replace(/^•\s*/, '').replace(/^-\s*/, '')}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 );
                             })()}
@@ -967,8 +1073,8 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
 
             {/* MODAL 4: E-TICKET DOWNLOAD MODAL */}
             {ticketBooking && (
-                <div className="ticket-modal-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-                    <div className="ticket-modal-content" style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', alignItems: 'center', maxHeight: '100vh', overflowY: 'auto', padding: '20px' }}>
+                <div className="printable-modal-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+                    <div className="printable-modal-content" style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', alignItems: 'center', maxHeight: '100vh', overflowY: 'auto', padding: '20px' }}>
                         
                         <div id="ticket-content-to-pdf" style={{ display: 'block', width: '100%' }}>
                             {Array.from({ length: ticketBooking.num_people || 1 }).map((_, idx) => {

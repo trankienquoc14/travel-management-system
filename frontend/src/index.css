@@ -2904,29 +2904,38 @@ body {
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 
+
 @media print {
     @page { margin: 1cm; }
+    
+    /* Force browsers to print background colors, images, and borders exactly as they appear */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     body * { visibility: hidden; }
     
-    .ticket-modal-wrapper, .ticket-modal-wrapper * { visibility: visible; }
+    .printable-modal-wrapper, .printable-modal-wrapper * { visibility: visible; }
     .no-print, .no-print * { display: none !important; }
     
-    .ticket-modal-wrapper {
+    .printable-modal-wrapper {
         position: static !important;
         display: block !important;
         background: transparent !important;
         padding: 0 !important;
     }
     
-    .ticket-modal-content {
+    .printable-modal-content {
         display: block !important;
         max-height: none !important;
         overflow: visible !important;
         padding: 0 !important;
         margin: 0 !important;
+        box-shadow: none !important;
     }
     
-    #ticket-content-to-pdf {
+    #ticket-content-to-pdf, .itinerary-print-area {
         display: block !important;
     }
     
@@ -2939,6 +2948,11 @@ body {
         border: 2px solid #cbd5e1 !important;
         border-radius: 20px !important;
         box-shadow: none !important;
+    }
+
+    .print-modal-day {
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
     
     .html2pdf__page-break {
