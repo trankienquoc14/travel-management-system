@@ -944,8 +944,23 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                         <div className="no-print" style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>🗺️ Lịch trình</h3>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <i className="fas fa-print"></i> In lịch trình
+                                <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                    <i className="fas fa-print"></i> In
+                                </button>
+                                <button onClick={() => {
+                                    const element = document.querySelector('.itinerary-print-area');
+                                    if (!element) return;
+                                    const opt = {
+                                        margin: [10, 10, 10, 10],
+                                        filename: `Lich-Trinh-${(itineraryModalBooking?.tour_name || 'Tour').replace(/[^a-zA-Z0-9_À-ỹ]/g, '-')}.pdf`,
+                                        image: { type: 'jpeg', quality: 0.98 },
+                                        html2canvas: { scale: 2, useCORS: true },
+                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                        pagebreak: { mode: 'css', avoid: '.print-modal-day' }
+                                    };
+                                    html2pdf().set(opt).from(element).save();
+                                }} style={{ padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                    <i className="fas fa-file-pdf"></i> Tải PDF
                                 </button>
                                 <button onClick={() => setItineraryModalBooking(null)} style={{ background: 'transparent', border: 'none', fontSize: '28px', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' }}>&times;</button>
                             </div>

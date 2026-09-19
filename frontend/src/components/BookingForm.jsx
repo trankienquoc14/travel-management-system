@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import html2pdf from 'html2pdf.js';
 import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag, MessageSquare, ShieldCheck, ChevronDown, Check, X, Calendar } from 'lucide-react';
 
 
@@ -74,6 +75,7 @@ const BookingFormInner = () => {
     
     // Expanded sections
     const [showPassengerModal, setShowPassengerModal] = useState(false);
+    const [showItineraryModal, setShowItineraryModal] = useState(false);
     const [passengerDetails, setPassengerDetails] = useState({});
     
     const [destinations, setDestinations] = useState([]);
@@ -294,7 +296,24 @@ const BookingFormInner = () => {
             for (let i = 0; i < pax[type]; i++) {
                 const pObj = passengerDetails[`${type}_${i}`];
                 if (pObj && pObj.name && pObj.name.trim() !== '') {
-                    passengersArray.push({ full_name: pObj.name.trim() });
+                    let mappedGender = 'Other';
+                    if (pObj.gender === 'Nam') mappedGender = 'Male';
+                    if (pObj.gender === 'Nữ') mappedGender = 'Female';
+
+                    let birthDateStr = null;
+                    if (pObj.dobYear && pObj.dobMonth && pObj.dobDay) {
+                        const y = pObj.dobYear;
+                        const m = pObj.dobMonth.toString().padStart(2, '0');
+                        const d = pObj.dobDay.toString().padStart(2, '0');
+                        birthDateStr = `${y}-${m}-${d}`;
+                    }
+
+                    passengersArray.push({ 
+                        full_name: pObj.name.trim(),
+                        gender: mappedGender,
+                        birth_date: birthDateStr,
+                        identity_number: pObj.phone || null
+                    });
                 }
             }
         });
@@ -339,9 +358,9 @@ const BookingFormInner = () => {
 
     return (
         <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '60px', fontFamily: '"Inter", sans-serif' }}>
-<CustomerNavbar />
+<div className="no-print"><CustomerNavbar /></div>
 
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+            <div className="no-print" style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
                 
                 {/* Cột trái: Form nhập liệu */}
                 <div style={{ flex: '1' }}>
@@ -537,6 +556,12 @@ const BookingFormInner = () => {
                                     <Tag size={14} /> {tour?.tour_code || `${tour?.tour_id || quote?.quote_id}-DEP`}
                                 </div>
                             </div>
+                        </div>
+
+                        <div style={{ marginBottom: '24px' }}>
+                            <button type="button" onClick={() => setShowItineraryModal(true)} style={{ width: '100%', padding: '12px', background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '12px', fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.05)' }}>
+                                <Calendar size={18} /> Xem lại chi tiết lịch trình
+                            </button>
                         </div>
 
                         {/* Accordion 1: Thông tin chuyến xe */}
@@ -762,7 +787,120 @@ const BookingFormInner = () => {
                     </div>
                 </div>
             )}
-            <CustomerFooter />
+            {/* ITINERARY MODAL */}
+            {showItineraryModal && (
+                <div className="printable-modal-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+                    <div className="printable-modal-content" style={{ backgroundColor: '#ffffff', borderRadius: '24px', width: '800px', maxWidth: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <div className="no-print" style={{ padding: '24px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>🗺️ Lịch trình</h3>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                    <i className="fas fa-print"></i> In
+                                </button>
+                                <button onClick={() => {
+                                    const element = document.querySelector('.itinerary-print-area');
+                                    if (!element) return;
+                                    const opt = {
+                                        margin: [10, 10, 10, 10],
+                                        filename: `Lich-Trinh-${(title || 'Tour').replace(/[^a-zA-Z0-9_À-ỹ]/g, '-')}.pdf`,
+                                        image: { type: 'jpeg', quality: 0.98 },
+                                        html2canvas: { scale: 2, useCORS: true },
+                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                        pagebreak: { mode: 'css', avoid: '.print-modal-day' }
+                                    };
+                                    html2pdf().set(opt).from(element).save();
+                                }} style={{ padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                    <i className="fas fa-file-pdf"></i> Tải PDF
+                                </button>
+                                <button onClick={() => setShowItineraryModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '28px', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' }}>&times;</button>
+                            </div>
+                        </div>
+                        <div style={{ padding: '32px', overflowY: 'auto', flex: 1, backgroundColor: '#f8fafc' }}>
+                            <div className="itinerary-print-area" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                {/* Brand Header */}
+                                <div style={{ textAlign: 'center', paddingBottom: '16px', borderBottom: '2px dashed #e2e8f0' }}>
+                                    <h1 style={{ margin: '0', fontSize: '32px', fontWeight: '900', color: '#3b82f6', letterSpacing: '-1px' }}>Travel<span style={{ color: '#0f172a' }}>VN</span></h1>
+                                    <p style={{ margin: '8px 0 0 0', color: '#64748b', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '700' }}>Hành Trình Chi Tiết</p>
+                                    <h2 style={{ margin: '16px 0 0 0', fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>{title}</h2>
+                                </div>
+
+                                {/* Overview Card */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="far fa-calendar-alt"></i></div>
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Khởi hành</div>
+                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{timeStartD} <br/> <span style={{ color: '#3b82f6' }}>{depDateStr}</span></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="fas fa-map-marker-alt"></i></div>
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Xuất phát</div>
+                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{startLocD}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0fdf4', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="far fa-clock"></i></div>
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Thời lượng</div>
+                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{daysArr.length} ngày</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fdf4ff', color: '#d946ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="fas fa-route"></i></div>
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Điểm đến</div>
+                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{endLocD || 'Nhiều điểm'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Itinerary Cards */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '16px' }}>
+                                    {daysArr.map((d, idx) => {
+                                        const dayNum = d.dayIndex || d.day_number || d.day || (idx + 1);
+                                        const dayTitle = d.route_title || d.title || `Ngày ${dayNum}`;
+                                        const cleanTitle = dayTitle.replace(new RegExp(`^Ngày ${dayNum}:\\s*`), '').replace(new RegExp(`^Ngày ${dayNum}\\s*`), '');
+                                        const desc = d.activities ? d.activities.map(a => `• ${a.name}`).join('\n') : (d.description || '');
+
+                                        return (
+                                            <div key={idx} className="print-modal-day" style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', position: 'relative', overflow: 'hidden' }}>
+                                                <div style={{ background: 'linear-gradient(to right, #eff6ff, #ffffff)', padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                                                    <div style={{ background: '#3b82f6', color: '#fff', padding: '10px 24px', borderRadius: '14px', fontSize: '15px', fontWeight: '800', letterSpacing: '1px', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}>
+                                                        NGÀY {dayNum}
+                                                    </div>
+                                                    <h4 style={{ margin: 0, fontSize: '20px', color: '#0f172a', fontWeight: '800', flex: 1, minWidth: '200px' }}>
+                                                        {cleanTitle}
+                                                    </h4>
+                                                    <div style={{ fontSize: '50px', fontWeight: '900', color: '#e2e8f0', lineHeight: 1, userSelect: 'none' }}>
+                                                        {String(dayNum).padStart(2, '0')}
+                                                    </div>
+                                                </div>
+                                                <div style={{ padding: '32px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                                        {desc.split('\n').filter(line => line.trim() !== '').map((line, lIdx) => (
+                                                            <div key={lIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                                                                <div style={{ marginTop: '4px', minWidth: '28px', height: '28px', borderRadius: '50%', background: '#f8fafc', border: '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#3b82f6' }}></div>
+                                                                </div>
+                                                                <div style={{ color: '#334155', fontSize: '16px', lineHeight: '1.6', paddingTop: '3px' }}>
+                                                                    {line.replace(/^•\s*/, '').replace(/^-\s*/, '')}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="no-print"><CustomerFooter /></div>
         </div>
     );
 };

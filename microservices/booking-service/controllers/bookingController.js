@@ -24,6 +24,8 @@ exports.getMyBookings = async (req, res) => {
         b.breakdown,
         b.quote_id,
         b.departure_id,
+        b.breakdown,
+        (SELECT GROUP_CONCAT(CONCAT(p.full_name, '::', IFNULL(p.gender, ''), '::', IFNULL(p.birth_date, ''), '::', IFNULL(p.identity_number, '')) SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
         (SELECT GROUP_CONCAT(p.full_name SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
         
         COALESCE(t.tour_name, CONCAT('Tour ', cr.destination)) AS tour_name,
@@ -180,12 +182,21 @@ exports.getAllPayments = async (req, res) => {
       SELECT 
         p.payment_id, p.booking_id, p.payment_method, p.amount, p.transaction_code, p.payment_status, p.paid_at,
         b.booking_date, b.booking_status, b.notes,
-        u.full_name AS customer_name, u.phone AS customer_phone
+        u.full_name AS customer_name, u.phone AS customer_phone,
+        COALESCE(t.tour_name, CONCAT('Tour ', cr.destination)) AS tour_name,
+        COALESCE(t.destination, cr.destination, 'Việt Nam') AS destination,
+        COALESCE(d.departure_date, cr.departure_date) AS departure_date,
+        t.design_data,
+        cr.requirements
       FROM payments p
       JOIN bookings b ON p.booking_id = b.booking_id
       LEFT JOIN users u ON b.customer_id = u.user_id
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
       ORDER BY 
-        CASE WHEN p.payment_status = 'Pending' THEN 1 ELSE 2 END, -- Ưu tiên đưa đơn Pending lên đầu
+        CASE WHEN p.payment_status = 'Pending' THEN 1 ELSE 2 END,
         p.payment_id DESC
     `);
 
@@ -394,8 +405,7 @@ exports.getAllBookings = async (req, res) => {
         b.payment_status,
         b.booking_date,
         b.notes,
-        b.quote_id,
-        b.departure_id,
+        b.quote_id, b.departure_id, b.breakdown, (SELECT GROUP_CONCAT(CONCAT(p.full_name, '::', IFNULL(p.gender, ''), '::', IFNULL(p.birth_date, ''), '::', IFNULL(p.identity_number, '')) SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
         
         u.full_name AS customer_name,
         u.email AS customer_email,
@@ -404,7 +414,8 @@ exports.getAllBookings = async (req, res) => {
         COALESCE(t.tour_name, CONCAT('Tour thiết kế riêng: ', cr.destination)) AS tour_name,
         COALESCE(d.departure_date, cr.departure_date) AS departure_date,
         COALESCE(t.duration_days, DATEDIFF(cr.return_date, cr.departure_date) + 1) AS duration_days,
-        COALESCE(t.image_url, 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1000') AS image_url
+        COALESCE(t.image_url, 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1000') AS image_url,
+        t.base_price, t.design_data, cr.requirements
 
       FROM bookings b
       LEFT JOIN users u ON b.customer_id = u.user_id
