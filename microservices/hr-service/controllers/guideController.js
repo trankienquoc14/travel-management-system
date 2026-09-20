@@ -10,15 +10,16 @@ exports.getAssignedWork = async (req, res) => {
     let whereClause = '';
     let replacements = [];
 
-    if (guide_id && guide_id !== 'all') {
-      // Nếu Admin/Manager chọn một Hướng dẫn viên cụ thể
-      whereClause = 'WHERE ga.guide_id = ?';
-      replacements.push(guide_id);
-    } else if (guide_id === 'all' || [1, 2, 3].includes(Number(userRole))) {
-      // Nếu Admin/Manager xem tất cả công việc của mọi HDV
-      whereClause = '';
+    const isAdmin = [1, 2, 3].includes(Number(userRole));
+
+    if (isAdmin) {
+      if (guide_id && guide_id !== 'all') {
+        whereClause = 'WHERE ga.guide_id = ?';
+        replacements.push(guide_id);
+      } else {
+        whereClause = '';
+      }
     } else {
-      // Nếu là tài khoản Hướng dẫn viên đăng nhập
       const [guide] = await sequelize.query(
         'SELECT guide_id FROM guides WHERE user_id = ?',
         { replacements: [userId] }

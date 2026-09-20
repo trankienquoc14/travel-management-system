@@ -13,7 +13,8 @@ import BookingForm from './components/BookingForm';
 import CustomerTourBuilder from './components/CustomerTourBuilder';
 import StaffTourRequestManager from './components/StaffTourRequestManager';
 import CustomerQuotes from './components/CustomerQuotes';
-import StaffFixedTourDesigner from './components/StaffFixedTourDesigner'; // Thêm trang thiết kế tour
+import StaffFixedTourDesigner from './components/StaffFixedTourDesigner';
+import PersonalSchedule from './components/PersonalSchedule'; // Thêm trang thiết kế tour
 import ServicesPage from './components/ServicesPage'; // Trang Dịch vụ Độc lập
 import ContactPage from './components/ContactPage';
 import ArticlePage from './components/ArticlePage'; // Trang Bài viết Footer
@@ -102,6 +103,7 @@ function App() {
         } />
 
         {/* Khai báo thêm trang thiết kế tour cố định mà chúng ta vừa làm */}
+        <Route path="/admin/schedule" element={<StaffProtectedRoute><PersonalSchedule /></StaffProtectedRoute>} />
         <Route path="/admin/fixed-tours" element={
           <StaffProtectedRoute><StaffFixedTourDesigner /></StaffProtectedRoute>
         } />

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 19, 2026 at 10:10 AM
+-- Generation Time: Sep 20, 2026 at 03:32 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -509,6 +509,26 @@ INSERT INTO `guide_assignments` (`assignment_id`, `departure_id`, `guide_id`, `a
 (25, 5, 1, '2026-09-16 03:31:14'),
 (26, 6, 2, '2026-09-16 03:31:14'),
 (27, 52, 1, '2026-09-16 03:31:14');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `holidays`
+--
+
+CREATE TABLE `holidays` (
+  `holiday_id` int(11) NOT NULL,
+  `holiday_date` date NOT NULL,
+  `holiday_name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `holidays`
+--
+
+INSERT INTO `holidays` (`holiday_id`, `holiday_date`, `holiday_name`, `created_at`) VALUES
+(1, '2026-09-02', 'Lễ Quốc khánh', '2026-09-19 08:43:51');
 
 -- --------------------------------------------------------
 
@@ -1027,6 +1047,37 @@ CREATE TABLE `performance_reviews` (
 INSERT INTO `performance_reviews` (`performance_id`, `employee_id`, `reviewer_id`, `score`, `comment`, `review_date`) VALUES
 (1, 4, 2, 90, 'Hoàn thành tốt', '2026-06-01'),
 (2, 4, 2, 30, 'ttfr', '2026-08-09');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `personal_work_tasks`
+--
+
+CREATE TABLE `personal_work_tasks` (
+  `task_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `work_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `priority` enum('Thấp','Trung bình','Cao') DEFAULT 'Trung bình',
+  `status` enum('Chưa làm','Đang thực hiện','Hoàn thành','Quá hạn') DEFAULT 'Chưa làm',
+  `related_type` varchar(50) DEFAULT NULL,
+  `related_id` varchar(50) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `completed_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `personal_work_tasks`
+--
+
+INSERT INTO `personal_work_tasks` (`task_id`, `user_id`, `title`, `description`, `work_date`, `start_time`, `end_time`, `priority`, `status`, `related_type`, `related_id`, `created_at`, `updated_at`, `completed_at`) VALUES
+(1, 4, 'Kiểm tra Booking', 'Kiểm tra các đơn đặt tour cho khách hàng', '2026-09-20', '08:00:00', '09:00:00', 'Trung bình', 'Chưa làm', NULL, NULL, '2026-09-19 08:54:42', '2026-09-19 08:55:25', NULL),
+(2, 4, 'Tư vấn cho khách hàng', 'Nhận các tin nhắn từ khách hàng và tiến hành tư vấn, giải đáp thắt mắt cho khách hàng', '2026-09-20', '09:00:00', '12:00:00', 'Trung bình', 'Chưa làm', NULL, NULL, '2026-09-19 08:57:18', '2026-09-19 08:57:18', NULL);
 
 -- --------------------------------------------------------
 
@@ -1699,6 +1750,12 @@ ALTER TABLE `guide_assignments`
   ADD KEY `guide_id` (`guide_id`);
 
 --
+-- Indexes for table `holidays`
+--
+ALTER TABLE `holidays`
+  ADD PRIMARY KEY (`holiday_id`);
+
+--
 -- Indexes for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
@@ -1778,6 +1835,13 @@ ALTER TABLE `performance_reviews`
   ADD PRIMARY KEY (`performance_id`),
   ADD KEY `employee_id` (`employee_id`),
   ADD KEY `reviewer_id` (`reviewer_id`);
+
+--
+-- Indexes for table `personal_work_tasks`
+--
+ALTER TABLE `personal_work_tasks`
+  ADD PRIMARY KEY (`task_id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `places`
@@ -1949,6 +2013,12 @@ ALTER TABLE `guide_assignments`
   MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
+-- AUTO_INCREMENT for table `holidays`
+--
+ALTER TABLE `holidays`
+  MODIFY `holiday_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
@@ -2013,6 +2083,12 @@ ALTER TABLE `payroll`
 --
 ALTER TABLE `performance_reviews`
   MODIFY `performance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `personal_work_tasks`
+--
+ALTER TABLE `personal_work_tasks`
+  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `places`
@@ -2225,6 +2301,12 @@ ALTER TABLE `payroll`
 ALTER TABLE `performance_reviews`
   ADD CONSTRAINT `performance_reviews_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`),
   ADD CONSTRAINT `performance_reviews_ibfk_2` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `personal_work_tasks`
+--
+ALTER TABLE `personal_work_tasks`
+  ADD CONSTRAINT `personal_work_tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `places`

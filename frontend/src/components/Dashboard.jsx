@@ -28,6 +28,7 @@ import StaffChangeRequestManager from './StaffChangeRequestManager';
 import StaffBookingManagement from './StaffBookingManagement';
 import StaffServiceBookingManagement from './StaffServiceBookingManagement';
 import UserProfile from './UserProfile';
+import PersonalSchedule from './PersonalSchedule';
 import MyBookings from './MyBookings';
 import CustomerQuotes from './CustomerQuotes';
 import CustomerTourBuilder from './CustomerTourBuilder';
@@ -215,9 +216,11 @@ const Dashboard = () => {
                   >
                     📍 Điểm Danh Cá Nhân (GPS)
                   </li>
-                  <li onClick={() => alert('Tính năng đang phát triển')}>
-                    📋 Công việc cá nhân
-                  </li>
+                  {!isTourGuide && (
+                    <li className={activeTab === 'personal_schedule' ? 'active' : ''} onClick={() => setActiveTab('personal_schedule')}>
+                      📋 Công việc cá nhân
+                    </li>
+                  )}
                   <li
                     className={activeTab === 'leave_requests' ? 'active' : ''}
                     onClick={() => setActiveTab('leave_requests')}
@@ -715,6 +718,7 @@ const Dashboard = () => {
 
           {/* Đơn xin nghỉ phép & Giải trình chấm công */}
           {activeTab === 'leave_requests' && isInternalStaff && <HRLeaveRequest mode="my_requests" />}
+          {activeTab === 'personal_schedule' && isInternalStaff && !isTourGuide && <PersonalSchedule />}
 
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}

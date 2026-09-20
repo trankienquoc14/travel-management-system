@@ -19,10 +19,12 @@ const partnerRoutes = require('./routes/partnerRoutes');
 const partnerServiceRoutes = require('./routes/partnerServiceRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
 
 // Cấu hình routes
 app.use('/api/hr', hrRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/staff/schedule', scheduleRoutes);
 app.use('/api/guide', guideRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/partner-services', partnerServiceRoutes);
