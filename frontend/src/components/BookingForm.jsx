@@ -251,18 +251,6 @@ const BookingFormInner = () => {
     let infantPrice = (adultPrice * infantPercent) / 100 + Number(ageMultiplier.infant?.fixed_surcharge || 0);
     let singleSupp = parsedDesign?.costConfig?.variable?.singleSupplement || 0;
 
-    if (isCustom && quote?.price_breakdown) {
-        try {
-            const pb = typeof quote.price_breakdown === 'string' ? JSON.parse(quote.price_breakdown) : quote.price_breakdown;
-            if (pb.adult !== undefined) adultPrice = pb.adult;
-            if (pb.child !== undefined) childPrice = pb.child;
-            if (pb.toddler !== undefined) toddlerPrice = pb.toddler;
-            if (pb.infant !== undefined) infantPrice = pb.infant;
-        } catch (e) {
-            console.error("Error parsing price_breakdown", e);
-        }
-    }
-
     if (!isCustom && parsedDesign) {
         const ageMult = parsedDesign?.costConfig?.ageMultiplier || {};
         const getPrice = (type) => {

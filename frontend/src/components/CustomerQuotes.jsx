@@ -285,12 +285,6 @@ const CustomerQuotes = () => {
             const prI = (sellingPrice * (sI.percent || 0) / 100) + Number(sI.fixed_surcharge || 0);
 
             grandTotal = (pA * prA) + (pC * prC) + (pT * prT) + (pI * prI);
-            
-            // Check if price_breakdown exists, prefer it
-            if (selectedQuote.price_breakdown) {
-                const pb = typeof selectedQuote.price_breakdown === 'string' ? JSON.parse(selectedQuote.price_breakdown) : selectedQuote.price_breakdown;
-                grandTotal = (pA * (pb.adult || 0)) + (pC * (pb.child || 0)) + (pT * (pb.toddler || 0)) + (pI * (pb.infant || 0));
-            }
         } catch (e) {
             console.error(e);
             grandTotal = selectedQuote.quoted_price || selectedQuote.quote_price || 0;

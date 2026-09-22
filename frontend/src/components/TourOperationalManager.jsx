@@ -1081,7 +1081,7 @@ const TourOperationalManager = () => {
                                                                                     </div>
 
                                                                                     {/* KHÁCH HÀNG & SLOT */}
-                                                                                    <div style={{ flex: '0 0 160px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                                    <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                                             <div style={{ fontSize: '13px', color: '#374151', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                                                 Khách: <span style={{ color: '#0ea5e9', fontWeight: '700' }}>{bookedSlots}</span> / 
@@ -1109,7 +1109,7 @@ const TourOperationalManager = () => {
                                                                                                     title={isPastTour ? "Tour trong quá khứ không thể đổi số chỗ" : ""}
                                                                                                     style={{ width: '56px', padding: '3px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: disableSlot ? '#f1f5f9' : '#fff', outline: 'none' }} 
                                                                                                 />
-                                                                                                <span style={{ color: '#64748b', fontSize: '12px' }}>(Hòa vốn: {minPax})</span>
+                                                                                                <span style={{ color: '#64748b', fontSize: '12px', whiteSpace: 'nowrap' }}>(Hòa vốn: {minPax})</span>
                                                                                             </div>
                                                                                         </div>
                                                                                         <div style={{ height: '6px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden' }}>
