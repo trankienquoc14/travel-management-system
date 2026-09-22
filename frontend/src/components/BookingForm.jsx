@@ -119,44 +119,104 @@ const BookingFormInner = () => {
         ? (quote?.proposed_itinerary || quote?.itinerary ? (typeof (quote.proposed_itinerary || quote.itinerary) === 'string' ? JSON.parse(quote.proposed_itinerary || quote.itinerary) : (quote.proposed_itinerary || quote.itinerary)) : null)
         : (tour?.design_data ? (typeof tour.design_data === 'string' ? JSON.parse(tour.design_data) : tour.design_data) : null);
     
+    const daysArr = parsedDesign?.days || parsedDesign?.itineraryDays || parsedDesign?.itinerary || tour?.itineraries || [];
+    const firstDay = daysArr[0];
+    const lastDay = daysArr[daysArr.length - 1];
+
+    // --- 1. DEPARTURE & RETURN DATES ---
     let depDateStr = 'Đang cập nhật';
     let retDateStr = 'Đang cập nhật';
+    let depDateObj = null;
+
     if (tour?.departures && bookingData.departureId) {
-        const dep = tour.departures.find(d => d.departure_id === bookingData.departureId);
-        if (dep) {
-            const d = new Date(dep.departure_date);
-            depDateStr = d.toLocaleDateString('vi-VN');
-            const durationCount = parsedDesign?.days?.length || parsedDesign?.itineraryDays?.length || tour?.itineraries?.length || 0;
-            if (durationCount > 0) {
-                const r = new Date(d);
-                r.setDate(r.getDate() + durationCount - 1);
-                retDateStr = r.toLocaleDateString('vi-VN');
-            }
+        const dep = tour.departures.find(d => String(d.departure_id) === String(bookingData.departureId) || String(d.id) === String(bookingData.departureId));
+        if (dep && dep.departure_date) {
+            depDateObj = new Date(dep.departure_date);
         }
+    }
+    if (!depDateObj && bookingData.departure_date) {
+        depDateObj = new Date(bookingData.departure_date);
+    }
+    if (!depDateObj && bookingData.selectedDeparture) {
+        if (typeof bookingData.selectedDeparture === 'object' && bookingData.selectedDeparture.departure_date) {
+            depDateObj = new Date(bookingData.selectedDeparture.departure_date);
+        } else if (typeof bookingData.selectedDeparture === 'string') {
+            depDateObj = new Date(bookingData.selectedDeparture);
+        }
+    }
+
+    if (depDateObj && !isNaN(depDateObj.getTime())) {
+        depDateStr = depDateObj.toLocaleDateString('vi-VN');
+        const durationDays = Number(tour?.duration_days) || daysArr.length || 1;
+        const retObj = new Date(depDateObj);
+        retObj.setDate(retObj.getDate() + Math.max(0, durationDays - 1));
+        retDateStr = retObj.toLocaleDateString('vi-VN');
     } else if (isCustom && quote) {
         depDateStr = quote.departure_date ? new Date(quote.departure_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
         retDateStr = quote.return_date ? new Date(quote.return_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
     }
 
+    // --- 2. TRANSPORT & TIME ---
     const transportType = parsedDesign?.costConfig?.selectedTransport?.service_type;
     const isFlight = transportType === 'Vé máy bay';
     const transportIcon = isFlight ? '✈️' : '🚌';
-    const transportName = isFlight ? (parsedDesign?.costConfig?.selectedTransport?.provider_name || 'Máy bay') : 'Xe khách';
-
-    const daysArr = parsedDesign?.days || parsedDesign?.itineraryDays || tour?.itineraries || [];
-    const firstDay = daysArr[0];
-    const lastDay = daysArr[daysArr.length - 1];
+    const transportName = isFlight ? (parsedDesign?.costConfig?.selectedTransport?.provider_name || 'Máy bay') : 'Xe khách du lịch';
 
     const safeDestinations = Array.isArray(destinations) ? destinations : [];
-    const startLocD = safeDestinations.find(x => String(x.destination_id) === String(firstDay?.start_destination_id))?.destination_name || 'Điểm đi';
-    const endLocD = safeDestinations.find(x => String(x.destination_id) === String(firstDay?.end_destination_id))?.destination_name || 'Điểm đến';
-    const startLocR = safeDestinations.find(x => String(x.destination_id) === String(lastDay?.start_destination_id))?.destination_name || 'Điểm đi';
-    const endLocR = safeDestinations.find(x => String(x.destination_id) === String(lastDay?.end_destination_id))?.destination_name || 'Điểm đến';
 
-    const timeStartD = parsedDesign?.costConfig?.transportTimes?.startD || '05:00';
-    const timeEndD = parsedDesign?.costConfig?.transportTimes?.endD || '07:00';
-    const timeStartR = parsedDesign?.costConfig?.transportTimes?.startR || '07:00';
-    const timeEndR = parsedDesign?.costConfig?.transportTimes?.endR || '05:00';
+    // --- 3. START LOCATION (Điểm xuất phát) ---
+    let startLocD = safeDestinations.find(x => String(x.destination_id) === String(firstDay?.start_destination_id))?.destination_name;
+    if (!startLocD && firstDay?.start_destination_id && isNaN(Number(firstDay.start_destination_id))) {
+        startLocD = firstDay.start_destination_id;
+    }
+    if (!startLocD && (tour?.departure_location || tour?.start_point)) {
+        startLocD = tour.departure_location || tour.start_point;
+    }
+    if (!startLocD && firstDay?.route_title) {
+        const firstPart = firstDay.route_title.split(/[-–]/)[0]?.trim();
+        if (firstPart && firstPart.length < 30) {
+            startLocD = firstPart;
+        }
+    }
+    if (!startLocD && tour?.tour_name) {
+        if (tour.tour_name.includes('Hà Nội')) startLocD = 'Hà Nội';
+        else if (tour.tour_name.includes('TP.HCM') || tour.tour_name.includes('Sài Gòn') || tour.tour_name.includes('Hồ Chí Minh')) startLocD = 'TP.HCM';
+        else if (tour.tour_name.includes('Đà Nẵng')) startLocD = 'Đà Nẵng';
+        else if (tour.tour_name.includes('Cần Thơ')) startLocD = 'Cần Thơ';
+    }
+    if (!startLocD) {
+        startLocD = 'Hà Nội';
+    }
+
+    // --- 4. END LOCATION (Điểm đến) ---
+    let endLocD = safeDestinations.find(x => String(x.destination_id) === String(lastDay?.end_destination_id || firstDay?.end_destination_id))?.destination_name;
+    if (!endLocD && (lastDay?.end_destination_id || firstDay?.end_destination_id)) {
+        const rawVal = lastDay?.end_destination_id || firstDay?.end_destination_id;
+        if (rawVal && isNaN(Number(rawVal))) endLocD = rawVal;
+    }
+    if (!endLocD && tour?.destination) {
+        const dObj = safeDestinations.find(x => String(x.destination_id) === String(tour.destination));
+        endLocD = dObj ? dObj.destination_name : (isNaN(Number(tour.destination)) ? tour.destination : null);
+    }
+    if (!endLocD && tour?.tour_name) {
+        const cleaned = tour.tour_name.replace(/Tour\s*/i, '');
+        const parts = cleaned.split(/[-–:]/);
+        if (parts.length > 1) {
+            const candidate = parts[parts.length - 1].replace(/\d+N\d+Đ|\d+\s*ngày|\d+\s*đêm/gi, '').trim();
+            if (candidate) endLocD = candidate;
+        }
+    }
+    if (!endLocD) {
+        endLocD = 'Nhiều điểm';
+    }
+
+    const startLocR = endLocD;
+    const endLocR = startLocD;
+
+    const timeStartD = parsedDesign?.costConfig?.transportTimes?.startD || '06:00';
+    const timeEndD = parsedDesign?.costConfig?.transportTimes?.endD || '09:00';
+    const timeStartR = parsedDesign?.costConfig?.transportTimes?.startR || '16:00';
+    const timeEndR = parsedDesign?.costConfig?.transportTimes?.endR || '19:00';
 
     const title = isCustom ? `✨ Tour thiết kế riêng: ${quote?.destination || ''}` : tour?.tour_name;
     const basePrice = isCustom ? (quote?.quoted_price || quote?.quote_price) : tour?.base_price;
@@ -825,33 +885,40 @@ const BookingFormInner = () => {
                                 </div>
 
                                 {/* Overview Card */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="far fa-calendar-alt"></i></div>
                                         <div>
-                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Khởi hành</div>
-                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{timeStartD} <br/> <span style={{ color: '#3b82f6' }}>{depDateStr}</span></div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Ngày đi</div>
+                                            <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{timeStartD} <br/> <span style={{ color: '#3b82f6' }}>{depDateStr}</span></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="far fa-calendar-check"></i></div>
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Ngày về</div>
+                                            <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{timeStartR} <br/> <span style={{ color: '#d97706' }}>{retDateStr}</span></div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="fas fa-map-marker-alt"></i></div>
                                         <div>
                                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Xuất phát</div>
-                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{startLocD}</div>
+                                            <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{startLocD}</div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0fdf4', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="far fa-clock"></i></div>
                                         <div>
                                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Thời lượng</div>
-                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{daysArr.length} ngày</div>
+                                            <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{tour?.duration_days || daysArr.length || 1} ngày</div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fdf4ff', color: '#d946ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><i className="fas fa-route"></i></div>
                                         <div>
                                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Điểm đến</div>
-                                            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{endLocD || 'Nhiều điểm'}</div>
+                                            <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '700', lineHeight: 1.4 }}>{endLocD || 'Nhiều điểm'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -862,7 +929,18 @@ const BookingFormInner = () => {
                                         const dayNum = d.dayIndex || d.day_number || d.day || (idx + 1);
                                         const dayTitle = d.route_title || d.title || `Ngày ${dayNum}`;
                                         const cleanTitle = dayTitle.replace(new RegExp(`^Ngày ${dayNum}:\\s*`), '').replace(new RegExp(`^Ngày ${dayNum}\\s*`), '');
-                                        const desc = d.activities ? d.activities.map(a => `• ${a.name}`).join('\n') : (d.description || '');
+                                        const desc = d.activities
+                                            ? d.activities.map(a => typeof a === 'string' ? `• ${a}` : `• ${a.name || a.title || a.service_name || ''}`).join('\n')
+                                            : (typeof d.description === 'string' ? d.description : '');
+
+                                        const rawHotel = d.hotel || d.hotel_name || d.accommodation || d.lodging;
+                                        let hotelText = '';
+                                        if (rawHotel) {
+                                            if (typeof rawHotel === 'string') hotelText = rawHotel;
+                                            else if (typeof rawHotel === 'object') {
+                                                hotelText = rawHotel.name || rawHotel.service_name || rawHotel.hotel_name || rawHotel.title || '';
+                                            }
+                                        }
 
                                         return (
                                             <div key={idx} className="print-modal-day" style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', position: 'relative', overflow: 'hidden' }}>
@@ -890,6 +968,11 @@ const BookingFormInner = () => {
                                                             </div>
                                                         ))}
                                                     </div>
+                                                    {hotelText ? (
+                                                        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '14px', fontWeight: '600' }}>
+                                                            <span>🏨 Nơi lưu trú:</span> <strong style={{ color: '#0f172a' }}>{hotelText}</strong>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         );

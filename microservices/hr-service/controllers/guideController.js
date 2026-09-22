@@ -253,15 +253,101 @@ exports.getDepartureIncidents = async (req, res) => {
   }
 };
 
+function formatActivitiesToDescription(day) {
+  let lines = [];
+  if (day.activities && day.activities.length > 0) {
+    day.activities.forEach((act) => {
+      const icon = act.type === 'Tham quan' ? '🏞️' : (act.type === 'Ăn uống' || act.type === 'Ẩm thực') ? '🍽️' : '🚌';
+      const priceText = (act.price && Number(act.price) > 0) ? ` (${Number(act.price).toLocaleString('vi-VN')} ₫)` : '';
+      lines.push(`${icon} ${act.name}${priceText}`);
+    });
+  }
+  if (day.accommodation && (day.accommodation.name || day.accommodation.service_name)) {
+    lines.push(`🏨 Khách sạn: ${day.accommodation.name || day.accommodation.service_name}`);
+  }
+  if (day.meals) {
+    const mealParts = [];
+    if (day.meals.breakfast) mealParts.push('Bữa sáng');
+    if (day.meals.lunch) mealParts.push('Bữa trưa');
+    if (day.meals.dinner) mealParts.push('Bữa tối');
+    if (mealParts.length > 0) {
+      lines.push(`🍽️ Phục vụ: ${mealParts.join(' • ')}`);
+    }
+  }
+  return lines.join('\n\n');
+}
+
+async function getTourItinerariesWithFallback(tourId) {
+  let [itineraries] = await sequelize.query(`
+    SELECT itinerary_id, tour_id, day_number, title, description
+    FROM itineraries 
+    WHERE tour_id = ? 
+    ORDER BY day_number ASC
+  `, { replacements: [tourId] });
+
+  if (itineraries.length > 0) {
+    return itineraries;
+  }
+
+  // Fallback 1: Parse design_data from tours table for custom tours
+  const [tours] = await sequelize.query(`
+    SELECT tour_id, tour_name, design_data, description FROM tours WHERE tour_id = ?
+  `, { replacements: [tourId] });
+
+  if (tours.length > 0) {
+    const tour = tours[0];
+    let designData = tour.design_data;
+
+    // Fallback 2: Check custom_tour_quotes if design_data is missing
+    if (!designData) {
+      const [quotes] = await sequelize.query(`
+        SELECT q.itinerary
+        FROM custom_tour_quotes q
+        JOIN custom_tour_requests r ON q.request_id = r.request_id
+        WHERE r.destination LIKE CONCAT('%', REPLACE(?, 'Tour Thiết Kế: ', ''), '%')
+        ORDER BY q.quote_id DESC LIMIT 1
+      `, { replacements: [tour.tour_name] });
+      if (quotes.length > 0) {
+        designData = quotes[0].itinerary;
+      }
+    }
+
+    if (designData) {
+      try {
+        const parsed = typeof designData === 'string' ? JSON.parse(designData) : designData;
+        if (parsed && Array.isArray(parsed.days) && parsed.days.length > 0) {
+          return parsed.days.map((day, idx) => ({
+            itinerary_id: (Number(tourId) * 100) + (day.dayIndex || (idx + 1)),
+            tour_id: Number(tourId),
+            day_number: day.dayIndex || (idx + 1),
+            title: day.route_title ? `Ngày ${day.dayIndex || (idx + 1)}: ${day.route_title}` : `Ngày ${day.dayIndex || (idx + 1)}`,
+            description: formatActivitiesToDescription(day)
+          }));
+        }
+      } catch (e) {
+        console.error('Lỗi parse design_data cho tour thiết kế:', e);
+      }
+    }
+
+    if (tour.description) {
+      return [{
+        itinerary_id: Number(tourId) * 100 + 1,
+        tour_id: Number(tourId),
+        day_number: 1,
+        title: `Lịch trình tour ${tour.tour_name}`,
+        description: tour.description
+      }];
+    }
+  }
+
+  return [];
+}
+
 // 7. Lấy lịch trình chi tiết của một Tour
 exports.getTourItinerary = async (req, res) => {
   try {
     const { tourId } = req.params;
-    const [itineraries] = await sequelize.query(`
-      SELECT * FROM itineraries 
-      WHERE tour_id = ? 
-      ORDER BY day_number ASC
-    `, { replacements: [tourId] });
+    const itineraries = await getTourItinerariesWithFallback(tourId);
 
     res.status(200).json({
       success: true,

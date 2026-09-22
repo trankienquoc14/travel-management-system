@@ -111,6 +111,116 @@ const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth, currentY
     );
 };
 
+const DriverTimelineCalendar = ({ drivers, driverSchedules, selectedMonth, currentYear }) => {
+    let year, month;
+    if (selectedMonth === 'all' || !selectedMonth) {
+        year = currentYear || new Date().getFullYear();
+        month = new Date().getMonth() + 1;
+    } else {
+        const parts = selectedMonth.split('-');
+        year = Number(parts[0]) || currentYear || new Date().getFullYear();
+        month = Number(parts[1]) || (new Date().getMonth() + 1);
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    const monthStart = new Date(year, month - 1, 1).getTime();
+    const monthEnd = new Date(year, month, 0, 23, 59, 59).getTime();
+
+    const getDriverTasks = (driverId) => {
+        return (driverSchedules || []).filter(sch => {
+            if (Number(sch.driver_id) !== Number(driverId)) return false;
+            const dStart = new Date(sch.departure_date).getTime();
+            const dEnd = new Date(sch.return_date).getTime();
+            return (dStart <= monthEnd && dEnd >= monthStart);
+        });
+    };
+
+    if (!drivers || drivers.length === 0) return null;
+
+    return (
+        <div style={{ marginTop: '24px', background: '#fff', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', background: '#f0fdf4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', color: '#14532d', fontWeight: '800' }}>Biểu Đồ Lịch Phân Công Tài Xế (Tháng {month}/{year})</h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#166534' }}>Theo dõi lịch chạy và đảm bảo tài xế rảnh trong vòng 5 ngày giữa các tour</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', fontSize: '12px', fontWeight: '600' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#10b981', borderRadius: '3px' }}></div> Chuyến xe khởi hành</div>
+                </div>
+            </div>
+            <div style={{ overflowX: 'auto', padding: '24px' }}>
+                <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px', marginBottom: '10px' }}>
+                    <div style={{ width: '200px', flexShrink: 0, fontWeight: '700', color: '#475569', fontSize: '14px' }}>Tài xế</div>
+                    <div style={{ display: 'flex', flex: 1, minWidth: `${daysInMonth * 24}px` }}>
+                        {daysArray.map(d => (
+                            <div key={d} style={{ flex: 1, textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#94a3b8' }}>{d}</div>
+                        ))}
+                    </div>
+                </div>
+                {drivers.map(driver => {
+                    const tasks = getDriverTasks(driver.user_id);
+                    return (
+                        <div key={driver.user_id} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ width: '200px', flexShrink: 0, fontSize: '14px', fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '8px' }} title={driver.full_name}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#15803d', fontWeight: 'bold' }}>
+                                    🚌
+                                </div>
+                                {driver.full_name}
+                            </div>
+                            <div style={{ display: 'flex', flex: 1, minWidth: `${daysInMonth * 24}px`, position: 'relative', height: '32px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                {tasks.map(task => {
+                                    const tStart = new Date(task.departure_date);
+                                    const tEnd = new Date(task.return_date);
+                                    
+                                    let startDay = 1;
+                                    if (tStart.getFullYear() === year && tStart.getMonth() + 1 === month) {
+                                        startDay = tStart.getDate();
+                                    }
+                                    
+                                    let endDay = daysInMonth;
+                                    if (tEnd.getFullYear() === year && tEnd.getMonth() + 1 === month) {
+                                        endDay = tEnd.getDate();
+                                    }
+
+                                    const leftPercent = ((startDay - 1) / daysInMonth) * 100;
+                                    const widthPercent = ((endDay - startDay + 1) / daysInMonth) * 100;
+
+                                    return (
+                                        <div key={task.departure_id} title={`${task.tour_name} (Xe: ${task.vehicle_number || 'Chưa gán'}) (${task.departure_date} -> ${task.return_date})`} style={{
+                                            position: 'absolute',
+                                            left: `${leftPercent}%`,
+                                            width: `${widthPercent}%`,
+                                            height: '100%',
+                                            background: '#10b981',
+                                            borderRadius: '6px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '11px',
+                                            color: '#fff',
+                                            fontWeight: '700',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                            overflow: 'hidden',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'help',
+                                            padding: '0 4px',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {task.vehicle_number ? `${task.vehicle_number} - ` : ''}{task.tour_name.substring(0, 12)}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedMonth, currentYear, onYearChange, tours = [], activeTourTab = 'fixed', uniqueDestinations = [], selectedDestination = 'all', setSelectedDestination }) => {
     const monthsArray = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -319,6 +429,8 @@ const TourOperationalManager = () => {
     // Core states needed for Departures
     const [departures, setDepartures] = useState([]);
     const [guides, setGuides] = useState([]);
+    const [drivers, setDrivers] = useState([]);
+    const [driverSchedules, setDriverSchedules] = useState([]);
 
     // Hidden states needed to preserve Tour Designer data when saving
     const [itineraryDays, setItineraryDays] = useState([]);
@@ -343,6 +455,8 @@ const TourOperationalManager = () => {
 
     useEffect(() => {
         fetchInitialData();
+        fetchGuideSchedules();
+        fetchDriverSchedules();
     }, []);
 
     const fetchInitialData = async () => {
@@ -357,7 +471,7 @@ const TourOperationalManager = () => {
                 setTours(opsTours);
             }
 
-            // 2. Fetch Guides
+            // 2. Fetch Guides & Drivers
             const resEmployees = await axios.get('http://localhost:5000/api/hr/employees', { headers });
             if (resEmployees.data.success) {
                 const guideList = (resEmployees.data.data || []).filter(e => 
@@ -365,6 +479,12 @@ const TourOperationalManager = () => {
                     e.status === 'Active'
                 );
                 setGuides(guideList);
+
+                const driverList = (resEmployees.data.data || []).filter(e => 
+                    (e.role_id === 8 || e.role_name === 'Driver' || e.role_name === 'Tài xế' || e.role_name?.toLowerCase().includes('driver')) && 
+                    e.status === 'Active'
+                );
+                setDrivers(driverList);
             }
         } catch (error) { 
             console.error('Error fetching initial data', error); 
@@ -382,7 +502,17 @@ const TourOperationalManager = () => {
             if (res.data.success) {
                 const d = res.data.data;
                 setSelectedTour(d);
-                setDepartures((d.departures || []).map(dep => ({ ...dep, original_max_slots: dep.max_slots, original_available_slots: dep.available_slots })));
+
+                const loadedDepartures = (d.departures || []).map(dep => ({
+                    ...dep,
+                    guide_id: (dep.guide_id && guides.some(g => g.user_id === Number(dep.guide_id))) ? Number(dep.guide_id) : null,
+                    driver_id: (dep.driver_id && drivers.some(drv => drv.user_id === Number(dep.driver_id))) ? Number(dep.driver_id) : null,
+                    vehicle_number: dep.vehicle_number || '',
+                    original_max_slots: dep.max_slots,
+                    original_available_slots: dep.available_slots
+                }));
+
+                setDepartures(loadedDepartures);
                 
                 // Preserve existing design configuration
                 setItineraryDays(d.itineraryDays || []);
@@ -412,9 +542,19 @@ const TourOperationalManager = () => {
         }
     };
 
-    useEffect(() => {
-        fetchGuideSchedules();
-    }, []);
+    const fetchDriverSchedules = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get('http://localhost:5000/api/driver/work?driver_id=all', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setDriverSchedules(res.data.data || []);
+            }
+        } catch (error) {
+            console.error('Lỗi lấy lịch chạy Tài xế', error);
+        }
+    };
 
     const formatMoney = (val) => Number(val || 0).toLocaleString('vi-VN') + ' ₫';
 
@@ -425,7 +565,7 @@ const TourOperationalManager = () => {
         const otherSchedules = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
 
         // THIẾT LẬP: Số tour tối đa 1 HDV có thể nhận trong 1 tháng
-        const MAX_TOURS_PER_MONTH = 4; // Bạn có thể thay đổi con số này sau
+        const MAX_TOURS_PER_MONTH = 4;
 
         for (let i = 0; i < departures.length; i++) {
             const dep = departures[i];
@@ -463,10 +603,7 @@ const TourOperationalManager = () => {
                 const depMonth = new Date(dep.departure_date).getMonth();
                 const depYear = new Date(dep.departure_date).getFullYear();
                 
-                // Lịch từ các tour khác của HDV này
                 const guideOtherSchs = otherSchedules.filter(s => s.guide_id === assignedGuideId && s.departure_date && s.return_date);
-                
-                // Lịch từ CÁC ĐỢT KHÁC trong CÙNG tour này mà HDV này được phân công
                 const guideSameTourSchs = departures.filter((d, idx) => idx !== i && Number(d.guide_id) === assignedGuideId && d.departure_date && d.return_date);
                 
                 const allToCheck = [
@@ -485,13 +622,11 @@ const TourOperationalManager = () => {
                 const ONE_DAY = 24 * 60 * 60 * 1000;
 
                 for (const sch of allToCheck) {
-                    // 1. Ràng buộc KHÔNG TRÙNG LỊCH (Overlap)
                     if (depStart <= sch.end && depEnd >= sch.start) {
                         alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn HDV khác hoặc đổi ngày!`);
                         return;
                     }
                     
-                    // 2. Ràng buộc KHOẢNG NGHỈ >= 2 ngày
                     if (depEnd < sch.start) {
                         const gapDays = (sch.start - depEnd) / ONE_DAY;
                         if (gapDays < 2) {
@@ -507,8 +642,7 @@ const TourOperationalManager = () => {
                     }
                 }
 
-                // 3. Ràng buộc SỐ TOUR TỐI ĐA TRONG THÁNG
-                let toursInThisMonth = 1; // Tính cả tour đang xét
+                let toursInThisMonth = 1;
                 for (const sch of allToCheck) {
                     const schMonth = new Date(sch.start).getMonth();
                     const schYear = new Date(sch.start).getFullYear();
@@ -520,6 +654,51 @@ const TourOperationalManager = () => {
                 if (toursInThisMonth > MAX_TOURS_PER_MONTH) {
                     alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} đã vượt quá giới hạn nhận tour trong Tháng ${depMonth + 1}/${depYear} (Tối đa ${MAX_TOURS_PER_MONTH} tour/tháng).\nVui lòng phân công cho HDV khác!`);
                     return;
+                }
+            }
+
+            // KIỂM TRA RÀNG BUỘC TÀI XẾ (Rảnh trong vòng 5 ngày)
+            if (dep.driver_id) {
+                const assignedDriverId = Number(dep.driver_id);
+                const driverName = drivers.find(d => d.user_id === assignedDriverId)?.full_name || 'Tài xế';
+                
+                const depStart = new Date(dep.departure_date).getTime();
+                const depEnd = new Date(dep.return_date).getTime();
+                const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+                
+                const otherDriverSchedules = driverSchedules ? driverSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id || sch.departure_id !== dep.departure_id) : [];
+                const drvOtherSchs = otherDriverSchedules.filter(s => Number(s.driver_id) === assignedDriverId && s.departure_date && s.return_date);
+                const drvSameTourSchs = departures.filter((d, idx) => idx !== i && Number(d.driver_id) === assignedDriverId && d.departure_date && d.return_date);
+                
+                const allToCheck = [
+                    ...drvOtherSchs.map(s => ({
+                        tour_name: s.tour_name || 'Chuyến xe khác',
+                        start: new Date(s.departure_date).getTime(),
+                        end: new Date(s.return_date).getTime()
+                    })),
+                    ...drvSameTourSchs.map(d => ({
+                        tour_name: 'một đợt khởi hành khác của tour này',
+                        start: new Date(d.departure_date).getTime(),
+                        end: new Date(d.return_date).getTime()
+                    }))
+                ];
+                
+                for (const sch of allToCheck) {
+                    if (depStart <= sch.end && depEnd >= sch.start) {
+                        alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn Tài xế rảnh!`);
+                        return;
+                    }
+                    
+                    if (depEnd < sch.start && (sch.start - depEnd) < FIVE_DAYS_MS) {
+                        const gapDays = Math.ceil((sch.start - depEnd) / (24 * 60 * 60 * 1000));
+                        alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày trước "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                        return;
+                    }
+                    if (depStart > sch.end && (depStart - sch.end) < FIVE_DAYS_MS) {
+                        const gapDays = Math.ceil((depStart - sch.end) / (24 * 60 * 60 * 1000));
+                        alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày sau "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                        return;
+                    }
                 }
             }
         }
@@ -543,9 +722,22 @@ const TourOperationalManager = () => {
             }, { headers: { Authorization: `Bearer ${token}` } });
 
             if (res.data.success) {
-                alert(`🎉 Đã lưu cấu hình lịch trình & phân công Hướng dẫn viên thành công cho Tour: ${selectedTour.tour_name}`);
-                fetchGuideSchedules();
-                handleSelectTour(selectedTour);
+                alert(`🎉 Đã lưu cấu hình lịch trình & phân công nhân sự thành công cho Tour: ${selectedTour.tour_name}`);
+                await fetchGuideSchedules();
+                await fetchDriverSchedules();
+                await handleSelectTour(selectedTour);
+
+                // Tự động chuyển selectedMonth sang tháng của đợt vừa lưu nếu đang lọc theo tháng cụ thể
+                if (selectedMonth !== 'all' && departures.length > 0) {
+                    const lastDep = departures[departures.length - 1];
+                    if (lastDep && lastDep.departure_date) {
+                        const d = new Date(lastDep.departure_date);
+                        const savedMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                        if (savedMonthStr !== selectedMonth) {
+                            setSelectedMonth(savedMonthStr);
+                        }
+                    }
+                }
             }
         } catch (e) { 
             alert("Lỗi khi lưu lịch trình khởi hành!"); 
@@ -737,10 +929,10 @@ const TourOperationalManager = () => {
                                                             {/* TOOLBAR NÚT THÊM ĐỢT MỚI */}
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                                                 <div style={{ fontWeight: '700', fontSize: '14px', color: '#1e3a8a' }}>
-                                                                    📋 Thiết Lập Ngày Khởi Hành & Phân Công Hướng Dẫn Viên:
+                                                                    📋 Thiết Lập Ngày Khởi Hành, Biển Số Xe & Phân Công Nhân Sự (HDV / Tài Xế):
                                                                 </div>
                                                                 {activeTourTab !== 'custom' && (
-                                                                    <button onClick={() => setDepartures([...departures, { departure_date: '', return_date: '', max_slots: 30, guide_id: null, status: 'Open' }])} disabled={loading} style={{ padding: '8px 16px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                    <button onClick={() => setDepartures([...departures, { departure_date: '', return_date: '', max_slots: 30, guide_id: null, driver_id: null, vehicle_number: '', status: 'Open' }])} disabled={loading} style={{ padding: '8px 16px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                                                         Thêm Đợt Mới
                                                                     </button>
@@ -752,11 +944,23 @@ const TourOperationalManager = () => {
                                                                 const monthDepartures = departures
                                                                     .map((dep, realIdx) => ({ ...dep, realIdx }))
                                                                     .filter(dep => {
-                                                                        if (!dep.departure_date) return true;
-                                                                        if (!dep.departure_id) return true;
-                                                                        if (selectedMonth === "all") return true;
+                                                                        if (!dep.departure_date) {
+                                                                            const targetMonthNum = (selectedMonth && selectedMonth !== 'all') ? Number(selectedMonth.split('-')[1]) : (new Date().getMonth() + 1);
+                                                                            return m === targetMonthNum;
+                                                                        }
                                                                         const d = new Date(dep.departure_date);
-                                                                        return d.getFullYear() === currentYear && (d.getMonth() + 1) === m;
+                                                                        const depMonth = d.getMonth() + 1;
+                                                                        const depYear = d.getFullYear();
+
+                                                                        if (depYear === currentYear && depMonth === m) return true;
+
+                                                                        // Nếu đợt mới chưa lưu (!dep.departure_id) và tháng đã chọn không nằm trong danh sách tháng đang hiển thị,
+                                                                        // giữ lại đợt đó trong thẻ tháng hiện tại (m) để không bị ẩn biến mất khi đang chỉnh sửa
+                                                                        if (!dep.departure_id && !monthsToRender.includes(depMonth)) {
+                                                                            return true;
+                                                                        }
+
+                                                                        return false;
                                                                     });
 
                                                                 if (monthDepartures.length === 0) {
@@ -773,11 +977,13 @@ const TourOperationalManager = () => {
                                                                             const idx = dep.realIdx;
 
 
-                                                                            const bookedSlots = (dep.departure_id && dep.original_max_slots !== undefined && dep.original_available_slots !== undefined) ? (dep.original_max_slots - dep.original_available_slots) : 0;
+                                                                            const bookedSlots = (dep.departure_id && dep.original_max_slots !== undefined && dep.original_available_slots !== undefined) ? Math.max(0, dep.original_max_slots - dep.original_available_slots) : 0;
                                                                             const hasBookings = bookedSlots > 0;
                                                                             const isPastTour = dep.departure_id && dep.departure_date && dep.departure_date < todayStr;
                                                                             const disableDate = activeTourTab === 'custom' || isPastTour || hasBookings;
                                                                             const disableSlot = activeTourTab === 'custom' || isPastTour;
+                                                                            
+                                                                            // LỌC HƯỚNG DẪN VIÊN RẢNH
                                                                             const availableGuides = guides.filter(g => {
                                                                                 if (!dep.departure_date || !dep.return_date) return true;
                                                                                 
@@ -807,16 +1013,45 @@ const TourOperationalManager = () => {
                                                                                     }
                                                                                 }
                                                                                 
-                                                                                // Always allow the currently selected guide to appear so the dropdown doesn't break, 
-                                                                                // but wait, the user requested to hide them. So we hide them.
                                                                                 if (toursInThisMonth > 4) return false;
                                                                                 return true;
                                                                             });
                                                                             
-                                                                            // Add the currently selected guide if they are not in the list, just to prevent React select from breaking, but add a warning label
                                                                             const currentGuide = guides.find(g => g.user_id === Number(dep.guide_id));
                                                                             if (currentGuide && !availableGuides.some(g => g.user_id === currentGuide.user_id)) {
                                                                                 availableGuides.push({ ...currentGuide, full_name: currentGuide.full_name + ' (Không đủ điều kiện)' });
+                                                                            }
+
+                                                                            // LỌC TÀI XẾ RẢNH (YÊU CẦU: NGHỈ ÍT NHẤT 5 NGÀY TRƯỚC VÀ SAU TOUR)
+                                                                            const availableDrivers = (drivers || []).filter(drv => {
+                                                                                if (!dep.departure_date || !dep.return_date) return true;
+
+                                                                                const depStart = new Date(dep.departure_date).getTime();
+                                                                                const depEnd = new Date(dep.return_date).getTime();
+
+                                                                                const otherSchs = driverSchedules ? driverSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
+                                                                                const drvOtherSchs = otherSchs.filter(s => s.driver_id === drv.user_id && s.departure_date && s.return_date);
+                                                                                const drvSameTourSchs = departures.filter((d, i) => i !== idx && Number(d.driver_id) === drv.user_id && d.departure_date && d.return_date);
+
+                                                                                const allToCheck = [
+                                                                                    ...drvOtherSchs.map(s => ({ start: new Date(s.departure_date).getTime(), end: new Date(s.return_date).getTime() })),
+                                                                                    ...drvSameTourSchs.map(d => ({ start: new Date(d.departure_date).getTime(), end: new Date(d.return_date).getTime() }))
+                                                                                ];
+
+                                                                                const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+
+                                                                                for (const sch of allToCheck) {
+                                                                                    if (depStart <= sch.end && depEnd >= sch.start) return false;
+                                                                                    if (depEnd < sch.start && (sch.start - depEnd) < FIVE_DAYS) return false;
+                                                                                    if (depStart > sch.end && (depStart - sch.end) < FIVE_DAYS) return false;
+                                                                                }
+
+                                                                                return true;
+                                                                            });
+
+                                                                            const currentDriver = (drivers || []).find(drv => drv.user_id === Number(dep.driver_id));
+                                                                            if (currentDriver && !availableDrivers.some(drv => drv.user_id === currentDriver.user_id)) {
+                                                                                availableDrivers.push({ ...currentDriver, full_name: currentDriver.full_name + ' (Bận / Dưới 5 ngày rảnh)' });
                                                                             }
 
                                                                             const parsedDesign = selectedTour?.design_data ? (typeof selectedTour.design_data === 'string' ? JSON.parse(selectedTour.design_data) : selectedTour.design_data) : null;
@@ -827,10 +1062,10 @@ const TourOperationalManager = () => {
                                                                             const statusColor = status === 'Open' ? '#166534' : (status === 'Closed' ? '#4b5563' : '#f9fafb');
 
                                                                             return (
-                                                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '14px 18px', gap: '20px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', flexWrap: 'wrap' }}>
+                                                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '14px 18px', gap: '16px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', flexWrap: 'wrap' }}>
                                                                                     
                                                                                     {/* NGÀY ĐI & NGÀY VỀ */}
-                                                                                    <div style={{ flex: '0 0 170px' }}>
+                                                                                    <div style={{ flex: '0 0 160px' }}>
                                                                                         <input 
                                                                                             type="date" 
                                                                                             min={todayStr}
@@ -846,7 +1081,7 @@ const TourOperationalManager = () => {
                                                                                     </div>
 
                                                                                     {/* KHÁCH HÀNG & SLOT */}
-                                                                                    <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' }}>
+                                                                                    <div style={{ flex: '0 0 160px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                                             <div style={{ fontSize: '13px', color: '#374151', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                                                 Khách: <span style={{ color: '#0ea5e9', fontWeight: '700' }}>{bookedSlots}</span> / 
@@ -882,27 +1117,54 @@ const TourOperationalManager = () => {
                                                                                         </div>
                                                                                     </div>
 
-                                                                                    {/* PHÂN CÔNG HDV & TRẠNG THÁI */}
-                                                                                    <div style={{ flex: '0 0 320px', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                                                    {/* PHÂN CÔNG TÀI XẾ & BIỂN SỐ XE & HDV & TRẠNG THÁI */}
+                                                                                    <div style={{ flex: '1', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                                                                        {/* Select Tài xế */}
+                                                                                        <select 
+                                                                                            value={dep.driver_id || ''} 
+                                                                                            onChange={e => { const up = [...departures]; up[idx].driver_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
+                                                                                            disabled={isPastTour}
+                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi tài xế" : "Chọn tài xế đang rảnh trong vòng 5 ngày"}
+                                                                                            style={{ flex: '1 1 150px', minWidth: '130px', padding: '8px 10px', border: dep.driver_id ? '1px solid #fed7aa' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.driver_id ? '#fff7ed' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.driver_id ? '#c2410c' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
+                                                                                        >
+                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>🚗 Chưa chọn Tài xế</option>
+                                                                                            {availableDrivers.map(drv => (
+                                                                                                <option key={drv.user_id} value={drv.user_id} style={{ background: '#fff', color: '#111827' }}>🚗 {drv.full_name}</option>
+                                                                                            ))}
+                                                                                        </select>
+
+                                                                                        {/* Biển số xe */}
+                                                                                        <input 
+                                                                                            type="text"
+                                                                                            placeholder="Biển số (vd: 51B-123.45)"
+                                                                                            value={dep.vehicle_number || ''}
+                                                                                            onChange={e => { const up = [...departures]; up[idx].vehicle_number = e.target.value; setDepartures(up); }}
+                                                                                            disabled={isPastTour}
+                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi biển số xe" : "Nhập biển số xe di chuyển"}
+                                                                                            style={{ width: '130px', padding: '8px 10px', border: dep.vehicle_number ? '1px solid #fde68a' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.vehicle_number ? '#fefce8' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : '#1e293b', fontSize: '13px', fontWeight: '600', outline: 'none' }}
+                                                                                        />
+
+                                                                                        {/* Select HDV */}
                                                                                         <select 
                                                                                             value={dep.guide_id || ''} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].guide_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
                                                                                             disabled={isPastTour}
                                                                                             title={isPastTour ? "Tour trong quá khứ không thể đổi hướng dẫn viên" : ""}
-                                                                                            style={{ flex: '1', padding: '8px 10px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.guide_id ? '#e0f2fe' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.guide_id ? '#0369a1' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
+                                                                                            style={{ flex: '1 1 150px', minWidth: '130px', padding: '8px 10px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.guide_id ? '#e0f2fe' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.guide_id ? '#0369a1' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
                                                                                         >
-                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>Chưa phân công HDV</option>
+                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>🚩 Chưa chọn HDV</option>
                                                                                             {availableGuides.map(g => (
-                                                                                                <option key={g.user_id} value={g.user_id} style={{ background: '#fff', color: '#111827' }}>{g.full_name}</option>
+                                                                                                <option key={g.user_id} value={g.user_id} style={{ background: '#fff', color: '#111827' }}>🚩 {g.full_name}</option>
                                                                                             ))}
                                                                                         </select>
 
+                                                                                        {/* Status */}
                                                                                         <select 
                                                                                             value={status} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].status = e.target.value; setDepartures(up); }} 
                                                                                             disabled={isPastTour}
                                                                                             title={isPastTour ? "Tour trong quá khứ không thể đổi trạng thái" : ""}
-                                                                                            style={{ flex: '0 0 95px', padding: '8px 10px', border: 'none', background: isPastTour ? '#f1f5f9' : statusBg, borderRadius: '8px', color: isPastTour ? '#9ca3af' : statusColor, fontSize: '13px', fontWeight: '700', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer', textAlign: 'center' }}
+                                                                                            style={{ width: '95px', padding: '8px 10px', border: 'none', background: isPastTour ? '#f1f5f9' : statusBg, borderRadius: '8px', color: isPastTour ? '#9ca3af' : statusColor, fontSize: '13px', fontWeight: '700', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer', textAlign: 'center' }}
                                                                                         >
                                                                                             <option value="Open" style={{ background: '#fff', color: '#111827' }}>Mở Bán</option>
                                                                                             <option value="Closed" style={{ background: '#fff', color: '#111827' }}>Khóa</option>
@@ -946,6 +1208,16 @@ const TourOperationalManager = () => {
                                                                 <GuideTimelineCalendar 
                                                                     guides={guides}
                                                                     guideSchedules={guideSchedules}
+                                                                    selectedMonth={selectedMonth}
+                                                                    currentYear={currentYear}
+                                                                />
+                                                            </div>
+
+                                                            {/* BIỂU ĐỒ NGHẼN LỊCH TÀI XẾ */}
+                                                            <div style={{ marginTop: '20px' }}>
+                                                                <DriverTimelineCalendar 
+                                                                    drivers={drivers}
+                                                                    driverSchedules={driverSchedules}
                                                                     selectedMonth={selectedMonth}
                                                                     currentYear={currentYear}
                                                                 />

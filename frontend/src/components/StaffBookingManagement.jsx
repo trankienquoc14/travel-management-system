@@ -7,6 +7,11 @@ const StaffBookingManagement = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterPayment, setFilterPayment] = useState('All');
+  const [selectedDestination, setSelectedDestination] = useState('All');
+  const [dateType, setDateType] = useState('departure');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -63,16 +68,82 @@ const StaffBookingManagement = () => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
   };
 
-  // Lọc dữ liệu
+  // Trích xuất danh sách địa điểm tự động
+  const destinationOptions = Array.from(new Set(
+    bookings.map(b => {
+      let dest = b.destination;
+      if (!dest && b.tour_name) {
+        if (b.tour_name.includes('Đà Lạt')) dest = 'Đà Lạt';
+        else if (b.tour_name.includes('Nha Trang')) dest = 'Nha Trang';
+        else if (b.tour_name.includes('Đà Nẵng')) dest = 'Đà Nẵng';
+        else if (b.tour_name.includes('Cần Thơ')) dest = 'Cần Thơ';
+        else if (b.tour_name.includes('Hà Nội')) dest = 'Hà Nội';
+        else if (b.tour_name.includes('Phú Quốc')) dest = 'Phú Quốc';
+        else if (b.tour_name.includes('Tây Ninh')) dest = 'Tây Ninh';
+        else if (b.tour_name.includes('Phan Thiết') || b.tour_name.includes('Phú Quý')) dest = 'Phan Thiết / Phú Quý';
+        else if (b.tour_name.includes('Măng Đen') || b.tour_name.includes('Tây Nguyên')) dest = 'Tây Nguyên';
+        else if (b.tour_name.includes('Hồ Tràm')) dest = 'Hồ Tràm';
+      }
+      return dest ? String(dest).trim() : null;
+    }).filter(Boolean)
+  )).sort();
+
+  // Lọc dữ liệu đa tiêu chí
   const filteredBookings = bookings.filter(b => {
+    // 1. Trạng thái Booking
     const matchesStatus = filterStatus === 'All' || b.booking_status === filterStatus;
-    const matchesSearch =
-      (b.booking_id && b.booking_id.toString().includes(searchTerm)) ||
-      (b.customer_name && b.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.customer_phone && b.customer_phone.includes(searchTerm)) ||
-      (b.tour_name && b.tour_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesStatus && matchesSearch;
+
+    // 2. Trạng thái Thanh toán
+    const matchesPayment = filterPayment === 'All' || 
+      (filterPayment === 'Paid' && b.payment_status === 'Paid') ||
+      (filterPayment === 'Unpaid' && b.payment_status !== 'Paid');
+
+    // 3. Địa điểm
+    const matchesDestination = (() => {
+      if (selectedDestination === 'All') return true;
+      const destVal = (b.destination || '').toLowerCase();
+      const tourVal = (b.tour_name || '').toLowerCase();
+      const selVal = selectedDestination.toLowerCase();
+      return destVal.includes(selVal) || tourVal.includes(selVal);
+    })();
+
+    // 4. Khoảng ngày (Khởi hành hoặc Ngày đặt)
+    const matchesDate = (() => {
+      if (!startDate && !endDate) return true;
+      const rawDateStr = dateType === 'departure' ? b.departure_date : b.booking_date;
+      if (!rawDateStr) return false;
+      const targetDate = new Date(rawDateStr);
+      if (isNaN(targetDate.getTime())) return false;
+      const targetYMD = targetDate.toISOString().split('T')[0];
+      if (startDate && targetYMD < startDate) return false;
+      if (endDate && targetYMD > endDate) return false;
+      return true;
+    })();
+
+    // 5. Từ khóa tìm kiếm
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term || (
+      (b.booking_id && b.booking_id.toString().includes(term)) ||
+      (b.customer_name && b.customer_name.toLowerCase().includes(term)) ||
+      (b.customer_phone && b.customer_phone.includes(term)) ||
+      (b.customer_email && b.customer_email.toLowerCase().includes(term)) ||
+      (b.tour_name && b.tour_name.toLowerCase().includes(term))
+    );
+
+    return matchesStatus && matchesPayment && matchesDestination && matchesDate && matchesSearch;
   });
+
+  const hasActiveFilters = filterStatus !== 'All' || filterPayment !== 'All' || selectedDestination !== 'All' || startDate || endDate || searchTerm;
+
+  const handleResetFilters = () => {
+    setFilterStatus('All');
+    setFilterPayment('All');
+    setSelectedDestination('All');
+    setStartDate('');
+    setEndDate('');
+    setDateType('departure');
+    setSearchTerm('');
+  };
 
   // Thống kê
   const totalCount = bookings.length;
@@ -441,38 +512,129 @@ const StaffBookingManagement = () => {
         </div>
       </div>
 
-      {/* FILTER & SEARCH */}
-      <div style={{ backgroundColor: '#fff', padding: '16px 20px', borderRadius: '12px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {[
-            { label: 'Tất cả', val: 'All' },
-            { label: `Chờ thanh toán (${pendingCount})`, val: 'Pending' },
-            { label: 'Đã xác nhận', val: 'Confirmed' },
-            { label: 'Đã hủy', val: 'Cancelled' }
-          ].map(tab => (
-            <button
-              key={tab.val}
-              onClick={() => setFilterStatus(tab.val)}
+      {/* BỘ LỌC & TÌM KIẾM ĐA TIÊU CHÍ */}
+      <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+        {/* HÀNG 1: TAB TRẠNG THÁI BOOKING & TÌM KIẾM TỪ KHÓA */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'Tất cả', val: 'All' },
+              { label: `Chờ thanh toán (${pendingCount})`, val: 'Pending' },
+              { label: `Đã xác nhận (${confirmedCount})`, val: 'Confirmed' },
+              { label: `Đã hủy (${cancelledCount})`, val: 'Cancelled' }
+            ].map(tab => (
+              <button
+                key={tab.val}
+                onClick={() => setFilterStatus(tab.val)}
+                style={{
+                  padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px',
+                  backgroundColor: filterStatus === tab.val ? '#0f172a' : '#f1f5f9',
+                  color: filterStatus === tab.val ? '#fff' : '#475569',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ position: 'relative', width: '320px', maxWidth: '100%' }}>
+            <input
+              type="text"
+              placeholder="🔍 Tìm mã booking, tên KH, SĐT, tour..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-                backgroundColor: filterStatus === tab.val ? '#0f172a' : '#f1f5f9',
-                color: filterStatus === tab.val ? '#fff' : '#475569'
+                width: '100%', padding: '10px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box'
               }}
-            >
-              {tab.label}
-            </button>
-          ))}
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>&times;</button>
+            )}
+          </div>
         </div>
 
-        <input
-          type="text"
-          placeholder="🔍 Tìm theo mã Booking, tên khách hàng, SĐT, tour..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: '10px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '340px', fontSize: '14px', outline: 'none'
-          }}
-        />
+        <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '2px 0' }}></div>
+
+        {/* HÀNG 2: BỘ LỌC CHI TIẾT (ĐỊA ĐIỂM, THANH TOÁN, KHOẢNG NGÀY, RESET) */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', fontSize: '14px' }}>
+          
+          {/* 📍 LỌC ĐỊA ĐIỂM */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: '600', color: '#475569', whiteSpace: 'nowrap' }}>📍 Địa điểm:</span>
+            <select
+              value={selectedDestination}
+              onChange={(e) => setSelectedDestination(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: '#fff', color: '#0f172a', fontWeight: '600', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="All">🌐 Tất cả địa điểm ({destinationOptions.length})</option>
+              {destinationOptions.map(dest => (
+                <option key={dest} value={dest}>{dest}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 💳 LỌC THANH TOÁN */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: '600', color: '#475569', whiteSpace: 'nowrap' }}>💳 Thanh toán:</span>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: '#fff', color: '#0f172a', fontWeight: '500', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="All">Tất cả thanh toán</option>
+              <option value="Paid">🟢 Đã thanh toán</option>
+              <option value="Unpaid">🟡 Chưa thanh toán</option>
+            </select>
+          </div>
+
+          {/* 📅 LỌC KHOẢNG NGÀY */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: '600', color: '#475569', whiteSpace: 'nowrap' }}>📅 Ngày:</span>
+            <select
+              value={dateType}
+              onChange={(e) => setDateType(e.target.value)}
+              style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#f8fafc', color: '#334155', fontWeight: '600', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="departure">Khởi hành</option>
+              <option value="booking">Ngày đặt</option>
+            </select>
+
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', color: '#0f172a', outline: 'none' }}
+              title="Từ ngày"
+            />
+            <span style={{ color: '#94a3b8' }}>-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', color: '#0f172a', outline: 'none' }}
+              title="Đến ngày"
+            />
+          </div>
+
+          {/* NÚT ĐẶT LẠI BỘ LỌC (LUÔN HIỂN THỊ) */}
+          <button
+            onClick={handleResetFilters}
+            style={{
+              padding: '8px 16px', borderRadius: '8px',
+              border: hasActiveFilters ? '1px solid #fca5a5' : '1px solid #cbd5e1',
+              backgroundColor: hasActiveFilters ? '#fef2f2' : '#f8fafc',
+              color: hasActiveFilters ? '#ef4444' : '#475569',
+              fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto',
+              transition: 'all 0.2s'
+            }}
+            title="Đặt lại toàn bộ các bộ lọc về mặc định"
+          >
+            🔄 Đặt lại
+          </button>
+        </div>
       </div>
 
       {/* TABLE */}

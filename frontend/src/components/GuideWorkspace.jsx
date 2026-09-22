@@ -65,6 +65,10 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [adminStatusFilter, setAdminStatusFilter] = useState('all');
 
+  // Trạng thái tìm kiếm & lọc danh sách tour được phân công (Table View)
+  const [assignedSearchTerm, setAssignedSearchTerm] = useState('');
+  const [assignedStatusFilter, setAssignedStatusFilter] = useState('all');
+
   const storedUser = localStorage.getItem('user');
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
   const isAdminOrManager = currentUser && [1, 2, 3, '1', '2', '3'].includes(currentUser.role);
@@ -580,6 +584,19 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   const totalPassengersCount = works.reduce((sum, w) => sum + (w.max_slots - w.available_slots), 0);
   const activeIncidentsCount = incidents.filter(i => i.status !== 'Resolved').length;
 
+  const filteredAssignedWorks = works.filter(w => {
+    const term = assignedSearchTerm.toLowerCase().trim();
+    const matchesSearch = 
+      !term ||
+      w.tour_name?.toLowerCase().includes(term) ||
+      w.destination?.toLowerCase().includes(term) ||
+      w.departure_id?.toString().includes(term) ||
+      (w.tour_code && w.tour_code.toLowerCase().includes(term));
+
+    const matchesStatus = assignedStatusFilter === 'all' || w.status === assignedStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   // Render dropdown chọn đoàn dành riêng cho các tab chi tiết (ERP Professional Selector)
   const renderDepartureSelector = () => (
     <div style={{
@@ -812,7 +829,200 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
         </div>
       )}
 
-      {/* 🚀 TAB 1: DANH SÁCH CHUYẾN ĐI ĐƯỢC PHÂN CÔNG */}
+      {/* 🚀 TAB 0: DANH SÁCH TOUR ĐƯỢC PHÂN CÔNG (TABLE VIEW) */}
+      {activeTab === 'guide_assigned' && (
+        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                📋 QUẢN LÝ PHÂN CÔNG • HƯỚNG DẪN VIÊN
+              </div>
+              <h3 style={{ margin: '4px 0 0 0', color: '#0f172a', fontSize: '22px', fontWeight: '800' }}>
+                Danh sách Tour Được Phân Công
+              </h3>
+              <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>
+                Danh sách tổng hợp toàn bộ các đoàn tour được Ban quản lý phân công cho bạn phụ trách dẫn đoàn.
+              </p>
+            </div>
+
+            {/* STAT CARDS */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '10px 16px', borderRadius: '10px', minWidth: '120px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Tổng tour:</div>
+                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>{works.length} đoàn</div>
+              </div>
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 16px', borderRadius: '10px', minWidth: '120px' }}>
+                <div style={{ fontSize: '11px', color: '#166534', fontWeight: '600' }}>Đang/Chuẩn bị đi:</div>
+                <div style={{ fontSize: '18px', fontWeight: '800', color: '#15803d' }}>
+                  {works.filter(w => w.status === 'Open' || w.status === 'Closed').length} đoàn
+                </div>
+              </div>
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '10px 16px', borderRadius: '10px', minWidth: '120px' }}>
+                <div style={{ fontSize: '11px', color: '#1e40af', fontWeight: '600' }}>Tổng hành khách:</div>
+                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1d4ed8' }}>
+                  {totalPassengersCount} khách
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEARCH & FILTER BAR */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '14px 18px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
+              <span style={{ fontSize: '16px' }}>🔍</span>
+              <input
+                type="text"
+                placeholder="Tìm theo tên tour, mã đoàn, điểm đến..."
+                value={assignedSearchTerm}
+                onChange={(e) => setAssignedSearchTerm(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>Trạng thái:</span>
+              {['all', 'Open', 'Closed', 'Completed'].map((st) => {
+                const label = st === 'all' ? 'Tất cả' : st === 'Open' ? 'Mở đăng ký' : st === 'Closed' ? 'Đang di chuyển' : 'Hoàn thành';
+                const isActive = assignedStatusFilter === st;
+                return (
+                  <button
+                    key={st}
+                    onClick={() => setAssignedStatusFilter(st)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      border: isActive ? 'none' : '1px solid #cbd5e1',
+                      background: isActive ? '#0284c7' : '#ffffff',
+                      color: isActive ? '#ffffff' : '#475569',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* TABLE OF ASSIGNED TOURS */}
+          {filteredAssignedWorks.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔍</div>
+              <div style={{ fontWeight: '600' }}>Không tìm thấy tour nào phù hợp với bộ lọc.</div>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Mã đoàn</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Tên Tour</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Điểm đến</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Thời gian khởi hành</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Số lượng khách</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Trạng thái</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800', textAlign: 'center' }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssignedWorks.map((w) => {
+                    const colors = getStatusColor(w.status, w.departure_date);
+                    const bookedCount = w.max_slots - w.available_slots;
+                    const fillPercent = Math.min(100, Math.round((bookedCount / w.max_slots) * 100));
+                    const isCurrentActive = selectedDeparture?.departure_id === w.departure_id;
+
+                    return (
+                      <tr 
+                        key={w.departure_id} 
+                        style={{ 
+                          borderBottom: '1px solid #e2e8f0', 
+                          background: isCurrentActive ? '#f0f9ff' : '#ffffff',
+                          transition: 'background 0.2s'
+                        }}
+                        onMouseOver={(e) => { if (!isCurrentActive) e.currentTarget.style.background = '#f8fafc'; }}
+                        onMouseOut={(e) => { if (!isCurrentActive) e.currentTarget.style.background = '#ffffff'; }}
+                      >
+                        <td style={{ padding: '14px', fontWeight: '800', color: '#1e3a8a' }}>
+                          <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 8px', borderRadius: '6px', fontSize: '12px' }}>
+                            #{w.departure_id}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px', fontWeight: '700', color: '#0f172a', maxWidth: '280px' }}>
+                          <div>{w.tour_name}</div>
+                          {w.tour_code && <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '500' }}>Mã: {w.tour_code}</div>}
+                        </td>
+                        <td style={{ padding: '14px', color: '#334155', fontWeight: '600' }}>
+                          📍 {w.destination}
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <div style={{ fontWeight: '700', color: '#1e293b' }}>
+                            📅 {new Date(w.departure_date).toLocaleDateString('vi-VN')} → {new Date(w.return_date).toLocaleDateString('vi-VN')}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                            ⏱️ {w.duration_days || Math.round((new Date(w.return_date) - new Date(w.departure_date)) / (1000 * 60 * 60 * 24)) + 1} ngày
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <div style={{ fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                            👥 {bookedCount} / {w.max_slots} khách ({fillPercent}%)
+                          </div>
+                          <div style={{ width: '120px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${fillPercent}%`, height: '100%', background: fillPercent >= 100 ? '#10b981' : '#0284c7', borderRadius: '3px' }} />
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <span style={{
+                            background: colors.bg,
+                            color: colors.text,
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.dot }} />
+                            {getStatusText(w.status, w.departure_date)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleSelectDeparture(w)}
+                            style={{
+                              padding: '8px 16px',
+                              background: isCurrentActive ? '#059669' : '#0284c7',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {isCurrentActive ? '✅ Đang dẫn đoàn' : '🚀 Hướng dẫn đoàn này'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 🚀 TAB 1: DANH SÁCH CHUYẾN ĐI ĐƯỢC PHÂN CÔNG (CARD VIEW) */}
       {activeTab === 'guide_work' && (
         <>
           {/* Thông báo chuyến đi đang chọn (nếu có) */}
@@ -995,7 +1205,22 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
       )}
 
       {/* 🚀 CHI TIẾT CÁC TAB KHÁC (DÙNG DROPDOWN LỰA CHỌN CHUYÊN NGHIỆP) */}
-      {activeTab !== 'guide_work' && selectedDeparture && (
+      {activeTab !== 'guide_work' && activeTab !== 'guide_assigned' && (
+        !selectedDeparture ? (
+          <div style={{ background: '#ffffff', padding: '40px 20px', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚩</div>
+            <h3 style={{ color: '#0f172a', margin: '0 0 8px 0', fontWeight: '800' }}>Chưa chọn đoàn tour nào để thao tác</h3>
+            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+              Vui lòng chọn một tour từ <strong>"Danh sách tour được phân công"</strong> để xem điểm danh, lịch trình chi tiết, hoặc báo cáo sự cố.
+            </p>
+            <button
+              onClick={() => setActiveTab('guide_assigned')}
+              style={{ padding: '10px 20px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)' }}
+            >
+              📋 Đến Danh Sách Tour Được Phân Công
+            </button>
+          </div>
+        ) : (
         <div>
           {/* Render Bộ Chọn Đoàn ERP ở trên cùng của mọi trang chi tiết */}
           {renderDepartureSelector()}
@@ -1569,7 +1794,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
 
           </div>
         </div>
-      )}
+      ))}
 
       {/* 🌟 MODAL TẠO BÁO CÁO SỰ CỐ KHẨN CẤP */}
       {showIncidentModal && (

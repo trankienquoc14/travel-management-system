@@ -283,17 +283,52 @@ exports.saveTourOperationalSchedule = async (req, res) => {
 
         let targetDepId = dep.departure_id;
 
+        const gIdToSave = dep.guide_id ? Number(dep.guide_id) : null;
+        const dIdToSave = dep.driver_id ? Number(dep.driver_id) : null;
+        const vehToSave = (dep.vehicle_number && String(dep.vehicle_number).trim()) ? String(dep.vehicle_number).trim() : null;
+
         if (targetDepId) {
+            const [oldDepRow] = await sequelize.query(`SELECT max_slots, available_slots FROM departures WHERE departure_id = ? LIMIT 1`, {
+              replacements: [targetDepId],
+              transaction
+            });
+            let newMaxSlots = Number(dep.max_slots || 30);
+            let newAvailSlots = newMaxSlots;
+            if (oldDepRow.length > 0) {
+              const oldMax = Number(oldDepRow[0].max_slots || 30);
+              const oldAvail = Number(oldDepRow[0].available_slots || 30);
+              const booked = Math.max(0, oldMax - oldAvail);
+              newAvailSlots = Math.max(0, newMaxSlots - booked);
+            }
+
             await sequelize.query(`
               UPDATE departures 
-              SET departure_date=?, return_date=?, max_slots=?, guide_id=? 
+              SET departure_date=?, return_date=?, max_slots=?, available_slots=?, guide_id=?, driver_id=?, vehicle_number=? 
               WHERE departure_id=?
-            `, { replacements: [dep.departure_date, dep.return_date, dep.max_slots || 30, dep.max_slots || 30, dep.guide_id || null, targetDepId], transaction });
+            `, { replacements: [
+                dep.departure_date, 
+                dep.return_date, 
+                newMaxSlots, 
+                newAvailSlots,
+                gIdToSave, 
+                dIdToSave, 
+                vehToSave, 
+                targetDepId
+              ], transaction });
         } else {
             const [insRes] = await sequelize.query(`
-              INSERT INTO departures (tour_id, departure_date, return_date, max_slots, available_slots, status, guide_id)
-              VALUES (?, ?, ?, ?, ?, 'Open', ?)
-            `, { replacements: [targetTourId, dep.departure_date, dep.return_date, dep.max_slots || 30, dep.max_slots || 30, dep.guide_id || null], transaction });
+              INSERT INTO departures (tour_id, departure_date, return_date, max_slots, available_slots, status, guide_id, driver_id, vehicle_number)
+              VALUES (?, ?, ?, ?, ?, 'Open', ?, ?, ?)
+            `, { replacements: [
+                targetTourId, 
+                dep.departure_date, 
+                dep.return_date, 
+                dep.max_slots || 30, 
+                dep.max_slots || 30, 
+                gIdToSave, 
+                dIdToSave, 
+                vehToSave
+              ], transaction });
             targetDepId = insRes;
         }
 

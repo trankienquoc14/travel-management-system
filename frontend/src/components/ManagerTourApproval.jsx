@@ -730,7 +730,7 @@ const ManagerApproveTours = () => {
                                 </div>
                                 <div>
                                     <p style={{ margin: '0 0 4px 0', color: '#64748b', fontSize: '13px', fontWeight: 'bold' }}>⏱️ Thời gian</p>
-                                    <p style={{ margin: 0, fontWeight: '600', color: '#0f172a' }}>{selectedFixedTour.duration_days} Ngày {Math.max(0, selectedFixedTour.duration_days - 1)} Đêm</p>
+                                    <p style={{ margin: 0, fontWeight: '600', color: '#0f172a' }}>{selectedFixedTour.duration_days || 1} Ngày {Math.max(0, (selectedFixedTour.duration_days || 1) - 1)} Đêm</p>
                                 </div>
                             </div>
 
@@ -740,57 +740,81 @@ const ManagerApproveTours = () => {
                                 try {
                                     let parsedDesign = typeof selectedFixedTour.design_data === 'string' ? JSON.parse(selectedFixedTour.design_data) : selectedFixedTour.design_data;
                                     
-                                    // Fallback / normalization for legacy design format
-                                    if ((!parsedDesign.days || !parsedDesign.costConfig || !parsedDesign.computed) && parsedDesign.itineraryDays) {
-                                        const days = parsedDesign.itineraryDays.map((d, idx) => {
-                                            const activities = [];
+                                    let rawDays = parsedDesign.days || parsedDesign.itineraryDays || parsedDesign.itinerary || selectedFixedTour.itineraries || [];
+                                    let days = Array.isArray(rawDays) ? rawDays.map((d, idx) => {
+                                        const dayIndex = d.dayIndex || d.day_number || d.day || (idx + 1);
+                                        const route_title = d.route_title || d.title || d.dateString || `Ngày ${dayIndex}`;
+                                        
+                                        let activities = d.activities;
+                                        if (!activities || !Array.isArray(activities)) {
+                                            activities = [];
                                             if (d.slots) {
                                                 ['morning', 'noon', 'evening'].forEach(slotKey => {
                                                     if (Array.isArray(d.slots[slotKey])) {
                                                         d.slots[slotKey].forEach(act => {
                                                             activities.push({
-                                                                type: 'Tham quan',
-                                                                name: act.name,
+                                                                type: act.type || 'Tham quan',
+                                                                name: act.name || act.title || 'Hoạt động',
                                                                 price: Number(act.price || 0)
                                                             });
                                                         });
                                                     }
                                                 });
+                                            } else if (d.places && Array.isArray(d.places)) {
+                                                d.places.forEach(p => {
+                                                    activities.push({
+                                                        type: 'Tham quan',
+                                                        name: p.place_name || p.name || 'Điểm tham quan',
+                                                        price: Number(p.price || 0)
+                                                    });
+                                                });
+                                            } else if (d.description && typeof d.description === 'string') {
+                                                activities.push({
+                                                    type: 'Lịch trình',
+                                                    name: d.description,
+                                                    price: 0
+                                                });
                                             }
-                                            return {
-                                                dayIndex: d.dayIndex || idx + 1,
-                                                route_title: d.dateString || `Ngày ${d.dayIndex || idx + 1}`,
-                                                activities: activities,
-                                                accommodation: parsedDesign.fixedServices?.accommodation?.[0] ? {
-                                                    name: parsedDesign.fixedServices.accommodation[0].name,
-                                                    price: parsedDesign.fixedServices.accommodation[0].price
-                                                } : null,
-                                                meals: { breakfast: true, lunch: true, dinner: true }
+                                        }
+
+                                        let accommodation = d.accommodation;
+                                        if (!accommodation && (d.hotel || d.hotel_name || d.lodging)) {
+                                            const rawHotel = d.hotel || d.hotel_name || d.lodging;
+                                            accommodation = {
+                                                name: typeof rawHotel === 'object' ? (rawHotel.name || rawHotel.service_name || rawHotel.title) : rawHotel,
+                                                price: Number(d.hotel_price || (typeof rawHotel === 'object' ? rawHotel.price : 0) || 0)
                                             };
-                                        });
+                                        }
 
-                                        const transport = parsedDesign.fixedServices?.transport?.[0];
-                                        parsedDesign = {
-                                            days,
-                                            costConfig: {
-                                                minimumPax: 15, margin: 18,
-                                                selectedTransport: transport ? { name: transport.name, price: transport.price } : null,
-                                                transportTimes: { startD: '07:00', endD: '11:30', startR: '13:00', endR: '18:00' },
-                                                fixed: { guidePerDay: 500000 },
-                                                variable: { breakfast: 100000, lunch: 150000, dinner: 200000 }
-                                            },
-                                            computed: {
-                                                netCost: Number(selectedFixedTour.base_cost || 3500000),
-                                                sellingPrice: Number(selectedFixedTour.base_price || 4200000),
-                                                totalDays: days.length,
-                                                totalNights: Math.max(1, days.length - 1)
-                                            },
-                                            dayImages: parsedDesign.dayImages || {}
+                                        return {
+                                            ...d,
+                                            dayIndex,
+                                            route_title,
+                                            activities,
+                                            accommodation
                                         };
-                                    }
+                                    }) : [];
 
-                                    const { days, costConfig, computed, dayImages, categories, highlights } = parsedDesign;
-                                    if (!days || !costConfig || !computed) return <span style={{ color: '#64748b' }}>Dữ liệu thiết kế không đầy đủ.</span>;
+                                    const costConfig = parsedDesign.costConfig || {
+                                        minimumPax: 15, margin: 18,
+                                        selectedTransport: parsedDesign.fixedServices?.transport?.[0] ? { name: parsedDesign.fixedServices.transport[0].name, price: parsedDesign.fixedServices.transport[0].price } : null,
+                                        transportTimes: { startD: '07:00', endD: '11:30', startR: '13:00', endR: '18:00' },
+                                        fixed: { guidePerDay: 500000 },
+                                        variable: { breakfast: 100000, lunch: 150000, dinner: 200000 }
+                                    };
+
+                                    const computed = parsedDesign.computed || {
+                                        netCost: Number(selectedFixedTour.base_cost || selectedFixedTour.net_cost || 3500000),
+                                        sellingPrice: Number(selectedFixedTour.base_price || selectedFixedTour.price || 4200000),
+                                        totalDays: days.length || selectedFixedTour.duration_days || 1,
+                                        totalNights: Math.max(0, (days.length || selectedFixedTour.duration_days || 1) - 1)
+                                    };
+
+                                    const dayImages = parsedDesign.dayImages || {};
+                                    const categories = parsedDesign.categories || [];
+                                    const highlights = parsedDesign.highlights || '';
+
+                                    if (!days || days.length === 0) return <span style={{ color: '#64748b' }}>Dữ liệu thiết kế không đầy đủ.</span>;
                                     
                                     let autoAccommodationCost = 0;
                                     days.forEach(day => {

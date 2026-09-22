@@ -37,6 +37,7 @@ import GPSCheckInWidget from './GPSCheckInWidget';
 import GeneralOverview from './GeneralOverview';
 import PersonalAttendance from './PersonalAttendance';
 import HRLeaveRequest from './HRLeaveRequest';
+import DriverWorkspace from './DriverWorkspace';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -52,6 +53,7 @@ const Dashboard = () => {
   const [isOperationsGroupOpen, setIsOperationsGroupOpen] = useState(false);
   const [isHRGroupOpen, setIsHRGroupOpen] = useState(false);
   const [isGuideGroupOpen, setIsGuideGroupOpen] = useState(false);
+  const [isDriverGroupOpen, setIsDriverGroupOpen] = useState(false);
   const [isSystemGroupOpen, setIsSystemGroupOpen] = useState(false);
 
   const [stats, setStats] = useState({ revenue: 0, activeTours: 0, pendingRequests: 0 });
@@ -85,7 +87,9 @@ const Dashboard = () => {
       } else if (parsedUser.role === 2 || parsedUser.role === 'HR Manager') {
         setActiveTab('hr_employees'); // Quản lý nhân sự vào thẳng Quản lý nhân sự
       } else if (parsedUser.role === 5 || parsedUser.role === 'Tour Guide') {
-        setActiveTab('guide_work'); // Hướng dẫn viên vào thẳng Lịch làm việc
+        setActiveTab('guide_assigned'); // Hướng dẫn viên vào thẳng Danh sách tour được phân công
+      } else if (parsedUser.role === 8 || parsedUser.role === 'Driver' || parsedUser.role === 'Tài xế') {
+        setActiveTab('driver_assigned'); // Tài xế vào thẳng Danh sách chuyến xe được phân công
       } else {
         setActiveTab('overview'); // Admin và Quản lý Tour vào Tổng quan
       }
@@ -147,6 +151,7 @@ const Dashboard = () => {
   const isTourManager = user.role === 3;
   const isHRManager = user.role === 2 || user.role === 'HR Manager';
   const isTourGuide = user.role === 5 || user.role === 'Tour Guide';
+  const isDriver = user.role === 8 || user.role === 'Driver' || user.role === 'Tài xế';
   const isAdmin = user.role === 1; // Admin hệ thống
   const isInternalStaff = !isCustomer && !isPartner; // Tất cả nhân viên nội bộ công ty
 
@@ -194,7 +199,7 @@ const Dashboard = () => {
     <div className="dashboard-layout">
       <aside className="sidebar">
         <div className="sidebar-logo"><h2 style={{ color: '#0f172a' }}>TravelVN<span style={{ color: '#0194f3' }}> ERP</span></h2></div>
-        <div className="sidebar-scrollable" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
+        <div className="sidebar-scrollable" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', paddingRight: '2px' }}>
           <div 
             className="sidebar-subtitle" 
             onClick={() => setIsPersonalOpen(!isPersonalOpen)}
@@ -216,11 +221,9 @@ const Dashboard = () => {
                   >
                     📍 Điểm Danh Cá Nhân (GPS)
                   </li>
-                  {!isTourGuide && (
-                    <li className={activeTab === 'personal_schedule' ? 'active' : ''} onClick={() => setActiveTab('personal_schedule')}>
-                      📋 Công việc cá nhân
-                    </li>
-                  )}
+                  <li className={activeTab === 'personal_schedule' ? 'active' : ''} onClick={() => setActiveTab('personal_schedule')}>
+                    📋 Công việc cá nhân
+                  </li>
                   <li
                     className={activeTab === 'leave_requests' ? 'active' : ''}
                     onClick={() => setActiveTab('leave_requests')}
@@ -503,6 +506,20 @@ const Dashboard = () => {
               {(isTourGuide || isAdmin) && (
                 <>
                   <li 
+                    className={activeTab === 'guide_assigned' ? 'active' : ''} 
+                    onClick={() => setActiveTab('guide_assigned')}
+                    style={{
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '6px'
+                    }}
+                  >
+                    📋 Danh sách tour được phân công
+                  </li>
+
+                  <li 
                     onClick={() => setIsGuideGroupOpen(!isGuideGroupOpen)}
                     style={{ 
                       cursor: 'pointer', 
@@ -516,12 +533,12 @@ const Dashboard = () => {
                       justify: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
-                      marginTop: '12px',
+                      marginTop: '4px',
                       marginBottom: '4px',
                       borderLeft: '4px solid #ec4899'
                     }}
                   >
-                    <span>💼 HƯỚNG DẪN VIÊN</span>
+                    <span>🚩 CÁC TOUR ĐANG HƯỚNG DẪN</span>
                     <span style={{ fontSize: '10px', color: '#64748b' }}>{isGuideGroupOpen ? '▲' : '▼'}</span>
                   </li>
                   {isGuideGroupOpen && (
@@ -532,6 +549,58 @@ const Dashboard = () => {
                       <li className={activeTab === 'guide_map' ? 'active' : ''} onClick={() => setActiveTab('guide_map')}>📍 Bản đồ & Định vị</li>
                       <li className={activeTab === 'guide_updates' ? 'active' : ''} onClick={() => setActiveTab('guide_updates')}>📝 Cập nhật hành trình</li>
                       <li className={activeTab === 'guide_incidents' ? 'active' : ''} onClick={() => setActiveTab('guide_incidents')}>🚨 Báo cáo sự cố</li>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* ========================================================= */}
+              {/* 5.5 KHÔNG GIAN TÀI XẾ DẪN ĐOÀN (Driver & Admin)            */}
+              {/* ========================================================= */}
+              {(isDriver || isAdmin) && (
+                <>
+                  <li 
+                    className={activeTab === 'driver_assigned' ? 'active' : ''} 
+                    onClick={() => setActiveTab('driver_assigned')}
+                    style={{
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '6px'
+                    }}
+                  >
+                    📋 Danh sách chuyến xe được phân công
+                  </li>
+
+                  <li 
+                    onClick={() => setIsDriverGroupOpen(!isDriverGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justify: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '4px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #0284c7'
+                    }}
+                  >
+                    <span>🚌 VẬN HÀNH & QUẢN LÝ XE</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isDriverGroupOpen ? '▲' : '▼'}</span>
+                  </li>
+                  {isDriverGroupOpen && (
+                    <>
+                      <li className={activeTab === 'driver_schedule' ? 'active' : ''} onClick={() => setActiveTab('driver_schedule')}>🚌 Lịch trình & Điểm đón</li>
+                      <li className={activeTab === 'driver_contacts' ? 'active' : ''} onClick={() => setActiveTab('driver_contacts')}>📞 Phối hợp Hướng dẫn viên</li>
+                      <li className={activeTab === 'driver_expenses' ? 'active' : ''} onClick={() => setActiveTab('driver_expenses')}>⛽ Kê khai chi phí chuyến đi</li>
+                      <li className={activeTab === 'driver_incidents' ? 'active' : ''} onClick={() => setActiveTab('driver_incidents')}>🛠️ Báo cáo sự cố xe</li>
                     </>
                   )}
                 </>
@@ -625,7 +694,7 @@ const Dashboard = () => {
               <div>
                 <span className="user-name">{user.fullName}</span>
                 <span className="user-role">
-                  {isAdmin ? 'Quản trị viên' : isTourManager ? 'Quản lý Tour' : isOfficeStaff ? 'Nhân viên Văn phòng' : isHRManager ? 'quản lý nhân sự' : isTourGuide ? 'Hướng dẫn viên' : 'Đối tác'}
+                  {isAdmin ? 'Quản trị viên' : isTourManager ? 'Quản lý Tour' : isOfficeStaff ? 'Nhân viên Văn phòng' : isHRManager ? 'Quản lý Nhân sự' : isTourGuide ? 'Hướng dẫn viên' : isDriver ? 'Tài xế dẫn đoàn' : 'Đối tác'}
                 </span>
               </div>
               <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="logout-btn">Đăng xuất</button>
@@ -664,8 +733,7 @@ const Dashboard = () => {
               mode={activeTab}
               defaultFilter={
                 activeTab === 'tour_requests_pending' ? 'Mới' :
-                activeTab === 'tour_requests_revision' ? 'Tất cả cần sửa' : 
-                activeTab === 'tour_requests' ? 'Khách đã chốt giá' : 'Tất cả'
+                activeTab === 'tour_requests_revision' ? 'Tất cả cần sửa' : 'Tất cả'
               }
               onStartDesign={(req) => {
                 setDesigningRequest(req);      // Lưu data khách đang tư vấn dở
@@ -718,7 +786,7 @@ const Dashboard = () => {
 
           {/* Đơn xin nghỉ phép & Giải trình chấm công */}
           {activeTab === 'leave_requests' && isInternalStaff && <HRLeaveRequest mode="my_requests" />}
-          {activeTab === 'personal_schedule' && isInternalStaff && !isTourGuide && <PersonalSchedule />}
+          {activeTab === 'personal_schedule' && isInternalStaff && <PersonalSchedule />}
 
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}
@@ -728,8 +796,18 @@ const Dashboard = () => {
           {activeTab === 'hr_performance' && (isHRManager || isAdmin) && <HRPerformanceReview />}
 
           {/* Vùng Hướng dẫn viên */}
-          {['guide_work', 'guide_passengers', 'guide_itinerary', 'guide_map', 'guide_incidents', 'guide_updates'].includes(activeTab) && (isTourGuide || isAdmin) && (
+          {['guide_assigned', 'guide_work', 'guide_passengers', 'guide_itinerary', 'guide_map', 'guide_incidents', 'guide_updates'].includes(activeTab) && (isTourGuide || isAdmin) && (
             <GuideWorkspace 
+              activeTab={activeTab} 
+              selectedDeparture={selectedDeparture} 
+              setSelectedDeparture={setSelectedDeparture} 
+              setActiveTab={setActiveTab} 
+            />
+          )}
+
+          {/* Vùng Tài xế dẫn đoàn */}
+          {['driver_assigned', 'driver_schedule', 'driver_contacts', 'driver_expenses', 'driver_incidents'].includes(activeTab) && (isDriver || isAdmin) && (
+            <DriverWorkspace 
               activeTab={activeTab} 
               selectedDeparture={selectedDeparture} 
               setSelectedDeparture={setSelectedDeparture} 
