@@ -929,7 +929,7 @@ const TourOperationalManager = () => {
                                                             {/* TOOLBAR NÚT THÊM ĐỢT MỚI */}
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                                                 <div style={{ fontWeight: '700', fontSize: '14px', color: '#1e3a8a' }}>
-                                                                    📋 Thiết Lập Ngày Khởi Hành, Biển Số Xe & Phân Công Nhân Sự (HDV / Tài Xế):
+                                                                    📋 Thiết Lập Ngày Khởi Hành, Loại Xe & Phân Công Nhân Sự (HDV / Tài Xế):
                                                                 </div>
                                                                 {activeTourTab !== 'custom' && (
                                                                     <button onClick={() => setDepartures([...departures, { departure_date: '', return_date: '', max_slots: 30, guide_id: null, driver_id: null, vehicle_number: '', status: 'Open' }])} disabled={loading} style={{ padding: '8px 16px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1056,6 +1056,7 @@ const TourOperationalManager = () => {
 
                                                                             const parsedDesign = selectedTour?.design_data ? (typeof selectedTour.design_data === 'string' ? JSON.parse(selectedTour.design_data) : selectedTour.design_data) : null;
                                                                             const minPax = parsedDesign?.costConfig?.minimumPax || 15;
+                                                                            const vehicleNameToDisplay = parsedDesign?.costConfig?.selectedTransport?.service_name || parsedDesign?.selectedTransport?.service_name || parsedDesign?.costConfig?.selectedTransport?.name || 'Theo hợp đồng tour';
                                                                             
                                                                             const status = dep.status || 'Open';
                                                                             const statusBg = status === 'Open' ? '#dcfce7' : (status === 'Closed' ? '#f3f4f6' : '#111827');
@@ -1133,16 +1134,27 @@ const TourOperationalManager = () => {
                                                                                             ))}
                                                                                         </select>
 
-                                                                                        {/* Biển số xe */}
-                                                                                        <input 
-                                                                                            type="text"
-                                                                                            placeholder="Biển số (vd: 51B-123.45)"
-                                                                                            value={dep.vehicle_number || ''}
-                                                                                            onChange={e => { const up = [...departures]; up[idx].vehicle_number = e.target.value; setDepartures(up); }}
-                                                                                            disabled={isPastTour}
-                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi biển số xe" : "Nhập biển số xe di chuyển"}
-                                                                                            style={{ width: '130px', padding: '8px 10px', border: dep.vehicle_number ? '1px solid #fde68a' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.vehicle_number ? '#fefce8' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : '#1e293b', fontSize: '13px', fontWeight: '600', outline: 'none' }}
-                                                                                        />
+                                                                                        {/* Loại xe */}
+                                                                                        <div 
+                                                                                            title={vehicleNameToDisplay}
+                                                                                            style={{ 
+                                                                                                width: '180px', 
+                                                                                                padding: '8px 10px', 
+                                                                                                border: '1px solid #e2e8f0', 
+                                                                                                background: '#f8fafc', 
+                                                                                                borderRadius: '8px', 
+                                                                                                color: '#475569', 
+                                                                                                fontSize: '13px', 
+                                                                                                fontWeight: '600', 
+                                                                                                display: 'flex', 
+                                                                                                alignItems: 'center', 
+                                                                                                whiteSpace: 'nowrap', 
+                                                                                                overflow: 'hidden', 
+                                                                                                textOverflow: 'ellipsis' 
+                                                                                            }}
+                                                                                        >
+                                                                                            🚌 {vehicleNameToDisplay}
+                                                                                        </div>
 
                                                                                         {/* Select HDV */}
                                                                                         <select 
