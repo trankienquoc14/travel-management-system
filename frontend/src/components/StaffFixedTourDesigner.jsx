@@ -2,11 +2,34 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TimelineBuilder from './TourBuilder/TimelineBuilder';
-// Nếu utils không tồn tại hàm formatMoney, ta định nghĩa lại:
 export const formatMoneyLocal = (amount) => {
     if (isNaN(amount) || amount === null || amount === undefined) return '0';
     return Number(amount).toLocaleString('vi-VN');
 };
+
+export const getInitialCostConfig = () => ({
+    minimumPax: 15,
+    margin: 20,
+    fixed: { transport: 0, guidePerDay: 500000, otherFixed: 0 },
+    variable: { 
+        transportTicket: 0, 
+        accommPerNight: 0, 
+        singleSupplement: 0, 
+        breakfast: 0, 
+        lunch: 0, 
+        dinner: 0, 
+        tickets: 0, 
+        insurance: 50000 
+    },
+    ageMultiplier: { 
+        child: { percent: 75, fixed_surcharge: 0 }, 
+        toddler: { percent: 50, fixed_surcharge: 0 },
+        infant: { percent: 0, fixed_surcharge: 500000 },
+        preset: 'custom'
+    },
+    selectedTransport: null,
+    transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
+});
 
 const StaffFixedTourDesigner = ({ editTourData }) => {
     const [tours, setTours] = useState([]);
@@ -18,6 +41,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
         tour_id: null,
         tour_name: '',
         description: '',
+        destination: '',
         image: null,
         image_url: '', categories: [], highlights: '' });
 
@@ -30,20 +54,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
     ]);
 
     // Costing State
-    const [costConfig, setCostConfig] = useState({
-        minimumPax: 15,
-        margin: 20,
-        fixed: { transport: 0, guidePerDay: 500000, otherFixed: 0 },
-        variable: { accommPerNight: 0, singleSupplement: 0, breakfast: 0, lunch: 0, dinner: 0, tickets: 0, insurance: 0 },
-        ageMultiplier: { 
-            child: { percent: 75, fixed_surcharge: 0 }, 
-            toddler: { percent: 50, fixed_surcharge: 0 },
-            infant: { percent: 0, fixed_surcharge: 500000 },
-            preset: 'custom'
-        },
-        selectedTransport: null,
-        transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
-    });
+    const [costConfig, setCostConfig] = useState(getInitialCostConfig());
 
     // Resources
     const [destinations, setDestinations] = useState([]);
@@ -118,23 +129,28 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
     const countLunch = costConfig.variable.countLunch !== undefined && costConfig.variable.countLunch !== '' ? Number(costConfig.variable.countLunch) : defaultLunch;
     const countDinner = costConfig.variable.countDinner !== undefined && costConfig.variable.countDinner !== '' ? Number(costConfig.variable.countDinner) : defaultDinner;
 
-    // Pricing Math
-    const totalFixed = Number(costConfig.fixed.transport) + (Number(costConfig.fixed.guidePerDay) * totalDays) + Number(costConfig.fixed.otherFixed);
-    const fixedPerPax = costConfig.minimumPax > 0 ? totalFixed / costConfig.minimumPax : 0;
-    
+    // Pricing & Break-Even Math
+    const totalFixed = Number(costConfig.fixed.transport || 0) + (Number(costConfig.fixed.guidePerDay || 0) * totalDays) + Number(costConfig.fixed.otherFixed || 0);
+    const targetMinPax = Math.max(1, Number(costConfig.minimumPax || 1));
+    const fixedPerPax = targetMinPax > 0 ? totalFixed / targetMinPax : 0;
     
     const finalTicketsCost = autoTicketsCost;
 
     const totalVariable = (autoAccommodationCost / 2) 
         + Number(costConfig.variable.transportTicket || 0)
-        + (Number(costConfig.variable.breakfast) * countBreakfast)
-        + (Number(costConfig.variable.lunch) * countLunch)
-        + (Number(costConfig.variable.dinner) * countDinner)
+        + (Number(costConfig.variable.breakfast || 0) * countBreakfast)
+        + (Number(costConfig.variable.lunch || 0) * countLunch)
+        + (Number(costConfig.variable.dinner || 0) * countDinner)
         + finalTicketsCost 
-        + Number(costConfig.variable.insurance);
+        + Number(costConfig.variable.insurance || 0);
         
     const netCost = fixedPerPax + totalVariable;
-    const sellingPrice = netCost * (1 + Number(costConfig.margin) / 100);
+    const sellingPrice = netCost * (1 + Number(costConfig.margin || 0) / 100);
+
+    const contributionMargin = sellingPrice - totalVariable;
+    const calculatedBreakEvenPax = (totalFixed > 0 && contributionMargin > 0)
+        ? Math.ceil(totalFixed / contributionMargin)
+        : (totalFixed === 0 ? 0 : Infinity);
 
     useEffect(() => {
         if (costConfig.selectedTransport) {
@@ -173,16 +189,59 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
 
     const handleSave = async () => {
         if (!formData.tour_name) return alert("Vui lòng nhập tên Tour!");
+        if (Number(costConfig.minimumPax || 0) < 1) {
+            return alert("⚠️ Số khách tối thiểu (Điểm hòa vốn) phải từ 1 khách trở lên!");
+        }
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const design_data = JSON.stringify({ days, costConfig, computed: { netCost, sellingPrice, totalDays, totalNights, totalMeals: { breakfast: countBreakfast, lunch: countLunch, dinner: countDinner }, autoTicketsCost }, categories: formData.categories, highlights: formData.highlights });
+            const design_data = JSON.stringify({ 
+                days, 
+                costConfig, 
+                computed: { 
+                    netCost, 
+                    sellingPrice, 
+                    totalDays, 
+                    totalNights, 
+                    totalMeals: { breakfast: countBreakfast, lunch: countLunch, dinner: countDinner }, 
+                    autoTicketsCost,
+                    breakEvenPax: isFinite(calculatedBreakEvenPax) ? calculatedBreakEvenPax : null,
+                    totalFixed,
+                    totalVariable
+                }, 
+                categories: formData.categories, 
+                highlights: formData.highlights 
+            });
             
+            let resolvedDestName = formData.destination ? formData.destination.trim() : '';
+            
+            // If destination is empty or placeholder, attempt to resolve from day 1 route IDs
+            if (!resolvedDestName || resolvedDestName === 'Multi-Destination' || resolvedDestName === 'Nhiều điểm đến') {
+                const rawDestId = days[0]?.end_destination_id || days[0]?.start_destination_id;
+                if (rawDestId) {
+                    const destObj = destinations.find(x => String(x.destination_id) === String(rawDestId));
+                    if (destObj) {
+                        resolvedDestName = destObj.destination_name;
+                    } else if (typeof rawDestId === 'string' && isNaN(Number(rawDestId))) {
+                        resolvedDestName = rawDestId;
+                    }
+                }
+            }
+
+            // Fallback to existing tour destination if editing
+            if ((!resolvedDestName || resolvedDestName === 'Multi-Destination' || resolvedDestName === 'Nhiều điểm đến') && editTourData?.destination) {
+                resolvedDestName = editTourData.destination;
+            }
+
+            // Fallback default if still empty
+            if (!resolvedDestName) {
+                resolvedDestName = 'Chưa phân loại';
+            }
+
             const data = new FormData();
             data.append('tour_name', formData.tour_name);
             data.append('description', formData.description);
-            // Default destination to first day's end destination or generic
-            data.append('destination', days[0]?.end_destination_id || 'Multi-Destination');
+            data.append('destination', resolvedDestName);
             data.append('duration_days', totalDays);
             data.append('base_cost', netCost);
             data.append('base_price', sellingPrice);
@@ -240,8 +299,12 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                     tour_id: tourData.tour_id,
                     tour_name: tourData.tour_name,
                     description: tourData.description,
+                    destination: tourData.destination || '',
                     image: null,
-                    image_url: tourData.image_url, categories: [], highlights: '' });
+                    image_url: tourData.image_url, 
+                    categories: [], 
+                    highlights: '' 
+                });
                 try {
                     const parsed = typeof tourData.design_data === 'string' ? JSON.parse(tourData.design_data) : tourData.design_data;
                     if (parsed && parsed.dayImages) setDayImagePreviews(parsed.dayImages);
@@ -298,22 +361,22 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                                     preset: 'custom'
                                 };
                             } else if (!parsedAgeMult.child) {
-                                parsedAgeMult = {
-                                    child: { percent: 75, fixed_surcharge: 0 },
-                                    toddler: { percent: 50, fixed_surcharge: 0 },
-                                    infant: { percent: 0, fixed_surcharge: 500000 },
-                                    preset: 'custom'
-                                };
+                                parsedAgeMult = getInitialCostConfig().ageMultiplier;
                             }
                             
-                            setCostConfig(prev => ({
-                                ...prev,
+                            const baseConfig = getInitialCostConfig();
+                            const loadedMinPax = Math.max(1, Number(parsed.costConfig?.minimumPax || 1));
+                            setCostConfig({
+                                ...baseConfig,
                                 ...parsed.costConfig,
-                                fixed: { ...(prev.fixed || {}), ...(parsed.costConfig.fixed || {}) },
-                                variable: { ...(prev.variable || {}), ...(parsed.costConfig.variable || {}) },
-                                ageMultiplier: { ...(prev.ageMultiplier || {}), ...parsedAgeMult },
-                                transportTimes: { ...(prev.transportTimes || {}), ...(parsed.costConfig.transportTimes || {}) }
-                            }));
+                                minimumPax: loadedMinPax,
+                                fixed: { ...baseConfig.fixed, ...(parsed.costConfig.fixed || {}) },
+                                variable: { ...baseConfig.variable, ...(parsed.costConfig.variable || {}) },
+                                ageMultiplier: { ...baseConfig.ageMultiplier, ...parsedAgeMult },
+                                transportTimes: { ...baseConfig.transportTimes, ...(parsed.costConfig.transportTimes || {}) }
+                            });
+                        } else {
+                            setCostConfig(getInitialCostConfig());
                         }
                     } catch (e) { console.error("JSON parse error:", e); }
                 }
@@ -342,7 +405,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                 if (destObj) {
                     destName = destObj.destination_name;
                 } else {
-                    destName = String(tour.destination);
+                    destName = String(tour.destination).trim();
                     if (destName === 'Multi-Destination') destName = 'Nhiều điểm đến';
                 }
             }
@@ -356,6 +419,12 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                     }
                 } catch(e){}
             }
+
+            if (destName.includes('-') && !destName.startsWith('Bà Rịa')) {
+                const parts = destName.split('-').map(s => s.trim());
+                if (parts[0]) destName = parts[0];
+            }
+
             return destName;
         };
 
@@ -386,11 +455,11 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                         )}
                     </div>
                     <button onClick={() => { 
-                        setFormData({ tour_id: null, tour_name: '', description: '', image: null, image_url: '', categories: [], highlights: '' });
+                        setFormData({ tour_id: null, tour_name: '', description: '', destination: '', image: null, image_url: '', categories: [], highlights: '' });
                         setDays([{ dayIndex: 1, start_destination_id: '', end_destination_id: '', route_title: '', activities: [], accommodation: null, transportTimes: { departureTime: '', returnTime: '' } }]);
                         setDayImages({});
                         setDayImagePreviews({});
-                        setCostConfig({ minimumPax: 15, margin: 20, selectedTransport: null, transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }, fixed: { transport: 0, guidePerDay: 500000, otherFixed: 0 }, variable: { transportTicket: 0, accommPerNight: 0, singleSupplement: 0, breakfast: 200000, lunch: 200000, dinner: 200000, tickets: 0, insurance: 0 }, ageMultiplier: { child: 75, infant: 25 } });
+                        setCostConfig(getInitialCostConfig());
                         setIsEditing(true);
                     }} style={{ padding: '10px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Tạo Tour Mới</button>
                 </div>
@@ -452,9 +521,20 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                 <div style={{ display: 'flex', gap: '20px' }}>
                     {/* Cột trái: Văn bản (70%) */}
                     <div style={{ flex: '7', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Tên Tour</label>
-                            <input value={formData.tour_name} onChange={e => setFormData({...formData, tour_name: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Tên Tour</label>
+                                <input value={formData.tour_name} onChange={e => setFormData({...formData, tour_name: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Điểm Đến Chính</label>
+                                <input 
+                                    value={formData.destination || ''} 
+                                    onChange={e => setFormData({...formData, destination: e.target.value})} 
+                                    placeholder="Ví dụ: Bà Rịa - Vũng Tàu, Hồ Tràm, Đà Lạt, Phú Quốc..."
+                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
+                                />
+                            </div>
                         </div>
                         
                         <div>
@@ -580,7 +660,13 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Điểm hòa vốn</label>
-                                <input type="number" value={costConfig.minimumPax} onChange={e => setCostConfig({...costConfig, minimumPax: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    value={costConfig.minimumPax} 
+                                    onChange={e => setCostConfig({...costConfig, minimumPax: e.target.value})} 
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} 
+                                />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chi phí Xe / Phương tiện</label>

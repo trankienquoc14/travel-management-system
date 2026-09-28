@@ -1,13 +1,30 @@
 const sequelize = require('../config/database');
 const Tour = require('../models/Tour');
 
+// Tự động kiểm tra và chuyển trạng thái đợt khởi hành hết hạn / quá ngày về CLOSED
+const syncExpiredDeparturesStatus = async (transaction = null) => {
+  try {
+    const opts = transaction ? { transaction } : {};
+    await sequelize.query(`
+      UPDATE departures 
+      SET status = 'Closed' 
+      WHERE (return_date < CURDATE() OR (available_slots <= 0 AND departure_date <= CURDATE()))
+        AND status = 'Open'
+    `, opts);
+  } catch (error) {
+    console.error("Auto sync departures status error:", error);
+  }
+};
+exports.syncExpiredDeparturesStatus = syncExpiredDeparturesStatus;
+
 // =====================================================================
-// NHÄ‚â€œM 1: CÄ‚Â C HÄ‚â‚¬M CĂ…Â¨ Ă„Â ANG CHĂ¡ÂºÂ Y (GIĂ¡Â»Â® NGUYÄ‚ÂŠN 100% Ă„Â Ă¡Â»â€š KHÄ‚â€ NG GÄ‚Æ’Y CODE)
+// NHÓM 1: CÁC HÀM CŨ ĐANG CHẠY (GIỮ NGUYÊN 100% ĐỂ KHÔNG GÂY CODE)
 // =====================================================================
 
 // Lấy danh sách tour mở bán cho khách hàng
 exports.getAllTours = async (req, res) => {
   try {
+    await syncExpiredDeparturesStatus();
     const tours = await Tour.findAll({ where: { status: 'Active', is_custom: 0 } });
     res.status(200).json({ success: true, data: tours });
   } catch (error) {
@@ -15,15 +32,16 @@ exports.getAllTours = async (req, res) => {
   }
 };
 
-// LĂ¡ÂºÂ¥y chi tiĂ¡ÂºÂ¿t tour cĂ†Â¡ bĂ¡ÂºÂ£n cho khÄ‚Â¡ch
+// Lấy chi tiết tour cơ bản cho khách
 exports.getTourById = async (req, res) => {
   try {
+    await syncExpiredDeparturesStatus();
     const tourId = req.params.id;
     const [tour] = await sequelize.query(`SELECT * FROM tours WHERE tour_id = ${tourId}`);
-    if (!tour.length) return res.status(404).json({ success: false, message: 'KhÄ‚Â´ng tÄ‚Â¬m thĂ¡ÂºÂ¥y tour' });
+    if (!tour.length) return res.status(404).json({ success: false, message: 'Không tìm thấy tour' });
 
     const [itineraries] = await sequelize.query(`SELECT * FROM itineraries WHERE tour_id = ${tourId} ORDER BY day_number ASC`);
-    const [departures] = await sequelize.query(`SELECT * FROM departures WHERE tour_id = ${tourId} AND status = 'Open' AND available_slots > 0 ORDER BY departure_date ASC`);
+    const [departures] = await sequelize.query(`SELECT * FROM departures WHERE tour_id = ${tourId} AND status = 'Open' AND available_slots > 0 AND return_date >= CURDATE() ORDER BY departure_date ASC`);
 
     res.status(200).json({ success: true, data: { ...tour[0], itineraries, departures } });
   } catch (error) {
@@ -143,12 +161,13 @@ exports.updateIncidentStatus = async (req, res) => {
 // NHÄ‚â€œM 2: CÄ‚ÂC HÄ‚â‚¬M MĂ¡Â»ÂI NÄ‚â€NG CĂ¡ÂºÂ¤P (VĂ¡ÂºÂ¬N HÄ‚â‚¬NH & Ă„ÂĂ¡Â»ÂNH GIÄ‚Â TOUR)
 // =====================================================================
 
-// [HÄ‚â‚¬M MĂ¡Â»ÂI] LĂ¡ÂºÂ¥y trĂ¡Â»Ân bĂ¡Â»â„¢ dĂ¡Â»Â¯ liĂ¡Â»â€¡u vĂ¡ÂºÂ­n hÄ‚Â nh (Tour + LĂ¡Â»â€¹ch trÄ‚Â¬nh ngÄ‚Â y + Ă„ÂiĂ¡Â»Æ’m ghÄ‚Â© thĂ„Æ’m + Ă„ÂĂ¡Â»Â£t khĂ¡Â»Å¸i hÄ‚Â nh)
+// [HÀM MỚI] Lấy trọn bộ dữ liệu vận hành (Tour + Lịch trình ngày + Điểm ghé thăm + Đợt khởi hành)
 exports.getTourOperationalDetail = async (req, res) => {
   try {
+    await syncExpiredDeparturesStatus();
     const { id } = req.params;
     const [tours] = await sequelize.query(`SELECT * FROM tours WHERE tour_id = ?`, { replacements: [id] });
-    if (tours.length === 0) return res.status(404).json({ success: false, message: 'KhÄ‚Â´ng tÄ‚Â¬m thĂ¡ÂºÂ¥y tour!' });
+    if (tours.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy tour!' });
     const tour = tours[0];
 
     const [days] = await sequelize.query(`SELECT * FROM itineraries WHERE tour_id = ? ORDER BY day_number ASC`, { replacements: [id] });
@@ -184,10 +203,11 @@ exports.getTourOperationalDetail = async (req, res) => {
   }
 };
 
-// [HÄ‚â‚¬M MĂ¡Â»ÂI] LĂ†Â°u trĂ¡Â»Ân bĂ¡Â»â„¢ Tour + LĂ¡Â»â€¹ch trÄ‚Â¬nh + Ă„ÂĂ¡Â»â€¹nh giÄ‚Â¡ (% LĂ¡Â»Â£i nhuĂ¡ÂºÂ­n) + KhĂ¡Â»Å¸i hÄ‚Â nh bĂ¡ÂºÂ±ng Transaction
+// [HÀM MỚI] Lưu trọn bộ Tour + Lịch trình + Định giá (% Lợi nhuận) + Khởi hành bằng Transaction
 exports.saveTourOperationalSchedule = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
+    await syncExpiredDeparturesStatus(transaction);
     const userId = req.user?.id || req.user?.user_id;
     let {
             tour_id, tour_name, destination, duration_days, base_price = 0,
@@ -202,7 +222,7 @@ exports.saveTourOperationalSchedule = async (req, res) => {
 
     let targetTourId = tour_id && tour_id !== 'null' ? Number(tour_id) : null;
 
-    // A. LĂ†Â¯U BĂ¡ÂºÂ¢NG TOURS (Ă„ÂÄ‚Â£ thÄ‚Âªm base_cost vÄ‚Â  markup_percent)
+    // A. LƯU BẢNG TOURS (Đã thêm base_cost và markup_percent)
     if (targetTourId) {
       await sequelize.query(`
         UPDATE tours 
@@ -217,7 +237,7 @@ exports.saveTourOperationalSchedule = async (req, res) => {
       targetTourId = insertResult;
     }
 
-    // B. LĂ†Â¯U LĂ¡Â»ÂCH TRÄ‚Å’NH VĂ¡ÂºÂ¬N HÄ‚â‚¬NH
+    // B. LƯU LỊCH TRÌNH VẬN HÀNH
     if (targetTourId) {
       const [oldItins] = await sequelize.query(`SELECT itinerary_id FROM itineraries WHERE tour_id=?`, { replacements: [targetTourId], transaction });
       for (let old of oldItins) {
@@ -228,7 +248,7 @@ exports.saveTourOperationalSchedule = async (req, res) => {
       for (let day of itineraryDays) {
         const [itinRes] = await sequelize.query(`
           INSERT INTO itineraries (tour_id, day_number, title, description) VALUES (?, ?, ?, ?)
-        `, { replacements: [targetTourId, day.day_number, day.title || `NgÄ‚Â y ${day.day_number}`, day.description || ''], transaction });
+        `, { replacements: [targetTourId, day.day_number, day.title || `Ngày ${day.day_number}`, day.description || ''], transaction });
 
         const newItinId = itinRes;
         if (day.places && day.places.length > 0) {
@@ -263,15 +283,16 @@ exports.saveTourOperationalSchedule = async (req, res) => {
       // C. LƯU ĐỢT KHỞI HÀNH & PHÂN CÔNG HƯỚNG DẪN VIÊN
       const keepDepIds = departures.map(d => d.departure_id).filter(id => id);
       if (keepDepIds.length > 0) {
-          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND departure_id NOT IN (?)`, { replacements: [targetTourId, keepDepIds], transaction });
+          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND status != 'Closed' AND status != 'Completed' AND return_date >= CURDATE() AND departure_id NOT IN (?)`, { replacements: [targetTourId, keepDepIds], transaction });
       } else {
-          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots`, { replacements: [targetTourId], transaction });
+          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND status != 'Closed' AND status != 'Completed' AND return_date >= CURDATE()`, { replacements: [targetTourId], transaction });
       }
+
+      const todayStr = new Date().toISOString().split('T')[0];
 
       for (let dep of departures) {
         let realGuideId = null;
         if (dep.guide_id) {
-          // Tìm guide_id chuẩn từ bảng guides theo user_id hoặc guide_id
           const [gRow] = await sequelize.query(`SELECT guide_id FROM guides WHERE user_id = ? OR guide_id = ? LIMIT 1`, {
             replacements: [dep.guide_id, dep.guide_id],
             transaction
@@ -288,22 +309,54 @@ exports.saveTourOperationalSchedule = async (req, res) => {
         const vehToSave = (dep.vehicle_number && String(dep.vehicle_number).trim()) ? String(dep.vehicle_number).trim() : null;
 
         if (targetDepId) {
-            const [oldDepRow] = await sequelize.query(`SELECT max_slots, available_slots FROM departures WHERE departure_id = ? LIMIT 1`, {
+            const [oldDepRow] = await sequelize.query(`SELECT departure_date, return_date, status, guide_id, driver_id, vehicle_number, max_slots, available_slots FROM departures WHERE departure_id = ? LIMIT 1`, {
               replacements: [targetDepId],
               transaction
             });
             let newMaxSlots = Number(dep.max_slots || 30);
             let newAvailSlots = newMaxSlots;
+
             if (oldDepRow.length > 0) {
-              const oldMax = Number(oldDepRow[0].max_slots || 30);
-              const oldAvail = Number(oldDepRow[0].available_slots || 30);
+              const oldDep = oldDepRow[0];
+              const oldRetStr = oldDep.return_date ? String(oldDep.return_date).substring(0, 10) : '';
+              const isOldPast = oldRetStr ? oldRetStr < todayStr : false;
+              const isOldClosed = oldDep.status === 'Closed' || oldDep.status === 'Completed' || isOldPast;
+
+              if (isOldClosed) {
+                const oldGuide = oldDep.guide_id ? Number(oldDep.guide_id) : null;
+                const oldDriver = oldDep.driver_id ? Number(oldDep.driver_id) : null;
+                const oldVeh = oldDep.vehicle_number ? String(oldDep.vehicle_number).trim() : null;
+                const oldDepDate = oldDep.departure_date ? String(oldDep.departure_date).substring(0, 10) : '';
+                const newDepDate = dep.departure_date ? String(dep.departure_date).substring(0, 10) : '';
+                const newRetDate = dep.return_date ? String(dep.return_date).substring(0, 10) : '';
+
+                if (
+                  gIdToSave !== oldGuide ||
+                  dIdToSave !== oldDriver ||
+                  vehToSave !== oldVeh ||
+                  (newDepDate && oldDepDate && newDepDate !== oldDepDate) ||
+                  (newRetDate && oldRetStr && newRetDate !== oldRetStr)
+                ) {
+                  await transaction.rollback();
+                  return res.status(400).json({
+                    success: false,
+                    message: `⚠️ Đợt khởi hành #${targetDepId} đã kết thúc hoặc ở trạng thái KHÓA (CLOSED). Không thể phân công HDV/Tài xế mới hoặc thay đổi lịch vận hành!`
+                  });
+                }
+              }
+
+              const oldMax = Number(oldDep.max_slots || 30);
+              const oldAvail = Number(oldDep.available_slots || 30);
               const booked = Math.max(0, oldMax - oldAvail);
               newAvailSlots = Math.max(0, newMaxSlots - booked);
             }
 
+            const isPastDep = dep.return_date && String(dep.return_date).substring(0, 10) < todayStr;
+            const depStatus = isPastDep ? 'Closed' : (dep.status || 'Open');
+
             await sequelize.query(`
               UPDATE departures 
-              SET departure_date=?, return_date=?, max_slots=?, available_slots=?, guide_id=?, driver_id=?, vehicle_number=? 
+              SET departure_date=?, return_date=?, max_slots=?, available_slots=?, guide_id=?, driver_id=?, vehicle_number=?, status=?
               WHERE departure_id=?
             `, { replacements: [
                 dep.departure_date, 
@@ -313,9 +366,18 @@ exports.saveTourOperationalSchedule = async (req, res) => {
                 gIdToSave, 
                 dIdToSave, 
                 vehToSave, 
+                depStatus,
                 targetDepId
               ], transaction });
         } else {
+            if ((dep.departure_date && String(dep.departure_date).substring(0, 10) < todayStr) || (dep.return_date && String(dep.return_date).substring(0, 10) < todayStr)) {
+              await transaction.rollback();
+              return res.status(400).json({
+                success: false,
+                message: `⚠️ Không thể tạo đợt khởi hành mới ở ngày quá khứ (${dep.departure_date}).`
+              });
+            }
+
             const [insRes] = await sequelize.query(`
               INSERT INTO departures (tour_id, departure_date, return_date, max_slots, available_slots, status, guide_id, driver_id, vehicle_number)
               VALUES (?, ?, ?, ?, ?, 'Open', ?, ?, ?)
@@ -379,9 +441,19 @@ exports.saveFixedTourDesign = async (req, res) => {
         const userId = req.user?.id || req.user?.user_id;
 
         let {
-            tour_id, tour_name, destination, duration_days, base_price, description,
+            tour_id, tour_name = '', destination = '', duration_days = 1, base_price = 0, description = '',
             status = 'Pending', base_cost = 0, markup_percent = 20, design_data = null
         } = req.body;
+
+        description = description || '';
+        destination = destination || 'Chưa phân loại';
+
+        if (destination && !isNaN(Number(destination))) {
+            const [destRows] = await sequelize.query(`SELECT destination_name FROM destinations WHERE destination_id = ?`, { replacements: [Number(destination)], transaction });
+            if (destRows.length > 0) {
+                destination = destRows[0].destination_name;
+            }
+        }
 
         const itineraryDays = req.body.itineraryDays ? JSON.parse(req.body.itineraryDays) : [];
         let targetTourId = tour_id && tour_id !== 'null' ? Number(tour_id) : null;
@@ -613,7 +685,7 @@ exports.getGuideSchedule = async (req, res) => {
     try {
         const [departures] = await sequelize.query(`
             SELECT 
-                d.departure_id, d.tour_id, d.departure_date, d.return_date, d.guide_id,
+                d.departure_id, d.tour_id, d.departure_date, d.return_date, d.guide_id, d.driver_id, d.vehicle_number,
                 t.tour_name, t.is_custom 
             FROM departures d
             JOIN tours t ON d.tour_id = t.tour_id
@@ -625,6 +697,28 @@ exports.getGuideSchedule = async (req, res) => {
         res.status(200).json({ success: true, data: departures });
     } catch (error) {
         console.error("Lỗi lấy lịch chạy HDV:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getVehicles = async (req, res) => {
+    try {
+        const [vehicles] = await sequelize.query(`
+            SELECT 
+                s.service_id,
+                s.service_name,
+                s.service_type,
+                s.capacity,
+                s.status,
+                COALESCE(p.partner_name, 'Nội bộ') as partner_name
+            FROM services s
+            LEFT JOIN partners p ON s.partner_id = p.partner_id
+            WHERE s.service_type = 'Xe vận chuyển' AND (s.status = 'Active' OR s.status IS NULL)
+            ORDER BY s.capacity ASC, s.service_name ASC
+        `);
+        res.status(200).json({ success: true, data: vehicles });
+    } catch (error) {
+        console.error("Lỗi lấy danh sách Xe hệ thống:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

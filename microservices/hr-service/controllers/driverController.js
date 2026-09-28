@@ -1,5 +1,18 @@
 const sequelize = require('../config/database');
 
+const syncExpiredDeparturesStatus = async () => {
+  try {
+    await sequelize.query(`
+      UPDATE departures 
+      SET status = 'Closed' 
+      WHERE (return_date < CURDATE() OR (available_slots <= 0 AND departure_date <= CURDATE()))
+        AND status = 'Open'
+    `);
+  } catch (e) {
+    console.error("Auto sync departures status error:", e);
+  }
+};
+
 // Lấy danh sách tất cả Tài xế trong hệ thống (dành cho bộ lọc Quản lý / Admin)
 exports.getAllDriversList = async (req, res) => {
   try {
@@ -23,6 +36,7 @@ exports.getAllDriversList = async (req, res) => {
 // Lấy danh sách chuyến xe được phân công cho Tài xế
 exports.getAssignedTrips = async (req, res) => {
   try {
+    await syncExpiredDeparturesStatus();
     const userId = req.user?.user_id || req.user?.id;
     const userRole = req.user?.role_id || req.user?.role;
     const requestedDriverId = req.query.driver_id;
@@ -192,6 +206,13 @@ exports.updateTripStatus = async (req, res) => {
 
     if (!['Open', 'Closed', 'Completed'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
+    }
+
+    const [depRow] = await sequelize.query(`SELECT return_date FROM departures WHERE departure_id = ?`, { replacements: [departureId] });
+    if (depRow.length > 0 && depRow[0].return_date && new Date(depRow[0].return_date) < new Date(new Date().setHours(0,0,0,0))) {
+      if (status === 'Open') {
+        return res.status(400).json({ success: false, message: 'Chuyến xe này đã quá ngày kết thúc (CLOSED). Không thể mở lại!' });
+      }
     }
 
     await sequelize.query(`

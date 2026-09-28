@@ -22,6 +22,7 @@ router.get('/all-guides', protect, guideController.getAllGuidesList);
 router.get('/work', protect, guideController.getAssignedWork);
 router.get('/departures/:departureId/passengers', protect, guideController.getDeparturePassengers);
 router.post('/passengers/:passengerId/checkin', protect, guideController.checkinPassenger);
+router.post('/passengers/qr-checkin', protect, guideController.qrCheckinPassenger);
 router.put('/departures/:departureId/status', protect, guideController.updateDepartureStatus);
 
 // Hỗ trợ upload ảnh báo cáo sự cố

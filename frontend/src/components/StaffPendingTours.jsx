@@ -62,6 +62,76 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
 
     // 3. State cho Modal xem chi tiết Tour Cố Định
     const [viewingFixedTour, setViewingFixedTour] = useState(null);
+    const [destinations, setDestinations] = useState([]);
+
+    const getDestName = (id, dayObj, isEnd = false, mainTour = null) => {
+        if (id !== undefined && id !== null && id !== '') {
+            const dest = destinations.find(x => String(x.destination_id) === String(id));
+            if (dest) return dest.destination_name;
+            if (typeof id === 'string' && isNaN(Number(id))) return id;
+        }
+        if (dayObj) {
+            const targetVal = isEnd 
+                ? (dayObj.end_destination_id || dayObj.end_destination || dayObj.end_location)
+                : (dayObj.start_destination_id || dayObj.start_destination || dayObj.start_location);
+            if (targetVal !== undefined && targetVal !== null && targetVal !== '') {
+                const dest = destinations.find(x => String(x.destination_id) === String(targetVal));
+                if (dest) return dest.destination_name;
+                if (typeof targetVal === 'string' && isNaN(Number(targetVal))) return targetVal;
+            }
+            if (dayObj.route_title && typeof dayObj.route_title === 'string') {
+                const cleanTitle = dayObj.route_title.replace(/^NGÀY\s*\d+\s*[-:]?\s*/i, '').trim();
+                if (cleanTitle.includes('-')) {
+                    const parts = cleanTitle.split('-').map(s => s.trim());
+                    if (!isEnd && parts[0]) return parts[0];
+                    if (isEnd && parts[parts.length - 1]) return parts[parts.length - 1];
+                }
+            }
+        }
+        if (mainTour) {
+            if (!isEnd && (mainTour.start_destination || mainTour.start_location || mainTour.departure_location)) {
+                return mainTour.start_destination || mainTour.start_location || mainTour.departure_location;
+            }
+            if (isEnd && (mainTour.destination || mainTour.destination_name || mainTour.end_destination)) {
+                return mainTour.destination || mainTour.destination_name || mainTour.end_destination;
+            }
+        }
+        return isEnd ? 'Điểm đến' : 'Điểm xuất phát';
+    };
+
+    const getTransportName = (costCfg, parsedDsg, tourObj) => {
+        const st = costCfg?.selectedTransport;
+        if (st) {
+            if (typeof st === 'string') return st;
+            if (typeof st === 'object') {
+                const name = st.service_name || st.name || st.title || st.label || st.vehicle_type || st.provider_name;
+                if (name) return name;
+            }
+        }
+        if (parsedDsg?.fixedServices?.transport && Array.isArray(parsedDsg.fixedServices.transport)) {
+            const ft = parsedDsg.fixedServices.transport[0];
+            if (ft) {
+                if (typeof ft === 'string') return ft;
+                if (typeof ft === 'object') {
+                    const name = ft.service_name || ft.name || ft.title;
+                    if (name) return name;
+                }
+            }
+        }
+        if (parsedDsg?.days && Array.isArray(parsedDsg.days)) {
+            for (const day of parsedDsg.days) {
+                if (day.activities && Array.isArray(day.activities)) {
+                    const tAct = day.activities.find(a => a.type === 'Transport' || a.activity_type === 'Transport' || (a.name && (a.name.includes('Di chuyển') || a.name.includes('Xe'))));
+                    if (tAct && tAct.name) return tAct.name;
+                }
+            }
+        }
+        if (tourObj) {
+            const tName = tourObj.transport_name || tourObj.transport || tourObj.vehicle_name || tourObj.vehicle_type;
+            if (tName) return tName;
+        }
+        return 'Xe du lịch chất lượng cao';
+    };
 
     useEffect(() => {
         fetchData();
@@ -72,11 +142,16 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
             setLoading(true);
             const token = localStorage.getItem('token');
 
-            // Gọi song song 2 API lấy dữ liệu
-            const [resCustom, resFixed] = await Promise.all([
+            // Gọi song song 3 API lấy dữ liệu
+            const [resCustom, resFixed, resDest] = await Promise.all([
                 axios.get('http://localhost:5000/api/custom-tours/requests', { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get('http://localhost:5000/api/staff/tours', { headers: { Authorization: `Bearer ${token}` } })
+                axios.get('http://localhost:5000/api/staff/tours', { headers: { Authorization: `Bearer ${token}` } }),
+                axios.get('http://localhost:5000/api/destinations').catch(() => ({ data: { data: [] } }))
             ]);
+
+            if (resDest?.data?.data) {
+                setDestinations(resDest.data.data);
+            }
 
             // Xử lý Tour Thiết kế riêng
             if (resCustom.data.success) {
@@ -451,6 +526,84 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                     
                                     const formatMoney = (val) => new Intl.NumberFormat('vi-VN').format(Math.round(val || 0));
 
+                                    const getDestName = (id, dayObj, isEnd = false, mainTour = null) => {
+                                        if (id !== undefined && id !== null && id !== '') {
+                                            const dest = destinations.find(x => String(x.destination_id) === String(id));
+                                            if (dest) return dest.destination_name;
+                                            if (typeof id === 'string' && isNaN(Number(id))) return id;
+                                        }
+                                        if (dayObj) {
+                                            const targetVal = isEnd 
+                                                ? (dayObj.end_destination_id || dayObj.end_destination || dayObj.end_location)
+                                                : (dayObj.start_destination_id || dayObj.start_destination || dayObj.start_location);
+                                            if (targetVal !== undefined && targetVal !== null && targetVal !== '') {
+                                                const dest = destinations.find(x => String(x.destination_id) === String(targetVal));
+                                                if (dest) return dest.destination_name;
+                                                if (typeof targetVal === 'string' && isNaN(Number(targetVal))) return targetVal;
+                                            }
+                                            if (dayObj.route_title && typeof dayObj.route_title === 'string') {
+                                                const cleanTitle = dayObj.route_title.replace(/^NGÀY\s*\d+\s*[-:]?\s*/i, '').trim();
+                                                if (cleanTitle.includes('-')) {
+                                                    const parts = cleanTitle.split('-').map(s => s.trim());
+                                                    if (!isEnd && parts[0]) return parts[0];
+                                                    if (isEnd && parts[parts.length - 1]) return parts[parts.length - 1];
+                                                }
+                                            }
+                                        }
+                                        if (mainTour) {
+                                            if (!isEnd && (mainTour.start_destination || mainTour.start_location || mainTour.departure_location)) {
+                                                return mainTour.start_destination || mainTour.start_location || mainTour.departure_location;
+                                            }
+                                            if (isEnd && (mainTour.destination || mainTour.destination_name || mainTour.end_destination)) {
+                                                return mainTour.destination || mainTour.destination_name || mainTour.end_destination;
+                                            }
+                                        }
+                                        return isEnd ? 'Điểm đến' : 'Điểm xuất phát';
+                                    };
+
+                                    const getTransportName = (costCfg, parsedDsg, tourObj) => {
+                                        const st = costCfg?.selectedTransport;
+                                        if (st) {
+                                            if (typeof st === 'string') return st;
+                                            if (typeof st === 'object') {
+                                                const name = st.service_name || st.name || st.title || st.label || st.vehicle_type || st.provider_name;
+                                                if (name) return name;
+                                            }
+                                        }
+                                        if (parsedDsg?.fixedServices?.transport && Array.isArray(parsedDsg.fixedServices.transport)) {
+                                            const ft = parsedDsg.fixedServices.transport[0];
+                                            if (ft) {
+                                                if (typeof ft === 'string') return ft;
+                                                if (typeof ft === 'object') {
+                                                    const name = ft.service_name || ft.name || ft.title;
+                                                    if (name) return name;
+                                                }
+                                            }
+                                        }
+                                        if (parsedDsg?.days && Array.isArray(parsedDsg.days)) {
+                                            for (const day of parsedDsg.days) {
+                                                if (day.activities && Array.isArray(day.activities)) {
+                                                    const tAct = day.activities.find(a => a.type === 'Transport' || a.activity_type === 'Transport' || (a.name && (a.name.includes('Di chuyển') || a.name.includes('Xe'))));
+                                                    if (tAct && tAct.name) return tAct.name;
+                                                }
+                                            }
+                                        }
+                                        if (tourObj) {
+                                            const tName = tourObj.transport_name || tourObj.transport || tourObj.vehicle_name || tourObj.vehicle_type;
+                                            if (tName) return tName;
+                                        }
+                                        return 'Xe du lịch chất lượng cao';
+                                    };
+
+                                    const firstDay = days[0] || {};
+                                    const lastDay = days[days.length - 1] || {};
+                                    const startDay1 = getDestName(firstDay.start_destination_id, firstDay, false, viewingFixedTour);
+                                    const endDay1 = getDestName(firstDay.end_destination_id, firstDay, true, viewingFixedTour);
+                                    let startLastDay = getDestName(lastDay.start_destination_id, lastDay, false, viewingFixedTour);
+                                    let endLastDay = getDestName(lastDay.end_destination_id, lastDay, true, viewingFixedTour);
+                                    if (startLastDay === 'Điểm xuất phát' && endDay1 && endDay1 !== 'Điểm đến') startLastDay = endDay1;
+                                    if (endLastDay === 'Điểm đến' && startDay1 && startDay1 !== 'Điểm xuất phát') endLastDay = startDay1;
+
                                     return (
                                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
                                             {/* CỘT TRÁI: LỊCH TRÌNH CHI TIẾT */}
@@ -502,7 +655,7 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                                 
                                                                 {/* Block Phương tiện CHI TIẾT */}
                                                                 <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                                                    <strong style={{ fontSize: '14px', color: '#1e293b', display: 'block', marginBottom: '12px' }}>🚗 Phương tiện di chuyển chính: {costConfig.selectedTransport ? costConfig.selectedTransport.name : 'Chưa chọn'}</strong>
+                                                                    <strong style={{ fontSize: '14px', color: '#1e293b', display: 'block', marginBottom: '12px' }}>🚗 Phương tiện di chuyển chính: {getTransportName(costConfig, parsedDesign, viewingFixedTour)}</strong>
                                                                     
                                                                     {costConfig.transportTimes && (
                                                                         <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
@@ -513,9 +666,9 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                                                                     <div style={{ flex: 1, height: '1px', background: '#cbd5e1', position: 'relative' }}><div style={{ position: 'absolute', right: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div><div style={{ position: 'absolute', left: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div></div>
                                                                                     <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endD || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                                                 </div>
-                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569' }}>
-                                                                                    <span>Điểm xuất phát</span>
-                                                                                    <span>Điểm đến</span>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
+                                                                                    <span>{startDay1}</span>
+                                                                                    <span>{endDay1}</span>
                                                                                 </div>
                                                                             </div>
                                                                             
@@ -528,9 +681,9 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                                                                     <div style={{ flex: 1, height: '1px', background: '#cbd5e1', position: 'relative' }}><div style={{ position: 'absolute', right: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div><div style={{ position: 'absolute', left: '-4px', top: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1' }}></div></div>
                                                                                     <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endR || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                                                 </div>
-                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569' }}>
-                                                                                    <span>Điểm kết thúc</span>
-                                                                                    <span>Điểm về</span>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
+                                                                                    <span>{startLastDay}</span>
+                                                                                    <span>{endLastDay}</span>
                                                                                 </div>
                                                                             </div>
                                                                         </div>

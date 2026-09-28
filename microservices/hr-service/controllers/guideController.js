@@ -1,8 +1,22 @@
 const sequelize = require('../config/database');
 
+const syncExpiredDeparturesStatus = async () => {
+  try {
+    await sequelize.query(`
+      UPDATE departures 
+      SET status = 'Closed' 
+      WHERE (return_date < CURDATE() OR (available_slots <= 0 AND departure_date <= CURDATE()))
+        AND status = 'Open'
+    `);
+  } catch (e) {
+    console.error("Auto sync departures status error:", e);
+  }
+};
+
 // 1. Lấy danh sách công việc được phân công (Tours/Departures được gán cho HDV)
 exports.getAssignedWork = async (req, res) => {
   try {
+    await syncExpiredDeparturesStatus();
     const userId = req.user.user_id;
     const userRole = req.user.role_id;
     const { guide_id } = req.query;
@@ -175,6 +189,156 @@ exports.checkinPassenger = async (req, res) => {
   }
 };
 
+// 3b. Điểm danh hành khách bằng mã QR Vé Tour (QR Code Scan Check-in)
+exports.qrCheckinPassenger = async (req, res) => {
+  try {
+    const { qr_code, departure_id } = req.body;
+    if (!qr_code) {
+      return res.status(400).json({ success: false, message: 'Thiếu mã QR Code quét được!' });
+    }
+
+    const cleanQr = String(qr_code).trim();
+    let bookingId = null;
+    let paxIndex = null;
+    let passengerId = null;
+
+    // Pattern 1: BKG-12-PAX-0 or BKG-0012-PAX-1
+    const matchBkgPax = cleanQr.match(/BKG-(\d+)-PAX-(\d+)/i);
+    if (matchBkgPax) {
+      bookingId = parseInt(matchBkgPax[1]);
+      paxIndex = parseInt(matchBkgPax[2]);
+    } else {
+      // Pattern 2: BKG-12
+      const matchBkg = cleanQr.match(/BKG-(\d+)/i);
+      if (matchBkg) {
+        bookingId = parseInt(matchBkg[1]);
+      } else {
+        // Pattern 3: PAX-45
+        const matchPax = cleanQr.match(/PAX-(\d+)/i);
+        if (matchPax) {
+          passengerId = parseInt(matchPax[1]);
+        } else if (!isNaN(Number(cleanQr))) {
+          bookingId = parseInt(cleanQr);
+        }
+      }
+    }
+
+    let targetPassenger = null;
+    let targetBookingId = bookingId;
+
+    if (bookingId !== null) {
+      // Tìm danh sách hành khách của bookingId
+      const [passList] = await sequelize.query(`
+        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, b.booking_id, b.departure_id
+        FROM bookings b
+        LEFT JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+        WHERE b.booking_id = ?
+        ORDER BY bp.passenger_id ASC
+      `, { replacements: [bookingId] });
+
+      if (passList.length === 0) {
+        return res.status(404).json({ success: false, message: `❌ Mã QR sai! Không tìm thấy mã đơn vé #${bookingId} trong hệ thống.` });
+      }
+
+      // Kiểm tra xem vé này có thuộc đoàn tour đang điểm danh hay không
+      const bookingDepId = passList[0].departure_id;
+      if (departure_id && Number(bookingDepId) !== Number(departure_id)) {
+        return res.status(400).json({
+          success: false,
+          message: `❌ Mã QR sai! Vé này thuộc Đoàn tour #${bookingDepId}, không khớp với Đoàn tour #${departure_id} đang hướng dẫn.`
+        });
+      }
+
+      if (paxIndex !== null && passList[paxIndex] && passList[paxIndex].passenger_id) {
+        targetPassenger = passList[paxIndex];
+      } else {
+        // Chọn hành khách đầu tiên chưa check in hoặc hành khách đầu tiên
+        const uncheck = passList.find(p => Number(p.is_checked_in) === 0 && p.passenger_id);
+        if (uncheck) {
+          targetPassenger = uncheck;
+        } else if (passList[0] && passList[0].passenger_id) {
+          targetPassenger = passList[0];
+        } else {
+          // Tự tạo bản ghi hành khách nếu booking chưa tạo booking_passengers
+          const [bkUser] = await sequelize.query(`
+            SELECT b.booking_id, u.full_name, u.gender, u.date_of_birth
+            FROM bookings b
+            JOIN users u ON b.customer_id = u.user_id
+            WHERE b.booking_id = ?
+          `, { replacements: [bookingId] });
+
+          if (bkUser.length > 0) {
+            const bu = bkUser[0];
+            const [insRes] = await sequelize.query(`
+              INSERT INTO booking_passengers (booking_id, full_name, gender, birth_date, identity_number, is_checked_in)
+              VALUES (?, ?, ?, ?, '—', 0)
+            `, { replacements: [bookingId, bu.full_name, bu.gender || 'Other', bu.date_of_birth || null] });
+            const newPaxId = typeof insRes === 'number' ? insRes : (insRes?.insertId || insRes);
+            targetPassenger = {
+              passenger_id: newPaxId,
+              full_name: bu.full_name,
+              is_checked_in: 0
+            };
+          }
+        }
+      }
+    } else if (passengerId !== null) {
+      const [pRow] = await sequelize.query(`
+        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, bp.booking_id, b.departure_id
+        FROM booking_passengers bp
+        JOIN bookings b ON bp.booking_id = b.booking_id
+        WHERE bp.passenger_id = ?
+      `, { replacements: [passengerId] });
+
+      if (pRow.length === 0) {
+        return res.status(404).json({ success: false, message: `❌ Mã QR sai! Không tìm thấy dữ liệu hành khách trong hệ thống.` });
+      }
+
+      const passengerDepId = pRow[0].departure_id;
+      if (departure_id && Number(passengerDepId) !== Number(departure_id)) {
+        return res.status(400).json({
+          success: false,
+          message: `❌ Mã QR sai! Vé này thuộc Đoàn tour #${passengerDepId}, không khớp với Đoàn tour #${departure_id} đang hướng dẫn.`
+        });
+      }
+
+      targetPassenger = pRow[0];
+      targetBookingId = pRow[0].booking_id;
+    }
+
+    if (!targetPassenger || !targetPassenger.passenger_id) {
+      return res.status(404).json({ success: false, message: `❌ Mã QR (${cleanQr}) không hợp lệ hoặc không tìm thấy hành khách!` });
+    }
+
+    // NẾU HÀNH KHÁCH ĐÃ ĐƯỢC ĐIỂM DANH CÓ MẶT RỒI
+    if (Number(targetPassenger.is_checked_in) === 1) {
+      return res.status(400).json({
+        success: false,
+        message: `⚠️ Hành khách "${targetPassenger.full_name}" (Vé #${targetBookingId || bookingId}) đã có mặt rồi! Vui lòng chọn/quét mã QR khác.`
+      });
+    }
+
+    // Cập nhật trạng thái điểm danh có mặt is_checked_in = 1
+    await sequelize.query(`
+      UPDATE booking_passengers SET is_checked_in = 1 WHERE passenger_id = ?
+    `, { replacements: [targetPassenger.passenger_id] });
+
+    res.status(200).json({
+      success: true,
+      message: `🎉 Điểm danh THÀNH CÔNG: ${targetPassenger.full_name} (Đơn vé #${targetBookingId || bookingId})`,
+      data: {
+        passenger_id: String(targetPassenger.passenger_id),
+        booking_id: targetBookingId || bookingId,
+        full_name: targetPassenger.full_name,
+        is_checked_in: 1
+      }
+    });
+  } catch (error) {
+    console.error("Lỗi QR Check-in:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // 4. Cập nhật trạng thái chuyến đi (Open, Closed, Completed)
 exports.updateDepartureStatus = async (req, res) => {
   try {
@@ -183,6 +347,13 @@ exports.updateDepartureStatus = async (req, res) => {
 
     if (!['Open', 'Closed', 'Completed'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Trạng thái chuyến đi không hợp lệ!' });
+    }
+
+    const [depRow] = await sequelize.query(`SELECT return_date FROM departures WHERE departure_id = ?`, { replacements: [departureId] });
+    if (depRow.length > 0 && depRow[0].return_date && new Date(depRow[0].return_date) < new Date(new Date().setHours(0,0,0,0))) {
+      if (status === 'Open') {
+        return res.status(400).json({ success: false, message: 'Chuyến đi này đã quá ngày kết thúc (CLOSED). Không thể mở lại!' });
+      }
     }
 
     await sequelize.query(`

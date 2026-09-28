@@ -979,7 +979,7 @@ const TourOperationalManager = () => {
 
                                                                             const bookedSlots = (dep.departure_id && dep.original_max_slots !== undefined && dep.original_available_slots !== undefined) ? Math.max(0, dep.original_max_slots - dep.original_available_slots) : 0;
                                                                             const hasBookings = bookedSlots > 0;
-                                                                            const isPastTour = dep.departure_id && dep.departure_date && dep.departure_date < todayStr;
+                                                                            const isPastTour = dep.status === 'Closed' || dep.status === 'Completed' || (dep.return_date && dep.return_date < todayStr) || (dep.departure_date && dep.departure_date < todayStr);
                                                                             const disableDate = activeTourTab === 'custom' || isPastTour || hasBookings;
                                                                             const disableSlot = activeTourTab === 'custom' || isPastTour;
                                                                             
@@ -1058,12 +1058,12 @@ const TourOperationalManager = () => {
                                                                             const minPax = parsedDesign?.costConfig?.minimumPax || 15;
                                                                             const vehicleNameToDisplay = parsedDesign?.costConfig?.selectedTransport?.service_name || parsedDesign?.selectedTransport?.service_name || parsedDesign?.costConfig?.selectedTransport?.name || 'Theo hợp đồng tour';
                                                                             
-                                                                            const status = dep.status || 'Open';
-                                                                            const statusBg = status === 'Open' ? '#dcfce7' : (status === 'Closed' ? '#f3f4f6' : '#111827');
-                                                                            const statusColor = status === 'Open' ? '#166534' : (status === 'Closed' ? '#4b5563' : '#f9fafb');
+                                                                            const status = isPastTour ? 'Closed' : (dep.status || 'Open');
+                                                                            const statusBg = isPastTour || status === 'Closed' ? '#fee2e2' : (status === 'Completed' ? '#111827' : '#dcfce7');
+                                                                            const statusColor = isPastTour || status === 'Closed' ? '#991b1b' : (status === 'Completed' ? '#f9fafb' : '#166534');
 
                                                                             return (
-                                                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '14px 18px', gap: '16px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', flexWrap: 'wrap' }}>
+                                                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', background: isPastTour ? '#fcfcfc' : '#fff', borderRadius: '14px', border: isPastTour ? '1px solid #cbd5e1' : '1px solid #e5e7eb', padding: '14px 18px', gap: '16px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', flexWrap: 'wrap', opacity: isPastTour ? 0.85 : 1 }}>
                                                                                     
                                                                                     {/* NGÀY ĐI & NGÀY VỀ */}
                                                                                     <div style={{ flex: '0 0 160px' }}>
@@ -1073,7 +1073,7 @@ const TourOperationalManager = () => {
                                                                                             value={dep.departure_date} 
                                                                                             onChange={e => handleDepartureDateChange(idx, e.target.value)} 
                                                                                             disabled={disableDate}
-                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi ngày" : (hasBookings ? "Tour đã có khách đặt không thể đổi ngày" : "")}
+                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) không thể đổi ngày" : (hasBookings ? "Tour đã có khách đặt không thể đổi ngày" : "")}
                                                                                             style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: disableDate ? '#f1f5f9' : '#f9fafb', width: '100%', fontFamily: 'inherit', color: disableDate ? '#9ca3af' : '#111827', fontSize: '14px', fontWeight: '600', outline: 'none', cursor: disableDate ? 'not-allowed' : 'pointer', marginBottom: '4px' }} 
                                                                                         />
                                                                                         <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
@@ -1107,7 +1107,7 @@ const TourOperationalManager = () => {
                                                                                                         setDepartures(up); 
                                                                                                     }}
                                                                                                     disabled={disableSlot} 
-                                                                                                    title={isPastTour ? "Tour trong quá khứ không thể đổi số chỗ" : ""}
+                                                                                                    title={isPastTour ? "Tour đã kết thúc (CLOSED) không thể đổi số chỗ" : ""}
                                                                                                     style={{ width: '56px', padding: '3px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: disableSlot ? '#f1f5f9' : '#fff', outline: 'none' }} 
                                                                                                 />
                                                                                                 <span style={{ color: '#64748b', fontSize: '12px', whiteSpace: 'nowrap' }}>(Hòa vốn: {minPax})</span>
@@ -1125,7 +1125,7 @@ const TourOperationalManager = () => {
                                                                                             value={dep.driver_id || ''} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].driver_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
                                                                                             disabled={isPastTour}
-                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi tài xế" : "Chọn tài xế đang rảnh trong vòng 5 ngày"}
+                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể phân công/thay đổi tài xế" : "Chọn tài xế đang rảnh trong vòng 5 ngày"}
                                                                                             style={{ flex: '1 1 150px', minWidth: '130px', padding: '8px 10px', border: dep.driver_id ? '1px solid #fed7aa' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.driver_id ? '#fff7ed' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.driver_id ? '#c2410c' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
                                                                                         >
                                                                                             <option value="" style={{ background: '#fff', color: '#111827' }}>🚗 Chưa chọn Tài xế</option>
@@ -1161,7 +1161,7 @@ const TourOperationalManager = () => {
                                                                                             value={dep.guide_id || ''} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].guide_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
                                                                                             disabled={isPastTour}
-                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi hướng dẫn viên" : ""}
+                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể phân công/thay đổi HDV" : ""}
                                                                                             style={{ flex: '1 1 150px', minWidth: '130px', padding: '8px 10px', border: dep.guide_id ? '1px solid #bae6fd' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.guide_id ? '#e0f2fe' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.guide_id ? '#0369a1' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
                                                                                         >
                                                                                             <option value="" style={{ background: '#fff', color: '#111827' }}>🚩 Chưa chọn HDV</option>
@@ -1175,15 +1175,15 @@ const TourOperationalManager = () => {
                                                                                             value={status} 
                                                                                             onChange={e => { const up = [...departures]; up[idx].status = e.target.value; setDepartures(up); }} 
                                                                                             disabled={isPastTour}
-                                                                                            title={isPastTour ? "Tour trong quá khứ không thể đổi trạng thái" : ""}
-                                                                                            style={{ width: '95px', padding: '8px 10px', border: 'none', background: isPastTour ? '#f1f5f9' : statusBg, borderRadius: '8px', color: isPastTour ? '#9ca3af' : statusColor, fontSize: '13px', fontWeight: '700', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer', textAlign: 'center' }}
+                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) - Chỉ xem lịch sử" : ""}
+                                                                                            style={{ width: '105px', padding: '8px 10px', border: 'none', background: statusBg, borderRadius: '8px', color: statusColor, fontSize: '12px', fontWeight: '800', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer', textAlign: 'center' }}
                                                                                         >
                                                                                             <option value="Open" style={{ background: '#fff', color: '#111827' }}>Mở Bán</option>
-                                                                                            <option value="Closed" style={{ background: '#fff', color: '#111827' }}>Khóa</option>
+                                                                                            <option value="Closed" style={{ background: '#fff', color: '#111827' }}>KHÓA (CLOSED)</option>
                                                                                             <option value="Completed" style={{ background: '#fff', color: '#111827' }}>Hoàn Tất</option>
                                                                                         </select>
 
-                                                                                        {activeTourTab !== 'custom' && (
+                                                                                        {activeTourTab !== 'custom' && !isPastTour && (
                                                                                             <button 
                                                                                                 onClick={() => setDepartures(departures.filter((_, i) => i !== idx))} 
                                                                                                 style={{ width: '34px', height: '34px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

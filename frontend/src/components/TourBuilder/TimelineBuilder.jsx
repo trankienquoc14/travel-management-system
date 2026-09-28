@@ -51,9 +51,52 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
             
 
             
-            {costConfig?.selectedTransport && (
+            {costConfig?.selectedTransport && (() => {
+                const getDestName = (id, dayObj, isEnd = false) => {
+                    if (id !== undefined && id !== null && id !== '') {
+                        const dest = destinations.find(x => String(x.destination_id) === String(id));
+                        if (dest) return dest.destination_name;
+                        if (typeof id === 'string' && isNaN(Number(id))) return id;
+                    }
+                    if (dayObj) {
+                        const targetVal = isEnd 
+                            ? (dayObj.end_destination_id || dayObj.end_destination || dayObj.end_location)
+                            : (dayObj.start_destination_id || dayObj.start_destination || dayObj.start_location);
+                        if (targetVal !== undefined && targetVal !== null && targetVal !== '') {
+                            const dest = destinations.find(x => String(x.destination_id) === String(targetVal));
+                            if (dest) return dest.destination_name;
+                            if (typeof targetVal === 'string' && isNaN(Number(targetVal))) return targetVal;
+                        }
+                        if (dayObj.route_title && typeof dayObj.route_title === 'string') {
+                            const cleanTitle = dayObj.route_title.replace(/^NGÀY\s*\d+\s*[-:]?\s*/i, '').trim();
+                            if (cleanTitle.includes('-')) {
+                                const parts = cleanTitle.split('-').map(s => s.trim());
+                                if (!isEnd && parts[0]) return parts[0];
+                                if (isEnd && parts[parts.length - 1]) return parts[parts.length - 1];
+                            }
+                        }
+                    }
+                    return isEnd ? 'Điểm đến' : 'Điểm xuất phát';
+                };
+
+                const transportName = typeof costConfig.selectedTransport === 'object' && costConfig.selectedTransport !== null
+                    ? (costConfig.selectedTransport.service_name || costConfig.selectedTransport.name || costConfig.selectedTransport.title || 'Phương tiện di chuyển') 
+                    : (typeof costConfig.selectedTransport === 'string' && costConfig.selectedTransport ? costConfig.selectedTransport : 'Phương tiện di chuyển');
+
+                const firstDay = days[0];
+                const lastDay = days[days.length - 1];
+                const startDay1 = getDestName(firstDay?.start_destination_id, firstDay, false);
+                const endDay1 = getDestName(firstDay?.end_destination_id, firstDay, true);
+                let startLastDay = getDestName(lastDay?.start_destination_id, lastDay, false);
+                let endLastDay = getDestName(lastDay?.end_destination_id, lastDay, true);
+                if (startLastDay === 'Điểm xuất phát' && endDay1 && endDay1 !== 'Điểm đến') startLastDay = endDay1;
+                if (endLastDay === 'Điểm đến' && startDay1 && startDay1 !== 'Điểm xuất phát') endLastDay = startDay1;
+
+                return (
                 <div style={{ marginBottom: '25px', padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#1e293b', marginBottom: '15px', fontSize: '16px' }}>Phương tiện di chuyển chính: {costConfig.selectedTransport.name}</div>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#1e293b', marginBottom: '15px', fontSize: '16px' }}>
+                        Phương tiện di chuyển chính: {transportName}
+                    </div>
                     
                     <div style={{ display: 'flex', gap: '20px' }}>
                         {/* Lượt đi */}
@@ -70,9 +113,9 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
                                 </div>
                                 <input type="time" value={costConfig.transportTimes?.endD || '12:00'} onChange={e => setCostConfig({...costConfig, transportTimes: {...(costConfig.transportTimes || {}), endD: e.target.value}})} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', width: '90px' }} />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
-                                <span>{(() => { const p = destinations.find(d => String(d.destination_id) === String(days[0]?.start_destination_id)); return p ? p.destination_name : '...'; })()}</span>
-                                <span>{(() => { const p = destinations.find(d => String(d.destination_id) === String(days[0]?.end_destination_id)); return p ? p.destination_name : '...'; })()}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569', fontWeight: '500' }}>
+                                <span>{startDay1}</span>
+                                <span>{endDay1}</span>
                             </div>
                         </div>
 
@@ -92,14 +135,15 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
                                 </div>
                                 <input type="time" value={costConfig.transportTimes?.endR || '05:30'} onChange={e => setCostConfig({...costConfig, transportTimes: {...(costConfig.transportTimes || {}), endR: e.target.value}})} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', width: '90px' }} />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
-                                <span>{(() => { const p = destinations.find(d => String(d.destination_id) === String(days[days.length - 1]?.start_destination_id)); return p ? p.destination_name : '...'; })()}</span>
-                                <span>{(() => { const p = destinations.find(d => String(d.destination_id) === String(days[days.length - 1]?.end_destination_id)); return p ? p.destination_name : '...'; })()}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569', fontWeight: '500' }}>
+                                <span>{startLastDay}</span>
+                                <span>{endLastDay}</span>
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {days.map((day, dIndex) => (

@@ -78,6 +78,27 @@ exports.createBooking = async (req, res) => {
     const count = num_people || (req.body.num_adults ? req.body.num_adults + (req.body.num_children || 0) : 1);
     const amount = total_amount || req.body.total_price || 0;
 
+    if (departure_id) {
+      const [depRows] = await sequelize.query(`
+        SELECT departure_id, departure_date, return_date, available_slots, status 
+        FROM departures WHERE departure_id = ?
+      `, { replacements: [departure_id], transaction });
+
+      if (depRows.length > 0) {
+        const dep = depRows[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isPast = dep.return_date ? String(dep.return_date).substring(0, 10) < todayStr : false;
+        if (dep.status === 'Closed' || dep.status === 'Completed' || isPast) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Đợt khởi hành này đã kết thúc hoặc ở trạng thái KHÓA (CLOSED). Không thể đặt vé!' });
+        }
+        if (dep.available_slots < count) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Số lượng chỗ trống không đủ!' });
+        }
+      }
+    }
+
     // 1. Tạo đơn đặt hàng (Dùng dấu ? an toàn chống SQL Injection)
     const [result] = await sequelize.query(`
       INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown)

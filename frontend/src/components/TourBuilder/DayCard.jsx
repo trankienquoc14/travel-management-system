@@ -427,14 +427,27 @@ const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayIma
                             <option value="Di chuyển">Di chuyển</option>
                             <option value="Nghỉ ngơi">Nghỉ ngơi</option>
                         </select>
-                        <input 
+                        <textarea 
                             value={act.name || ''} 
+                            rows={Math.max(1, Math.ceil((act.name || '').length / 45))}
                             onChange={e => {
                                 const newDays = [...days];
                                 newDays[dIndex].activities[aIndex].name = e.target.value;
                                 setDays(newDays);
                             }} 
-                            style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }} 
+                            placeholder="Nhập chi tiết địa điểm / hoạt động..."
+                            style={{ 
+                                flex: 1, 
+                                padding: '8px 10px', 
+                                borderRadius: '6px', 
+                                border: '1px solid #cbd5e1',
+                                fontFamily: 'inherit',
+                                fontSize: '13px',
+                                lineHeight: '1.4',
+                                resize: 'vertical',
+                                minHeight: '38px',
+                                boxSizing: 'border-box'
+                            }} 
                         />
                         <button onClick={() => removeActivity(aIndex)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Xóa</button>
                     </div>

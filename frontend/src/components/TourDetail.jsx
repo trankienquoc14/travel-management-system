@@ -298,6 +298,77 @@ const TourDetail = () => {
                             
                             const formatM = (v) => new Intl.NumberFormat('vi-VN').format(Math.round(v)) + 'đ';
 
+                            const getDestNameHelper = (id, dayObj, isEnd = false) => {
+                                if (id !== undefined && id !== null && id !== '') {
+                                    const dest = destinations.find(x => String(x.destination_id) === String(id));
+                                    if (dest) return dest.destination_name;
+                                    if (typeof id === 'string' && isNaN(Number(id))) return id;
+                                }
+                                if (dayObj) {
+                                    const targetVal = isEnd 
+                                        ? (dayObj.end_destination_id || dayObj.end_destination || dayObj.end_location)
+                                        : (dayObj.start_destination_id || dayObj.start_destination || dayObj.start_location);
+                                    if (targetVal !== undefined && targetVal !== null && targetVal !== '') {
+                                        const dest = destinations.find(x => String(x.destination_id) === String(targetVal));
+                                        if (dest) return dest.destination_name;
+                                        if (typeof targetVal === 'string' && isNaN(Number(targetVal))) return targetVal;
+                                    }
+                                    if (dayObj.route_title && typeof dayObj.route_title === 'string') {
+                                        const cleanTitle = dayObj.route_title.replace(/^NGÀY\s*\d+\s*[-:]?\s*/i, '').trim();
+                                        if (cleanTitle.includes('-')) {
+                                            const parts = cleanTitle.split('-').map(s => s.trim());
+                                            if (!isEnd && parts[0]) return parts[0];
+                                            if (isEnd && parts[parts.length - 1]) return parts[parts.length - 1];
+                                        }
+                                    }
+                                }
+                                if (tour) {
+                                    if (!isEnd && (tour.start_destination || tour.start_location || tour.departure_location)) {
+                                        return tour.start_destination || tour.start_location || tour.departure_location;
+                                    }
+                                    if (isEnd && (tour.destination || tour.destination_name || tour.end_destination)) {
+                                        return tour.destination || tour.destination_name || tour.end_destination;
+                                    }
+                                }
+                                return isEnd ? 'Điểm đến' : 'Điểm đi';
+                            };
+
+                            const getTransportNameHelper = (costCfg, parsedDsg, tourObj) => {
+                                const st = costCfg?.selectedTransport;
+                                if (st) {
+                                    if (typeof st === 'string') return st;
+                                    if (typeof st === 'object') {
+                                        const name = st.service_name || st.name || st.title || st.label || st.vehicle_type || st.provider_name;
+                                        if (name) return name;
+                                    }
+                                }
+                                if (parsedDsg?.fixedServices?.transport && Array.isArray(parsedDsg.fixedServices.transport)) {
+                                    const ft = parsedDsg.fixedServices.transport[0];
+                                    if (ft) {
+                                        if (typeof ft === 'string') return ft;
+                                        if (typeof ft === 'object') {
+                                            const name = ft.service_name || ft.name || ft.title;
+                                            if (name) return name;
+                                        }
+                                    }
+                                }
+                                if (tourObj) {
+                                    const tName = tourObj.transport_name || tourObj.transport || tourObj.vehicle_name || tourObj.vehicle_type;
+                                    if (tName) return tName;
+                                }
+                                return 'Xe du lịch chất lượng cao';
+                            };
+
+                            const firstDay = parsedDesign?.days?.[0];
+                            const lastDay = parsedDesign?.days?.[parsedDesign?.days?.length - 1];
+                            const startDay1Name = getDestNameHelper(firstDay?.start_destination_id, firstDay, false);
+                            const endDay1Name = getDestNameHelper(firstDay?.end_destination_id, firstDay, true);
+                            let startLastDayName = getDestNameHelper(lastDay?.start_destination_id, lastDay, false);
+                            let endLastDayName = getDestNameHelper(lastDay?.end_destination_id, lastDay, true);
+                            if (startLastDayName === 'Điểm đi' && endDay1Name && endDay1Name !== 'Điểm đến') startLastDayName = endDay1Name;
+                            if (endLastDayName === 'Điểm đến' && startDay1Name && startDay1Name !== 'Điểm đi') endLastDayName = startDay1Name;
+                            const transportVehName = getTransportNameHelper(parsedDesign?.costConfig, parsedDesign, tour);
+
                             return (
                                 <div>
                                     {/* Tabs Tháng */}
@@ -372,16 +443,14 @@ const TourDetail = () => {
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                                                         <span style={{ color: '#64748b', fontSize: '14px' }}>Ngày đi: <strong style={{color: '#0f172a'}}>{dateStr}</strong></span>
                                                                         <span style={{ color: '#ea580c', fontWeight: 'bold', fontSize: '14px' }}>
-                                                                            {parsedDesign?.costConfig?.selectedTransport?.service_type === 'Vé máy bay' 
-                                                                                ? `✈️ ${parsedDesign?.costConfig?.selectedTransport?.provider_name || 'Máy bay'}`
-                                                                                : '🚌 Xe khách'}
+                                                                            🚗 {transportVehName}
                                                                         </span>
                                                                     </div>
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.startD || '05:30'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[0]?.start_destination_id))?.destination_name || 'Điểm đi'}
+                                                                                {startDay1Name}
                                                                             </span>
                                                                         </div>
                                                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
@@ -393,7 +462,7 @@ const TourDetail = () => {
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.endD || '12:00'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[0]?.end_destination_id))?.destination_name || 'Điểm đến'}
+                                                                                {endDay1Name}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -403,16 +472,14 @@ const TourDetail = () => {
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                                                         <span style={{ color: '#64748b', fontSize: '14px' }}>Ngày về: <strong style={{color: '#0f172a'}}>{new Date(dep.return_date || new Date(d.getTime() + (tour.duration_days - 1) * 86400000)).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong></span>
                                                                         <span style={{ color: '#ea580c', fontWeight: 'bold', fontSize: '14px' }}>
-                                                                            {parsedDesign?.costConfig?.selectedTransport?.service_type === 'Vé máy bay' 
-                                                                                ? `✈️ ${parsedDesign?.costConfig?.selectedTransport?.provider_name || 'Máy bay'}`
-                                                                                : '🚌 Xe khách'}
+                                                                            🚗 {transportVehName}
                                                                         </span>
                                                                     </div>
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.startR || '12:00'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[parsedDesign.days.length - 1]?.start_destination_id))?.destination_name || 'Điểm đi'}
+                                                                                {startLastDayName}
                                                                             </span>
                                                                         </div>
                                                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
@@ -424,7 +491,7 @@ const TourDetail = () => {
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.endR || '17:30'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[parsedDesign.days.length - 1]?.end_destination_id))?.destination_name || 'Điểm đến'}
+                                                                                {endLastDayName}
                                                                             </span>
                                                                         </div>
                                                                     </div>

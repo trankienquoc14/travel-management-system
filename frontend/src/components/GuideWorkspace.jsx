@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import '../styles/partner.css';
 
 const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, setActiveTab }) => {
@@ -68,6 +69,13 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   // Trạng thái tìm kiếm & lọc danh sách tour được phân công (Table View)
   const [assignedSearchTerm, setAssignedSearchTerm] = useState('');
   const [assignedStatusFilter, setAssignedStatusFilter] = useState('all');
+
+  // Trạng thái Quét mã QR Điểm danh
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrActiveTab, setQrActiveTab] = useState('camera'); // 'camera' | 'manual' | 'file'
+  const [qrInputText, setQrInputText] = useState('');
+  const [qrScanMsg, setQrScanMsg] = useState(null);
+  const [qrSubmitting, setQrSubmitting] = useState(false);
 
   const storedUser = localStorage.getItem('user');
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
@@ -238,6 +246,108 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
       alert('Không thể cập nhật trạng thái điểm danh: ' + (error.response?.data?.message || error.message));
     }
   };
+
+  const playBeepSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    } catch (e) {
+      console.log('Audio Context error:', e);
+    }
+  };
+
+  const handleProcessQrCode = async (codeToProcess) => {
+    const qrStr = codeToProcess || qrInputText;
+    if (!qrStr || !qrStr.trim()) {
+      setQrScanMsg({ type: 'error', text: 'Vui lòng nhập hoặc quét mã QR hợp lệ!' });
+      return;
+    }
+    setQrSubmitting(true);
+    setQrScanMsg(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        'http://localhost:5000/api/guide/passengers/qr-checkin',
+        {
+          qr_code: qrStr.trim(),
+          departure_id: selectedDeparture?.departure_id
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data.success) {
+        playBeepSound();
+        setQrScanMsg({ type: 'success', text: res.data.message });
+        setQrInputText('');
+        if (selectedDeparture) {
+          fetchPassengersAndIncidents(selectedDeparture.departure_id);
+        }
+      } else {
+        setQrScanMsg({ type: 'error', text: res.data.message || 'Điểm danh thất bại!' });
+      }
+    } catch (err) {
+      const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : null) || err.message;
+      setQrScanMsg({
+        type: 'error',
+        text: serverMsg || 'Có lỗi xảy ra khi xác thực mã QR vé tour.'
+      });
+    } finally {
+      setQrSubmitting(false);
+    }
+  };
+
+  const handleQrFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setQrSubmitting(true);
+      setQrScanMsg(null);
+      const html5QrCode = new Html5Qrcode("qr-file-scanner-temp");
+      const qrCodeMessage = await html5QrCode.scanFile(file, true);
+      await handleProcessQrCode(qrCodeMessage);
+    } catch (err) {
+      setQrScanMsg({ type: 'error', text: 'Không quét được mã QR từ tệp ảnh này. Vui lòng thử ảnh rõ nét hơn hoặc nhập mã thủ công.' });
+    } finally {
+      setQrSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    let scanner = null;
+    if (showQrModal && qrActiveTab === 'camera') {
+      const timer = setTimeout(() => {
+        const container = document.getElementById('qr-reader-container');
+        if (container) {
+          scanner = new Html5QrcodeScanner(
+            'qr-reader-container',
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            false
+          );
+          scanner.render(
+            (decodedText) => {
+              scanner.clear().catch(console.error);
+              handleProcessQrCode(decodedText);
+            },
+            () => {}
+          );
+        }
+      }, 300);
+      return () => {
+        clearTimeout(timer);
+        if (scanner) {
+          scanner.clear().catch(() => {});
+        }
+      };
+    }
+  }, [showQrModal, qrActiveTab]);
 
   const handleStatusChange = async (departureId, newStatus) => {
     const statusMsg = newStatus === 'Completed' ? 'Hoàn thành chuyến đi' : newStatus === 'Closed' ? 'Đóng nhận khách & Bắt đầu đi' : 'Mở lại đoàn';
@@ -527,37 +637,48 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
-  const getStatusText = (status, startDateStr) => {
+  const getStatusText = (status, startDateStr, endDateStr) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const start = new Date(startDateStr);
-    start.setHours(0, 0, 0, 0);
+    const start = startDateStr ? new Date(startDateStr) : null;
+    if (start) start.setHours(0, 0, 0, 0);
+    const end = endDateStr ? new Date(endDateStr) : null;
+    if (end) end.setHours(0, 0, 0, 0);
+
+    const isPast = end ? today > end : (start ? today > start : false);
 
     switch (status) {
       case 'Open': 
-        if (today > start) return 'Mở đăng ký (Trễ hạn)';
+        if (isPast) return '🔒 Đã khóa (CLOSED)';
         return 'Mở đăng ký (Open)';
       case 'Closed': 
-        if (today < start) return 'Chốt đoàn (Chờ đi)';
+        if (isPast) return '🔒 Đã khóa (CLOSED)';
+        if (start && today < start) return 'Chốt đoàn (Chờ đi)';
         return 'Đang di chuyển (Closed)';
       case 'Completed': return 'Hoàn thành (Completed)';
-      default: return status;
+      default: return isPast ? '🔒 Đã khóa (CLOSED)' : status;
     }
   };
 
-  const getStatusColor = (status, startDateStr) => {
+  const getStatusColor = (status, startDateStr, endDateStr) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const start = new Date(startDateStr);
-    start.setHours(0, 0, 0, 0);
+    const start = startDateStr ? new Date(startDateStr) : null;
+    if (start) start.setHours(0, 0, 0, 0);
+    const end = endDateStr ? new Date(endDateStr) : null;
+    if (end) end.setHours(0, 0, 0, 0);
+
+    const isPast = end ? today > end : (start ? today > start : false);
+
+    if (isPast || status === 'Closed') {
+      if (isPast) return { bg: '#fee2e2', text: '#991b1b', dot: '#dc2626' };
+      if (start && today < start) return { bg: '#ffedd5', text: '#c2410c', dot: '#ea580c' };
+      return { bg: '#fef3c7', text: '#d97706', dot: '#f59e0b' };
+    }
 
     switch (status) {
       case 'Open': 
-        if (today > start) return { bg: '#fee2e2', text: '#b91c1c', dot: '#ef4444' };
         return { bg: '#e0f2fe', text: '#0369a1', dot: '#0284c7' };
-      case 'Closed': 
-        if (today < start) return { bg: '#ffedd5', text: '#c2410c', dot: '#ea580c' };
-        return { bg: '#fef3c7', text: '#d97706', dot: '#f59e0b' };
       case 'Completed': return { bg: '#dcfce7', text: '#15803d', dot: '#16a34a' };
       default: return { bg: '#f1f5f9', text: '#475569', dot: '#64748b' };
     }
@@ -1236,13 +1357,38 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                     <h4 style={{ margin: 0, fontSize: '16px', color: '#0f172a', fontWeight: '700' }}>📋 Danh sách Điểm danh đoàn</h4>
-                    <input 
-                      type="text" 
-                      placeholder="Tìm theo tên hành khách, CMND..." 
-                      value={searchPassenger}
-                      onChange={(e) => setSearchPassenger(e.target.value)}
-                      style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '240px' }}
-                    />
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowQrModal(true);
+                          setQrScanMsg(null);
+                        }}
+                        style={{
+                          padding: '7px 14px',
+                          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(2,132,199,0.3)'
+                        }}
+                      >
+                        📷 Quét Mã QR Điểm Danh
+                      </button>
+                      <input 
+                        type="text" 
+                        placeholder="Tìm theo tên hành khách, CMND..." 
+                        value={searchPassenger}
+                        onChange={(e) => setSearchPassenger(e.target.value)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '240px' }}
+                      />
+                    </div>
                   </div>
 
                   {passengersLoading ? (
@@ -2393,6 +2539,168 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                 </div>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL QUÉT MÃ QR ĐIỂM DANH HÀNH KHÁCH */}
+      {showQrModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff', padding: '24px', borderRadius: '16px',
+            width: '100%', maxWidth: '480px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📷 Quét Mã QR Vé Tour Điểm Danh
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowQrModal(false);
+                  setQrScanMsg(null);
+                }} 
+                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Subheader info */}
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#0369a1' }}>
+              <strong>Đoàn #{selectedDeparture?.departure_id}</strong> - {selectedDeparture?.tour_name}
+            </div>
+
+            {/* Tabs selection */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #cbd5e1', paddingBottom: '8px' }}>
+              <button
+                type="button"
+                onClick={() => { setQrActiveTab('camera'); setQrScanMsg(null); }}
+                style={{
+                  flex: 1, padding: '8px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', border: 'none', cursor: 'pointer',
+                  background: qrActiveTab === 'camera' ? '#0284c7' : '#f1f5f9',
+                  color: qrActiveTab === 'camera' ? '#fff' : '#475569'
+                }}
+              >
+                📷 Camera trực tiếp
+              </button>
+              <button
+                type="button"
+                onClick={() => { setQrActiveTab('file'); setQrScanMsg(null); }}
+                style={{
+                  flex: 1, padding: '8px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', border: 'none', cursor: 'pointer',
+                  background: qrActiveTab === 'file' ? '#0284c7' : '#f1f5f9',
+                  color: qrActiveTab === 'file' ? '#fff' : '#475569'
+                }}
+              >
+                🖼️ Tải tệp ảnh QR
+              </button>
+              <button
+                type="button"
+                onClick={() => { setQrActiveTab('manual'); setQrScanMsg(null); }}
+                style={{
+                  flex: 1, padding: '8px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', border: 'none', cursor: 'pointer',
+                  background: qrActiveTab === 'manual' ? '#0284c7' : '#f1f5f9',
+                  color: qrActiveTab === 'manual' ? '#fff' : '#475569'
+                }}
+              >
+                ⌨️ Nhập mã tay
+              </button>
+            </div>
+
+            {/* Notification message box */}
+            {qrScanMsg && (
+              <div style={{
+                padding: '12px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', fontWeight: '600',
+                background: qrScanMsg.type === 'success' ? '#dcfce7' : '#fee2e2',
+                color: qrScanMsg.type === 'success' ? '#15803d' : '#991b1b',
+                border: `1px solid ${qrScanMsg.type === 'success' ? '#bbf7d0' : '#fca5a5'}`
+              }}>
+                {qrScanMsg.type === 'success' ? '🎉 ' : '❌ '}{qrScanMsg.text}
+              </div>
+            )}
+
+            {/* Tab contents */}
+            {qrActiveTab === 'camera' && (
+              <div style={{ textAlign: 'center' }}>
+                <div id="qr-reader-container" style={{ width: '100%', maxWidth: '360px', margin: '0 auto', border: '2px dashed #0284c7', borderRadius: '12px', overflow: 'hidden', padding: '10px' }}></div>
+                <p style={{ fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
+                  💡 Giữ mã QR trên vé tour của hành khách thẳng trước camera thiết bị để tự động ghi nhận điểm danh.
+                </p>
+              </div>
+            )}
+
+            {qrActiveTab === 'file' && (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '24px 16px', background: '#f8fafc' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '10px' }}>🖼️</div>
+                  <label style={{ display: 'inline-block', padding: '10px 20px', background: '#0284c7', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                    Chọn tệp ảnh QR vé tour
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleQrFileUpload} 
+                      disabled={qrSubmitting}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '10px', margin: 0 }}>
+                    Hỗ trợ định dạng JPG, PNG từ máy hoặc điện thoại.
+                  </p>
+                </div>
+                <div id="qr-file-scanner-temp" style={{ display: 'none' }}></div>
+              </div>
+            )}
+
+            {qrActiveTab === 'manual' && (
+              <form onSubmit={(e) => { e.preventDefault(); handleProcessQrCode(); }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                    Nhập mã QR / Mã vé đơn tour *
+                  </label>
+                  <input
+                    type="text"
+                    value={qrInputText}
+                    onChange={(e) => setQrInputText(e.target.value)}
+                    placeholder="Ví dụ: BKG-12-PAX-0, BKG-12 hoặc 12"
+                    required
+                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px' }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    * Hỗ trợ định dạng <code>BKG-[ID]-PAX-[STT]</code>, <code>BKG-[ID]</code>, <code>PAX-[ID]</code> hoặc mã ID số đơn hàng.
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={qrSubmitting}
+                  style={{
+                    width: '100%', padding: '10px 16px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px',
+                    fontSize: '14px', fontWeight: '700', cursor: qrSubmitting ? 'not-allowed' : 'pointer', opacity: qrSubmitting ? 0.7 : 1
+                  }}
+                >
+                  {qrSubmitting ? '⏳ Đang kiểm tra & điểm danh...' : '⚡ Xác Nhận Điểm Danh'}
+                </button>
+              </form>
+            )}
+
+            {/* Modal Footer */}
+            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQrModal(false);
+                  setQrScanMsg(null);
+                }}
+                style={{ padding: '8px 16px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>

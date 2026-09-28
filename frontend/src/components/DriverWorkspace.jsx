@@ -12,6 +12,10 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
   // Filter & Search states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [timeFilterType, setTimeFilterType] = useState('all'); // 'all' | 'upcoming' | 'single_date' | 'this_month' | 'month_YYYY-MM' | 'custom'
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [singleDateFilter, setSingleDateFilter] = useState('');
 
   // Form states - Chi phí
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -251,25 +255,82 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, returnDateStr) => {
+    const today = new Date().toISOString().split('T')[0];
+    const isPast = returnDateStr && String(returnDateStr).substring(0, 10) < today;
+    if (isPast || status === 'Closed') {
+      if (isPast) return { text: '🔒 Đã khóa (CLOSED)', bg: '#fee2e2', color: '#991b1b' };
+      return { text: 'Đã khóa / Đang đi', bg: '#fef3c7', color: '#d97706' };
+    }
     switch (status) {
       case 'Open': return { text: 'Chuẩn bị đi', bg: '#e0f2fe', color: '#0369a1' };
-      case 'Closed': return { text: 'Đang di chuyển', bg: '#fef3c7', color: '#d97706' };
       case 'Completed': return { text: 'Hoàn thành', bg: '#dcfce7', color: '#15803d' };
       default: return { text: status, bg: '#f1f5f9', color: '#475569' };
     }
   };
 
-  const filteredTrips = trips.filter(t => {
-    const term = searchTerm.toLowerCase().trim();
-    const matchesSearch = !term ||
-      t.tour_name?.toLowerCase().includes(term) ||
-      t.destination?.toLowerCase().includes(term) ||
-      t.departure_id?.toString().includes(term) ||
-      (t.vehicle_number && t.vehicle_number.toLowerCase().includes(term));
-    const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const uniqueMonths = Array.from(new Set(
+    trips.map(t => {
+      if (!t.departure_date) return null;
+      const d = new Date(t.departure_date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }).filter(Boolean)
+  )).sort().reverse().map(ym => {
+    const [y, m] = ym.split('-');
+    return { val: ym, label: `${m}/${y}` };
   });
+
+  const sortedTrips = [...trips]
+    .filter(t => {
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch = !term ||
+        t.tour_name?.toLowerCase().includes(term) ||
+        t.destination?.toLowerCase().includes(term) ||
+        t.departure_id?.toString().includes(term) ||
+        (t.vehicle_number && t.vehicle_number.toLowerCase().includes(term));
+        
+      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
+
+      let matchesTime = true;
+      if (timeFilterType === 'upcoming') {
+        const today = new Date().toISOString().split('T')[0];
+        matchesTime = t.departure_date >= today;
+      } else if (timeFilterType === 'single_date') {
+        if (singleDateFilter) {
+          const sDate = singleDateFilter;
+          const dStart = t.departure_date ? t.departure_date.split('T')[0] : '';
+          const dEnd = t.return_date ? t.return_date.split('T')[0] : dStart;
+          matchesTime = (sDate >= dStart && sDate <= dEnd);
+        }
+      } else if (timeFilterType === 'this_month') {
+        const now = new Date();
+        const currYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        matchesTime = t.departure_date && t.departure_date.startsWith(currYearMonth);
+      } else if (timeFilterType.startsWith('month_')) {
+        const targetMonth = timeFilterType.replace('month_', '');
+        matchesTime = t.departure_date && t.departure_date.startsWith(targetMonth);
+      } else if (timeFilterType === 'custom') {
+        if (startDateFilter && t.departure_date < startDateFilter) matchesTime = false;
+        if (endDateFilter && t.departure_date > endDateFilter) matchesTime = false;
+      }
+
+      return matchesSearch && matchesStatus && matchesTime;
+    })
+    .sort((a, b) => {
+      // 1. Đưa các chuyến "Chuẩn bị đi" (Open) lên đầu bảng!
+      const statusPriority = { 'Open': 1, 'Closed': 2, 'Completed': 3 };
+      const pA = statusPriority[a.status] || 99;
+      const pB = statusPriority[b.status] || 99;
+
+      if (pA !== pB) {
+        return pA - pB;
+      }
+
+      // 2. Cùng trạng thái: Sắp xếp theo Ngày khởi hành gần nhất trước
+      const dA = a.departure_date ? new Date(a.departure_date).getTime() : 0;
+      const dB = b.departure_date ? new Date(b.departure_date).getTime() : 0;
+      return dA - dB;
+    });
 
   const renderDepartureSelector = () => (
     <div style={{
@@ -400,44 +461,152 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
             </div>
           </div>
 
-          {/* SEARCH & FILTER BAR */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '14px 18px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
-              <span style={{ fontSize: '16px' }}>🔍</span>
-              <input
-                type="text"
-                placeholder="Tìm theo tên tour, điểm đến, biển số xe..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none' }}
-              />
+          {/* SEARCH & FILTER BAR WITH TIME & STATUS */}
+          <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            
+            {/* ROW 1: SEARCH & TIME FILTER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              
+              {/* SEARCH INPUT */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1 1 280px' }}>
+                <span style={{ fontSize: '16px' }}>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên tour, điểm đến, loại xe..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff' }}
+                />
+              </div>
+
+              {/* TIME FILTER DROPDOWN & DATE RANGE */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: '#475569', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  📅 Thời gian:
+                </span>
+                <select
+                  value={timeFilterType}
+                  onChange={(e) => {
+                    setTimeFilterType(e.target.value);
+                    if (e.target.value !== 'custom') {
+                      setStartDateFilter('');
+                      setEndDateFilter('');
+                    }
+                    if (e.target.value !== 'single_date') {
+                      setSingleDateFilter('');
+                    }
+                  }}
+                  style={{
+                    padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                    fontSize: '13px', fontWeight: '700', color: '#1e3a8a', background: '#fff', outline: 'none', cursor: 'pointer'
+                  }}
+                >
+                  <option value="all">📅 Tất cả thời gian</option>
+                  <option value="upcoming">🚀 Sắp tới / Tương lai</option>
+                  <option value="single_date">📆 Chọn Ngày/Tháng/Năm cụ thể</option>
+                  <option value="this_month">🗓️ Tháng này</option>
+                  <option value="custom">📆 Khoảng ngày (Từ ngày - Đến ngày)</option>
+                  {uniqueMonths.map(m => (
+                    <option key={m.val} value={`month_${m.val}`}>🗓️ Tháng {m.label}</option>
+                  ))}
+                </select>
+
+                {/* SINGLE DATE INPUT */}
+                {timeFilterType === 'single_date' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="date"
+                      value={singleDateFilter}
+                      onChange={(e) => setSingleDateFilter(e.target.value)}
+                      style={{ padding: '7px 10px', borderRadius: '8px', border: '2px solid #0284c7', fontSize: '13px', fontWeight: '700', outline: 'none', background: '#f0f9ff', color: '#0369a1', cursor: 'pointer' }}
+                    />
+                  </div>
+                )}
+
+                {/* CUSTOM DATE RANGE INPUTS */}
+                {timeFilterType === 'custom' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="date"
+                      value={startDateFilter}
+                      onChange={(e) => setStartDateFilter(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }}
+                    />
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
+                    <input
+                      type="date"
+                      value={endDateFilter}
+                      onChange={(e) => setEndDateFilter(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }}
+                    />
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>Trạng thái:</span>
-              {['all', 'Open', 'Closed', 'Completed'].map((st) => {
-                const label = st === 'all' ? 'Tất cả' : st === 'Open' ? 'Chuẩn bị đi' : st === 'Closed' ? 'Đang đi' : 'Hoàn thành';
-                const isActive = statusFilter === st;
-                return (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    style={{
-                      padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
-                      border: isActive ? 'none' : '1px solid #cbd5e1',
-                      background: isActive ? '#0284c7' : '#ffffff', color: isActive ? '#ffffff' : '#475569',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+            {/* ROW 2: STATUS FILTER BUTTONS */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '12px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: '#475569', fontWeight: '700' }}>⚡ Trạng thái:</span>
+                {[
+                  { id: 'all', label: 'Tất cả', count: trips.length },
+                  { id: 'Open', label: 'Chuẩn bị đi', count: trips.filter(t => t.status === 'Open').length },
+                  { id: 'Closed', label: 'Đang đi tour', count: trips.filter(t => t.status === 'Closed').length },
+                  { id: 'Completed', label: 'Hoàn thành', count: trips.filter(t => t.status === 'Completed').length }
+                ].map((st) => {
+                  const isActive = statusFilter === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      onClick={() => setStatusFilter(st.id)}
+                      style={{
+                        padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
+                        border: isActive ? 'none' : '1px solid #cbd5e1',
+                        background: isActive ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
+                        color: isActive ? '#ffffff' : '#475569',
+                        cursor: 'pointer',
+                        boxShadow: isActive ? '0 2px 6px rgba(2, 132, 199, 0.25)' : 'none',
+                        display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
+                      }}
+                    >
+                      <span>{st.label}</span>
+                      <span style={{
+                        background: isActive ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                        color: isActive ? '#fff' : '#0369a1',
+                        padding: '1px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '800'
+                      }}>
+                        {st.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {(searchTerm || statusFilter !== 'all' || timeFilterType !== 'all' || singleDateFilter) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('all');
+                    setTimeFilterType('all');
+                    setStartDateFilter('');
+                    setEndDateFilter('');
+                    setSingleDateFilter('');
+                  }}
+                  style={{
+                    background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5',
+                    padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                  }}
+                >
+                  ✕ Xóa bộ lọc
+                </button>
+              )}
             </div>
+
           </div>
 
           {/* BẢNG CHUYẾN XE */}
-          {filteredTrips.length === 0 ? (
+          {sortedTrips.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px' }}>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚌</div>
               <div style={{ fontWeight: '600' }}>Không tìm thấy chuyến xe nào phù hợp.</div>
@@ -448,7 +617,7 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
                 <thead>
                   <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
                     <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Mã đoàn</th>
-                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Biển số xe</th>
+                    <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Loại xe</th>
                     <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Tên Tour & Điểm đến</th>
                     <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Thời gian di chuyển</th>
                     <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Hướng dẫn viên</th>
@@ -457,8 +626,8 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTrips.map(t => {
-                    const badge = getStatusBadge(t.status);
+                  {sortedTrips.map(t => {
+                    const badge = getStatusBadge(t.status, t.return_date);
                     const isCurrent = selectedDeparture?.departure_id === t.departure_id;
 
                     return (

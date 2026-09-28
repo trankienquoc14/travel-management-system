@@ -543,7 +543,6 @@ const Dashboard = () => {
                   </li>
                   {isGuideGroupOpen && (
                     <>
-                      <li className={activeTab === 'guide_work' ? 'active' : ''} onClick={() => setActiveTab('guide_work')}>💼 Lịch trình Dẫn đoàn</li>
                       <li className={activeTab === 'guide_passengers' ? 'active' : ''} onClick={() => setActiveTab('guide_passengers')}>📋 Điểm danh hành khách</li>
                       <li className={activeTab === 'guide_itinerary' ? 'active' : ''} onClick={() => setActiveTab('guide_itinerary')}>🗺️ Lịch trình chi tiết</li>
                       <li className={activeTab === 'guide_map' ? 'active' : ''} onClick={() => setActiveTab('guide_map')}>📍 Bản đồ & Định vị</li>
