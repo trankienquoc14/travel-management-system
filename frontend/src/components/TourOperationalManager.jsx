@@ -944,23 +944,19 @@ const TourOperationalManager = () => {
                                                                 const monthDepartures = departures
                                                                     .map((dep, realIdx) => ({ ...dep, realIdx }))
                                                                     .filter(dep => {
-                                                                        if (!dep.departure_date) {
+                                                                        // Giữ đợt mới chưa lưu luôn ở thẻ tháng đang thao tác để không bị giật/nhảy
+                                                                        if (!dep.departure_id) {
                                                                             const targetMonthNum = (selectedMonth && selectedMonth !== 'all') ? Number(selectedMonth.split('-')[1]) : (new Date().getMonth() + 1);
                                                                             return m === targetMonthNum;
                                                                         }
+                                                                        
+                                                                        if (!dep.departure_date) return false;
+                                                                        
                                                                         const d = new Date(dep.departure_date);
                                                                         const depMonth = d.getMonth() + 1;
                                                                         const depYear = d.getFullYear();
 
-                                                                        if (depYear === currentYear && depMonth === m) return true;
-
-                                                                        // Nếu đợt mới chưa lưu (!dep.departure_id) và tháng đã chọn không nằm trong danh sách tháng đang hiển thị,
-                                                                        // giữ lại đợt đó trong thẻ tháng hiện tại (m) để không bị ẩn biến mất khi đang chỉnh sửa
-                                                                        if (!dep.departure_id && !monthsToRender.includes(depMonth)) {
-                                                                            return true;
-                                                                        }
-
-                                                                        return false;
+                                                                        return (depYear === currentYear && depMonth === m);
                                                                     });
 
                                                                 if (monthDepartures.length === 0) {

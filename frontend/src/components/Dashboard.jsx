@@ -8,6 +8,9 @@ import ServiceForm from './ServiceForm';
 import PartnerManagement from './PartnerManagement';
 import PartnerForm from './PartnerForm';
 import PartnerInventory from './PartnerInventory';
+import ServiceRequestList from './ServiceRequestList';
+import ServiceRequestCreate from './ServiceRequestCreate';
+import ServiceRequestSupplement from './ServiceRequestSupplement';
 import PartnerServiceRequests from './PartnerServiceRequests';
 import StaffTourRequestManager from './StaffTourRequestManager';
 import StaffTourDesigner from './StaffTourDesigner';
@@ -23,6 +26,7 @@ import HRPayroll from './HRPayroll';
 import GuideWorkspace from './GuideWorkspace';
 import IncidentManagement from './IncidentManagement';
 import TourOperationalManager from './TourOperationalManager';
+import TourOperations from './TourOperations';
 import StaffFixedTourDesigner from './StaffFixedTourDesigner';
 import StaffChangeRequestManager from './StaffChangeRequestManager';
 import StaffBookingManagement from './StaffBookingManagement';
@@ -443,6 +447,9 @@ const Dashboard = () => {
                         🗺️ Danh Mục Tour
                       </li>
                       <li className={activeTab === 'operational_manager' ? 'active' : ''} onClick={() => setActiveTab('operational_manager')}>
+                        ⚙️ Thiết lập Lịch trình
+                      </li>
+                      <li className={activeTab === 'tour_operations' ? 'active' : ''} onClick={() => setActiveTab('tour_operations')}>
                         ⚙️ Vận hành Tour
                       </li>
                       <li className={activeTab === 'services' || activeTab === 'service_form' ? 'active' : ''} onClick={() => setActiveTab('services')}>
@@ -456,6 +463,49 @@ const Dashboard = () => {
                       </li>
                       <li className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>
                         ⚠️ Xử lý sự cố Tour
+                      </li>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* ========================================================= */}
+              {/* QUẢN LÝ YÊU CẦU DỊCH VỤ                                   */}
+              {/* ========================================================= */}
+              {(isTourManager || isAdmin) && (
+                <>
+                  <li 
+                    onClick={() => setIsRequestGroupOpen(!isRequestGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #f59e0b'
+                    }}
+                  >
+                    📦 QUẢN LÝ YÊU CẦU
+                    <span>{isRequestGroupOpen ? '▼' : '▲'}</span>
+                  </li>
+                  {isRequestGroupOpen && (
+                    <>
+                      <li className={activeTab === 'service_requests' ? 'active' : ''} onClick={() => setActiveTab('service_requests')}>
+                        📄 Danh sách yêu cầu
+                      </li>
+                      <li className={activeTab === 'create_request' ? 'active' : ''} onClick={() => setActiveTab('create_request')}>
+                        ➕ Tạo yêu cầu cung cấp dịch vụ
+                      </li>
+                      <li className={activeTab === 'create_supplement_request' ? 'active' : ''} onClick={() => setActiveTab('create_supplement_request')}>
+                        ➕ Tạo yêu cầu bổ sung
                       </li>
                     </>
                   )}
@@ -778,6 +828,13 @@ const Dashboard = () => {
           {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
           {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
           {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
+          {activeTab === 'tour_operations' && (isTourManager || isAdmin) && <TourOperations />}
+          
+          {/* QUẢN LÝ YÊU CẦU DỊCH VỤ */}
+          {activeTab === 'service_requests' && (isTourManager || isAdmin) && <ServiceRequestList />}
+          {activeTab === 'create_request' && (isTourManager || isAdmin) && <ServiceRequestCreate />}
+          {activeTab === 'create_supplement_request' && (isTourManager || isAdmin) && <ServiceRequestSupplement />}
+          
           {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner editTourData={fixedTourToEdit} />}
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}

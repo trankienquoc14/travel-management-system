@@ -62,4 +62,7 @@ router.put('/incidents/:id/status', protect, restrictTo(1, 3), tourController.up
 router.put('/admin/status/:id', protect, restrictTo(1, 3), tourController.updateTourStatus);
 router.put('/admin/price/:id', protect, restrictTo(1, 3), tourController.updateTourPrice);
 
+router.get('/operations/departures', protect, restrictTo(1, 3), tourController.getOperationalDepartures);
+router.post('/operations/departures/:id/decision', protect, restrictTo(1, 3), tourController.makeOperationalDecision);
+
 module.exports = router;

@@ -16,12 +16,14 @@ const tourRoutes = require('./routes/tourRoutes');
 const customTourRoutes = require('./routes/customTourRoutes');
 const destinationRoutes = require('./routes/destinationRoutes');
 const placeRoutes = require('./routes/placeRoutes');
+const serviceRequestRoutes = require('./routes/serviceRequestRoutes');
 
 // Cấu hình routes
 app.use('/api/tours', tourRoutes);
 app.use('/api/custom-tours', customTourRoutes);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/places', placeRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
 app.get('/api/builder/places', require('./controllers/placeController').getBuilderPlaces);
 const PORT = process.env.TOUR_SERVICE_PORT || 5002;
 
