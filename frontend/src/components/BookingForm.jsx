@@ -340,7 +340,7 @@ const BookingFormInner = () => {
         const token = localStorage.getItem('token');
 
         const passengersArray = [];
-        ['adults', 'children', 'toddlers'].forEach(type => {
+        ['adults', 'children', 'toddlers', 'infants'].forEach(type => {
             for (let i = 0; i < pax[type]; i++) {
                 const pObj = passengerDetails[`${type}_${i}`];
                 if (pObj && pObj.name && pObj.name.trim() !== '') {
@@ -356,11 +356,18 @@ const BookingFormInner = () => {
                         birthDateStr = `${y}-${m}-${d}`;
                     }
 
+                    let passType = 'ADULT';
+                    if (type === 'children') passType = 'CHILD';
+                    if (type === 'toddlers') passType = 'TODDLER';
+                    if (type === 'infants') passType = 'INFANT';
+
                     passengersArray.push({ 
                         full_name: pObj.name.trim(),
                         gender: mappedGender,
                         birth_date: birthDateStr,
-                        identity_number: pObj.phone || null
+                        identity_number: pObj.phone || null,
+                        passenger_type: passType,
+                        single_room: passType === 'ADULT' ? !!pObj.singleRoom : false
                     });
                 }
             }
@@ -513,10 +520,10 @@ const BookingFormInner = () => {
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '16px' }}>Thông tin hành khách</h2>
 
-                        {['adults', 'children', 'toddlers'].map(type => {
+                        {['adults', 'children', 'toddlers', 'infants'].map(type => {
                             if (pax[type] === 0) return null;
-                            const typeName = type === 'adults' ? 'Người lớn' : type === 'children' ? 'Trẻ em' : 'Trẻ nhỏ';
-                            const typeDesc = type === 'adults' ? 'Từ 12 tuổi trở lên' : type === 'children' ? 'Từ 5 - 11 tuổi' : 'Từ 2 - 4 tuổi';
+                            const typeName = type === 'adults' ? 'Người lớn' : type === 'children' ? 'Trẻ em' : type === 'toddlers' ? 'Trẻ nhỏ' : 'Em bé';
+                            const typeDesc = type === 'adults' ? 'Từ 12 tuổi trở lên' : type === 'children' ? 'Từ 5 - 11 tuổi' : type === 'toddlers' ? 'Từ 2 - 4 tuổi' : 'Dưới 2 tuổi';
                             
                             return (
                                 <div key={type} style={{ marginBottom: '24px' }}>
@@ -537,10 +544,14 @@ const BookingFormInner = () => {
                                                 )}
                                             </div>
                                             {type === 'adults' && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Phòng đơn:</span>
-                                                    <div style={{ width: '40px', height: '20px', background: '#e2e8f0', borderRadius: '10px', position: 'relative' }}>
-                                                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: '2px' }}></div>
+                                                <div 
+                                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                                                    onClick={() => updatePassenger(type, idx, 'singleRoom', !passengerDetails[`${type}_${idx}`]?.singleRoom)}
+                                                    title="Phòng đơn: ở riêng, không ghép với hành khách khác."
+                                                >
+                                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Phòng đơn</span>
+                                                    <div style={{ width: '40px', height: '20px', background: passengerDetails[`${type}_${idx}`]?.singleRoom ? '#0ea5e9' : '#e2e8f0', borderRadius: '10px', position: 'relative', transition: 'background 0.3s' }}>
+                                                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: passengerDetails[`${type}_${idx}`]?.singleRoom ? '22px' : '2px', transition: 'left 0.3s' }}></div>
                                                     </div>
                                                 </div>
                                             )}

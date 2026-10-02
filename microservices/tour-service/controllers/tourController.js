@@ -1,3 +1,4 @@
+const { calculateDepartureCrossBooking } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
 const Tour = require('../models/Tour');
 
@@ -818,16 +819,67 @@ exports.getOperationalDepartures = async (req, res) => {
         `;
         const [rows] = await sequelize.query(query);
         
-        const departures = rows.map(r => {
+        
+        // Fetch all active bookings and their passengers to calculate exact room allocations
+        const [allBookings] = await sequelize.query(`
+            SELECT b.booking_id, b.departure_id, p.passenger_type, p.single_room
+            FROM bookings b
+            JOIN booking_passengers p ON b.booking_id = p.booking_id
+            WHERE b.booking_status != 'Cancelled'
+        `);
+        
+        // Group by departure_id -> booking_id
+        const departureBookings = {};
+        for (const row of allBookings) {
+            if (!departureBookings[row.departure_id]) departureBookings[row.departure_id] = {};
+            if (!departureBookings[row.departure_id][row.booking_id]) {
+                departureBookings[row.departure_id][row.booking_id] = { booking_id: row.booking_id, passengers: [] };
+            }
+            departureBookings[row.departure_id][row.booking_id].passengers.push({
+                passenger_type: row.passenger_type,
+                single_room: row.single_room === 1 || row.single_room === true
+            });
+        }
+
+        const departures = await Promise.all(rows.map(async r => {
             let minPax = 15;
             let destName = r.destination;
+            let roomRules = { max_adults: 2, max_children: 2, max_infants: 1, min_adults: 1, single_room_allowed: true };
+            
             if (r.design_data) {
                 try {
                     const parsed = typeof r.design_data === 'string' ? JSON.parse(r.design_data) : r.design_data;
                     if (parsed?.costConfig?.minimumPax) minPax = parsed.costConfig.minimumPax;
+                    
+                    // Attempt to extract specific room rules for this tour's accommodation
+                    const days = parsed.days || parsed.itinerary || [];
+                    for (const day of days) {
+                        if (day.accommodation && day.accommodation.service_id) {
+                            const [srvRows] = await sequelize.query("SELECT * FROM services WHERE service_id = ?", { replacements: [day.accommodation.service_id] });
+                            if (srvRows.length > 0) {
+                                const srv = srvRows[0];
+                                roomRules = {
+                                    max_adults: srv.max_adults !== undefined ? srv.max_adults : 2,
+                                    max_children: srv.max_children !== undefined ? srv.max_children : 2,
+                                    max_infants: srv.max_infants !== undefined ? srv.max_infants : 1,
+                                    min_adults: srv.min_adults !== undefined ? srv.min_adults : 1,
+                                    single_room_allowed: srv.single_room_allowed !== undefined ? !!srv.single_room_allowed : true
+                                };
+                                break;
+                            }
+                        }
+                    }
                 } catch(e) {}
             }
             
+            // Calculate total_required_rooms using cross-booking algorithm
+            let total_required_rooms = 0;
+            const bksForDep = departureBookings[r.departure_id];
+            if (bksForDep) {
+                const bookingsArr = Object.values(bksForDep);
+                total_required_rooms = calculateDepartureCrossBooking(bookingsArr, roomRules);
+            }
+
             // Calculate current pax: max_slots - available_slots
             const currentPax = (r.max_slots || 0) - (r.available_slots || 0);
             
@@ -855,9 +907,10 @@ exports.getOperationalDepartures = async (req, res) => {
                 current_pax: currentPax,
                 days_until: daysUntil,
                 milestone: milestone,
-                decision_history: decHistory
+                decision_history: decHistory,
+                total_required_rooms: total_required_rooms
             };
-        });
+        }));
         
         res.status(200).json({ success: true, data: departures });
     } catch (err) {

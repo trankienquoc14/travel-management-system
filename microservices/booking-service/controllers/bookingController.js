@@ -1,3 +1,4 @@
+const { calculateRooms } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
 
 // 1. Tạo đơn đặt hàng cho Tour trọn gói cố định (Định nghĩa chính thức nằm ở dòng 96 phía dưới)
@@ -76,16 +77,68 @@ exports.createBooking = async (req, res) => {
     }
 
     const count = num_people || (req.body.num_adults ? req.body.num_adults + (req.body.num_children || 0) : 1);
+    
+let requiredRooms = 0; let singleRoomCount = 0;
+
     const amount = total_amount || req.body.total_price || 0;
 
     if (departure_id) {
       const [depRows] = await sequelize.query(`
-        SELECT departure_id, departure_date, return_date, available_slots, status 
-        FROM departures WHERE departure_id = ?
+        SELECT d.departure_id, d.departure_date, d.return_date, d.available_slots, d.status, t.design_data 
+        FROM departures d
+        JOIN tours t ON d.tour_id = t.tour_id
+        WHERE d.departure_id = ?
       `, { replacements: [departure_id], transaction });
 
       if (depRows.length > 0) {
         const dep = depRows[0];
+        
+        if (req.body.passengers && Array.isArray(req.body.passengers)) {
+            // Default rules
+            let roomRules = { max_adults: 2, max_children: 2, max_infants: 1, min_adults: 1 };
+            
+            // Try to extract specific rules from tour design_data
+            if (dep.design_data) {
+                try {
+                    const parsed = typeof dep.design_data === 'string' ? JSON.parse(dep.design_data) : dep.design_data;
+                    const days = parsed.days || parsed.itinerary || [];
+                    // Find first day with accommodation that might have rules
+                    for (const day of days) {
+                        if (day.accommodation && day.accommodation.service_id) {
+                            const [srvRows] = await sequelize.query("SELECT * FROM services WHERE service_id = ?", { replacements: [day.accommodation.service_id], transaction });
+                            if (srvRows.length > 0) {
+                                const srv = srvRows[0];
+                                roomRules = {
+                                    max_adults: srv.max_adults !== undefined ? srv.max_adults : 2,
+                                    max_children: srv.max_children !== undefined ? srv.max_children : 2,
+                                    max_infants: srv.max_infants !== undefined ? srv.max_infants : 1,
+                                    min_adults: srv.min_adults !== undefined ? srv.min_adults : 1,
+                                    single_room_allowed: srv.single_room_allowed !== undefined ? !!srv.single_room_allowed : true
+                                };
+                                break; // Just take the first hotel's rule
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error("Error parsing design_data for room rules", e);
+                }
+            }
+            
+            // Validate if single_room_allowed
+            const hasSingle = req.body.passengers.some(p => p.passenger_type === 'ADULT' && p.single_room);
+            if (hasSingle && roomRules.single_room_allowed === false) {
+                await transaction.rollback();
+                return res.status(400).json({ success: false, message: 'Loại phòng khách sạn của tour này không cho phép chọn phòng đơn.' });
+            }
+
+            const roomResult = calculateRooms(req.body.passengers, roomRules);
+            if (!roomResult.valid) {
+                await transaction.rollback();
+                return res.status(400).json({ success: false, message: roomResult.error });
+            }
+            requiredRooms = roomResult.requiredRooms;
+            singleRoomCount = roomResult.singleRoomCount;
+        }
         const todayStr = new Date().toISOString().split('T')[0];
         const isPast = dep.return_date ? String(dep.return_date).substring(0, 10) < todayStr : false;
         if (dep.status === 'Closed' || dep.status === 'Completed' || isPast) {
@@ -101,10 +154,10 @@ exports.createBooking = async (req, res) => {
 
     // 1. Tạo đơn đặt hàng (Dùng dấu ? an toàn chống SQL Injection)
     const [result] = await sequelize.query(`
-      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown)
-      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?, ?)
+      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown, required_rooms, single_room_count)
+      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?, ?, ?, ?)
     `, {
-      replacements: [customer_id, departure_id, count, amount, notes || null, req.body.breakdown ? JSON.stringify(req.body.breakdown) : null],
+      replacements: [customer_id, departure_id, count, amount, notes || null, req.body.breakdown ? JSON.stringify(req.body.breakdown) : null, requiredRooms, singleRoomCount],
       transaction
     });
 
@@ -114,10 +167,10 @@ exports.createBooking = async (req, res) => {
     if (req.body.passengers && Array.isArray(req.body.passengers)) {
       for (const p of req.body.passengers) {
         await sequelize.query(`
-          INSERT INTO booking_passengers (booking_id, full_name, identity_number, gender, birth_date, is_checked_in)
-          VALUES (?, ?, ?, ?, ?, 0)
+          INSERT INTO booking_passengers (booking_id, full_name, identity_number, gender, birth_date, is_checked_in, passenger_type, single_room)
+          VALUES (?, ?, ?, ?, ?, 0, ?, ?)
         `, {
-          replacements: [newBookingId, p.full_name, p.identity_number || null, p.gender || 'Other', p.birth_date || null],
+          replacements: [newBookingId, p.full_name, p.identity_number || null, p.gender || 'Other', p.birth_date || null, p.passenger_type || 'ADULT', !!p.single_room],
           transaction
         });
       }

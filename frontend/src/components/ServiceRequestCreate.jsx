@@ -4,6 +4,8 @@ import axios from 'axios';
 const ServiceRequestCreate = () => {
     const [departures, setDepartures] = useState([]);
     const [partners, setPartners] = useState([]);
+    const [destinations, setDestinations] = useState([]);
+    const [allServices, setAllServices] = useState([]);
     
     // Selection state
     const [selectedDepId, setSelectedDepId] = useState('');
@@ -31,6 +33,12 @@ const ServiceRequestCreate = () => {
                 
                 const partRes = await axios.get('http://localhost:5000/api/partners', { headers });
                 if (partRes.data.success) setPartners(partRes.data.data);
+
+                const destRes = await axios.get('http://localhost:5000/api/destinations', { headers });
+                if (destRes.data.success) setDestinations(destRes.data.data);
+
+                const srvRes = await axios.get('http://localhost:5000/api/services', { headers });
+                if (srvRes.data.success) setAllServices(srvRes.data.data);
             } catch (err) {
                 console.error(err);
             }
@@ -96,7 +104,7 @@ const ServiceRequestCreate = () => {
         
         const days = parsed.days || parsed.itinerary || [];
         const pax = selectedDep.current_pax || 0;
-        const rooms = Math.ceil(pax / 2) || 0;
+        const rooms = parseInt(selectedDep.total_required_rooms) || Math.ceil(pax / 2) || 0;
         
         if (days.length === 0) {
             setItineraryRows([]);
@@ -116,8 +124,10 @@ const ServiceRequestCreate = () => {
 
             // Hotel
             let hotelName = '';
+            let hotelServiceId = null;
             if (day.accommodation && day.accommodation.name) {
                 hotelName = day.accommodation.name;
+                hotelServiceId = day.accommodation.service_id;
             } else if (day.hotel_name || day.hotel) {
                 hotelName = day.hotel_name || day.hotel;
             }
@@ -135,7 +145,9 @@ const ServiceRequestCreate = () => {
                         checkIn: dateStr,
                         checkOut: coDate.toISOString().split('T')[0],
                         nights: 1,
-                        rooms: rooms
+                        rooms: rooms,
+                        service_id: hotelServiceId,
+                        destination_id: day.end_destination_id || day.destination_id
                     });
                 }
             }
@@ -169,10 +181,44 @@ const ServiceRequestCreate = () => {
         // Auto-generate services
         const autoServ = [];
         hotelsMap.forEach(h => {
+            let matchedPartnerId = '';
+            if (h.service_id && allServices.length > 0) {
+                const srv = allServices.find(s => s.service_id == h.service_id);
+                if (srv && srv.partner_id) matchedPartnerId = srv.partner_id;
+            }
+            if (!matchedPartnerId && h.name) {
+                const matched = partners.find(p => p.partner_name === h.name);
+                if (matched) matchedPartnerId = matched.partner_id;
+            }
+            // Auto-select the first available partner if still no match, because user requested to select one
+            if (!matchedPartnerId && partners.length > 0) {
+                // Find first hotel in this destination
+                const availableHotels = partners.filter(p => {
+                    const isHotel = p.partner_type === 'Hotel' || p.partner_type === 'Accommodation' || p.partner_type === 'Khách sạn' || p.partner_type === 'Khách Sạn';
+                    if (!isHotel) return false;
+                    const dest = destinations.find(d => d.destination_id == p.destination_id);
+                    const pDestName = dest ? dest.destination_name : (p.destination_name || '');
+                    
+                    if (!pDestName) return true;
+                    
+                    const tourName = selectedDep.tour_name || '';
+                    const tourDest = selectedDep.destination || '';
+                    const pdNameStr = pDestName.trim().toLowerCase();
+                    
+                    const matchDest = tourDest.toLowerCase().includes(pdNameStr);
+                    const matchName = tourName.toLowerCase().includes(pdNameStr);
+                    
+                    return matchDest || matchName || (!tourDest && !tourName);
+                });
+                if (availableHotels.length > 0) {
+                    matchedPartnerId = availableHotels[0].partner_id;
+                }
+            }
+            
             autoServ.push({
                 id: Math.random().toString(36).substr(2, 9),
                 type: 'HOTEL',
-                partner_id: '',
+                partner_id: matchedPartnerId,
                 quantity: h.rooms,
                 hotelName: h.name,
                 details: { checkIn: h.checkIn, checkOut: h.checkOut, nights: h.nights }
@@ -189,7 +235,7 @@ const ServiceRequestCreate = () => {
             });
         });
         setServices(autoServ);
-    }, [selectedDep]);
+    }, [selectedDep, partners, destinations, allServices]);
 
     // Service handlers
     const addService = (type) => {
@@ -472,7 +518,28 @@ const ServiceRequestCreate = () => {
                                     </label>
                                     <select value={s.partner_id} onChange={e => handleServiceChange(originalIndex, 'partner_id', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                                         <option value="">-- Chọn nhà cung cấp / đối tác --</option>
-                                        {partners.filter(p => p.partner_type === 'Accommodation' || p.partner_type === 'Khách sạn').map(p => (
+                                        {partners.filter(p => {
+                                            const isHotel = p.partner_type === 'Hotel' || p.partner_type === 'Accommodation' || p.partner_type === 'Khách sạn' || p.partner_type === 'Khách Sạn';
+                                            if (!isHotel) return false;
+                                            
+                                            if (s.destination_id) {
+                                                return p.destination_id == s.destination_id;
+                                            }
+                                            
+                                            const dest = destinations.find(d => d.destination_id == p.destination_id);
+                                            const pDestName = dest ? dest.destination_name : (p.destination_name || '');
+                                            
+                                            if (!pDestName) return true;
+                                            
+                                            const tourName = selectedDep.tour_name || '';
+                                            const tourDest = selectedDep.destination || '';
+                                            const pdNameStr = pDestName.trim().toLowerCase();
+                                            
+                                            const matchDest = tourDest.toLowerCase().includes(pdNameStr);
+                                            const matchName = tourName.toLowerCase().includes(pdNameStr);
+                                            
+                                            return matchDest || matchName || (!tourDest && !tourName);
+                                        }).map(p => (
                                             <option key={p.partner_id} value={p.partner_id}>{p.partner_name}</option>
                                         ))}
                                     </select>

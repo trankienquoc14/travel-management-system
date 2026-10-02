@@ -51,6 +51,7 @@ const Dashboard = () => {
   // States toggle cho từng cụm menu trong Sidebar
   const [isOverviewGroupOpen, setIsOverviewGroupOpen] = useState(false);
   const [isRequestGroupOpen, setIsRequestGroupOpen] = useState(false);
+  const [isServiceRequestGroupOpen, setIsServiceRequestGroupOpen] = useState(false);
   const [isTourGroupOpen, setIsTourGroupOpen] = useState(false);
   const [isBookingGroupOpen, setIsBookingGroupOpen] = useState(false);
   const [isRequestManagerOpen, setIsRequestManagerOpen] = useState(false);
@@ -272,7 +273,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '8px',
@@ -313,7 +314,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '12px',
@@ -350,7 +351,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '12px',
@@ -384,7 +385,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '12px',
@@ -430,7 +431,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '12px',
@@ -475,7 +476,7 @@ const Dashboard = () => {
               {(isTourManager || isAdmin) && (
                 <>
                   <li 
-                    onClick={() => setIsRequestGroupOpen(!isRequestGroupOpen)}
+                    onClick={() => setIsServiceRequestGroupOpen(!isServiceRequestGroupOpen)}
                     style={{ 
                       cursor: 'pointer', 
                       background: '#f8fafc', 
@@ -493,10 +494,10 @@ const Dashboard = () => {
                       borderLeft: '4px solid #f59e0b'
                     }}
                   >
-                    📦 QUẢN LÝ YÊU CẦU
-                    <span>{isRequestGroupOpen ? '▼' : '▲'}</span>
+                    <span>📦 QUẢN LÝ YÊU CẦU</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isServiceRequestGroupOpen ? '▲' : '▼'}</span>
                   </li>
-                  {isRequestGroupOpen && (
+                  {isServiceRequestGroupOpen && (
                     <>
                       <li className={activeTab === 'service_requests' ? 'active' : ''} onClick={() => setActiveTab('service_requests')}>
                         📄 Danh sách yêu cầu
@@ -528,7 +529,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '12px',
@@ -580,7 +581,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '4px',
@@ -633,7 +634,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '4px',
@@ -671,7 +672,7 @@ const Dashboard = () => {
                       color: '#1e293b', 
                       textTransform: 'uppercase', 
                       display: 'flex', 
-                      justify: 'space-between', 
+                      justifyContent: 'space-between', 
                       alignItems: 'center',
                       borderRadius: '8px',
                       marginTop: '12px',

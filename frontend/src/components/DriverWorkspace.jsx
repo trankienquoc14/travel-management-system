@@ -399,7 +399,7 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
         <div style={{
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#ffffff',
           padding: '16px 20px', borderRadius: '14px', marginBottom: '20px', display: 'flex',
-          justify: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px'
+          justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px'
         }}>
           <div>
             <div style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', textTransform: 'uppercase' }}>
