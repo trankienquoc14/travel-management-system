@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 02, 2026 at 05:30 AM
+-- Generation Time: Oct 04, 2026 at 06:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -60,7 +60,9 @@ INSERT INTO `bookings` (`booking_id`, `customer_id`, `departure_id`, `quote_id`,
 (13, 8, 59, NULL, 2, '2026-10-01 14:47:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1),
 (14, 8, 59, NULL, 1, '2026-10-01 14:50:08', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
 (15, 8, 59, NULL, 3, '2026-10-02 01:41:11', 11398500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":1,\"toddlers\":0,\"infants\":1}', 1, 1),
-(16, 8, 59, NULL, 1, '2026-10-02 01:43:11', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0);
+(16, 8, 59, NULL, 1, '2026-10-02 01:43:11', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
+(17, 8, 59, NULL, 1, '2026-10-03 16:23:00', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
+(18, 8, 59, NULL, 2, '2026-10-04 02:05:08', 15198000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1);
 
 -- --------------------------------------------------------
 
@@ -135,7 +137,10 @@ INSERT INTO `booking_passengers` (`passenger_id`, `booking_id`, `full_name`, `ge
 (37, 15, 'Nguyễn Thị Minh A', 'Female', '1995-05-15', '0345765102', 0, 'ADULT', 1),
 (38, 15, 'Nguyễn Huy H', 'Other', '2015-07-13', NULL, 0, 'CHILD', 0),
 (39, 15, 'Nguyễn Thị D', 'Female', '2025-10-16', NULL, 0, 'INFANT', 0),
-(40, 16, 'Phan Huy H', 'Other', '1992-06-12', '0267432108', 0, 'ADULT', 0);
+(40, 16, 'Phan Huy H', 'Other', '1992-06-12', '0267432108', 0, 'ADULT', 0),
+(41, 17, 'Trịnh Văn K', 'Other', '1990-06-15', '0345324101', 0, 'ADULT', 0),
+(42, 18, 'Phan Minh H', 'Other', '1983-03-13', '0345127651', 0, 'ADULT', 1),
+(43, 18, 'Trần Minh T', 'Other', '1995-04-15', '0356245103', 0, 'ADULT', 0);
 
 -- --------------------------------------------------------
 
@@ -261,7 +266,9 @@ INSERT INTO `customer_behavior_logs` (`log_id`, `user_id`, `session_id`, `event_
 (78, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 14:45:27'),
 (79, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 14:48:36'),
 (80, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-02 01:38:57'),
-(81, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-02 01:42:08');
+(81, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-02 01:42:08'),
+(82, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-03 16:21:53'),
+(83, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-04 02:03:19');
 
 -- --------------------------------------------------------
 
@@ -437,7 +444,7 @@ INSERT INTO `departures` (`departure_id`, `tour_id`, `departure_date`, `return_d
 (56, 51, '2026-12-19', '2026-12-19', 10, 10, 'Open', 6, 17, 'Xe Limousine 11 chỗ VIP / Ngày', 'Pending', NULL),
 (57, 29, '2026-11-17', '2026-11-20', 16, 4, 'Open', 6, 16, NULL, 'Pending', NULL),
 (58, 31, '2026-11-11', '2026-11-13', 15, 15, 'Open', 6, 17, NULL, 'Pending', NULL),
-(59, 29, '2026-11-03', '2026-11-06', 17, 5, 'Open', 6, 16, NULL, 'Pending', NULL);
+(59, 29, '2026-11-03', '2026-11-06', 17, 2, 'Open', 6, 16, NULL, 'Pending', NULL);
 
 -- --------------------------------------------------------
 
@@ -619,6 +626,258 @@ CREATE TABLE `holidays` (
 
 INSERT INTO `holidays` (`holiday_id`, `holiday_date`, `holiday_name`, `created_at`) VALUES
 (1, '2026-09-02', 'Lễ Quốc khánh', '2026-09-19 08:43:51');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hotel_service_details`
+--
+
+CREATE TABLE `hotel_service_details` (
+  `hotel_service_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `room_type` varchar(100) DEFAULT NULL,
+  `bed_type` varchar(50) DEFAULT NULL,
+  `star_rating` int(11) DEFAULT 0,
+  `max_adults` int(11) DEFAULT 2,
+  `max_children` int(11) DEFAULT 2,
+  `max_infants` int(11) DEFAULT 1,
+  `min_adults` int(11) DEFAULT 1,
+  `single_room_allowed` tinyint(1) DEFAULT 1,
+  `single_room_supplement` decimal(10,2) DEFAULT 0.00,
+  `extra_bed_allowed` tinyint(1) DEFAULT 0,
+  `max_extra_beds` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `hotel_service_details`
+--
+
+INSERT INTO `hotel_service_details` (`hotel_service_id`, `service_id`, `room_type`, `bed_type`, `star_rating`, `max_adults`, `max_children`, `max_infants`, `min_adults`, `single_room_allowed`, `single_room_supplement`, `extra_bed_allowed`, `max_extra_beds`) VALUES
+(1, 6, 'Deluxe', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(2, 7, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(3, 8, 'Superior', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(4, 9, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(5, 10, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(6, 12, 'Deluxe', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(7, 13, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(8, 20, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(9, 21, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(10, 26, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(11, 27, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(12, 28, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(13, 29, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(14, 30, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(15, 31, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(16, 32, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(17, 33, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(18, 34, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(19, 35, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(20, 36, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(21, 37, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(22, 38, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(23, 39, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(24, 40, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(25, 41, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(26, 42, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(27, 43, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(28, 44, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(29, 45, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(30, 46, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(31, 47, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(32, 48, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(33, 49, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(34, 50, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(35, 51, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(36, 52, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(37, 53, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(38, 54, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(39, 55, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(40, 56, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(41, 57, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(42, 58, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(43, 59, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(44, 60, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(45, 61, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(46, 62, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(47, 63, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(48, 64, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(49, 65, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(50, 66, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(51, 67, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(52, 68, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(53, 69, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(54, 70, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(55, 71, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(56, 72, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(57, 73, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(58, 74, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(66, 75, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(67, 76, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(68, 77, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(69, 78, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(70, 79, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(71, 80, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(72, 81, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(73, 82, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(74, 83, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(75, 84, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(76, 85, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(77, 86, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(78, 87, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(79, 88, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(80, 89, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(81, 90, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(82, 91, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(83, 92, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(84, 93, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(85, 94, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(86, 95, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(87, 96, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(88, 97, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(89, 98, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(90, 99, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(91, 100, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(92, 101, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(93, 102, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(94, 103, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(95, 104, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(96, 105, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(97, 106, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(98, 107, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(99, 108, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(100, 109, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(101, 110, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(102, 111, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(103, 112, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(104, 113, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(105, 114, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(106, 115, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(107, 116, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(108, 117, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(109, 118, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(110, 119, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(111, 120, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(112, 121, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(113, 122, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(114, 123, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(115, 124, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(116, 125, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(117, 126, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(118, 127, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(119, 128, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(120, 129, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(121, 130, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(122, 131, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(123, 132, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(124, 133, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(125, 134, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(126, 135, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(127, 136, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(128, 137, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(129, 138, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(130, 139, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(131, 140, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(132, 141, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(133, 142, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(134, 143, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(135, 144, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(136, 145, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(137, 146, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(138, 147, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(139, 148, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(140, 149, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(141, 150, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(142, 151, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(143, 152, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(144, 153, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(145, 154, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(146, 155, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(147, 156, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(148, 157, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(149, 158, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(150, 159, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(151, 160, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(152, 161, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(153, 162, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(154, 163, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(155, 164, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(156, 165, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(157, 166, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(158, 167, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(159, 168, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(160, 169, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(161, 170, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(162, 171, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(163, 172, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(164, 173, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(165, 174, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(166, 175, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(167, 176, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(168, 177, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(169, 178, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(170, 179, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(171, 180, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(172, 181, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(173, 182, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(174, 183, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(175, 184, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(176, 185, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(177, 186, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(178, 187, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(179, 188, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(180, 189, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(181, 190, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(182, 191, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(183, 192, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(184, 193, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(185, 194, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(186, 195, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(187, 196, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(188, 197, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(189, 198, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(190, 199, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(191, 200, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(192, 201, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(193, 202, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(194, 203, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(195, 204, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(196, 205, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(197, 206, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(198, 207, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(199, 208, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(200, 209, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(201, 210, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(202, 211, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(203, 212, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(204, 213, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(205, 214, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(206, 215, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(207, 216, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(208, 217, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(209, 218, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(210, 219, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(211, 220, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(212, 221, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(213, 222, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(214, 223, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(215, 224, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(216, 225, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(217, 226, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(218, 227, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(219, 228, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(220, 229, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(221, 230, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(222, 231, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(223, 232, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(224, 233, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(225, 234, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(226, 235, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(227, 236, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(228, 237, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(229, 238, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(230, 239, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(231, 240, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1);
 
 -- --------------------------------------------------------
 
@@ -894,36 +1153,130 @@ INSERT INTO `partners` (`partner_id`, `destination_id`, `partner_name`, `partner
 (6, 2, 'Hôtel Colline Đà Lạt', 'Hotel', NULL, NULL, NULL, '10 Phan Bội Châu, Đà Lạt', 'Active'),
 (7, 2, 'Ana Mandara Villas Dalat', 'Hotel', NULL, NULL, NULL, 'Lê Lai, Phường 5, Đà Lạt', 'Active'),
 (8, 3, 'JW Marriott Phu Quoc', 'Hotel', NULL, NULL, NULL, 'Bãi Khem, Phú Quốc', 'Active'),
-(9, 5, 'Mường Thanh Đà Nẵng', '', 'Quản lý', '0900000000', 'muongthanh_dn@gmail.com', NULL, 'Active'),
-(10, 1, 'Vinpearl Resort Nha Trang', '', 'Quản lý', '0900000000', 'vinpearl_nt@gmail.com', NULL, 'Active'),
-(11, NULL, 'Nhà Xe Hoàng Long Toàn Quốc', 'Transport', 'Quản lý', '0900000000', 'hoanglong_trans@gmail.com', NULL, 'Active');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `partner_services`
---
-
-CREATE TABLE `partner_services` (
-  `partner_service_id` int(11) NOT NULL,
-  `partner_id` int(11) DEFAULT NULL,
-  `service_id` int(11) DEFAULT NULL,
-  `unit_price` decimal(15,2) DEFAULT NULL,
-  `available_quantity` int(11) DEFAULT NULL,
-  `status` enum('Active','Inactive','Pending') DEFAULT 'Active'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `partner_services`
---
-
-INSERT INTO `partner_services` (`partner_service_id`, `partner_id`, `service_id`, `unit_price`, `available_quantity`, `status`) VALUES
-(1, 9, 12, 1200000.00, 50, 'Active'),
-(2, 10, 13, 2200000.00, 30, 'Active'),
-(3, 11, 14, 1000000.00, 10, 'Active'),
-(4, 11, 15, 1800000.00, 5, 'Active'),
-(6, 10, 20, 4000000.00, 3, 'Active'),
-(7, 10, 21, 3000000.00, 2, 'Pending');
+(9, 5, 'Mường Thanh Đà Nẵng', 'Hotel', 'Quản lý', '0900000000', 'muongthanh_dn@gmail.com', NULL, 'Active'),
+(10, 1, 'Vinpearl Resort Nha Trang', 'Hotel', 'Quản lý', '0900000000', 'vinpearl_nt@gmail.com', NULL, 'Active'),
+(11, NULL, 'Nhà Xe Hoàng Long Toàn Quốc', 'Transport', 'Quản lý', '0900000000', 'hoanglong_trans@gmail.com', NULL, 'Active'),
+(12, NULL, 'Đồng Văn Hoa Cổ', 'Hotel', 'Admin', '0900000000', 'contact_26@hotel.com', 'Vietnam', 'Active'),
+(13, NULL, 'Phoenix Hà Giang', 'Hotel', 'Admin', '0900000000', 'contact_27@hotel.com', 'Vietnam', 'Active'),
+(14, NULL, 'Hmong Village Resort', 'Hotel', 'Admin', '0900000000', 'contact_28@hotel.com', 'Vietnam', 'Active'),
+(15, NULL, 'Sala Phú Yên Beach', 'Hotel', 'Admin', '0900000000', 'contact_29@hotel.com', 'Vietnam', 'Active'),
+(16, NULL, 'Stelia Beach Resort', 'Hotel', 'Admin', '0900000000', 'contact_30@hotel.com', 'Vietnam', 'Active'),
+(17, NULL, 'Hùng Vương Phú Yên', 'Hotel', 'Admin', '0900000000', 'contact_31@hotel.com', 'Vietnam', 'Active'),
+(18, NULL, 'Seagull Quy Nhơn', 'Hotel', 'Admin', '0900000000', 'contact_32@hotel.com', 'Vietnam', 'Active'),
+(19, NULL, 'FLC Luxury Resort Quy Nhơn', 'Hotel', 'Admin', '0900000000', 'contact_33@hotel.com', 'Vietnam', 'Active'),
+(20, NULL, 'Hải Âu Quy Nhơn', 'Hotel', 'Admin', '0900000000', 'contact_34@hotel.com', 'Vietnam', 'Active'),
+(21, NULL, 'Phố Cổ Hội An', 'Hotel', 'Admin', '0900000000', 'contact_35@hotel.com', 'Vietnam', 'Active'),
+(22, NULL, 'Silk Sense Hoi An River Resort', 'Hotel', 'Admin', '0900000000', 'contact_36@hotel.com', 'Vietnam', 'Active'),
+(23, NULL, 'Hoi An Historic', 'Hotel', 'Admin', '0900000000', 'contact_37@hotel.com', 'Vietnam', 'Active'),
+(24, NULL, 'Century Riverside Huế', 'Hotel', 'Admin', '0900000000', 'contact_38@hotel.com', 'Vietnam', 'Active'),
+(25, NULL, 'Silk Path Grand Hue Hotel', 'Hotel', 'Admin', '0900000000', 'contact_39@hotel.com', 'Vietnam', 'Active'),
+(26, NULL, 'Moonlight Huế', 'Hotel', 'Admin', '0900000000', 'contact_40@hotel.com', 'Vietnam', 'Active'),
+(27, NULL, 'Mường Thanh Quảng Bình', 'Hotel', 'Admin', '0900000000', 'contact_41@hotel.com', 'Vietnam', 'Active'),
+(28, NULL, 'Sun Spa Resort Quảng Bình', 'Hotel', 'Admin', '0900000000', 'contact_42@hotel.com', 'Vietnam', 'Active'),
+(29, NULL, 'Tân Bình Quảng Bình', 'Hotel', 'Admin', '0900000000', 'contact_43@hotel.com', 'Vietnam', 'Active'),
+(30, NULL, 'Sapa Horizon', 'Hotel', 'Admin', '0900000000', 'contact_44@hotel.com', 'Vietnam', 'Active'),
+(31, NULL, 'Hotel de la Coupole Sapa', 'Hotel', 'Admin', '0900000000', 'contact_45@hotel.com', 'Vietnam', 'Active'),
+(32, NULL, 'Bamboo Sapa', 'Hotel', 'Admin', '0900000000', 'contact_46@hotel.com', 'Vietnam', 'Active'),
+(33, NULL, 'Mường Thanh Luxury Hạ Long', 'Hotel', 'Admin', '0900000000', 'contact_47@hotel.com', 'Vietnam', 'Active'),
+(34, NULL, 'Vinpearl Resort & Spa Hạ Long', 'Hotel', 'Admin', '0900000000', 'contact_48@hotel.com', 'Vietnam', 'Active'),
+(35, NULL, 'Halong Bay Hotel', 'Hotel', 'Admin', '0900000000', 'contact_49@hotel.com', 'Vietnam', 'Active'),
+(36, NULL, 'Emeralda Resort Ninh Bình', 'Hotel', 'Admin', '0900000000', 'contact_50@hotel.com', 'Vietnam', 'Active'),
+(37, NULL, 'Legend Ninh Bình', 'Hotel', 'Admin', '0900000000', 'contact_51@hotel.com', 'Vietnam', 'Active'),
+(38, NULL, 'Bái Đính Ninh Bình', 'Hotel', 'Admin', '0900000000', 'contact_52@hotel.com', 'Vietnam', 'Active'),
+(39, NULL, 'TTC Cần Thơ', 'Hotel', 'Admin', '0900000000', 'contact_53@hotel.com', 'Vietnam', 'Active'),
+(40, NULL, 'Victoria Cần Thơ Resort', 'Hotel', 'Admin', '0900000000', 'contact_54@hotel.com', 'Vietnam', 'Active'),
+(41, NULL, 'Ninh Kiều Cần Thơ', 'Hotel', 'Admin', '0900000000', 'contact_55@hotel.com', 'Vietnam', 'Active'),
+(42, NULL, 'Six Senses Côn Đảo', 'Hotel', 'Admin', '0900000000', 'contact_56@hotel.com', 'Vietnam', 'Active'),
+(43, NULL, 'The Secret Côn Đảo', 'Hotel', 'Admin', '0900000000', 'contact_57@hotel.com', 'Vietnam', 'Active'),
+(44, NULL, 'Côn Đảo Resort', 'Hotel', 'Admin', '0900000000', 'contact_58@hotel.com', 'Vietnam', 'Active'),
+(45, NULL, 'The Grand Ho Tram Resort', 'Hotel', 'Admin', '0900000000', 'contact_59@hotel.com', 'Vietnam', 'Active'),
+(46, NULL, 'Imperial Hotel Vũng Tàu', 'Hotel', 'Admin', '0900000000', 'contact_60@hotel.com', 'Vietnam', 'Active'),
+(47, NULL, 'Malibu Vũng Tàu', 'Hotel', 'Admin', '0900000000', 'contact_61@hotel.com', 'Vietnam', 'Active'),
+(48, NULL, 'Saigon Ban Me', 'Hotel', 'Admin', '0900000000', 'contact_62@hotel.com', 'Vietnam', 'Active'),
+(49, NULL, 'Pleiku Hotel', 'Hotel', 'Admin', '0900000000', 'contact_63@hotel.com', 'Vietnam', 'Active'),
+(50, NULL, 'Elephants Hotel Buôn Ma Thuột', 'Hotel', 'Admin', '0900000000', 'contact_64@hotel.com', 'Vietnam', 'Active'),
+(51, NULL, 'Mũi Cà Mau', 'Hotel', 'Admin', '0900000000', 'contact_65@hotel.com', 'Vietnam', 'Active'),
+(52, NULL, 'Mường Thanh Luxury Cà Mau', 'Hotel', 'Admin', '0900000000', 'contact_66@hotel.com', 'Vietnam', 'Active'),
+(53, NULL, 'Melia Vinpearl Tây Ninh', 'Hotel', 'Admin', '0900000000', 'contact_67@hotel.com', 'Vietnam', 'Active'),
+(54, NULL, 'Sunrise Tây Ninh', 'Hotel', 'Admin', '0900000000', 'contact_68@hotel.com', 'Vietnam', 'Active'),
+(55, NULL, 'Phú Quý Island Hotel', 'Hotel', 'Admin', '0900000000', 'contact_69@hotel.com', 'Vietnam', 'Active'),
+(56, NULL, 'Centara Mirage Resort Mũi Né', 'Hotel', 'Admin', '0900000000', 'contact_70@hotel.com', 'Vietnam', 'Active'),
+(57, NULL, 'Lotte Hotel Hà Nội', 'Hotel', 'Admin', '0900000000', 'contact_71@hotel.com', 'Vietnam', 'Active'),
+(58, NULL, 'Silk Path Hà Nội', 'Hotel', 'Admin', '0900000000', 'contact_72@hotel.com', 'Vietnam', 'Active'),
+(59, NULL, 'Rex Hotel Saigon', 'Hotel', 'Admin', '0900000000', 'contact_73@hotel.com', 'Vietnam', 'Active'),
+(60, NULL, 'Liberty Central Saigon', 'Hotel', 'Admin', '0900000000', 'contact_74@hotel.com', 'Vietnam', 'Active'),
+(201, 1, 'Nhà hàng Âu Lạc Thịnh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110001', NULL, NULL, 'Active'),
+(202, 1, 'Nhà hàng Thùy Dương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110002', NULL, NULL, 'Active'),
+(203, 1, 'Nhà hàng Làng Biển', 'Restaurant', 'Quản lý Đặt tiệc', '0901110003', NULL, NULL, 'Active'),
+(204, 2, 'Nhà hàng Buffet Rau Leguda', 'Restaurant', 'Quản lý Đặt tiệc', '0901110004', NULL, NULL, 'Active'),
+(205, 2, 'Nhà hàng Rừng Thông Mơ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110005', NULL, NULL, 'Active'),
+(206, 2, 'Trạm dừng Tâm Châu (Bảo Lộc)', 'Restaurant', 'Quản lý Đặt tiệc', '0901110006', NULL, NULL, 'Active'),
+(207, 3, 'Nhà hàng Hạnh Nhung Luxury', 'Restaurant', 'Quản lý Đặt tiệc', '0901110007', NULL, NULL, 'Active'),
+(208, 3, 'Nhà hàng Xin Chào Phú Quốc', 'Restaurant', 'Quản lý Đặt tiệc', '0901110008', NULL, NULL, 'Active'),
+(209, 3, 'Nhà hàng Trùng Dương Marina', 'Restaurant', 'Quản lý Đặt tiệc', '0901110009', NULL, NULL, 'Active'),
+(210, 4, 'Nhà hàng Chợ Tình Sapa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110010', NULL, NULL, 'Active'),
+(211, 4, 'Nhà hàng Cá Hồi Vua Sapa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110011', NULL, NULL, 'Active'),
+(212, 4, 'Nhà hàng Hải Lâm Sapa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110012', NULL, NULL, 'Active'),
+(213, 5, 'Nhà hàng Không Gian Xưa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110013', NULL, NULL, 'Active'),
+(214, 5, 'Nhà hàng 4U Beach', 'Restaurant', 'Quản lý Đặt tiệc', '0901110014', NULL, NULL, 'Active'),
+(215, 5, 'Đặc Sản Trần (Cơ sở Lê Duẩn)', 'Restaurant', 'Quản lý Đặt tiệc', '0901110015', NULL, NULL, 'Active'),
+(216, 6, 'Nhà hàng Làng Lụa Hội An', 'Restaurant', 'Quản lý Đặt tiệc', '0901110016', NULL, NULL, 'Active'),
+(217, 6, 'Nhà hàng Fullmoon', 'Restaurant', 'Quản lý Đặt tiệc', '0901110017', NULL, NULL, 'Active'),
+(218, 6, 'Khu Sinh Thái Rừng Dừa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110018', NULL, NULL, 'Active'),
+(219, 7, 'Nhà hàng Cung Đình Huế', 'Restaurant', 'Quản lý Đặt tiệc', '0901110019', NULL, NULL, 'Active'),
+(220, 7, 'Nhà hàng Nổi Sông Hương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110020', NULL, NULL, 'Active'),
+(221, 7, 'Nhà hàng Chân Đồi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110021', NULL, NULL, 'Active'),
+(222, 8, 'Khu Ẩm thực Sen Tây Hồ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110022', NULL, NULL, 'Active'),
+(223, 8, 'Nhà hàng Lục Thủy', 'Restaurant', 'Quản lý Đặt tiệc', '0901110023', NULL, NULL, 'Active'),
+(224, 8, 'Hệ thống Trống Đồng Palace', 'Restaurant', 'Quản lý Đặt tiệc', '0901110024', NULL, NULL, 'Active'),
+(225, 9, 'Nhà hàng Hồng Hạnh 3', 'Restaurant', 'Quản lý Đặt tiệc', '0901110025', NULL, NULL, 'Active'),
+(226, 9, 'Nhà hàng Cua Vàng', 'Restaurant', 'Quản lý Đặt tiệc', '0901110026', NULL, NULL, 'Active'),
+(227, 9, 'Nhà hàng Phương Nam', 'Restaurant', 'Quản lý Đặt tiệc', '0901110027', NULL, NULL, 'Active'),
+(228, 10, 'Nhà hàng Cococamp Kỳ Co', 'Restaurant', 'Quản lý Đặt tiệc', '0901110028', NULL, NULL, 'Active'),
+(229, 10, 'Nhà hàng Hướng Dương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110029', NULL, NULL, 'Active'),
+(230, 10, 'Nhà hàng Mộc Viên', 'Restaurant', 'Quản lý Đặt tiệc', '0901110030', NULL, NULL, 'Active'),
+(231, 11, 'Nhà hàng Cây Bàng Mũi Né', 'Restaurant', 'Quản lý Đặt tiệc', '0901110031', NULL, NULL, 'Active'),
+(232, 11, 'Nhà hàng Hồng Vinh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110032', NULL, NULL, 'Active'),
+(233, 11, 'Khu Ẩm thực Làng Chài', 'Restaurant', 'Quản lý Đặt tiệc', '0901110033', NULL, NULL, 'Active'),
+(234, 12, 'Nhà hàng Du thuyền Cần Thơ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110034', NULL, NULL, 'Active'),
+(235, 12, 'KDL Sinh thái Hoa Sứ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110035', NULL, NULL, 'Active'),
+(236, 12, 'Nhà hàng Lúa Nếp', 'Restaurant', 'Quản lý Đặt tiệc', '0901110036', NULL, NULL, 'Active'),
+(237, 13, 'Nhà hàng Thu Ba', 'Restaurant', 'Quản lý Đặt tiệc', '0901110037', NULL, NULL, 'Active'),
+(238, 13, 'Nhà hàng Cánh Buồm', 'Restaurant', 'Quản lý Đặt tiệc', '0901110038', NULL, NULL, 'Active'),
+(239, 13, 'Nhà hàng Hải sản Ớt', 'Restaurant', 'Quản lý Đặt tiệc', '0901110039', NULL, NULL, 'Active'),
+(240, 14, 'Nhà hàng Gành Hào', 'Restaurant', 'Quản lý Đặt tiệc', '0901110040', NULL, NULL, 'Active'),
+(241, 14, 'Nhà hàng Hải sản Lâm Đường', 'Restaurant', 'Quản lý Đặt tiệc', '0901110041', NULL, NULL, 'Active'),
+(242, 14, 'Làng Nướng Vạn Chài', 'Restaurant', 'Quản lý Đặt tiệc', '0901110042', NULL, NULL, 'Active'),
+(243, 15, 'Nhà hàng Hoàng Giang', 'Restaurant', 'Quản lý Đặt tiệc', '0901110043', NULL, NULL, 'Active'),
+(244, 15, 'Nhà hàng Thăng Long', 'Restaurant', 'Quản lý Đặt tiệc', '0901110044', NULL, NULL, 'Active'),
+(245, 15, 'Nhà hàng Tam Cốc Bích Động', 'Restaurant', 'Quản lý Đặt tiệc', '0901110045', NULL, NULL, 'Active'),
+(246, 16, 'Nhà hàng Lá Cọ Beach', 'Restaurant', 'Quản lý Đặt tiệc', '0901110046', NULL, NULL, 'Active'),
+(247, 16, 'Nhà hàng nổi Đại Dương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110047', NULL, NULL, 'Active'),
+(248, 16, 'Nhà hàng Sabochi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110048', NULL, NULL, 'Active'),
+(249, 18, 'Khu du lịch Tân Cảng', 'Restaurant', 'Quản lý Đặt tiệc', '0901110049', NULL, NULL, 'Active'),
+(250, 18, 'Nhà hàng Tân Hải Vân', 'Restaurant', 'Quản lý Đặt tiệc', '0901110050', NULL, NULL, 'Active'),
+(251, 18, 'Nhà hàng Vườn Cau', 'Restaurant', 'Quản lý Đặt tiệc', '0901110051', NULL, NULL, 'Active'),
+(252, 19, 'Nhà hàng Ngói Đỏ Hà Giang', 'Restaurant', 'Quản lý Đặt tiệc', '0901110052', NULL, NULL, 'Active'),
+(253, 19, 'Nhà hàng Cơm Niêu Hà Giang', 'Restaurant', 'Quản lý Đặt tiệc', '0901110053', NULL, NULL, 'Active'),
+(254, 19, 'Nhà hàng Sông Miện', 'Restaurant', 'Quản lý Đặt tiệc', '0901110054', NULL, NULL, 'Active'),
+(255, 20, 'Nhà hàng Quang Anh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110055', NULL, NULL, 'Active'),
+(256, 20, 'Nhà hàng Sala Tuy Hòa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110056', NULL, NULL, 'Active'),
+(257, 20, 'Nhà hàng Năm Đô', 'Restaurant', 'Quản lý Đặt tiệc', '0901110057', NULL, NULL, 'Active'),
+(258, 21, 'KDL Sinh Thái Suối Ong', 'Restaurant', 'Quản lý Đặt tiệc', '0901110058', NULL, NULL, 'Active'),
+(259, 21, 'Điền Trang Hoa Mai', 'Restaurant', 'Quản lý Đặt tiệc', '0901110059', NULL, NULL, 'Active'),
+(260, 21, 'Nhà hàng Thủy Cương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110060', NULL, NULL, 'Active'),
+(261, 22, 'Nhà hàng Phượng Vĩ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110061', NULL, NULL, 'Active'),
+(262, 22, 'Nhà hàng Hương Đất Mũi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110062', NULL, NULL, 'Active'),
+(263, 22, 'Nhà hàng Vân Thủy', 'Restaurant', 'Quản lý Đặt tiệc', '0901110063', NULL, NULL, 'Active'),
+(264, 23, 'Nhà hàng Long Châu', 'Restaurant', 'Quản lý Đặt tiệc', '0901110064', NULL, NULL, 'Active'),
+(265, 23, 'Khu ẩm thực Sinh Đôi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110065', NULL, NULL, 'Active'),
+(266, 23, 'Bò Tơ Năm Sánh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110066', NULL, NULL, 'Active'),
+(267, 24, 'Nhà hàng Công Tử Bạc Liêu', 'Restaurant', 'Quản lý Đặt tiệc', '0901110067', NULL, NULL, 'Active'),
+(268, 24, 'KDL Sinh Thái Hồ Nam', 'Restaurant', 'Quản lý Đặt tiệc', '0901110068', NULL, NULL, 'Active'),
+(269, 24, 'Nhà hàng Thủy Tạ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110069', NULL, NULL, 'Active'),
+(270, 25, 'Nhà hàng Hoa Sứ Sa Đéc', 'Restaurant', 'Quản lý Đặt tiệc', '0901110070', NULL, NULL, 'Active'),
+(271, 25, 'Nhà hàng KDL Xẻo Quýt', 'Restaurant', 'Quản lý Đặt tiệc', '0901110071', NULL, NULL, 'Active'),
+(272, 25, 'Nhà hàng Tám Thành', 'Restaurant', 'Quản lý Đặt tiệc', '0901110072', NULL, NULL, 'Active');
 
 -- --------------------------------------------------------
 
@@ -958,7 +1311,9 @@ INSERT INTO `payments` (`payment_id`, `booking_id`, `payment_method`, `amount`, 
 (13, 13, 'Cash', 15198000.00, 'TXN_1790866070789', 'Success', '2026-10-01 14:48:05'),
 (14, 14, 'Cash', 7599000.00, 'TXN_1790866208770', 'Success', '2026-10-01 14:50:18'),
 (15, 15, 'Cash', 11398500.00, 'TXN_1790905271149', 'Success', '2026-10-02 01:41:30'),
-(16, 16, 'Cash', 7599000.00, 'TXN_1790905391782', 'Pending', NULL);
+(16, 16, 'Cash', 7599000.00, 'TXN_1790905391782', 'Pending', NULL),
+(17, 17, 'Cash', 7599000.00, 'TXN_1791044580839', 'Pending', NULL),
+(18, 18, 'Cash', 15198000.00, 'TXN_1791079508116', 'Pending', NULL);
 
 -- --------------------------------------------------------
 
@@ -1239,91 +1594,322 @@ CREATE TABLE `services` (
   `unit` varchar(50) DEFAULT NULL,
   `base_cost` decimal(15,2) DEFAULT NULL,
   `selling_price` decimal(15,2) DEFAULT NULL,
-  `capacity` int(11) DEFAULT NULL,
   `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
   `action_verb` varchar(50) DEFAULT NULL,
-  `short_display_name` varchar(150) DEFAULT NULL,
-  `max_adults` int(11) DEFAULT 2,
-  `max_children` int(11) DEFAULT 2,
-  `max_infants` int(11) DEFAULT 1,
-  `min_adults` int(11) DEFAULT 1,
-  `single_room_allowed` tinyint(1) DEFAULT 1,
-  `single_room_supplement` decimal(10,2) DEFAULT 0.00
+  `short_display_name` varchar(150) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `services`
 --
 
-INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `capacity`, `attributes`, `action_verb`, `short_display_name`, `max_adults`, `max_children`, `max_infants`, `min_adults`, `single_room_allowed`, `single_room_supplement`) VALUES
-(1, 'Vé máy bay Khứ hồi - Phổ thông', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 2200000.00, 2200000.00, 1, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Airbus A321\", \"has_baggage\": \"20kg Ký gửi\"}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(2, 'Vé máy bay Khứ hồi - Thương gia', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 5500000.00, 5500000.00, 1, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Boeing 787\", \"has_baggage\": \"30kg Ký gửi + Phòng chờ VIP\"}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(4, 'Xe Du lịch 16 chỗ / Ngày', 'Xe vận chuyển', '', '/uploads/1786238675096-710880483.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1200000.00, 1200000.00, 15, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(5, 'Thuê xe Limousine 9 chỗ / Ngày', 'Xe vận chuyển', '', '/uploads/1786238624166-114887815.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 2000000.00, 2000000.00, 9, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(6, 'Phòng Deluxe Ocean View', 'Khách sạn', NULL, NULL, 'Active', 4, 1, 'Phòng/Đêm', 2500000.00, 2500000.00, 2, '{\"star_rating\": 5, \"room_type\": \"Deluxe\", \"bed_type\": \"1 King Bed\", \"has_breakfast\": true}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(7, 'Phòng Standard Hướng Phố', 'Khách sạn', NULL, NULL, 'Active', 5, 1, 'Phòng/Đêm', 900000.00, 900000.00, 2, '{\"star_rating\": 4, \"room_type\": \"Standard\", \"bed_type\": \"2 Twin Beds\", \"has_breakfast\": true}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(8, 'Phòng Superior', 'Khách sạn', '', '/uploads/1786237947856-208711390.jpg', 'Active', 6, 2, 'Phòng/Đêm', 1300000.00, 1300000.00, 2, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(9, 'Villa 1 Phòng Ngủ (Cổ điển)', 'Khách sạn', '', '/uploads/1786237896616-604688624.jpg', 'Active', 7, 2, 'Căn/Đêm', 3200000.00, 3200000.00, 2, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(10, 'Emerald Bay View', 'Khách sạn', '', '/uploads/1786211032534-907253131.avif', 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 5000000.00, 2, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(12, 'Phòng Deluxe Hướng Biển', 'Accommodation', '', '/uploads/1786211263783-230213333.jpg', 'Active', NULL, 5, 'Phòng/Đêm', 1200000.00, 1200000.00, 0, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(13, 'Phòng Suite Cao Cấp', 'Accommodation', '', '/uploads/1786211185878-710398912.webp', 'Active', NULL, 1, 'Phòng/Đêm', 2000000.00, 2000000.00, 0, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(14, 'Xe Ford Transit 16 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210855576-636069820.webp', 'Active', NULL, NULL, 'Xe/Ngày', 960000.00, 1060000.00, 0, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(15, 'Xe Thaco 29 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210745118-332571067.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1760000.00, 1760000.00, 0, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(20, 'Phòng Suite Cơ Bản', 'Khách sạn', 'Trải nghiệm sang trọng, dịch vụ đẳng cấp', '/uploads/1786209370282-387963415.webp', 'Active', 10, 1, 'Phòng/Đêm', 0.00, 0.00, 2, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(21, 'Phòng Suite Cao Cấp', 'Khách sạn', 'ỷhh', '/uploads/1786246706834-935012199.webp', 'Pending', 10, 1, 'Phòng/Đêm', 0.00, 0.00, 2, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(22, 'Xe SUV 7 chỗ (Innova/Fortuner) / Ngày', 'Xe vận chuyển', 'Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.', '/uploads/1787459248482-55394049.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 900000.00, 900000.00, 7, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(23, 'Xe Limousine 11 chỗ VIP / Ngày', 'Xe vận chuyển', 'Xe Limousine độ ghế massage cao cấp, chuyên phục vụ khách VIP.', '/uploads/1787459197786-354992328.jpeg', 'Active', NULL, NULL, 'Xe/Ngày', 2200000.00, 2200000.00, 11, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(24, 'Xe 29 chỗ Thaco Town / Ngày', 'Xe vận chuyển', 'Xe 29 chỗ rộng rãi, hầm cốp lớn, phù hợp cho đoàn công ty vừa và nhỏ.', '/uploads/1787459151889-630393448.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1600000.00, 1700000.00, 29, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(25, 'Xe 45 chỗ Universe / Ngày', 'Xe vận chuyển', 'Dòng xe 45 chỗ cao cấp nhất, bầu hơi êm ái, chuyên chạy tour ghép đoàn lớn.', '/uploads/1787459109242-530366681.jpeg', 'Active', NULL, NULL, 'Xe/Ngày', 2500000.00, 2600000.00, 45, '{}', NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(26, 'Khách sạn 3★ Đồng Văn Hoa Cổ', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 19, 'Phòng/Đêm', 850000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(27, 'Khách sạn 4★ Phoenix Hà Giang', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 19, 'Phòng/Đêm', 1200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(28, 'Hmong Village Resort 4★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 19, 'Phòng/Đêm', 1600000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(29, 'Khách sạn 4★ Sala Phú Yên Beach', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 20, 'Phòng/Đêm', 1200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(30, 'Stelia Beach Resort 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 20, 'Phòng/Đêm', 2800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(31, 'Khách sạn 3★ Hùng Vương Phú Yên', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 20, 'Phòng/Đêm', 750000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(32, 'Khách sạn 4★ Seagull Quy Nhơn', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 10, 'Phòng/Đêm', 1300000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(33, 'FLC Luxury Resort Quy Nhơn 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 10, 'Phòng/Đêm', 3500000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(34, 'Khách sạn 3★ Hải Âu Quy Nhơn', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 10, 'Phòng/Đêm', 800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(35, 'Khách sạn 4★ Phố Cổ Hội An', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 6, 'Phòng/Đêm', 1300000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(36, 'Silk Sense Hoi An River Resort 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 6, 'Phòng/Đêm', 2900000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(37, 'Khách sạn 3★ Hoi An Historic', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 6, 'Phòng/Đêm', 850000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(38, 'Khách sạn 4★ Century Riverside Huế', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 7, 'Phòng/Đêm', 1200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(39, 'Silk Path Grand Hue Hotel 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 7, 'Phòng/Đêm', 2500000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(40, 'Khách sạn 3★ Moonlight Huế', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 7, 'Phòng/Đêm', 800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(41, 'Khách sạn 4★ Mường Thanh Quảng Bình', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 16, 'Phòng/Đêm', 1250000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(42, 'Sun Spa Resort Quảng Bình 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 16, 'Phòng/Đêm', 2800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(43, 'Khách sạn 3★ Tân Bình Quảng Bình', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 16, 'Phòng/Đêm', 750000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(44, 'Khách sạn 4★ Sapa Horizon', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 4, 'Phòng/Đêm', 1400000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(45, 'Hotel de la Coupole Sapa 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 4, 'Phòng/Đêm', 3800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(46, 'Khách sạn 3★ Bamboo Sapa', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 4, 'Phòng/Đêm', 950000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(47, 'Khách sạn 4★ Mường Thanh Luxury Hạ Long', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 9, 'Phòng/Đêm', 1500000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(48, 'Vinpearl Resort & Spa Hạ Long 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 9, 'Phòng/Đêm', 3600000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(49, 'Khách sạn 3★ Halong Bay Hotel', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 9, 'Phòng/Đêm', 850000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(50, 'Emeralda Resort Ninh Bình 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 15, 'Phòng/Đêm', 2600000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(51, 'Khách sạn 4★ Legend Ninh Bình', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 15, 'Phòng/Đêm', 1300000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(52, 'Khách sạn 3★ Bái Đính Ninh Bình', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 15, 'Phòng/Đêm', 800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(53, 'Khách sạn 4★ TTC Cần Thơ', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 12, 'Phòng/Đêm', 1200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(54, 'Victoria Cần Thơ Resort 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 12, 'Phòng/Đêm', 2700000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(55, 'Khách sạn 3★ Ninh Kiều Cần Thơ', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 12, 'Phòng/Đêm', 850000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(56, 'Six Senses Côn Đảo 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 13, 'Phòng/Đêm', 8500000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(57, 'The Secret Côn Đảo 4★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 13, 'Phòng/Đêm', 2200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(58, 'Khách sạn 3★ Côn Đảo Resort', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 13, 'Phòng/Đêm', 1100000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(59, 'The Grand Ho Tram Resort 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 14, 'Phòng/Đêm', 3200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(60, 'Imperial Hotel Vũng Tàu 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 14, 'Phòng/Đêm', 2600000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(61, 'Khách sạn 4★ Malibu Vũng Tàu', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 14, 'Phòng/Đêm', 1400000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(62, 'Khách sạn 4★ Saigon Ban Me', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 21, 'Phòng/Đêm', 1200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(63, 'Khách sạn 3★ Pleiku Hotel', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 21, 'Phòng/Đêm', 850000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(64, 'Elephants Hotel Buôn Ma Thuột 4★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 21, 'Phòng/Đêm', 1100000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(65, 'Khách sạn 3★ Mũi Cà Mau', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 22, 'Phòng/Đêm', 800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(66, 'Khách sạn 4★ Mường Thanh Luxury Cà Mau', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 22, 'Phòng/Đêm', 1300000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(67, 'Melia Vinpearl Tây Ninh 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 23, 'Phòng/Đêm', 1600000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(68, 'Khách sạn 3★ Sunrise Tây Ninh', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 23, 'Phòng/Đêm', 750000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(69, 'Phú Quý Island Hotel 3★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 11, 'Phòng/Đêm', 900000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(70, 'Centara Mirage Resort Mũi Né 5★', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 11, 'Phòng/Đêm', 2900000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(71, 'Khách sạn 5★ Lotte Hotel Hà Nội', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 8, 'Phòng/Đêm', 3200000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(72, 'Khách sạn 4★ Silk Path Hà Nội', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 8, 'Phòng/Đêm', 1600000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(73, 'Khách sạn 5★ Rex Hotel Saigon', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 18, 'Phòng/Đêm', 2800000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00),
-(74, 'Khách sạn 4★ Liberty Central Saigon', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', NULL, 18, 'Phòng/Đêm', 1500000.00, NULL, NULL, NULL, NULL, NULL, 2, 2, 1, 1, 1, 0.00);
+INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `attributes`, `action_verb`, `short_display_name`) VALUES
+(1, 'Vé máy bay Khứ hồi - Phổ thông', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 2200000.00, 2200000.00, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Airbus A321\", \"has_baggage\": \"20kg Ký gửi\"}', NULL, NULL),
+(2, 'Vé máy bay Khứ hồi - Thương gia', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 5500000.00, 5500000.00, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Boeing 787\", \"has_baggage\": \"30kg Ký gửi + Phòng chờ VIP\"}', NULL, NULL),
+(4, 'Xe Du lịch 16 chỗ / Ngày', 'Xe vận chuyển', '', '/uploads/1786238675096-710880483.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1200000.00, 1200000.00, '{}', NULL, NULL),
+(5, 'Thuê xe Limousine 9 chỗ / Ngày', 'Xe vận chuyển', '', '/uploads/1786238624166-114887815.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 2000000.00, 2000000.00, '{}', NULL, NULL),
+(6, 'Phòng Deluxe Ocean View', 'Khách sạn', NULL, NULL, 'Active', 4, 1, 'Phòng/Đêm', 2500000.00, 2500000.00, '{\"star_rating\": 5, \"room_type\": \"Deluxe\", \"bed_type\": \"1 King Bed\", \"has_breakfast\": true}', NULL, NULL),
+(7, 'Phòng Standard Hướng Phố', 'Khách sạn', NULL, NULL, 'Active', 5, 1, 'Phòng/Đêm', 900000.00, 900000.00, '{\"star_rating\": 4, \"room_type\": \"Standard\", \"bed_type\": \"2 Twin Beds\", \"has_breakfast\": true}', NULL, NULL),
+(8, 'Phòng Superior', 'Khách sạn', '', '/uploads/1786237947856-208711390.jpg', 'Active', 6, 2, 'Phòng/Đêm', 1300000.00, 1300000.00, '{}', NULL, NULL),
+(9, 'Villa 1 Phòng Ngủ (Cổ điển)', 'Khách sạn', '', '/uploads/1786237896616-604688624.jpg', 'Active', 7, 2, 'Căn/Đêm', 3200000.00, 3200000.00, '{}', NULL, NULL),
+(10, 'Emerald Bay View', 'Khách sạn', '', '/uploads/1786211032534-907253131.avif', 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 5000000.00, '{}', NULL, NULL),
+(12, 'Phòng Deluxe Hướng Biển', 'Khách sạn', '', '/uploads/1786211263783-230213333.jpg', 'Active', NULL, 5, 'Phòng/Đêm', 1200000.00, 1200000.00, '{}', NULL, NULL),
+(13, 'Phòng Suite Cao Cấp', 'Accommodation', '', '/uploads/1786211185878-710398912.webp', 'Active', NULL, 1, 'Phòng/Đêm', 2000000.00, 2000000.00, '{}', NULL, NULL),
+(14, 'Xe Ford Transit 16 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210855576-636069820.webp', 'Active', NULL, NULL, 'Xe/Ngày', 960000.00, 1060000.00, '{}', NULL, NULL),
+(15, 'Xe Thaco 29 Chỗ', 'Xe vận chuyển', '', '/uploads/1786210745118-332571067.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1760000.00, 1760000.00, '{}', NULL, NULL),
+(20, 'Phòng Suite Cơ Bản', 'Khách sạn', 'Trải nghiệm sang trọng, dịch vụ đẳng cấp', '/uploads/1786209370282-387963415.webp', 'Active', 10, 1, 'Phòng/Đêm', 0.00, 0.00, '{}', NULL, NULL),
+(21, 'Phòng Suite Cao Cấp', 'Khách sạn', 'ỷhh', '/uploads/1786246706834-935012199.webp', 'Pending', 10, 1, 'Phòng/Đêm', 0.00, 0.00, NULL, NULL, NULL),
+(22, 'Xe SUV 7 chỗ (Innova/Fortuner) / Ngày', 'Xe vận chuyển', 'Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.', '/uploads/1787459248482-55394049.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 900000.00, 900000.00, '{}', NULL, NULL),
+(23, 'Xe Limousine 11 chỗ VIP / Ngày', 'Xe vận chuyển', 'Xe Limousine độ ghế massage cao cấp, chuyên phục vụ khách VIP.', '/uploads/1787459197786-354992328.jpeg', 'Active', NULL, NULL, 'Xe/Ngày', 2200000.00, 2200000.00, '{}', NULL, NULL),
+(24, 'Xe 29 chỗ Thaco Town / Ngày', 'Xe vận chuyển', 'Xe 29 chỗ rộng rãi, hầm cốp lớn, phù hợp cho đoàn công ty vừa và nhỏ.', '/uploads/1787459151889-630393448.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1600000.00, 1700000.00, '{}', NULL, NULL),
+(25, 'Xe 45 chỗ Universe / Ngày', 'Xe vận chuyển', 'Dòng xe 45 chỗ cao cấp nhất, bầu hơi êm ái, chuyên chạy tour ghép đoàn lớn.', '/uploads/1787459109242-530366681.jpeg', 'Active', NULL, NULL, 'Xe/Ngày', 2500000.00, 2600000.00, '{}', NULL, NULL),
+(26, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 12, 19, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(27, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 13, 19, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(28, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 14, 19, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(29, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 15, 20, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(30, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 16, 20, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(31, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 17, 20, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(32, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 18, 10, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(33, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 19, 10, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(34, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 20, 10, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(35, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 21, 6, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(36, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 22, 6, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(37, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 23, 6, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(38, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 24, 7, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(39, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 25, 7, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(40, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 26, 7, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(41, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 27, 16, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(42, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 28, 16, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(43, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 29, 16, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(44, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 30, 4, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(45, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 31, 4, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(46, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 32, 4, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(47, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 33, 9, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(48, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 34, 9, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(49, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 35, 9, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(50, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 36, 15, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(51, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 37, 15, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(52, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 38, 15, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(53, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 39, 12, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(54, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 40, 12, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(55, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 41, 12, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(56, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 42, 13, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(57, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 43, 13, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(58, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 44, 13, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(59, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 45, 14, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(60, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 46, 14, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(61, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 47, 14, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(62, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 48, 21, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(63, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 49, 21, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(64, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 50, 21, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(65, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 51, 22, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(66, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 52, 22, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(67, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 53, 23, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(68, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 54, 23, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(69, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 55, 11, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(70, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 56, 11, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(71, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 57, 8, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(72, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 58, 8, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(73, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 59, 18, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(74, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 60, 18, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(75, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 12, 19, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(76, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 12, 19, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(77, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(78, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(79, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(80, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(81, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(82, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(83, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(84, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(85, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(86, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(87, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(88, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(89, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(90, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(91, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(92, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(93, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 17, 20, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(94, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 17, 20, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(95, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(96, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(97, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(98, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(99, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(100, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(101, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(102, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(103, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 20, 10, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(104, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 20, 10, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(105, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(106, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(107, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(108, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(109, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(110, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(111, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(112, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(113, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 23, 6, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(114, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 23, 6, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(115, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(116, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(117, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(118, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(119, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(120, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(121, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(122, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(123, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 26, 7, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(124, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 26, 7, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(125, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(126, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(127, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(128, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(129, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(130, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(131, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(132, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(133, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 29, 16, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(134, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 29, 16, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(135, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(136, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(137, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(138, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(139, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(140, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(141, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(142, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(143, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 32, 4, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(144, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 32, 4, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(145, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(146, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(147, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(148, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(149, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(150, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(151, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(152, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(153, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 35, 9, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(154, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 35, 9, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(155, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(156, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(157, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(158, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(159, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(160, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(161, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(162, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(163, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 38, 15, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(164, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 38, 15, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(165, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(166, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(167, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(168, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(169, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(170, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(171, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(172, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(173, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 41, 12, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(174, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 41, 12, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(175, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(176, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(177, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(178, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(179, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(180, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(181, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(182, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(183, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 44, 13, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(184, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 44, 13, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(185, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(186, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(187, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(188, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(189, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(190, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(191, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(192, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(193, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(194, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(195, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(196, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(197, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(198, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(199, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(200, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(201, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 49, 21, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(202, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 49, 21, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(203, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(204, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(205, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(206, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(207, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 51, 22, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(208, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 51, 22, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(209, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(210, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(211, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(212, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(213, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(214, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(215, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(216, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(217, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 54, 23, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(218, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 54, 23, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(219, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 55, 11, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(220, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 55, 11, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(221, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(222, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(223, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(224, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(225, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(226, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(227, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(228, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(229, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(230, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(231, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(232, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(233, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(234, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(235, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(236, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(237, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(238, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(239, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(240, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(301, 'Set Menu Tiêu Chuẩn - Âu Lạc Thịnh', 'Nhà hàng', 'Thực đơn 6 món chuẩn đoàn, bàn 10 người', NULL, 'Active', 201, 1, 'Suất', 130000.00, 150000.00, NULL, NULL, NULL),
+(302, 'Set Menu Hải Sản - Thùy Dương', 'Nhà hàng', 'Thực đơn 7 món hải sản biển, có lẩu', NULL, 'Active', 202, 1, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(303, 'Set Menu V.I.P - Làng Biển', 'Nhà hàng', 'Thực đơn 8 món, setup riêng khu vực VIP', NULL, 'Active', 203, 1, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(304, 'Buffet Rau Không Giới Hạn - Leguda', 'Nhà hàng', 'Ăn kèm 2 loại nước lẩu và hải sản, thịt nướng', NULL, 'Active', 204, 2, 'Suất', 140000.00, 169000.00, NULL, NULL, NULL),
+(305, 'Set Menu Cơm Đoàn - Rừng Thông Mơ', 'Nhà hàng', 'Đặc sản Cơm lam gà nướng nguyên con', NULL, 'Active', 205, 2, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(306, 'Set Cơm Niêu - Tâm Châu', 'Nhà hàng', 'Phục vụ ăn trưa nhanh dọc đường', NULL, 'Active', 206, 2, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(307, 'Set Menu Gala Dinner - Hạnh Nhung', 'Nhà hàng', 'Hải sản cao cấp, hỗ trợ setup âm thanh sân khấu', NULL, 'Active', 207, 3, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(308, 'Set Menu Hoàng Hôn - Xin Chào', 'Nhà hàng', 'Bàn view biển ngắm hoàng hôn, thực đơn 8 món', NULL, 'Active', 208, 3, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(309, 'Set Menu Đoàn Đông - Trùng Dương', 'Nhà hàng', 'Thực đơn cơ bản, lên món siêu tốc cho đoàn >100 người', NULL, 'Active', 209, 3, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(310, 'Set Lẩu Cá Hồi - Chợ Tình Sapa', 'Nhà hàng', 'Lẩu cá hồi Sapa đặc sản, ăn kèm rau rừng', NULL, 'Active', 210, 4, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(311, 'Set Menu Đặc Sản - Cá Hồi Vua', 'Nhà hàng', 'Cá hồi tươi sống làm 4 món, lẩu cá tầm', NULL, 'Active', 211, 4, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(312, 'Set Gà Đồi Lợn Bản - Hải Lâm', 'Nhà hàng', 'Thực đơn đậm chất Tây Bắc, phù hợp mọi lứa tuổi', NULL, 'Active', 212, 4, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(313, 'Set Menu Cung Đình - Không Gian Xưa', 'Nhà hàng', 'Thực đơn cung đình kết hợp dân dã, bàn 10 người', NULL, 'Active', 213, 5, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(314, 'Buffet Hải Sản Tiệc - 4U Beach', 'Nhà hàng', 'Tổ chức Gala Dinner trên bãi biển Mỹ Khê', NULL, 'Active', 214, 5, 'Suất', 350000.00, 450000.00, NULL, NULL, NULL),
+(315, 'Combo Đặc Sản - Trần', 'Nhà hàng', 'Bánh tráng cuốn thịt heo 2 đầu da, Mì Quảng', NULL, 'Active', 215, 5, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(316, 'Buffet Làng Quê - Làng Lụa', 'Nhà hàng', 'Gánh hàng rong với hơn 40 món đặc sản Quảng Nam', NULL, 'Active', 216, 6, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(317, 'Set Menu Phố Cổ - Fullmoon', 'Nhà hàng', 'Cao lầu, hoành thánh, cơm gà và thả hoa đăng', NULL, 'Active', 217, 6, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(318, 'Set Ăn Miệt Vườn - Rừng Dừa', 'Nhà hàng', 'Dùng bữa tại chòi lá sau khi đi thuyền thúng', NULL, 'Active', 218, 6, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(319, 'Set Cơm Vua - Cung Đình Huế', 'Nhà hàng', 'Cơm Vua 8 món, khách được mặc hoàng bào chụp ảnh', NULL, 'Active', 219, 7, 'Suất', 300000.00, 380000.00, NULL, NULL, NULL),
+(320, 'Set Menu Ăn Tối Trên Sông - Nổi SH', 'Nhà hàng', 'Vừa dùng bữa tối vừa nghe Ca Huế trên sông Hương', NULL, 'Active', 220, 7, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(321, 'Set Menu Tiêu Chuẩn - Chân Đồi', 'Nhà hàng', 'Thực đơn 6 món ăn kèm chuẩn vị Huế', NULL, 'Active', 221, 7, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(322, 'Buffet Quốc Tế - Sen Tây Hồ', 'Nhà hàng', 'Hơn 200 món ăn Á Âu, sức chứa hàng ngàn khách', NULL, 'Active', 222, 8, 'Suất', 380000.00, 450000.00, NULL, NULL, NULL),
+(323, 'Set Menu Cao Cấp - Lục Thủy', 'Nhà hàng', 'Thực đơn chuẩn sao, view nhìn ra Hồ Gươm', NULL, 'Active', 223, 8, 'Suất', 400000.00, 500000.00, NULL, NULL, NULL),
+(324, 'Set Hội Nghị - Trống Đồng Palace', 'Nhà hàng', 'Chuyên nhận đoàn MICE, hội trường cực lớn', NULL, 'Active', 224, 8, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(325, 'Set Menu Hải Sản - Hồng Hạnh 3', 'Nhà hàng', 'Hải sản Hạ Long tươi sống, bề bề rang muối', NULL, 'Active', 225, 9, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(326, 'Set Lẩu Cua Biển - Cua Vàng', 'Nhà hàng', 'Lẩu cua biển nấu trong niêu đất độc quyền', NULL, 'Active', 226, 9, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(327, 'Set Menu View Vịnh - Phương Nam', 'Nhà hàng', 'Bàn 10 người ngắm Vịnh Hạ Long, có sẵn sân khấu', NULL, 'Active', 227, 9, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(328, 'Set Menu Hải Sản Kỳ Co - Cococamp', 'Nhà hàng', 'Thực đơn ăn trưa 8 món sau khi lặn ngắm san hô', NULL, 'Active', 228, 10, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(329, 'Set Menu Tiêu Chuẩn - Hướng Dương', 'Nhà hàng', 'Phục vụ đoàn tham quan Eo Gió, đầy đủ tôm mực', NULL, 'Active', 229, 10, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(330, 'Set Cơm Đoàn - Mộc Viên', 'Nhà hàng', 'Phục vụ cơm phần gia đình mộc mạc, đậm vị đất Võ', NULL, 'Active', 230, 10, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(331, 'Set Menu Hải Sản - Cây Bàng', 'Nhà hàng', 'Gỏi cá mai, tôm nướng muối ớt, lẩu cá bớp', NULL, 'Active', 231, 11, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(332, 'Set Gala Dinner - Hồng Vinh', 'Nhà hàng', 'Có khuôn viên tổ chức Gala ngoài trời, hỗ trợ âm thanh', NULL, 'Active', 232, 11, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(333, 'Set Tiêu Chuẩn - Làng Chài', 'Nhà hàng', 'Set thực đơn 7 món hải sản bình dân', NULL, 'Active', 233, 11, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(334, 'Set Ăn Tối Du Thuyền - Cần Thơ', 'Nhà hàng', 'Du ngoạn sông Hậu 2 tiếng, đờn ca tài tử', NULL, 'Active', 234, 12, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(335, 'Set Menu Miệt Vườn - Hoa Sứ', 'Nhà hàng', 'Cá tai tượng chiên xù, lẩu mắm đồng quê', NULL, 'Active', 235, 12, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(336, 'Set Menu Cao Cấp - Lúa Nếp', 'Nhà hàng', 'Thực đơn các món ăn biến tấu từ đặc sản miền Tây', NULL, 'Active', 236, 12, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(337, 'Set Tiêu Chuẩn - Thu Ba', 'Nhà hàng', 'Phục vụ đoàn lớn, thực đơn 6 món hải sản tươi', NULL, 'Active', 237, 13, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(338, 'Set Đặc Sản Biển - Cánh Buồm', 'Nhà hàng', 'Có ốc vú nàng, gỏi cá nhám đặc trưng', NULL, 'Active', 238, 13, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(339, 'Set Cơm Đoàn - Hải Sản Ớt', 'Nhà hàng', 'Đồ ăn lên nhanh, nóng hổi, phù hợp tour tâm linh', NULL, 'Active', 239, 13, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(340, 'Set Menu Hải Sản - Gành Hào', 'Nhà hàng', 'Thực đơn 8 món, nhà hàng sát biển view hoàng hôn', NULL, 'Active', 240, 14, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(341, 'Set Tiêu Chuẩn - Lâm Đường', 'Nhà hàng', 'Không gian nổi trên biển, khu Gala riêng biệt', NULL, 'Active', 241, 14, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(342, 'Buffet Nướng Vạn Chài', 'Nhà hàng', 'Phục vụ không giới hạn các loại ốc, tôm, mực', NULL, 'Active', 242, 14, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(343, 'Set Dê Núi - Hoàng Giang', 'Nhà hàng', 'Cơm cháy sốt mỡ hành, dê tái chanh, dê xào lăn', NULL, 'Active', 243, 15, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(344, 'Set Buffet Chay - Thăng Long', 'Nhà hàng', 'Phục vụ các đoàn hành hương Chùa Bái Đính', NULL, 'Active', 244, 15, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(345, 'Set Menu Tiêu Chuẩn - Tam Cốc', 'Nhà hàng', 'Phục vụ bữa trưa trước/sau khi đi thuyền Tam Cốc', NULL, 'Active', 245, 15, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(346, 'Set Gala Dinner - Lá Cọ Beach', 'Nhà hàng', 'Mực nháy, cá đối nướng, thiết kế sẵn backdrop', NULL, 'Active', 246, 16, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(347, 'Set Menu Trên Sông - Đại Dương', 'Nhà hàng', 'Ăn tối trên nhà hàng nổi sông Nhật Lệ', NULL, 'Active', 247, 16, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(348, 'Set Bồi Bổ - Sabochi', 'Nhà hàng', 'Các món ăn tiềm, hầm kết hợp sâm Bố Chính', NULL, 'Active', 248, 16, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(349, 'Buffet Khẩn Hoang - Bình Quới', 'Nhà hàng', 'Gánh hàng rong tái hiện ẩm thực 3 miền', NULL, 'Active', 249, 18, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(350, 'Set Menu Dimsum - Tân Hải Vân', 'Nhà hàng', 'Menu đồ Hoa đặc sắc phục vụ khách Inbound', NULL, 'Active', 250, 18, 'Suất', 300000.00, 380000.00, NULL, NULL, NULL),
+(351, 'Set Tiệc Cưới/Hội Nghị - Vườn Cau', 'Nhà hàng', 'Sảnh tiệc hoành tráng, âm thanh ánh sáng chuẩn', NULL, 'Active', 251, 18, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(352, 'Set Đặc Sản - Ngói Đỏ', 'Nhà hàng', 'Gà đồi nướng, lợn bản xào, rau rừng', NULL, 'Active', 252, 19, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(353, 'Set Cơm Niêu Tiêu Chuẩn', 'Nhà hàng', 'Bữa trưa dọc đường, các món kho quẹt đậm đà', NULL, 'Active', 253, 19, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(354, 'Set Ăn View Sông - Sông Miện', 'Nhà hàng', 'Cá suối chiên giòn, măng rừng xào', NULL, 'Active', 254, 19, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(355, 'Set Sò Huyết Đầm Ô Loan - Quang Anh', 'Nhà hàng', 'Đặc sản sò huyết, mắt cá ngừ đại dương', NULL, 'Active', 255, 20, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(356, 'Set Gala Dinner - Sala Tuy Hòa', 'Nhà hàng', 'Phục vụ tiệc cao cấp, hội nghị khách hàng', NULL, 'Active', 256, 20, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(357, 'Set Tiêu Chuẩn - Năm Đô', 'Nhà hàng', 'Ăn trưa nhanh chóng, giá cả cực kỳ cạnh tranh', NULL, 'Active', 257, 20, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(358, 'Set Menu Sinh Thái - Suối Ong', 'Nhà hàng', 'Gà nướng mọi, heo rừng xào sả ớt', NULL, 'Active', 258, 21, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(359, 'Set Cơm Lam Gà Sa Lửa - Hoa Mai', 'Nhà hàng', 'Đặc sản Tây Nguyên không thể thiếu trong tour', NULL, 'Active', 259, 21, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(360, 'Set Bê Thui - Thủy Cương', 'Nhà hàng', 'Thực đơn ăn nhậu lai rai cho khách đoàn', NULL, 'Active', 260, 21, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(361, 'Set Menu Tiêu Chuẩn - Phượng Vĩ', 'Nhà hàng', 'Lẩu cá kèo, lươn om sả, cá rô kho tộ', NULL, 'Active', 261, 22, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(362, 'Set Cua Cà Mau - Hương Đất Mũi', 'Nhà hàng', 'Đảm bảo mỗi khách 1 con cua Cà Mau chính gốc', NULL, 'Active', 262, 22, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(363, 'Set Menu Hội Nghị - Vân Thủy', 'Nhà hàng', 'Không gian lịch sự, phục vụ chuyên nghiệp', NULL, 'Active', 263, 22, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(364, 'Set Tiêu Chuẩn - Long Châu', 'Nhà hàng', 'Các món cuốn bánh tráng, rau rừng Tây Ninh', NULL, 'Active', 264, 23, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(365, 'Set Menu Chay - Sinh Đôi', 'Nhà hàng', 'Phục vụ đoàn hành hương các dịp rằm, lễ lớn', NULL, 'Active', 265, 23, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(366, 'Set Bò Tơ - Năm Sánh', 'Nhà hàng', 'Bò tơ nướng lụi, lẩu bò sụn ngon nức tiếng', NULL, 'Active', 266, 23, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(367, 'Set Công Tử Bạc Liêu', 'Nhà hàng', 'Các món ăn mang phong vị gia đình bá hộ xưa', NULL, 'Active', 267, 24, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(368, 'Set Gala Trữ Tình - Hồ Nam', 'Nhà hàng', 'Vừa dùng tiệc vừa nghe vọng cổ đờn ca tài tử', NULL, 'Active', 268, 24, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(369, 'Set Menu Tiêu Chuẩn - Thủy Tạ', 'Nhà hàng', 'Lẩu chua cá hú, cá lóc kho tộ mặn mà', NULL, 'Active', 269, 24, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(370, 'Set Menu Xứ Hoa - Hoa Sứ Sa Đéc', 'Nhà hàng', 'Bữa trưa miệt vườn giữa làng hoa kiểng', NULL, 'Active', 270, 25, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(371, 'Set Đặc Sản - Xẻo Quýt', 'Nhà hàng', 'Cá lóc nướng trui cuộn lá sen non đặc trưng', NULL, 'Active', 271, 25, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(372, 'Set Tiêu Chuẩn - Tám Thành', 'Nhà hàng', 'Cơm đoàn lên món nhanh chóng, giá siêu tốt', NULL, 'Active', 272, 25, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1357,6 +1943,103 @@ INSERT INTO `service_bookings` (`booking_id`, `customer_id`, `service_id`, `quan
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `service_migration_backup`
+--
+
+CREATE TABLE `service_migration_backup` (
+  `backup_id` int(11) NOT NULL,
+  `old_service_id` int(11) DEFAULT NULL,
+  `old_service_name` varchar(255) DEFAULT NULL,
+  `old_partner_id` int(11) DEFAULT NULL,
+  `old_service_type` varchar(100) DEFAULT NULL,
+  `old_capacity` int(11) DEFAULT NULL,
+  `old_max_adults` int(11) DEFAULT NULL,
+  `old_max_children` int(11) DEFAULT NULL,
+  `old_max_infants` int(11) DEFAULT NULL,
+  `old_min_adults` int(11) DEFAULT NULL,
+  `old_single_room_allowed` tinyint(1) DEFAULT NULL,
+  `old_single_room_supplement` decimal(10,2) DEFAULT NULL,
+  `migration_status` varchar(50) DEFAULT NULL,
+  `migration_note` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `service_migration_backup`
+--
+
+INSERT INTO `service_migration_backup` (`backup_id`, `old_service_id`, `old_service_name`, `old_partner_id`, `old_service_type`, `old_capacity`, `old_max_adults`, `old_max_children`, `old_max_infants`, `old_min_adults`, `old_single_room_allowed`, `old_single_room_supplement`, `migration_status`, `migration_note`) VALUES
+(1, 1, 'Vé máy bay Khứ hồi - Phổ thông', 1, 'Vé máy bay', 1, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(2, 2, 'Vé máy bay Khứ hồi - Thương gia', 1, 'Vé máy bay', 1, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(3, 4, 'Xe Du lịch 16 chỗ / Ngày', NULL, 'Xe vận chuyển', 15, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(4, 5, 'Thuê xe Limousine 9 chỗ / Ngày', NULL, 'Xe vận chuyển', 9, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(5, 6, 'Phòng Deluxe Ocean View', 4, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(6, 7, 'Phòng Standard Hướng Phố', 5, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(7, 8, 'Phòng Superior', 6, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(8, 9, 'Villa 1 Phòng Ngủ (Cổ điển)', 7, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(9, 10, 'Emerald Bay View', 8, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(10, 12, 'Phòng Deluxe Hướng Biển', NULL, 'Accommodation', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(11, 13, 'Phòng Suite Cao Cấp', NULL, 'Accommodation', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(12, 14, 'Xe Ford Transit 16 Chỗ', NULL, 'Xe vận chuyển', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(13, 15, 'Xe Thaco 29 Chỗ', NULL, 'Xe vận chuyển', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(14, 20, 'Phòng Suite Cơ Bản', 10, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(15, 21, 'Phòng Suite Cao Cấp', 10, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(16, 22, 'Xe SUV 7 chỗ (Innova/Fortuner) / Ngày', NULL, 'Xe vận chuyển', 7, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(17, 23, 'Xe Limousine 11 chỗ VIP / Ngày', NULL, 'Xe vận chuyển', 11, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(18, 24, 'Xe 29 chỗ Thaco Town / Ngày', NULL, 'Xe vận chuyển', 29, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(19, 25, 'Xe 45 chỗ Universe / Ngày', NULL, 'Xe vận chuyển', 45, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(20, 26, 'Khách sạn 3★ Đồng Văn Hoa Cổ', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(21, 27, 'Khách sạn 4★ Phoenix Hà Giang', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(22, 28, 'Hmong Village Resort 4★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(23, 29, 'Khách sạn 4★ Sala Phú Yên Beach', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(24, 30, 'Stelia Beach Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(25, 31, 'Khách sạn 3★ Hùng Vương Phú Yên', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(26, 32, 'Khách sạn 4★ Seagull Quy Nhơn', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(27, 33, 'FLC Luxury Resort Quy Nhơn 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(28, 34, 'Khách sạn 3★ Hải Âu Quy Nhơn', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(29, 35, 'Khách sạn 4★ Phố Cổ Hội An', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(30, 36, 'Silk Sense Hoi An River Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(31, 37, 'Khách sạn 3★ Hoi An Historic', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(32, 38, 'Khách sạn 4★ Century Riverside Huế', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(33, 39, 'Silk Path Grand Hue Hotel 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(34, 40, 'Khách sạn 3★ Moonlight Huế', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(35, 41, 'Khách sạn 4★ Mường Thanh Quảng Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(36, 42, 'Sun Spa Resort Quảng Bình 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(37, 43, 'Khách sạn 3★ Tân Bình Quảng Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(38, 44, 'Khách sạn 4★ Sapa Horizon', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(39, 45, 'Hotel de la Coupole Sapa 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(40, 46, 'Khách sạn 3★ Bamboo Sapa', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(41, 47, 'Khách sạn 4★ Mường Thanh Luxury Hạ Long', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(42, 48, 'Vinpearl Resort & Spa Hạ Long 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(43, 49, 'Khách sạn 3★ Halong Bay Hotel', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(44, 50, 'Emeralda Resort Ninh Bình 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(45, 51, 'Khách sạn 4★ Legend Ninh Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(46, 52, 'Khách sạn 3★ Bái Đính Ninh Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(47, 53, 'Khách sạn 4★ TTC Cần Thơ', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(48, 54, 'Victoria Cần Thơ Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(49, 55, 'Khách sạn 3★ Ninh Kiều Cần Thơ', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(50, 56, 'Six Senses Côn Đảo 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(51, 57, 'The Secret Côn Đảo 4★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(52, 58, 'Khách sạn 3★ Côn Đảo Resort', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(53, 59, 'The Grand Ho Tram Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(54, 60, 'Imperial Hotel Vũng Tàu 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(55, 61, 'Khách sạn 4★ Malibu Vũng Tàu', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(56, 62, 'Khách sạn 4★ Saigon Ban Me', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(57, 63, 'Khách sạn 3★ Pleiku Hotel', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(58, 64, 'Elephants Hotel Buôn Ma Thuột 4★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(59, 65, 'Khách sạn 3★ Mũi Cà Mau', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(60, 66, 'Khách sạn 4★ Mường Thanh Luxury Cà Mau', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(61, 67, 'Melia Vinpearl Tây Ninh 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(62, 68, 'Khách sạn 3★ Sunrise Tây Ninh', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(63, 69, 'Phú Quý Island Hotel 3★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(64, 70, 'Centara Mirage Resort Mũi Né 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(65, 71, 'Khách sạn 5★ Lotte Hotel Hà Nội', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(66, 72, 'Khách sạn 4★ Silk Path Hà Nội', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(67, 73, 'Khách sạn 5★ Rex Hotel Saigon', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(68, 74, 'Khách sạn 4★ Liberty Central Saigon', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `service_requests`
 --
 
@@ -1372,17 +2055,38 @@ CREATE TABLE `service_requests` (
   `agreed_price` int(11) DEFAULT 0 COMMENT 'Giá thỏa thuận chốt cứng tại thời điểm đặt',
   `group_id` int(11) DEFAULT NULL,
   `service_type` varchar(50) DEFAULT NULL,
-  `quantity` int(11) DEFAULT NULL
+  `quantity` int(11) DEFAULT NULL,
+  `responded_by` int(11) DEFAULT NULL,
+  `responded_at` datetime DEFAULT NULL,
+  `response_note` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `service_requests`
 --
 
-INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_id`, `partner_id`, `requested_by`, `request_content`, `status`, `created_at`, `agreed_price`, `group_id`, `service_type`, `quantity`) VALUES
-(7, NULL, 1, 5, 4, 'Khách hàng đặt: Ngày 2026-08-09 - Số lượng: 1', 'Accepted', '2026-08-08 10:39:19', 1200000, NULL, NULL, NULL),
-(8, NULL, 3, 10, 8, 'Khách hàng đặt: Ngày 2026-08-13 - Số lượng: 1', 'Accepted', '2026-08-08 18:03:44', 4200000, NULL, NULL, NULL),
-(9, NULL, 4, 10, 8, 'Khách hàng đặt: Ngày 2026-08-14 - Số lượng: 1', 'Pending', '2026-08-09 03:36:58', 4200000, NULL, NULL, NULL);
+INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_id`, `partner_id`, `requested_by`, `request_content`, `status`, `created_at`, `agreed_price`, `group_id`, `service_type`, `quantity`, `responded_by`, `responded_at`, `response_note`) VALUES
+(19, 59, NULL, 6, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-03\",\"checkOut\":\"2026-11-04\",\"nights\":1,\"service_id\":8}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'HOTEL', 5, 18, '2026-10-03 15:18:02', ''),
+(20, 59, NULL, 5, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-04\",\"checkOut\":\"2026-11-06\",\"nights\":2,\"service_id\":7}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'HOTEL', 5, 18, '2026-10-03 15:18:08', ''),
+(21, 59, NULL, 205, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Trưa\",\"service_id\":305,\"destName\":\"\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:12', ''),
+(22, 59, NULL, 204, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Tối\",\"service_id\":304,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:18', ''),
+(23, 59, NULL, 203, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Trưa\",\"service_id\":303,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-05\",\"mealType\":\"Tối\",\"service_id\":303,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:15', ''),
+(24, 59, NULL, 202, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Tối\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-06\",\"mealType\":\"Trưa\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\",\"18\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:20', ''),
+(25, 59, NULL, 201, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-05\",\"mealType\":\"Trưa\",\"service_id\":301,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:23', ''),
+(26, 57, NULL, 6, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-17\",\"checkOut\":\"2026-11-18\",\"nights\":1,\"service_id\":8}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'HOTEL', 4, NULL, NULL, NULL),
+(27, 57, NULL, 5, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-18\",\"checkOut\":\"2026-11-20\",\"nights\":2,\"service_id\":7}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'HOTEL', 4, NULL, NULL, NULL),
+(28, 57, NULL, 205, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-17\",\"mealType\":\"Trưa\",\"service_id\":305,\"destName\":\"\",\"possible_dests\":[\"2\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(29, 57, NULL, 204, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-17\",\"mealType\":\"Tối\",\"service_id\":304,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(30, 57, NULL, 203, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-18\",\"mealType\":\"Trưa\",\"service_id\":303,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-19\",\"mealType\":\"Tối\",\"service_id\":303,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(31, 57, NULL, 202, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-18\",\"mealType\":\"Tối\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-20\",\"mealType\":\"Trưa\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\",\"18\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(32, 57, NULL, 201, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-19\",\"mealType\":\"Trưa\",\"service_id\":301,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(33, 59, NULL, 6, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-03\",\"checkOut\":\"2026-11-04\",\"nights\":1,\"service_id\":8}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'HOTEL', 2, 18, '2026-10-04 03:31:54', ''),
+(34, 59, NULL, 5, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-04\",\"checkOut\":\"2026-11-06\",\"nights\":2,\"service_id\":7}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'HOTEL', 2, 18, '2026-10-04 03:31:56', ''),
+(35, 59, NULL, 205, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Trưa\",\"service_id\":305,\"destName\":\"\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:17', ''),
+(36, 59, NULL, 204, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Tối\",\"service_id\":304,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:20', ''),
+(37, 59, NULL, 203, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Trưa\",\"service_id\":303,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-05\",\"mealType\":\"Tối\",\"service_id\":303,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:22', ''),
+(38, 59, NULL, 202, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Tối\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-06\",\"mealType\":\"Trưa\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\",\"18\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:25', ''),
+(39, 59, NULL, 201, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-05\",\"mealType\":\"Trưa\",\"service_id\":301,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:27', '');
 
 -- --------------------------------------------------------
 
@@ -1398,8 +2102,18 @@ CREATE TABLE `service_request_groups` (
   `passenger_count` int(11) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
-  `status` varchar(50) DEFAULT 'DRAFT'
+  `status` varchar(50) DEFAULT 'DRAFT',
+  `parent_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `service_request_groups`
+--
+
+INSERT INTO `service_request_groups` (`id`, `code`, `departure_id`, `request_type`, `passenger_count`, `created_by`, `created_at`, `status`, `parent_id`) VALUES
+(2, 'YCT-2799', 59, 'INITIAL', 12, 3, '2026-10-03 15:03:55', 'PROCESSING', NULL),
+(3, 'YCT-0168', 57, 'INITIAL', 12, 3, '2026-10-04 02:54:03', 'PROCESSING', NULL),
+(4, 'YCB-2799-01', 59, 'SUPPLEMENT', 3, 3, '2026-10-04 03:30:35', 'PROCESSING', 2);
 
 -- --------------------------------------------------------
 
@@ -1607,30 +2321,65 @@ CREATE TABLE `users` (
   `date_of_birth` date DEFAULT NULL,
   `status` enum('Active','Inactive','Blocked') DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `partner_group` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`, `phone`, `avatar`, `gender`, `date_of_birth`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Admin', 'admin@gmail.com', '$2b$10$x1TcT7jDDa0T2/k73QqzB.uB5Tczgmfou83MQ0jMRvzW/gs4E6RLq', '0900000001', NULL, 'Male', '1990-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:26'),
-(2, 2, 'HR Manager', 'hr@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000002', NULL, 'Female', '1991-02-02', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:34'),
-(3, 3, 'Tour Manager', 'manager@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000003', NULL, 'Male', '1989-03-03', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:40'),
-(4, 4, 'Office Staff', 'staff@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000004', NULL, 'Female', '1995-04-04', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:45'),
-(5, 5, 'Guide One', 'guide1@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000005', NULL, 'Male', '1992-05-05', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:52'),
-(6, 5, 'Guide Two', 'guide2@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000006', '/uploads/avatar_6_1785853247689.jpg', 'Female', '1993-06-06', 'Active', '2026-06-20 17:53:17', '2026-08-04 14:20:47'),
-(7, 6, 'Nguyễn Văn Hoàng', 'nguyenvanhoang@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000007', NULL, 'Male', '2000-01-01', 'Active', '2026-06-20 17:53:17', '2026-09-19 02:33:44'),
-(8, 6, 'Trần Kiến Quốc', 'trankienquoc@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000008', NULL, 'Female', '2001-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-28 07:10:12'),
-(9, 7, 'Nha xe Đức Mai', 'ducmai@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0326753674', NULL, 'Male', NULL, 'Active', '2026-06-27 09:59:12', '2026-06-28 06:58:12'),
-(10, 4, 'tdoan', 'doanthitramyt2004@gmail.com', '$2b$10$Gpa90D0cbSaicPW3deTo/uxfKC2ehntZ02hC2qeWs8rM02MjXBJLi', '0347853897', NULL, 'Female', '2001-02-06', 'Active', '2026-08-03 13:03:03', '2026-08-03 13:03:03'),
-(11, 7, 'Partner', 'partner.muongthanh@travel.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000055', NULL, NULL, NULL, 'Active', '2026-08-08 10:23:29', '2026-08-08 10:25:08'),
-(12, 7, 'KS Mường Thanh Đà Nẵng', 'muongthanh_dn@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0901234567', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:03'),
-(13, 7, 'Vinpearl Nha Trang', 'vinpearl_nt@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0902345678', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:51'),
-(14, 7, 'Nhà Xe Hoàng Long', 'hoanglong_trans@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0903456789', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:11'),
-(16, 8, 'Nguyễn Văn Tài (Tài xế)', 'taixe@travelvn.com', '$2b$10$bFBYZisZ961NKc/L3hsDNO5dpSkrEeVDH5BzoNuQIB/dNCSPlVdVK', '0912345678', NULL, NULL, NULL, 'Active', '2026-09-22 02:30:12', '2026-09-22 02:30:12'),
-(17, 8, 'Trần Văn Lái (Tài xế Cao Cấp)', 'tranvanlai@travelvn.com', '$2b$10$bFBYZisZ961NKc/L3hsDNO5dpSkrEeVDH5BzoNuQIB/dNCSPlVdVK', '0987654321', NULL, NULL, NULL, 'Active', '2026-09-22 02:30:12', '2026-09-22 02:30:12');
+INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`, `phone`, `avatar`, `gender`, `date_of_birth`, `status`, `created_at`, `updated_at`, `partner_group`) VALUES
+(1, 1, 'Admin', 'admin@gmail.com', '$2b$10$x1TcT7jDDa0T2/k73QqzB.uB5Tczgmfou83MQ0jMRvzW/gs4E6RLq', '0900000001', NULL, 'Male', '1990-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:26', NULL),
+(2, 2, 'HR Manager', 'hr@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000002', NULL, 'Female', '1991-02-02', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:34', NULL),
+(3, 3, 'Tour Manager', 'manager@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000003', NULL, 'Male', '1989-03-03', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:40', NULL),
+(4, 4, 'Office Staff', 'staff@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000004', NULL, 'Female', '1995-04-04', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:45', NULL),
+(5, 5, 'Guide One', 'guide1@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000005', NULL, 'Male', '1992-05-05', 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:52', NULL),
+(6, 5, 'Guide Two', 'guide2@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000006', '/uploads/avatar_6_1785853247689.jpg', 'Female', '1993-06-06', 'Active', '2026-06-20 17:53:17', '2026-08-04 14:20:47', NULL),
+(7, 6, 'Nguyễn Văn Hoàng', 'nguyenvanhoang@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000007', NULL, 'Male', '2000-01-01', 'Active', '2026-06-20 17:53:17', '2026-09-19 02:33:44', NULL),
+(8, 6, 'Trần Kiến Quốc', 'trankienquoc@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000008', NULL, 'Female', '2001-01-01', 'Active', '2026-06-20 17:53:17', '2026-06-28 07:10:12', NULL),
+(9, 7, 'Nha xe Đức Mai', 'ducmai@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0326753674', NULL, 'Male', NULL, 'Active', '2026-06-27 09:59:12', '2026-06-28 06:58:12', NULL),
+(10, 4, 'tdoan', 'doanthitramyt2004@gmail.com', '$2b$10$Gpa90D0cbSaicPW3deTo/uxfKC2ehntZ02hC2qeWs8rM02MjXBJLi', '0347853897', NULL, 'Female', '2001-02-06', 'Active', '2026-08-03 13:03:03', '2026-08-03 13:03:03', NULL),
+(11, 7, 'Partner', 'partner.muongthanh@travel.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000055', NULL, NULL, NULL, 'Active', '2026-08-08 10:23:29', '2026-08-08 10:25:08', NULL),
+(12, 7, 'KS Mường Thanh Đà Nẵng', 'muongthanh_dn@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0901234567', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:03', NULL),
+(13, 7, 'Vinpearl Nha Trang', 'vinpearl_nt@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0902345678', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:51', NULL),
+(14, 7, 'Nhà Xe Hoàng Long', 'hoanglong_trans@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0903456789', NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:11', NULL),
+(16, 8, 'Nguyễn Văn Tài (Tài xế)', 'taixe@travelvn.com', '$2b$10$bFBYZisZ961NKc/L3hsDNO5dpSkrEeVDH5BzoNuQIB/dNCSPlVdVK', '0912345678', NULL, NULL, NULL, 'Active', '2026-09-22 02:30:12', '2026-09-22 02:30:12', NULL),
+(17, 8, 'Trần Văn Lái (Tài xế Cao Cấp)', 'tranvanlai@travelvn.com', '$2b$10$bFBYZisZ961NKc/L3hsDNO5dpSkrEeVDH5BzoNuQIB/dNCSPlVdVK', '0987654321', NULL, NULL, NULL, 'Active', '2026-09-22 02:30:12', '2026-09-22 02:30:12', NULL),
+(18, 7, 'Đối tác Khách sạn', 'partner_hotel@example.com', '$2b$10$87T5aMWepgDqYTt/gepgdODR6DIThz0df38lRTSM/2n0ZiLIIAz/q', NULL, NULL, NULL, NULL, 'Active', '2026-10-03 08:24:27', '2026-10-03 08:24:27', 'HOTEL'),
+(19, 7, 'Đối tác Nhà hàng', 'partner_restaurant@example.com', '$2b$10$87T5aMWepgDqYTt/gepgdODR6DIThz0df38lRTSM/2n0ZiLIIAz/q', NULL, NULL, NULL, NULL, 'Active', '2026-10-03 08:24:27', '2026-10-03 08:24:27', 'RESTAURANT');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vehicle_service_details`
+--
+
+CREATE TABLE `vehicle_service_details` (
+  `vehicle_service_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `vehicle_type` varchar(100) DEFAULT NULL,
+  `vehicle_model` varchar(100) DEFAULT NULL,
+  `seat_capacity` int(11) DEFAULT NULL,
+  `license_plate` varchar(20) DEFAULT NULL,
+  `driver_required` tinyint(1) DEFAULT 1,
+  `vehicle_status` varchar(50) DEFAULT 'AVAILABLE',
+  `driver_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `vehicle_service_details`
+--
+
+INSERT INTO `vehicle_service_details` (`vehicle_service_id`, `service_id`, `vehicle_type`, `vehicle_model`, `seat_capacity`, `license_plate`, `driver_required`, `vehicle_status`, `driver_id`) VALUES
+(1, 4, 'Xe Du lịch 16 chỗ / Ngày', NULL, 16, NULL, 1, 'AVAILABLE', NULL),
+(2, 5, 'Thuê xe Limousine 9 chỗ / Ngày', NULL, 9, NULL, 1, 'AVAILABLE', NULL),
+(5, 14, 'Xe Ford Transit 16 Chỗ', NULL, 16, NULL, 1, 'AVAILABLE', NULL),
+(6, 15, 'Xe Thaco 29 Chỗ', NULL, 29, NULL, 1, 'AVAILABLE', NULL),
+(7, 22, 'Xe SUV 7 chỗ (Innova/Fortuner) / Ngày', NULL, 7, NULL, 1, 'AVAILABLE', NULL),
+(8, 23, 'Xe Limousine 11 chỗ VIP / Ngày', NULL, 11, NULL, 1, 'AVAILABLE', NULL),
+(9, 24, 'Xe 29 chỗ Thaco Town / Ngày', NULL, 29, NULL, 1, 'AVAILABLE', NULL),
+(10, 25, 'Xe 45 chỗ Universe / Ngày', NULL, 45, NULL, 1, 'AVAILABLE', NULL);
 
 --
 -- Indexes for dumped tables
@@ -1757,6 +2506,13 @@ ALTER TABLE `holidays`
   ADD PRIMARY KEY (`holiday_id`);
 
 --
+-- Indexes for table `hotel_service_details`
+--
+ALTER TABLE `hotel_service_details`
+  ADD PRIMARY KEY (`hotel_service_id`),
+  ADD UNIQUE KEY `service_id` (`service_id`);
+
+--
 -- Indexes for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
@@ -1806,14 +2562,6 @@ ALTER TABLE `notifications`
 ALTER TABLE `partners`
   ADD PRIMARY KEY (`partner_id`),
   ADD KEY `fk_partners_destinations` (`destination_id`);
-
---
--- Indexes for table `partner_services`
---
-ALTER TABLE `partner_services`
-  ADD PRIMARY KEY (`partner_service_id`),
-  ADD KEY `partner_id` (`partner_id`),
-  ADD KEY `service_id` (`service_id`);
 
 --
 -- Indexes for table `payments`
@@ -1870,13 +2618,20 @@ ALTER TABLE `roles`
 -- Indexes for table `services`
 --
 ALTER TABLE `services`
-  ADD PRIMARY KEY (`service_id`);
+  ADD PRIMARY KEY (`service_id`),
+  ADD KEY `fk_services_partner` (`partner_id`);
 
 --
 -- Indexes for table `service_bookings`
 --
 ALTER TABLE `service_bookings`
   ADD PRIMARY KEY (`booking_id`);
+
+--
+-- Indexes for table `service_migration_backup`
+--
+ALTER TABLE `service_migration_backup`
+  ADD PRIMARY KEY (`backup_id`);
 
 --
 -- Indexes for table `service_requests`
@@ -1937,6 +2692,14 @@ ALTER TABLE `users`
   ADD KEY `role_id` (`role_id`);
 
 --
+-- Indexes for table `vehicle_service_details`
+--
+ALTER TABLE `vehicle_service_details`
+  ADD PRIMARY KEY (`vehicle_service_id`),
+  ADD UNIQUE KEY `service_id` (`service_id`),
+  ADD KEY `driver_id` (`driver_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -1944,7 +2707,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `booking_change_requests`
@@ -1956,7 +2719,7 @@ ALTER TABLE `booking_change_requests`
 -- AUTO_INCREMENT for table `booking_passengers`
 --
 ALTER TABLE `booking_passengers`
-  MODIFY `passenger_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `passenger_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `consultation_requests`
@@ -1968,7 +2731,7 @@ ALTER TABLE `consultation_requests`
 -- AUTO_INCREMENT for table `customer_behavior_logs`
 --
 ALTER TABLE `customer_behavior_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=82;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
 
 --
 -- AUTO_INCREMENT for table `customer_travel_preferences`
@@ -2037,6 +2800,12 @@ ALTER TABLE `holidays`
   MODIFY `holiday_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `hotel_service_details`
+--
+ALTER TABLE `hotel_service_details`
+  MODIFY `hotel_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=232;
+
+--
 -- AUTO_INCREMENT for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
@@ -2076,19 +2845,13 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `partners`
 --
 ALTER TABLE `partners`
-  MODIFY `partner_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
---
--- AUTO_INCREMENT for table `partner_services`
---
-ALTER TABLE `partner_services`
-  MODIFY `partner_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `partner_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=273;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `payroll`
@@ -2130,7 +2893,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=373;
 
 --
 -- AUTO_INCREMENT for table `service_bookings`
@@ -2139,16 +2902,22 @@ ALTER TABLE `service_bookings`
   MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `service_migration_backup`
+--
+ALTER TABLE `service_migration_backup`
+  MODIFY `backup_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+
+--
 -- AUTO_INCREMENT for table `service_requests`
 --
 ALTER TABLE `service_requests`
-  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `service_request_groups`
 --
 ALTER TABLE `service_request_groups`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `timekeeping`
@@ -2184,7 +2953,13 @@ ALTER TABLE `trip_reports`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+
+--
+-- AUTO_INCREMENT for table `vehicle_service_details`
+--
+ALTER TABLE `vehicle_service_details`
+  MODIFY `vehicle_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- Constraints for dumped tables
@@ -2257,6 +3032,12 @@ ALTER TABLE `guide_assignments`
   ADD CONSTRAINT `guide_assignments_ibfk_2` FOREIGN KEY (`guide_id`) REFERENCES `guides` (`guide_id`);
 
 --
+-- Constraints for table `hotel_service_details`
+--
+ALTER TABLE `hotel_service_details`
+  ADD CONSTRAINT `hotel_service_details_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
@@ -2301,13 +3082,6 @@ ALTER TABLE `partners`
   ADD CONSTRAINT `fk_partners_destinations` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`destination_id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `partner_services`
---
-ALTER TABLE `partner_services`
-  ADD CONSTRAINT `partner_services_ibfk_1` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`),
-  ADD CONSTRAINT `partner_services_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
-
---
 -- Constraints for table `payments`
 --
 ALTER TABLE `payments`
@@ -2346,6 +3120,12 @@ ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
 
 --
+-- Constraints for table `services`
+--
+ALTER TABLE `services`
+  ADD CONSTRAINT `fk_services_partner` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `service_requests`
 --
 ALTER TABLE `service_requests`
@@ -2371,6 +3151,13 @@ ALTER TABLE `tour_category_map`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`);
+
+--
+-- Constraints for table `vehicle_service_details`
+--
+ALTER TABLE `vehicle_service_details`
+  ADD CONSTRAINT `vehicle_service_details_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `vehicle_service_details_ibfk_2` FOREIGN KEY (`driver_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

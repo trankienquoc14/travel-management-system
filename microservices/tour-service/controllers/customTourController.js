@@ -462,10 +462,7 @@ exports.bookCustomTourQuote = async (req, res) => {
             for (const acc of accommodationList) {
                 if (acc.name) {
                     await sequelize.query(`
-                        UPDATE partner_services ps
-                        INNER JOIN services s ON ps.service_id = s.service_id
-                        SET ps.available_quantity = GREATEST(0, ps.available_quantity - 1)
-                        WHERE ? LIKE CONCAT('%', s.service_name, '%')
+                        SELECT 1 /* Disabled decrement because partner_services is deprecated */
                     `, { replacements: [acc.name], transaction });
                 }
             }

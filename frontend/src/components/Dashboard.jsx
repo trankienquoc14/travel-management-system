@@ -12,6 +12,7 @@ import ServiceRequestList from './ServiceRequestList';
 import ServiceRequestCreate from './ServiceRequestCreate';
 import ServiceRequestSupplement from './ServiceRequestSupplement';
 import PartnerServiceRequests from './PartnerServiceRequests';
+import PartnerServiceSummary from './PartnerServiceSummary';
 import StaffTourRequestManager from './StaffTourRequestManager';
 import StaffTourDesigner from './StaffTourDesigner';
 import PlaceManagement from './PlaceManagement';
@@ -698,6 +699,7 @@ const Dashboard = () => {
                 <>
                   <li className={activeTab === 'partner_inventory' ? 'active' : ''} onClick={() => setActiveTab('partner_inventory')}>🏪 Kho Dịch vụ của tôi</li>
                   <li className={activeTab === 'partner_requests' ? 'active' : ''} onClick={() => setActiveTab('partner_requests')}>📩 Xử lý Yêu cầu dịch vụ</li>
+                  <li className={activeTab === 'partner_summary' ? 'active' : ''} onClick={() => setActiveTab('partner_summary')}>📊 Tổng hợp cung cấp dịch vụ</li>
                 </>
               )}
 
@@ -833,13 +835,14 @@ const Dashboard = () => {
           
           {/* QUẢN LÝ YÊU CẦU DỊCH VỤ */}
           {activeTab === 'service_requests' && (isTourManager || isAdmin) && <ServiceRequestList />}
-          {activeTab === 'create_request' && (isTourManager || isAdmin) && <ServiceRequestCreate />}
+          {activeTab === 'create_request' && (isTourManager || isAdmin) && <ServiceRequestCreate setActiveTab={setActiveTab} />}
           {activeTab === 'create_supplement_request' && (isTourManager || isAdmin) && <ServiceRequestSupplement />}
           
           {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner editTourData={fixedTourToEdit} />}
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
           {activeTab === 'partner_requests' && isPartner && <PartnerServiceRequests />}
+          {activeTab === 'partner_summary' && isPartner && <PartnerServiceSummary />}
 
           {/* Đơn xin nghỉ phép & Giải trình chấm công */}
           {activeTab === 'leave_requests' && isInternalStaff && <HRLeaveRequest mode="my_requests" />}

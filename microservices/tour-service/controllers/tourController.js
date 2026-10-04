@@ -183,13 +183,12 @@ exports.getTourOperationalDetail = async (req, res) => {
                END as place_name,
                CASE 
                  WHEN ia.activity_type = 'Place' THEN p.estimated_price
-                 WHEN ia.activity_type IN ('Accommodation', 'Transport') THEN ps.unit_price
+                 WHEN ia.activity_type IN ('Accommodation', 'Transport') THEN s.base_cost
                  ELSE 0
                END as estimated_price
         FROM itinerary_activities ia
         LEFT JOIN places p ON ia.activity_type = 'Place' AND ia.reference_id = p.place_id
-        LEFT JOIN partner_services ps ON ia.activity_type IN ('Accommodation', 'Transport') AND ia.reference_id = ps.partner_service_id
-        LEFT JOIN services s ON ps.service_id = s.service_id
+        LEFT JOIN services s ON ia.activity_type IN ('Accommodation', 'Transport') AND ia.reference_id = s.service_id
         WHERE ia.itinerary_id = ?
         ORDER BY ia.order_index ASC, ia.start_time ASC
       `, { replacements: [day.itinerary_id] });
@@ -598,13 +597,12 @@ exports.getFixedTourById = async (req, res) => {
                        END as place_name,
                        CASE 
                          WHEN ia.activity_type = 'Place' THEN p.estimated_price
-                         WHEN ia.activity_type IN ('Accommodation', 'Transport') THEN ps.unit_price
+                         WHEN ia.activity_type IN ('Accommodation', 'Transport') THEN s.base_cost
                          ELSE 0
                        END as estimated_price
                 FROM itinerary_activities ia
                 LEFT JOIN places p ON ia.activity_type = 'Place' AND ia.reference_id = p.place_id
-                LEFT JOIN partner_services ps ON ia.activity_type IN ('Accommodation', 'Transport') AND ia.reference_id = ps.partner_service_id
-                LEFT JOIN services s ON ps.service_id = s.service_id
+                LEFT JOIN services s ON ia.activity_type IN ('Accommodation', 'Transport') AND ia.reference_id = s.service_id
                 WHERE ia.itinerary_id = ?
                 ORDER BY ia.order_index ASC, ia.start_time ASC
             `, { replacements: [day.itinerary_id] });
@@ -709,13 +707,13 @@ exports.getVehicles = async (req, res) => {
                 s.service_id,
                 s.service_name,
                 s.service_type,
-                s.capacity,
+                vsd.seat_capacity as capacity,
                 s.status,
                 COALESCE(p.partner_name, 'Nội bộ') as partner_name
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             WHERE s.service_type = 'Xe vận chuyển' AND (s.status = 'Active' OR s.status IS NULL)
-            ORDER BY s.capacity ASC, s.service_name ASC
+            ORDER BY vsd.seat_capacity ASC, s.service_name ASC
         `);
         res.status(200).json({ success: true, data: vehicles });
     } catch (error) {
@@ -855,7 +853,7 @@ exports.getOperationalDepartures = async (req, res) => {
                     const days = parsed.days || parsed.itinerary || [];
                     for (const day of days) {
                         if (day.accommodation && day.accommodation.service_id) {
-                            const [srvRows] = await sequelize.query("SELECT * FROM services WHERE service_id = ?", { replacements: [day.accommodation.service_id] });
+                            const [srvRows] = await sequelize.query("SELECT s.*, hsd.max_adults, hsd.max_children, hsd.max_infants, hsd.min_adults, hsd.single_room_allowed FROM services s LEFT JOIN hotel_service_details hsd ON s.service_id = hsd.service_id WHERE s.service_id = ?", { replacements: [day.accommodation.service_id] });
                             if (srvRows.length > 0) {
                                 const srv = srvRows[0];
                                 roomRules = {

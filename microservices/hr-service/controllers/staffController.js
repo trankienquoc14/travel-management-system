@@ -54,20 +54,20 @@ exports.getDestinationResources = async (req, res) => {
 
         // 2. LẤY KHÁCH SẠN
         const [hotels] = await sequelize.query(`
-            SELECT CONCAT('hotel_', ps.partner_service_id) as id, CONCAT(p.partner_name, ' - ', s.service_name) as name, '🏨 Lưu trú' as type, ps.unit_price as price
-            FROM partner_services ps
-            JOIN partners p ON ps.partner_id = p.partner_id
-            JOIN services s ON ps.service_id = s.service_id
+            SELECT CONCAT('hotel_', s.service_id) as id, CONCAT(p.partner_name, ' - ', s.service_name) as name, '🏨 Lưu trú' as type, s.base_cost as price
+            FROM services s
+            JOIN partners p ON s.partner_id = p.partner_id
+            
             JOIN destinations d ON p.destination_id = d.destination_id
             WHERE p.partner_type = 'Hotel' AND d.destination_name LIKE ?
         `, { replacements: [`%${destination}%`] });
 
         // 3. LẤY XE & MÁY BAY
         const [transports] = await sequelize.query(`
-            SELECT CONCAT('transport_', ps.partner_service_id) as id, CONCAT(p.partner_name, ' - ', s.service_name) as name, '✈️ Di chuyển' as type, ps.unit_price as price
-            FROM partner_services ps
-            JOIN partners p ON ps.partner_id = p.partner_id
-            JOIN services s ON ps.service_id = s.service_id
+            SELECT CONCAT('transport_', s.service_id) as id, CONCAT(p.partner_name, ' - ', s.service_name) as name, '✈️ Di chuyển' as type, s.base_cost as price
+            FROM services s
+            JOIN partners p ON s.partner_id = p.partner_id
+            
             WHERE p.partner_type = 'Transport'
         `);
 

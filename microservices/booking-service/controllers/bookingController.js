@@ -105,7 +105,7 @@ let requiredRooms = 0; let singleRoomCount = 0;
                     // Find first day with accommodation that might have rules
                     for (const day of days) {
                         if (day.accommodation && day.accommodation.service_id) {
-                            const [srvRows] = await sequelize.query("SELECT * FROM services WHERE service_id = ?", { replacements: [day.accommodation.service_id], transaction });
+                            const [srvRows] = await sequelize.query("SELECT s.*, hsd.max_adults, hsd.max_children, hsd.max_infants, hsd.min_adults, hsd.single_room_allowed FROM services s LEFT JOIN hotel_service_details hsd ON s.service_id = hsd.service_id WHERE s.service_id = ?", { replacements: [day.accommodation.service_id], transaction });
                             if (srvRows.length > 0) {
                                 const srv = srvRows[0];
                                 roomRules = {

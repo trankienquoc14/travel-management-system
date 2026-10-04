@@ -12,7 +12,7 @@ exports.getMyInventory = async (req, res) => {
         // Đã sửa: Nối bảng qua u.email = p.email 
         const [services] = await sequelize.query(`
             SELECT ps.*, s.service_name, s.service_type, ps.unit_price as price
-            FROM partner_services ps
+            FROM services ps
             JOIN services s ON ps.service_id = s.service_id
             JOIN partners p ON ps.partner_id = p.partner_id
             JOIN users u ON u.email = p.email
@@ -70,7 +70,7 @@ exports.addServiceToInventory = async (req, res) => {
 
         // Bước 2: Thêm vào kho của đối tác với trạng thái Pending
         await sequelize.query(`
-            INSERT INTO partner_services (partner_id, service_id, unit_price, available_quantity, status)
+            INSERT INTO services (partner_id, service_id, unit_price, available_quantity, status)
             VALUES (?, ?, ?, ?, 'Pending')
         `, { replacements: [partner_id, newServiceId, price, available_quantity] });
 
@@ -81,14 +81,14 @@ exports.addServiceToInventory = async (req, res) => {
     }
 };
 
-// 3. XÓA CỨNG (Vì bảng partner_services của bạn chưa có cột status)
+// 3. XÓA CỨNG (Vì bảng services của bạn chưa có cột status)
 exports.deletePartnerService = async (req, res) => {
     try {
         const { id } = req.params;
 
         // Xóa hẳn khỏi database
         const [result] = await sequelize.query(`
-            DELETE FROM partner_services 
+            DELETE FROM services 
             WHERE partner_service_id = ?
         `, { replacements: [id] });
 
@@ -116,7 +116,7 @@ exports.updatePartnerService = async (req, res) => {
         // 1. Kiểm tra quyền sở hữu
         const [rows] = await sequelize.query(`
             SELECT ps.partner_service_id 
-            FROM partner_services ps
+            FROM services ps
             JOIN partners p ON ps.partner_id = p.partner_id
             JOIN users u ON u.email = p.email
             WHERE ps.partner_service_id = ? AND u.user_id = ?
@@ -128,7 +128,7 @@ exports.updatePartnerService = async (req, res) => {
 
         // 2. Cập nhật dữ liệu
         await sequelize.query(`
-            UPDATE partner_services 
+            UPDATE services 
             SET unit_price = ?, available_quantity = ?
             WHERE partner_service_id = ?
         `, { replacements: [price, available_quantity, id] });
@@ -149,7 +149,7 @@ exports.getServicesByDestination = async (req, res) => {
         // Lấy KS ở tỉnh đó HOẶC Xe cộ toàn quốc (NULL)
         let query = `
             SELECT ps.partner_service_id, p.partner_name, p.partner_type, s.service_name, s.image_url, ps.unit_price as price
-            FROM partner_services ps
+            FROM services ps
             JOIN partners p ON ps.partner_id = p.partner_id
             JOIN services s ON ps.service_id = s.service_id
             WHERE p.status = 'Active' AND ps.status = 'Active'

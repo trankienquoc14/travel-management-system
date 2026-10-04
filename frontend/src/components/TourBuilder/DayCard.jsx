@@ -306,21 +306,7 @@ const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayIma
                         targetDestId && String(s.destination_id) === String(targetDestId)
                     );
 
-                    // 2. Khách sạn thuộc khu vực lân cận cùng Miền
-                    const nearbyHotels = (allServices || []).filter(s => 
-                        (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') &&
-                        String(s.service_id) !== currentServiceId &&
-                        (!targetDestId || String(s.destination_id) !== String(targetDestId)) &&
-                        (targetRegion && REGION_MAP[Number(s.destination_id)] === targetRegion)
-                    );
-
-                    // 3. Các khách sạn thuộc khu vực khác
-                    const otherHotels = (allServices || []).filter(s => 
-                        (s.service_type === 'Khách sạn' || s.service_type === 'Accommodation') &&
-                        String(s.service_id) !== currentServiceId &&
-                        (!targetDestId || String(s.destination_id) !== String(targetDestId)) &&
-                        (!targetRegion || REGION_MAP[Number(s.destination_id)] !== targetRegion)
-                    );
+                    
 
                     return (
                         <select 
@@ -365,28 +351,7 @@ const DayCard = ({ day, dIndex, days, setDays, destinations, allServices, dayIma
                                 </optgroup>
                             )}
 
-                            {/* Nhóm 2: Khách sạn thuộc Khu vực lân cận cùng Miền */}
-                            {nearbyHotels.length > 0 && (
-                                <optgroup label={`🏞️ Khách sạn khu vực lân cận (${targetRegion || 'Cùng miền'})`}>
-                                    {nearbyHotels.map(h => (
-                                        <option key={h.service_id} value={h.service_id}>
-                                            {h.service_name} ({Number(h.base_cost).toLocaleString('vi-VN')}đ)
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            )}
-
-                            {/* Nhóm 3: Các khu vực khác */}
-                            {otherHotels.length > 0 && (
-                                <optgroup label="🌐 Khách sạn thuộc các khu vực khác">
-                                    {otherHotels.map(h => (
-                                        <option key={h.service_id} value={h.service_id}>
-                                            {h.service_name} ({Number(h.base_cost).toLocaleString('vi-VN')}đ)
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            )}
-                        </select>
+                            </select>
                     );
                 })()}
             </div>

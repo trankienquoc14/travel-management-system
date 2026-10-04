@@ -1,0 +1,1181 @@
+{
+  "total_partners_updated": 49,
+  "partners_list": [
+    "Đồng Văn Hoa Cổ",
+    "Phoenix Hà Giang",
+    "Hmong Village Resort",
+    "Sala Phú Yên Beach",
+    "Stelia Beach Resort",
+    "Hùng Vương Phú Yên",
+    "Seagull Quy Nhơn",
+    "FLC Luxury Resort Quy Nhơn",
+    "Hải Âu Quy Nhơn",
+    "Phố Cổ Hội An",
+    "Silk Sense Hoi An River Resort",
+    "Hoi An Historic",
+    "Century Riverside Huế",
+    "Silk Path Grand Hue Hotel",
+    "Moonlight Huế",
+    "Mường Thanh Quảng Bình",
+    "Sun Spa Resort Quảng Bình",
+    "Tân Bình Quảng Bình",
+    "Sapa Horizon",
+    "Hotel de la Coupole Sapa",
+    "Bamboo Sapa",
+    "Mường Thanh Luxury Hạ Long",
+    "Vinpearl Resort & Spa Hạ Long",
+    "Halong Bay Hotel",
+    "Emeralda Resort Ninh Bình",
+    "Legend Ninh Bình",
+    "Bái Đính Ninh Bình",
+    "TTC Cần Thơ",
+    "Victoria Cần Thơ Resort",
+    "Ninh Kiều Cần Thơ",
+    "Six Senses Côn Đảo",
+    "The Secret Côn Đảo",
+    "Côn Đảo Resort",
+    "The Grand Ho Tram Resort",
+    "Imperial Hotel Vũng Tàu",
+    "Malibu Vũng Tàu",
+    "Saigon Ban Me",
+    "Pleiku Hotel",
+    "Elephants Hotel Buôn Ma Thuột",
+    "Mũi Cà Mau",
+    "Mường Thanh Luxury Cà Mau",
+    "Melia Vinpearl Tây Ninh",
+    "Sunrise Tây Ninh",
+    "Phú Quý Island Hotel",
+    "Centara Mirage Resort Mũi Né",
+    "Lotte Hotel Hà Nội",
+    "Silk Path Hà Nội",
+    "Rex Hotel Saigon",
+    "Liberty Central Saigon"
+  ],
+  "total_rooms_created": 166,
+  "mapping_details": [
+    {
+      "hotel": "Đồng Văn Hoa Cổ",
+      "old_service": "Khách sạn 3★ Đồng Văn Hoa Cổ",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Đồng Văn Hoa Cổ",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Đồng Văn Hoa Cổ",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Phoenix Hà Giang",
+      "old_service": "Khách sạn 4★ Phoenix Hà Giang",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Phoenix Hà Giang",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Phoenix Hà Giang",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Phoenix Hà Giang",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Phoenix Hà Giang",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Hmong Village Resort",
+      "old_service": "Hmong Village Resort 4★",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Hmong Village Resort",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Hmong Village Resort",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Hmong Village Resort",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Hmong Village Resort",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Sala Phú Yên Beach",
+      "old_service": "Khách sạn 4★ Sala Phú Yên Beach",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Sala Phú Yên Beach",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Sala Phú Yên Beach",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Sala Phú Yên Beach",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Sala Phú Yên Beach",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Stelia Beach Resort",
+      "old_service": "Stelia Beach Resort 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Stelia Beach Resort",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Stelia Beach Resort",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Stelia Beach Resort",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Stelia Beach Resort",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Hùng Vương Phú Yên",
+      "old_service": "Khách sạn 3★ Hùng Vương Phú Yên",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Hùng Vương Phú Yên",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Hùng Vương Phú Yên",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Seagull Quy Nhơn",
+      "old_service": "Khách sạn 4★ Seagull Quy Nhơn",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Seagull Quy Nhơn",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Seagull Quy Nhơn",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Seagull Quy Nhơn",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Seagull Quy Nhơn",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "FLC Luxury Resort Quy Nhơn",
+      "old_service": "FLC Luxury Resort Quy Nhơn 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "FLC Luxury Resort Quy Nhơn",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "FLC Luxury Resort Quy Nhơn",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "FLC Luxury Resort Quy Nhơn",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "FLC Luxury Resort Quy Nhơn",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Hải Âu Quy Nhơn",
+      "old_service": "Khách sạn 3★ Hải Âu Quy Nhơn",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Hải Âu Quy Nhơn",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Hải Âu Quy Nhơn",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Phố Cổ Hội An",
+      "old_service": "Khách sạn 4★ Phố Cổ Hội An",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Phố Cổ Hội An",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Phố Cổ Hội An",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Phố Cổ Hội An",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Phố Cổ Hội An",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Silk Sense Hoi An River Resort",
+      "old_service": "Silk Sense Hoi An River Resort 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Silk Sense Hoi An River Resort",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Silk Sense Hoi An River Resort",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Silk Sense Hoi An River Resort",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Silk Sense Hoi An River Resort",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Hoi An Historic",
+      "old_service": "Khách sạn 3★ Hoi An Historic",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Hoi An Historic",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Hoi An Historic",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Century Riverside Huế",
+      "old_service": "Khách sạn 4★ Century Riverside Huế",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Century Riverside Huế",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Century Riverside Huế",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Century Riverside Huế",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Century Riverside Huế",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Silk Path Grand Hue Hotel",
+      "old_service": "Silk Path Grand Hue Hotel 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Silk Path Grand Hue Hotel",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Silk Path Grand Hue Hotel",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Silk Path Grand Hue Hotel",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Silk Path Grand Hue Hotel",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Moonlight Huế",
+      "old_service": "Khách sạn 3★ Moonlight Huế",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Moonlight Huế",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Moonlight Huế",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Mường Thanh Quảng Bình",
+      "old_service": "Khách sạn 4★ Mường Thanh Quảng Bình",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Mường Thanh Quảng Bình",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Mường Thanh Quảng Bình",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Mường Thanh Quảng Bình",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Mường Thanh Quảng Bình",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Sun Spa Resort Quảng Bình",
+      "old_service": "Sun Spa Resort Quảng Bình 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Sun Spa Resort Quảng Bình",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Sun Spa Resort Quảng Bình",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Sun Spa Resort Quảng Bình",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Sun Spa Resort Quảng Bình",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Tân Bình Quảng Bình",
+      "old_service": "Khách sạn 3★ Tân Bình Quảng Bình",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Tân Bình Quảng Bình",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Tân Bình Quảng Bình",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Sapa Horizon",
+      "old_service": "Khách sạn 4★ Sapa Horizon",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Sapa Horizon",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Sapa Horizon",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Sapa Horizon",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Sapa Horizon",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Hotel de la Coupole Sapa",
+      "old_service": "Hotel de la Coupole Sapa 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Hotel de la Coupole Sapa",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Hotel de la Coupole Sapa",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Hotel de la Coupole Sapa",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Hotel de la Coupole Sapa",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Bamboo Sapa",
+      "old_service": "Khách sạn 3★ Bamboo Sapa",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Bamboo Sapa",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Bamboo Sapa",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Hạ Long",
+      "old_service": "Khách sạn 4★ Mường Thanh Luxury Hạ Long",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Hạ Long",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Hạ Long",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Hạ Long",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Hạ Long",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Vinpearl Resort & Spa Hạ Long",
+      "old_service": "Vinpearl Resort & Spa Hạ Long 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Vinpearl Resort & Spa Hạ Long",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Vinpearl Resort & Spa Hạ Long",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Vinpearl Resort & Spa Hạ Long",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Vinpearl Resort & Spa Hạ Long",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Halong Bay Hotel",
+      "old_service": "Khách sạn 3★ Halong Bay Hotel",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Halong Bay Hotel",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Halong Bay Hotel",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Emeralda Resort Ninh Bình",
+      "old_service": "Emeralda Resort Ninh Bình 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Emeralda Resort Ninh Bình",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Emeralda Resort Ninh Bình",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Emeralda Resort Ninh Bình",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Emeralda Resort Ninh Bình",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Legend Ninh Bình",
+      "old_service": "Khách sạn 4★ Legend Ninh Bình",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Legend Ninh Bình",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Legend Ninh Bình",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Legend Ninh Bình",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Legend Ninh Bình",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Bái Đính Ninh Bình",
+      "old_service": "Khách sạn 3★ Bái Đính Ninh Bình",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Bái Đính Ninh Bình",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Bái Đính Ninh Bình",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "TTC Cần Thơ",
+      "old_service": "Khách sạn 4★ TTC Cần Thơ",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "TTC Cần Thơ",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "TTC Cần Thơ",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "TTC Cần Thơ",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "TTC Cần Thơ",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Victoria Cần Thơ Resort",
+      "old_service": "Victoria Cần Thơ Resort 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Victoria Cần Thơ Resort",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Victoria Cần Thơ Resort",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Victoria Cần Thơ Resort",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Victoria Cần Thơ Resort",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Ninh Kiều Cần Thơ",
+      "old_service": "Khách sạn 3★ Ninh Kiều Cần Thơ",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Ninh Kiều Cần Thơ",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Ninh Kiều Cần Thơ",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Six Senses Côn Đảo",
+      "old_service": "Six Senses Côn Đảo 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Six Senses Côn Đảo",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Six Senses Côn Đảo",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Six Senses Côn Đảo",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Six Senses Côn Đảo",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "The Secret Côn Đảo",
+      "old_service": "The Secret Côn Đảo 4★",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "The Secret Côn Đảo",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "The Secret Côn Đảo",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "The Secret Côn Đảo",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "The Secret Côn Đảo",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Côn Đảo Resort",
+      "old_service": "Khách sạn 3★ Côn Đảo Resort",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Côn Đảo Resort",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Côn Đảo Resort",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "The Grand Ho Tram Resort",
+      "old_service": "The Grand Ho Tram Resort 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "The Grand Ho Tram Resort",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "The Grand Ho Tram Resort",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "The Grand Ho Tram Resort",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "The Grand Ho Tram Resort",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Imperial Hotel Vũng Tàu",
+      "old_service": "Imperial Hotel Vũng Tàu 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Imperial Hotel Vũng Tàu",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Imperial Hotel Vũng Tàu",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Imperial Hotel Vũng Tàu",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Imperial Hotel Vũng Tàu",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Malibu Vũng Tàu",
+      "old_service": "Khách sạn 4★ Malibu Vũng Tàu",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Malibu Vũng Tàu",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Malibu Vũng Tàu",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Malibu Vũng Tàu",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Malibu Vũng Tàu",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Saigon Ban Me",
+      "old_service": "Khách sạn 4★ Saigon Ban Me",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Saigon Ban Me",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Saigon Ban Me",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Saigon Ban Me",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Saigon Ban Me",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Pleiku Hotel",
+      "old_service": "Khách sạn 3★ Pleiku Hotel",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Pleiku Hotel",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Pleiku Hotel",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Elephants Hotel Buôn Ma Thuột",
+      "old_service": "Elephants Hotel Buôn Ma Thuột 4★",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Elephants Hotel Buôn Ma Thuột",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Elephants Hotel Buôn Ma Thuột",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Elephants Hotel Buôn Ma Thuột",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Elephants Hotel Buôn Ma Thuột",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Mũi Cà Mau",
+      "old_service": "Khách sạn 3★ Mũi Cà Mau",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Mũi Cà Mau",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Mũi Cà Mau",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Cà Mau",
+      "old_service": "Khách sạn 4★ Mường Thanh Luxury Cà Mau",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Cà Mau",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Cà Mau",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Cà Mau",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Mường Thanh Luxury Cà Mau",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Melia Vinpearl Tây Ninh",
+      "old_service": "Melia Vinpearl Tây Ninh 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Melia Vinpearl Tây Ninh",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Melia Vinpearl Tây Ninh",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Melia Vinpearl Tây Ninh",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Melia Vinpearl Tây Ninh",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Sunrise Tây Ninh",
+      "old_service": "Khách sạn 3★ Sunrise Tây Ninh",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Sunrise Tây Ninh",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Sunrise Tây Ninh",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Phú Quý Island Hotel",
+      "old_service": "Phú Quý Island Hotel 3★",
+      "mapped_to": "Phòng Standard",
+      "price": "500000 / 700000"
+    },
+    {
+      "hotel": "Phú Quý Island Hotel",
+      "new_service": "Phòng Superior",
+      "price": "650000 / 900000"
+    },
+    {
+      "hotel": "Phú Quý Island Hotel",
+      "new_service": "Phòng Deluxe",
+      "price": "850000 / 1200000"
+    },
+    {
+      "hotel": "Centara Mirage Resort Mũi Né",
+      "old_service": "Centara Mirage Resort Mũi Né 5★",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Centara Mirage Resort Mũi Né",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Centara Mirage Resort Mũi Né",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Centara Mirage Resort Mũi Né",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Centara Mirage Resort Mũi Né",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Lotte Hotel Hà Nội",
+      "old_service": "Khách sạn 5★ Lotte Hotel Hà Nội",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Lotte Hotel Hà Nội",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Lotte Hotel Hà Nội",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Lotte Hotel Hà Nội",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Lotte Hotel Hà Nội",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Silk Path Hà Nội",
+      "old_service": "Khách sạn 4★ Silk Path Hà Nội",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Silk Path Hà Nội",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Silk Path Hà Nội",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Silk Path Hà Nội",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Silk Path Hà Nội",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    },
+    {
+      "hotel": "Rex Hotel Saigon",
+      "old_service": "Khách sạn 5★ Rex Hotel Saigon",
+      "mapped_to": "Phòng Standard",
+      "price": "1200000 / 1600000"
+    },
+    {
+      "hotel": "Rex Hotel Saigon",
+      "new_service": "Phòng Superior",
+      "price": "1350000 / 1800000"
+    },
+    {
+      "hotel": "Rex Hotel Saigon",
+      "new_service": "Phòng Deluxe",
+      "price": "1550000 / 2100000"
+    },
+    {
+      "hotel": "Rex Hotel Saigon",
+      "new_service": "Phòng Executive",
+      "price": "1800000 / 2450000"
+    },
+    {
+      "hotel": "Rex Hotel Saigon",
+      "new_service": "Phòng Suite",
+      "price": "2200000 / 2900000"
+    },
+    {
+      "hotel": "Liberty Central Saigon",
+      "old_service": "Khách sạn 4★ Liberty Central Saigon",
+      "mapped_to": "Phòng Standard",
+      "price": "800000 / 1050000"
+    },
+    {
+      "hotel": "Liberty Central Saigon",
+      "new_service": "Phòng Superior",
+      "price": "950000 / 1250000"
+    },
+    {
+      "hotel": "Liberty Central Saigon",
+      "new_service": "Phòng Deluxe",
+      "price": "1150000 / 1550000"
+    },
+    {
+      "hotel": "Liberty Central Saigon",
+      "new_service": "Phòng Executive",
+      "price": "1400000 / 1900000"
+    },
+    {
+      "hotel": "Liberty Central Saigon",
+      "new_service": "Phòng Suite",
+      "price": "1800000 / 2350000"
+    }
+  ]
+}
