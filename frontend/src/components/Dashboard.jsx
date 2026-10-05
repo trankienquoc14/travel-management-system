@@ -33,6 +33,9 @@ import StaffChangeRequestManager from './StaffChangeRequestManager';
 import StaffBookingManagement from './StaffBookingManagement';
 import StaffServiceBookingManagement from './StaffServiceBookingManagement';
 import UserProfile from './UserProfile';
+import VehicleFleetManagement from './VehicleFleetManagement';
+import TourVehicleDispatching from './TourVehicleDispatching';
+import DriverAssignedVehicles from './DriverAssignedVehicles';
 import PersonalSchedule from './PersonalSchedule';
 import MyBookings from './MyBookings';
 import CustomerQuotes from './CustomerQuotes';
@@ -454,8 +457,8 @@ const Dashboard = () => {
                       <li className={activeTab === 'tour_operations' ? 'active' : ''} onClick={() => setActiveTab('tour_operations')}>
                         ⚙️ Vận hành Tour
                       </li>
-                      <li className={activeTab === 'services' || activeTab === 'service_form' ? 'active' : ''} onClick={() => setActiveTab('services')}>
-                        🏨 Quản lý Dịch vụ
+                      <li className={activeTab === 'fleet_vehicles' ? 'active' : ''} onClick={() => setActiveTab('fleet_vehicles')}>
+                        🚌 Quản lý Xe
                       </li>
                       <li className={activeTab === 'places' ? 'active' : ''} onClick={() => setActiveTab('places')}>
                         📍 Quản lý Địa điểm
@@ -832,6 +835,14 @@ const Dashboard = () => {
           {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
           {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
           {activeTab === 'tour_operations' && (isTourManager || isAdmin) && <TourOperations />}
+          {activeTab === 'fleet_vehicles' && (isTourManager || isAdmin) && <VehicleFleetManagement />}
+          {activeTab === 'driver_assigned' && (isDriver || isAdmin) && (
+            <DriverAssignedVehicles 
+              setActiveTab={setActiveTab} 
+              setSelectedDeparture={setSelectedDeparture} 
+              selectedDeparture={selectedDeparture} 
+            />
+          )}
           
           {/* QUẢN LÝ YÊU CẦU DỊCH VỤ */}
           {activeTab === 'service_requests' && (isTourManager || isAdmin) && <ServiceRequestList />}
@@ -866,7 +877,7 @@ const Dashboard = () => {
           )}
 
           {/* Vùng Tài xế dẫn đoàn */}
-          {['driver_assigned', 'driver_schedule', 'driver_contacts', 'driver_expenses', 'driver_incidents'].includes(activeTab) && (isDriver || isAdmin) && (
+          {['driver_schedule', 'driver_contacts', 'driver_expenses', 'driver_incidents'].includes(activeTab) && (isDriver || isAdmin) && (
             <DriverWorkspace 
               activeTab={activeTab} 
               selectedDeparture={selectedDeparture} 

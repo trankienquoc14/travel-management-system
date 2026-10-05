@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const tourController = require('../controllers/tourController');
+const vehicleController = require('../controllers/vehicleController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 // === CẤU HÌNH MULTER ĐỂ LƯU ẢNH UPLOAD ===
@@ -28,7 +29,6 @@ const upload = multer({ storage: storage });
 router.get('/', tourController.getAllTours);
 router.post('/preferences', tourController.saveCustomerPreferences);
 router.post('/behavior-log', tourController.logCustomerBehavior);
-router.get('/:id', tourController.getTourById);
 
 // 2. CÁC ROUTE QUẢN LÝ VẬN HÀNH (Chỉ Staff, Manager, Admin)
 router.post('/design', protect, restrictTo(1, 3, 4), upload.any(), tourController.saveFixedTourDesign);
@@ -64,5 +64,18 @@ router.put('/admin/price/:id', protect, restrictTo(1, 3), tourController.updateT
 
 router.get('/operations/departures', protect, restrictTo(1, 3), tourController.getOperationalDepartures);
 router.post('/operations/departures/:id/decision', protect, restrictTo(1, 3), tourController.makeOperationalDecision);
+
+// === HỆ THỐNG QUẢN LÝ ĐỘI XE & ĐIỀU XE TOUR ===
+router.get('/fleet/vehicles', protect, vehicleController.getAllVehicles);
+router.post('/fleet/vehicles', protect, restrictTo(1, 3), vehicleController.createVehicle);
+router.put('/fleet/vehicles/:id', protect, restrictTo(1, 3), vehicleController.updateVehicle);
+router.delete('/fleet/vehicles/:id', protect, restrictTo(1, 3), vehicleController.deleteVehicle);
+
+router.get('/fleet/available-vehicles', protect, vehicleController.getAvailableVehicles);
+router.post('/fleet/dispatch', protect, restrictTo(1, 3), vehicleController.dispatchVehicle);
+router.post('/fleet/maintenance', protect, restrictTo(1, 3), vehicleController.createMaintenance);
+router.get('/fleet/driver-assigned', protect, vehicleController.getDriverAssignedTours);
+
+router.get('/:id', tourController.getTourById);
 
 module.exports = router;

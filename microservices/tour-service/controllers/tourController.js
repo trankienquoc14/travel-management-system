@@ -406,6 +406,30 @@ exports.saveTourOperationalSchedule = async (req, res) => {
             transaction
           });
         }
+
+        if (targetDepId && vehToSave && dIdToSave) {
+          try {
+            await sequelize.query(`DELETE FROM tour_vehicle_assignments WHERE departure_id = ?`, {
+              replacements: [targetDepId],
+              transaction
+            });
+            const [vRows] = await sequelize.query(`SELECT vehicle_id FROM vehicles WHERE license_plate = ? LIMIT 1`, {
+              replacements: [vehToSave],
+              transaction
+            });
+            if (vRows.length > 0) {
+              await sequelize.query(`
+                INSERT INTO tour_vehicle_assignments (departure_id, vehicle_id, driver_id, start_date, end_date, status)
+                VALUES (?, ?, ?, ?, ?, 'ASSIGNED')
+              `, {
+                replacements: [targetDepId, vRows[0].vehicle_id, dIdToSave, dep.departure_date, dep.return_date],
+                transaction
+              });
+            }
+          } catch(ve) {
+            console.warn("Không thể đồng bộ tour_vehicle_assignments:", ve.message);
+          }
+        }
       }
     }
 

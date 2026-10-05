@@ -108,7 +108,7 @@ const ServiceForm = ({ editData, onBack }) => {
     return (
         <div className="form-container" style={{ padding: '20px', background: '#fff', borderRadius: '10px' }}>
             <div className="form-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h2>{editData ? "✏️ Sửa Dịch Vụ" : "➕ Thêm Dịch Vụ Mới"}</h2>
+                <h2>{editData ? "✏️ Sửa Thông Tin Xe" : "➕ Thêm Phương Tiện Xe Mới"}</h2>
                 <button onClick={onBack} className="btn-action">⬅ Quay lại</button>
             </div>
 
@@ -200,7 +200,7 @@ const ServiceForm = ({ editData, onBack }) => {
 
                 <div className="form-actions full-width" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                     <button type="submit" className="btn-add-new" style={{ padding: '12px 24px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        {editData ? "💾 Lưu Thay Đổi" : "✅ Tạo Dịch Vụ"}
+                        {editData ? "💾 Lưu Thay Đổi" : "✅ Tạo Phương Tiện Xe"}
                     </button>
                 </div>
             </form>

@@ -431,6 +431,7 @@ const TourOperationalManager = () => {
     const [guides, setGuides] = useState([]);
     const [drivers, setDrivers] = useState([]);
     const [driverSchedules, setDriverSchedules] = useState([]);
+    const [fleetVehicles, setFleetVehicles] = useState([]);
 
     // Hidden states needed to preserve Tour Designer data when saving
     const [itineraryDays, setItineraryDays] = useState([]);
@@ -457,6 +458,7 @@ const TourOperationalManager = () => {
         fetchInitialData();
         fetchGuideSchedules();
         fetchDriverSchedules();
+        fetchFleetVehicles();
     }, []);
 
     const fetchInitialData = async () => {
@@ -553,6 +555,20 @@ const TourOperationalManager = () => {
             }
         } catch (error) {
             console.error('Lỗi lấy lịch chạy Tài xế', error);
+        }
+    };
+
+    const fetchFleetVehicles = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get('http://localhost:5000/api/tours/fleet/vehicles', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data && res.data.success) {
+                setFleetVehicles(res.data.data || []);
+            }
+        } catch (error) {
+            console.error('Lỗi lấy danh sách đội xe', error);
         }
     };
 
@@ -1151,6 +1167,22 @@ const TourOperationalManager = () => {
                                                                                         >
                                                                                             🚌 {vehicleNameToDisplay}
                                                                                         </div>
+
+                                                                                        {/* Select Biển số xe cụ thể */}
+                                                                                        <select 
+                                                                                            value={dep.vehicle_number || ''} 
+                                                                                            onChange={e => { const up = [...departures]; up[idx].vehicle_number = e.target.value; setDepartures(up); }} 
+                                                                                            disabled={isPastTour}
+                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể chọn xe" : "Chọn biển số xe cụ thể trong Đội xe"}
+                                                                                            style={{ flex: '1 1 150px', minWidth: '135px', padding: '8px 10px', border: dep.vehicle_number ? '1px solid #fde047' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.vehicle_number ? '#fefce8' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.vehicle_number ? '#854d0e' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
+                                                                                        >
+                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>🚘 Chọn Biển Số Xe</option>
+                                                                                            {fleetVehicles.map(v => (
+                                                                                                <option key={v.vehicle_id} value={v.license_plate} style={{ background: '#fff', color: '#111827' }}>
+                                                                                                    🚘 {v.license_plate} ({v.brand_model || v.vehicle_type} - {v.seat_capacity} chỗ)
+                                                                                                </option>
+                                                                                            ))}
+                                                                                        </select>
 
                                                                                         {/* Select HDV */}
                                                                                         <select 

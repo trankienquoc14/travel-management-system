@@ -70,12 +70,14 @@ exports.getAssignedTrips = async (req, res) => {
         CONCAT('TOUR-', t.tour_id) as tour_code,
         t.destination,
         t.duration_days,
-        g.full_name as guide_name,
-        g.phone as guide_phone,
-        g.email as guide_email
+        COALESCE(g.full_name, g_user.full_name) as guide_name,
+        COALESCE(g.phone, g_user.phone) as guide_phone,
+        COALESCE(g.email, g_user.email) as guide_email
       FROM departures d
       JOIN tours t ON d.tour_id = t.tour_id
       LEFT JOIN users g ON d.guide_id = g.user_id
+      LEFT JOIN guides g_table ON d.guide_id = g_table.guide_id
+      LEFT JOIN users g_user ON g_table.user_id = g_user.user_id
       ${whereClause}
       ORDER BY d.departure_date DESC;
     `, {
