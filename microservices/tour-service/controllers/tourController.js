@@ -732,10 +732,12 @@ exports.getVehicles = async (req, res) => {
                 s.service_name,
                 s.service_type,
                 vsd.seat_capacity as capacity,
+                vsd.vehicle_service_id,
                 s.status,
                 COALESCE(p.partner_name, 'Nội bộ') as partner_name
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
+            LEFT JOIN vehicle_service_details vsd ON s.service_id = vsd.service_id
             WHERE s.service_type = 'Xe vận chuyển' AND (s.status = 'Active' OR s.status IS NULL)
             ORDER BY vsd.seat_capacity ASC, s.service_name ASC
         `);

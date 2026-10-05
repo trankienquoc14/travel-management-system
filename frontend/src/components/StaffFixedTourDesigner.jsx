@@ -85,9 +85,11 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
             if (res.data.success) {
                 setAllServices(res.data.data);
                 const transports = res.data.data.filter(s => 
-                    s.service_type === 'Vé máy bay' || 
+                    (s.vehicle_service_id !== null && s.vehicle_service_id !== undefined) ||
                     s.service_type === 'Xe vận chuyển' ||
-                    s.service_type === 'Phương tiện'
+                    s.service_type === 'Vé máy bay' ||
+                    s.service_type === 'Phương tiện' ||
+                    s.service_type === 'Transport'
                 );
                 setTransportServices(transports);
             }
@@ -177,7 +179,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
             return;
         }
         const s = transportServices.find(x => String(x.service_id) === String(sid));
-        const isTicket = s && s.unit && (s.unit.toLowerCase().includes('vé') || s.unit.toLowerCase().includes('người'));
+        const isTicket = s && ((s.unit && (s.unit.toLowerCase().includes('vé') || s.unit.toLowerCase().includes('người'))) || s.service_type === 'Vé máy bay');
         
         setCostConfig({...costConfig, 
             selectedTransport: s || null,

@@ -14,12 +14,11 @@ exports.getAllServices = async (req, res) => {
     try {
         const [services] = await sequelize.query(`
             SELECT s.*, p.partner_name, d.destination_name, s.base_cost as proposed_cost,
-                   vsd.seat_capacity as capacity,
+                   vsd.vehicle_service_id, vsd.seat_capacity as capacity, vsd.vehicle_type as vehicle_detail_type, vsd.vehicle_model,
                    hsd.max_adults, hsd.max_children, hsd.max_infants, hsd.min_adults, hsd.single_room_allowed, hsd.single_room_supplement
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             LEFT JOIN travel_management.destinations d ON s.destination_id = d.destination_id
-            
             LEFT JOIN vehicle_service_details vsd ON s.service_id = vsd.service_id
             LEFT JOIN hotel_service_details hsd ON s.service_id = hsd.service_id
             ORDER BY s.service_id DESC

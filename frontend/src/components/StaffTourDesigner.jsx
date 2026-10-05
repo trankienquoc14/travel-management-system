@@ -96,7 +96,13 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 if (resDest.data.success) setDestinations(resDest.data.data);
                 if (resServ.data.success) {
                     setAllServices(resServ.data.data);
-                    setTransportServices(resServ.data.data.filter(s => s.service_type === 'Vé máy bay' || s.service_type === 'Xe vận chuyển' || s.service_type === 'Phương tiện'));
+                    setTransportServices(resServ.data.data.filter(s => 
+                        (s.vehicle_service_id !== null && s.vehicle_service_id !== undefined) ||
+                        s.service_type === 'Xe vận chuyển' ||
+                        s.service_type === 'Vé máy bay' ||
+                        s.service_type === 'Phương tiện' ||
+                        s.service_type === 'Transport'
+                    ));
                 }
             } catch (error) { console.error('Lỗi tải dữ liệu', error); }
         };
@@ -318,7 +324,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
             
             if (!selected) return prev;
 
-            const isTicket = selected.unit && (selected.unit.toLowerCase().includes('vé') || selected.unit.toLowerCase().includes('người'));
+            const isTicket = selected && ((selected.unit && (selected.unit.toLowerCase().includes('vé') || selected.unit.toLowerCase().includes('người'))) || selected.service_type === 'Vé máy bay');
             
             return {
                 ...prev,
