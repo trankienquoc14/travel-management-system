@@ -667,7 +667,7 @@ exports.getDestinationResources = async (req, res) => {
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             JOIN destinations d ON s.destination_id = d.destination_id
-            WHERE s.service_type = 'Khách sạn' AND d.destination_name LIKE ?
+            WHERE s.service_type IN ('Khách sạn', 'Hotel', 'Accommodation') AND d.destination_name LIKE ?
         `, { replacements: [`%${destination}%`] });
 
         // 3. LĂ¡ÂºÂ¤Y XE & MÄ‚ÂY BAY
@@ -676,7 +676,7 @@ exports.getDestinationResources = async (req, res) => {
             SELECT CONCAT('transport_', s.service_id) as id, CONCAT(COALESCE(p.partner_name, 'Nội bộ'), ' - ', s.service_name) as name, '✈️ Di chuyển' as type, s.base_cost as price
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
-            WHERE s.service_type IN ('Xe vận chuyển', 'Vé máy bay')
+            WHERE s.service_type IN ('Xe vận chuyển', 'Transport', 'Vehicle', 'Vé máy bay', 'Flight')
         `);
 
         res.status(200).json({
@@ -738,7 +738,7 @@ exports.getVehicles = async (req, res) => {
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             LEFT JOIN vehicle_service_details vsd ON s.service_id = vsd.service_id
-            WHERE s.service_type = 'Xe vận chuyển' AND (s.status = 'Active' OR s.status IS NULL)
+            WHERE s.service_type IN ('Xe vận chuyển', 'Transport', 'Vehicle') AND (s.status = 'Active' OR s.status IS NULL)
             ORDER BY vsd.seat_capacity ASC, s.service_name ASC
         `);
         res.status(200).json({ success: true, data: vehicles });

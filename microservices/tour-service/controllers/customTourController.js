@@ -350,11 +350,11 @@ exports.getDestinationExtraServices = async (req, res) => {
         `, { replacements: [destination, destination] });
 
         const [accommodations] = await sequelize.query(`
-            SELECT CONCAT('srv_', service_id) AS id, 'đŸ¨ LÆ°u trĂº' AS type, service_name AS name, 0 AS price FROM services WHERE status = 'Active' AND service_type = 'Hotel'
+            SELECT CONCAT('srv_', service_id) AS id, '🏨 Lưu trú' AS type, service_name AS name, COALESCE(selling_price, base_cost, 0) AS price FROM services WHERE status = 'Active' AND service_type IN ('Khách sạn', 'Hotel', 'Accommodation')
         `);
 
         const [transports] = await sequelize.query(`
-            SELECT CONCAT('srv_', service_id) AS id, 'âœˆï¸ Di chuyá»ƒn' AS type, service_name AS name, 0 AS price FROM services WHERE status = 'Active' AND service_type = 'Transport'
+            SELECT CONCAT('srv_', service_id) AS id, '🚗 Di chuyển' AS type, service_name AS name, COALESCE(selling_price, base_cost, 0) AS price FROM services WHERE status = 'Active' AND service_type IN ('Xe vận chuyển', 'Transport', 'Vehicle', 'Vé máy bay', 'Flight')
         `);
 
         res.status(200).json({ success: true, data: { sightseeing: places, accommodation: accommodations, transport: transports } });

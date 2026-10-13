@@ -183,9 +183,15 @@ const ServicesPage = () => {
                                         <span className="price-label">Giá từ ({service.unit})</span>
                                         <span className="new-price">{formatCurrency(service.selling_price)}</span>
                                     </div>
-                                    <button className="btn-book" onClick={() => handleBookClick(service)}>
-                                        Đặt ngay
-                                    </button>
+                                    {service.service_type === 'Xe vận chuyển' && service.available_vehicles_count === 0 ? (
+                                        <button className="btn-book" style={{ backgroundColor: '#94a3b8', cursor: 'not-allowed' }} disabled>
+                                            Hết xe
+                                        </button>
+                                    ) : (
+                                        <button className="btn-book" onClick={() => handleBookClick(service)}>
+                                            Đặt ngay
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

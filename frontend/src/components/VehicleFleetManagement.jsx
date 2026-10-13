@@ -31,10 +31,38 @@ const VehicleFleetManagement = () => {
   });
 
   const [maintData, setMaintData] = useState({
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date(Date.now() + 3*86400000).toISOString().split('T')[0],
-    reason: 'Bảo dưỡng định kỳ / Thay dầu / Đăng kiểm'
+    start_date: '',
+    end_date: '',
+    reason: ''
   });
+  const [vehicleHistory, setVehicleHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const fetchHistory = async (vid) => {
+    setLoadingHistory(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${GATEWAY_URL}/api/tours/fleet/staff/vehicles/${vid}/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.success) {
+        setVehicleHistory(res.data.data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+
+  const getImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('blob:')) return url;
+    if (url.startsWith('/')) return `${GATEWAY_URL}${url}`;
+    return url;
+  };
 
   useEffect(() => {
     fetchVehicles();
@@ -67,6 +95,7 @@ const VehicleFleetManagement = () => {
         seat_capacity: veh.seat_capacity || 7,
         vehicle_type: veh.vehicle_type || 'Xe 7 chỗ',
         brand_model: veh.brand_model || '',
+        imagePreview: veh.image_url || '',
         image_url: veh.image_url || '',
         color: veh.color || 'Trắng',
         status: veh.status || 'AVAILABLE',
@@ -79,6 +108,7 @@ const VehicleFleetManagement = () => {
         license_plate: '',
         seat_capacity: 7,
         vehicle_type: 'Xe 7 chỗ',
+        imagePreview: '',
         brand_model: '',
         image_url: '',
         color: 'Trắng',
@@ -93,13 +123,31 @@ const VehicleFleetManagement = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const config = { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        } 
+      };
+
+      const fd = new FormData();
+      Object.keys(formData).forEach(key => {
+        if (key !== 'imageFile' && key !== 'imagePreview') {
+          if (formData[key] !== null && formData[key] !== undefined) {
+             fd.append(key, formData[key]);
+          }
+        }
+      });
+
+      if (formData.imageFile) {
+        fd.append('image', formData.imageFile);
+      }
 
       if (editVehicle) {
-        await axios.put(`${GATEWAY_URL}/api/tours/fleet/vehicles/${editVehicle.vehicle_id}`, formData, config);
+        await axios.put(`${GATEWAY_URL}/api/tours/fleet/vehicles/${editVehicle.vehicle_id}`, fd, config);
         setAlertMsg({ type: 'success', text: `Đã cập nhật xe ${formData.license_plate} thành công!` });
       } else {
-        await axios.post(`${GATEWAY_URL}/api/tours/fleet/vehicles`, formData, config);
+        await axios.post(`${GATEWAY_URL}/api/tours/fleet/vehicles`, fd, config);
         setAlertMsg({ type: 'success', text: `Đã thêm phương tiện ${formData.license_plate} vào đội xe!` });
       }
 
@@ -314,7 +362,7 @@ const VehicleFleetManagement = () => {
                         {/* Hình Ảnh Xe & Mã Xe */}
                         <div style={{ position: 'relative', width: '100%', height: '160px', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px', backgroundColor: '#e2e8f0' }}>
                           <img 
-                            src={v.image_url || fallbackImg} 
+                            src={getImageUrl(v.image_url) || fallbackImg} 
                             alt={v.license_plate}
                             onError={(e) => { e.target.src = fallbackImg; }}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -373,19 +421,19 @@ const VehicleFleetManagement = () => {
                             onClick={() => openAddModal(v)}
                             style={{ ...styles.btnSmall, backgroundColor: '#3b82f6', color: '#fff' }}
                           >
-                            ✏️ Sửa
+                            Sửa
                           </button>
                           <button 
-                            onClick={() => { setSelectedVehicle(v); setShowMaintModal(true); }}
-                            style={{ ...styles.btnSmall, backgroundColor: '#f59e0b', color: '#fff' }}
+                            onClick={() => { setSelectedVehicle(v); fetchHistory(v.vehicle_id); setShowMaintModal(true); }}
+                            style={{ ...styles.btnSmall, backgroundColor: '#64748b', color: '#fff' }}
                           >
-                            🛠️ Bảo dưỡng
+                            Xem tình trạng
                           </button>
                           <button 
                             onClick={() => handleDelete(v.vehicle_id, v.license_plate)}
                             style={{ ...styles.btnSmall, backgroundColor: '#ef4444', color: '#fff' }}
                           >
-                            🗑️ Xóa
+                            Xóa
                           </button>
                         </div>
 
@@ -412,116 +460,145 @@ const VehicleFleetManagement = () => {
       {/* Modal Thêm / Chỉnh Sửa Xe */}
       {showAddModal && (
         <div style={styles.modalBackdrop}>
-          <div style={styles.modalCard}>
-            <h2 style={{ marginTop: 0, fontSize: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              {editVehicle ? `✏️ Chỉnh Sửa Thông Tin Xe (${editVehicle.license_plate})` : '➕ Thêm Xe Mới Vào Đội Xe'}
-            </h2>
-            <form onSubmit={handleFormSubmit}>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div>
-                  <label style={styles.label}>Mã quản lý xe</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: XE-7C-01"
-                    value={formData.vehicle_code}
-                    onChange={(e) => setFormData({ ...formData, vehicle_code: e.target.value })}
-                    style={styles.input}
-                  />
-                </div>
-                <div>
-                  <label style={styles.label}>Biển số xe * (VD: 43A-123.45)</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="43A-123.45"
-                    value={formData.license_plate}
-                    onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
-                    style={styles.input}
-                  />
-                </div>
-              </div>
+          <div style={{ ...styles.modalCard, width: '800px', maxWidth: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '22px', color: '#1e293b', fontWeight: '600' }}>
+                {editVehicle ? `Chỉnh sửa thông tin xe (${editVehicle.license_plate})` : 'Thêm xe mới'}
+              </h2>
+              <button type="button" onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div>
-                  <label style={styles.label}>Số chỗ ngồi *</label>
-                  <input 
-                    type="number" 
-                    required 
-                    value={formData.seat_capacity}
-                    onChange={(e) => {
-                      const seats = parseInt(e.target.value, 10);
-                      setFormData({ 
-                        ...formData, 
-                        seat_capacity: seats,
-                        vehicle_type: `Xe ${seats} chỗ` 
-                      });
-                    }}
-                    style={styles.input}
-                  />
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              <form id="vehicleForm" onSubmit={handleFormSubmit}>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={styles.label}>Mã quản lý xe</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: XE-7C-01"
+                      value={formData.vehicle_code}
+                      onChange={(e) => setFormData({ ...formData, vehicle_code: e.target.value })}
+                      style={{ ...styles.input, height: '42px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={styles.label}>Biển số xe *</label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="VD: 43A-123.45"
+                      value={formData.license_plate}
+                      onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
+                      style={{ ...styles.input, height: '42px' }}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label style={styles.label}>Phân loại loại xe</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: Xe 7 chỗ, Xe 16 chỗ..."
-                    value={formData.vehicle_type}
-                    onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
-                    style={styles.input}
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={styles.label}>Số chỗ ngồi *</label>
+                    <input 
+                      type="number" 
+                      required 
+                      value={formData.seat_capacity}
+                      onChange={(e) => {
+                        const seats = parseInt(e.target.value, 10) || 0;
+                        setFormData({ 
+                          ...formData, 
+                          seat_capacity: seats,
+                          vehicle_type: `Xe ${seats} chỗ` 
+                        });
+                      }}
+                      style={{ ...styles.input, height: '42px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={styles.label}>Phân loại xe</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: Xe Limousine"
+                      value={formData.vehicle_type}
+                      onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
+                      style={{ ...styles.input, height: '42px' }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div>
-                  <label style={styles.label}>Dòng xe / Đời xe</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: Toyota Fortuner 2023"
-                    value={formData.brand_model}
-                    onChange={(e) => setFormData({ ...formData, brand_model: e.target.value })}
-                    style={styles.input}
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                  <div>
+                    <label style={styles.label}>Dòng xe / Đời xe</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: Toyota Fortuner 2023"
+                      value={formData.brand_model}
+                      onChange={(e) => setFormData({ ...formData, brand_model: e.target.value })}
+                      style={{ ...styles.input, height: '42px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={styles.label}>Màu xe</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: Trắng, Đen, Bạc"
+                      value={formData.color}
+                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                      style={{ ...styles.input, height: '42px' }}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label style={styles.label}>Màu xe</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: Trắng, Đen, Bạc"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    style={styles.input}
-                  />
+
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={styles.label}>Hình ảnh xe</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '16px', border: '1px dashed #cbd5e1', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                    <div style={{ width: '160px', height: '100px', backgroundColor: '#e2e8f0', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {formData.imagePreview ? (
+                        <img src={getImageUrl(formData.imagePreview)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '13px' }}>Chưa có ảnh</span>
+                      )}
+                    </div>
+                    <div>
+                      <label style={{ display: 'inline-block', padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: '#334155', transition: 'all 0.2s' }}>
+                        Thay ảnh
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setFormData({ 
+                                ...formData, 
+                                imageFile: file,
+                                imagePreview: URL.createObjectURL(file)
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748b' }}>Định dạng JPG, PNG. Khuyên dùng tỉ lệ 16:9.</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ marginBottom: '12px' }}>
-                <label style={styles.label}>Link Hình ảnh xe (URL)</label>
-                <input 
-                  type="text" 
-                  placeholder="https://images.unsplash.com/..."
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  style={styles.input}
-                />
-              </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={styles.label}>Ghi chú tình trạng xe</label>
+                  <textarea 
+                    rows="3"
+                    placeholder="Tiện ích xe (Wifi, Tủ lạnh), lốp mới thay, ngày kiểm định..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    style={{ ...styles.input, resize: 'vertical' }}
+                  ></textarea>
+                </div>
+              </form>
+            </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={styles.label}>Ghi chú tình trạng xe</label>
-                <textarea 
-                  rows="3"
-                  placeholder="Tiện ích xe (Wifi, Tủ lạnh), lốp mới thay, ngày kiểm định..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  style={styles.input}
-                ></textarea>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} style={styles.btnSecondary}>Hủy</button>
-                <button type="submit" style={styles.btnPrimary}>💾 Lưu Xe</button>
-              </div>
-            </form>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '1px solid #e2e8f0', marginTop: '10px' }}>
+              <button type="button" onClick={() => setShowAddModal(false)} style={{ ...styles.btnSecondary, padding: '10px 24px' }}>Hủy</button>
+              <button type="submit" form="vehicleForm" style={{ ...styles.btnPrimary, padding: '10px 24px' }}>Lưu thay đổi</button>
+            </div>
           </div>
         </div>
       )}
@@ -529,48 +606,76 @@ const VehicleFleetManagement = () => {
       {/* Modal Báo Bảo Dưỡng */}
       {showMaintModal && selectedVehicle && (
         <div style={styles.modalBackdrop}>
-          <div style={styles.modalCard}>
-            <h2 style={{ marginTop: 0, fontSize: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              🛠️ Đưa Xe <span style={{ color: '#2563eb' }}>{selectedVehicle.license_plate}</span> Vào Bảo Dưỡng
-            </h2>
-            <form onSubmit={handleMaintSubmit}>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={styles.label}>Từ ngày</label>
-                <input 
-                  type="date" 
-                  required
-                  value={maintData.start_date}
-                  onChange={(e) => setMaintData({ ...maintData, start_date: e.target.value })}
-                  style={styles.input}
-                />
+          <div style={{ ...styles.modalCard, width: '600px', maxWidth: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <h2 style={{ marginTop: 0, fontSize: '18px', margin: 0 }}>
+                Tình trạng phương tiện: <span style={{ color: '#2563eb' }}>{selectedVehicle.license_plate}</span>
+              </h2>
+              <button type="button" onClick={() => setShowMaintModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+            </div>
+            
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '24px' }}>
+              <div>
+                <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 'bold' }}>Trạng thái kỹ thuật</label>
+                <div style={{ marginTop: '4px', fontSize: '15px', fontWeight: 'bold', color: selectedVehicle.status === 'AVAILABLE' ? '#166534' : selectedVehicle.status === 'MAINTENANCE' ? '#9a3412' : selectedVehicle.status === 'REPAIR' ? '#991b1b' : '#475569' }}>
+                  {selectedVehicle.status === 'AVAILABLE' ? 'Sẵn sàng' : selectedVehicle.status === 'MAINTENANCE' ? 'Đang bảo dưỡng' : selectedVehicle.status === 'REPAIR' ? 'Đang sửa chữa' : 'Tạm ngưng'}
+                </div>
               </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={styles.label}>Đến ngày dự kiến hoàn thành</label>
-                <input 
-                  type="date" 
-                  required
-                  value={maintData.end_date}
-                  onChange={(e) => setMaintData({ ...maintData, end_date: e.target.value })}
-                  style={styles.input}
-                />
+              <div>
+                <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 'bold' }}>Trạng thái vận hành</label>
+                <div style={{ marginTop: '4px', fontSize: '15px', fontWeight: 'bold', color: selectedVehicle.current_tour ? '#854d0e' : '#334155' }}>
+                  {selectedVehicle.current_tour ? 'Đang đi tour' : 'Không có lịch chạy'}
+                </div>
               </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={styles.label}>Lý do bảo dưỡng / Sửa chữa</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="VD: Thay dầu, thay lốp, đăng kiểm định kỳ..."
-                  value={maintData.reason}
-                  onChange={(e) => setMaintData({ ...maintData, reason: e.target.value })}
-                  style={styles.input}
-                />
-              </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowMaintModal(false)} style={styles.btnSecondary}>Hủy</button>
-                <button type="submit" style={{ ...styles.btnPrimary, backgroundColor: '#f59e0b' }}>🛠️ Xác Nhận Bảo Dưỡng</button>
+            {selectedVehicle.current_maintenance && (
+              <div style={{ background: '#fef2f2', borderLeft: '4px solid #ef4444', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
+                <strong style={{ color: '#991b1b', fontSize: '14px' }}>Thông tin Bảo dưỡng / Sửa chữa:</strong>
+                <div style={{ fontSize: '13px', color: '#475569', marginTop: '6px' }}>
+                  Lý do: {selectedVehicle.current_maintenance.reason}<br/>
+                  Thời gian: {selectedVehicle.current_maintenance.start_date} ➔ {selectedVehicle.current_maintenance.end_date}
+                </div>
               </div>
-            </form>
+            )}
+
+            <div style={{ marginTop: '20px' }}>
+              <h3 style={{ fontSize: '15px', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '12px' }}>Lịch sử cập nhật trạng thái</h3>
+              {loadingHistory ? (
+                <div style={{ fontSize: '13px', color: '#64748b' }}>Đang tải lịch sử...</div>
+              ) : vehicleHistory && vehicleHistory.length > 0 ? (
+                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
+                      <tr>
+                        <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Ngày</th>
+                        <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Trạng thái</th>
+                        <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Người C.Nhật</th>
+                        <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Lý do</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vehicleHistory.map((h, i) => (
+                        <tr key={i}>
+                          <td style={{ padding: '8px', borderBottom: '1px solid #f1f5f9' }}>{new Date(h.created_at).toLocaleDateString()}</td>
+                          <td style={{ padding: '8px', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold' }}>
+                            {h.new_status === 'AVAILABLE' ? 'Sẵn sàng' : h.new_status === 'MAINTENANCE' ? 'Bảo dưỡng' : h.new_status === 'REPAIR' ? 'Sửa chữa' : 'Tạm ngưng'}
+                          </td>
+                          <td style={{ padding: '8px', borderBottom: '1px solid #f1f5f9' }}>{h.user_name || 'Hệ thống'}</td>
+                          <td style={{ padding: '8px', borderBottom: '1px solid #f1f5f9' }}>{h.reason || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ fontSize: '13px', color: '#64748b' }}>Chưa có lịch sử trạng thái cho xe này.</div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button type="button" onClick={() => setShowMaintModal(false)} style={{ ...styles.btnPrimary }}>Đóng</button>
+            </div>
           </div>
         </div>
       )}

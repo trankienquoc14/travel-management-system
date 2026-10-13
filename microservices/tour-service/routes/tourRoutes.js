@@ -67,14 +67,25 @@ router.post('/operations/departures/:id/decision', protect, restrictTo(1, 3), to
 
 // === HỆ THỐNG QUẢN LÝ ĐỘI XE & ĐIỀU XE TOUR ===
 router.get('/fleet/vehicles', protect, vehicleController.getAllVehicles);
-router.post('/fleet/vehicles', protect, restrictTo(1, 3), vehicleController.createVehicle);
-router.put('/fleet/vehicles/:id', protect, restrictTo(1, 3), vehicleController.updateVehicle);
+router.post('/fleet/vehicles', protect, restrictTo(1, 3), upload.single('image'), vehicleController.createVehicle);
+router.put('/fleet/vehicles/:id', protect, restrictTo(1, 3), upload.single('image'), vehicleController.updateVehicle);
 router.delete('/fleet/vehicles/:id', protect, restrictTo(1, 3), vehicleController.deleteVehicle);
 
 router.get('/fleet/available-vehicles', protect, vehicleController.getAvailableVehicles);
 router.post('/fleet/dispatch', protect, restrictTo(1, 3), vehicleController.dispatchVehicle);
 router.post('/fleet/maintenance', protect, restrictTo(1, 3), vehicleController.createMaintenance);
 router.get('/fleet/driver-assigned', protect, vehicleController.getDriverAssignedTours);
+
+
+// ==========================================
+// OFFICE STAFF VEHICLE FUNCTIONS
+// ==========================================
+router.put('/fleet/staff/vehicles/:id/status', protect, restrictTo(1, 4), vehicleController.updateVehicleStatusStaff);
+router.get('/fleet/staff/incidents', protect, restrictTo(1, 4), vehicleController.getDriverIncidentsStaff);
+router.put('/fleet/staff/incidents/:id', protect, restrictTo(1, 4), vehicleController.updateDriverIncidentStaff);
+router.get('/fleet/staff/vehicles/:id/history', protect, restrictTo(1, 3, 4), vehicleController.getVehicleHistoryStaff);
+
+
 
 router.get('/:id', tourController.getTourById);
 

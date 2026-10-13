@@ -46,6 +46,9 @@ import GeneralOverview from './GeneralOverview';
 import PersonalAttendance from './PersonalAttendance';
 import HRLeaveRequest from './HRLeaveRequest';
 import DriverWorkspace from './DriverWorkspace';
+import StaffVehicleManagement from './StaffVehicleManagement';
+import StaffVehicleIncidents from './StaffVehicleIncidents';
+import StaffVehicleHistory from './StaffVehicleHistory';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -58,6 +61,7 @@ const Dashboard = () => {
   const [isServiceRequestGroupOpen, setIsServiceRequestGroupOpen] = useState(false);
   const [isTourGroupOpen, setIsTourGroupOpen] = useState(false);
   const [isBookingGroupOpen, setIsBookingGroupOpen] = useState(false);
+  const [isOfficeStaffVehicleGroupOpen, setIsOfficeStaffVehicleGroupOpen] = useState(false);
   const [isRequestManagerOpen, setIsRequestManagerOpen] = useState(false);
   const [isOperationsGroupOpen, setIsOperationsGroupOpen] = useState(false);
   const [isHRGroupOpen, setIsHRGroupOpen] = useState(false);
@@ -373,6 +377,44 @@ const Dashboard = () => {
                       </li>
                       <li className={activeTab === 'approved_tours' ? 'active' : ''} onClick={() => setActiveTab('approved_tours')}>
                         📋 Tour đã thiết kế
+                      </li>
+                    </>
+                  )}
+
+                  
+                  {/* QUẢN LÝ XE (Office Staff) */}
+                  <li 
+                    onClick={() => setIsOfficeStaffVehicleGroupOpen(!isOfficeStaffVehicleGroupOpen)}
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: '#f8fafc', 
+                      padding: '10px 14px', 
+                      fontSize: '12px', 
+                      fontWeight: '800', 
+                      color: '#1e293b', 
+                      textTransform: 'uppercase', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      borderRadius: '8px',
+                      marginTop: '12px',
+                      marginBottom: '4px',
+                      borderLeft: '4px solid #0194f3'
+                    }}
+                  >
+                    <span>⚙️ VẬN HÀNH & NGUỒN LỰC</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>{isOfficeStaffVehicleGroupOpen ? '▲' : '▼'}</span>
+                  </li>
+                  {isOfficeStaffVehicleGroupOpen && (
+                    <>
+                      <li className={activeTab === 'staff_fleet_vehicles' ? 'active' : ''} onClick={() => setActiveTab('staff_fleet_vehicles')}>
+                        🚌 Quản lý xe
+                      </li>
+                      <li className={activeTab === 'staff_vehicle_incidents' ? 'active' : ''} onClick={() => setActiveTab('staff_vehicle_incidents')}>
+                        ⚠️ Báo cáo sự cố xe
+                      </li>
+                      <li className={activeTab === 'staff_vehicle_history' ? 'active' : ''} onClick={() => setActiveTab('staff_vehicle_history')}>
+                        📜 Lịch sử xe
                       </li>
                     </>
                   )}
@@ -862,6 +904,11 @@ const Dashboard = () => {
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}
           {activeTab === 'hr_customers' && (isOfficeStaff || isAdmin) && <HRCustomerManagement />}
+
+          {activeTab === 'staff_fleet_vehicles' && (isOfficeStaff || isAdmin) && <StaffVehicleManagement />}
+          {activeTab === 'staff_vehicle_incidents' && (isOfficeStaff || isAdmin) && <StaffVehicleIncidents />}
+          {activeTab === 'staff_vehicle_history' && (isOfficeStaff || isAdmin) && <StaffVehicleHistory />}
+
           {activeTab === 'hr_attendance' && (isHRManager || isAdmin) && <HRAttendance />}
           {activeTab === 'hr_payroll' && (isHRManager || isAdmin) && <HRPayroll />}
           {activeTab === 'hr_performance' && (isHRManager || isAdmin) && <HRPerformanceReview />}

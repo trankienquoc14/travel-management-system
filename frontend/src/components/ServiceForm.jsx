@@ -4,7 +4,7 @@ import axios from "axios";
 const ServiceForm = ({ editData, onBack }) => {
     const [formData, setFormData] = useState({
         service_name: "",
-        service_type: "Hotel",
+        service_type: "Khách sạn",
         description: "",
         partner_id: "",
         destination_id: "",
@@ -129,10 +129,10 @@ const ServiceForm = ({ editData, onBack }) => {
                 <div className="form-group">
                     <label>Phân loại dịch vụ *</label>
                     <select name="service_type" value={formData.service_type} onChange={handleChange} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
-                        <option value="Hotel">Lưu trú (Hotel/Resort)</option>
-                        <option value="Transport">Vận chuyển (Xe/Tàu)</option>
-                        <option value="Flight">Vé máy bay (Flight)</option>
-                        <option value="Restaurant">Nhà hàng / Ăn uống</option>
+                        <option value="Khách sạn">Lưu trú (Khách sạn / Resort)</option>
+                        <option value="Xe vận chuyển">Vận chuyển (Xe du lịch)</option>
+                        <option value="Vé máy bay">Vé máy bay (Hàng không)</option>
+                        <option value="Nhà hàng">Nhà hàng / Ăn uống</option>
                         <option value="Ticket">Vé tham quan / Giải trí</option>
                         <option value="Other">Khác</option>
                     </select>

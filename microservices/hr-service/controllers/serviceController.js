@@ -1,3 +1,13 @@
+
+function normalizeServiceType(type) {
+    if (!type) return 'Khách sạn';
+    const t = type.trim();
+    if (t === 'Hotel' || t === 'Accommodation' || t === 'Khách sạn') return 'Khách sạn';
+    if (t === 'Transport' || t === 'Vehicle' || t === 'Xe vận chuyển') return 'Xe vận chuyển';
+    if (t === 'Flight' || t === 'Vé máy bay') return 'Vé máy bay';
+    if (t === 'Restaurant' || t === 'Nhà hàng') return 'Nhà hàng';
+    return t;
+}
 const sequelize = require('../config/database');
 
 // API nhỏ: Lấy danh sách Nhà cung cấp để hiển thị trong thẻ Select
@@ -15,7 +25,12 @@ exports.getAllServices = async (req, res) => {
         const [services] = await sequelize.query(`
             SELECT s.*, p.partner_name, d.destination_name, s.base_cost as proposed_cost,
                    vsd.vehicle_service_id, vsd.seat_capacity as capacity, vsd.vehicle_type as vehicle_detail_type, vsd.vehicle_model,
-                   hsd.max_adults, hsd.max_children, hsd.max_infants, hsd.min_adults, hsd.single_room_allowed, hsd.single_room_supplement
+                   hsd.max_adults, hsd.max_children, hsd.max_infants, hsd.min_adults, hsd.single_room_allowed, hsd.single_room_supplement,
+                   (
+                       SELECT COUNT(*) FROM travel_management.vehicles v 
+                       WHERE v.seat_capacity = vsd.seat_capacity 
+                       AND v.status = 'AVAILABLE'
+                   ) as available_vehicles_count
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             LEFT JOIN travel_management.destinations d ON s.destination_id = d.destination_id
@@ -49,7 +64,7 @@ exports.createService = async (req, res) => {
             INSERT INTO services (service_name, service_type, description, image_url, partner_id, destination_id, unit, base_cost, selling_price, attributes, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, { replacements: [
-            service_name || '', service_type || 'Khách sạn', description || '', finalImageUrl, 
+            service_name || '', normalizeServiceType(service_type), description || '', finalImageUrl, 
             parsedPartnerId, parsedDestId, unit || null, 
             base_cost || 0, selling_price || 0, 
             attributes || '{}', status || 'Active'
@@ -108,7 +123,7 @@ exports.updateService = async (req, res) => {
             SET service_name = ?, service_type = ?, description = ?, image_url = ?, partner_id = ?, destination_id = ?, unit = ?, base_cost = ?, selling_price = ?, attributes = ?, status = ?
             WHERE service_id = ?
         `, { replacements: [
-            service_name || '', service_type || 'Khách sạn', description || '', finalImageUrl, 
+            service_name || '', normalizeServiceType(service_type), description || '', finalImageUrl, 
             parsedPartnerId, parsedDestId, unit || null, 
             base_cost || 0, selling_price || 0, 
             attributes || '{}', status || 'Active', id

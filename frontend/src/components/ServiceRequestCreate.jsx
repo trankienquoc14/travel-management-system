@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { FormattedDateInput } from './FormattedDateInput';
 
 const ServiceRequestCreate = ({ setActiveTab }) => {
     const [departures, setDepartures] = useState([]);
@@ -736,6 +737,7 @@ const ServiceRequestCreate = ({ setActiveTab }) => {
                                                     if (!srv.partner_id) return false;
                                                     const p = partners.find(pt => pt.partner_id === srv.partner_id);
                                                     if (!p) return false;
+                                                    if (srv.partner_id == s.partner_id) return true;
                                                     if (s.destination_id) return p.destination_id == s.destination_id;
                                                     const dest = destinations.find(d => d.destination_id == p.destination_id);
                                                     const pDestName = dest ? dest.destination_name : (p.destination_name || '');
@@ -786,11 +788,11 @@ const ServiceRequestCreate = ({ setActiveTab }) => {
                             <div style={{ display: 'flex', gap: '16px' }}>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Check-in</label>
-                                    <input type="date" value={s.details.checkIn || ''} onChange={e => handleDetailChange(originalIndex, 'checkIn', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                    <FormattedDateInput value={s.details.checkIn || ''} onChange={val => handleDetailChange(originalIndex, 'checkIn', val)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Check-out</label>
-                                    <input type="date" value={s.details.checkOut || ''} onChange={e => handleDetailChange(originalIndex, 'checkOut', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                    <FormattedDateInput value={s.details.checkOut || ''} onChange={val => handleDetailChange(originalIndex, 'checkOut', val)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                                 </div>
                             </div>
                             <button onClick={() => {
