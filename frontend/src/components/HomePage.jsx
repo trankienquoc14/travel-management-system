@@ -6,6 +6,8 @@ import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
 import TravelPreferenceFilter, { trackBehavior } from './TravelPreferenceFilter';
 import TravelPreferenceSidebar from './TravelPreferenceSidebar';
+import CustomerChatWidget from './CustomerChatWidget';
+import CustomerAIChatWidget from './CustomerAIChatWidget';
 import '../index.css';
 
 const HomePage = () => {
@@ -1389,6 +1391,12 @@ const HomePage = () => {
 
             {/* 10. FOOTER */}
             <CustomerFooter />
+
+            {/* 11. ROBOT CHAT AI (HỎI ĐÁP DỰA TRÊN CSDL THỰC TẾ 24/7) */}
+            <CustomerAIChatWidget />
+
+            {/* 12. LIVE CHAT MESSAGE WIDGET (TƯ VẤN KHÁCH HÀNG VỚI NHÂN VIÊN) */}
+            <CustomerChatWidget />
 
         </div>
     );

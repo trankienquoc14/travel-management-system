@@ -18,6 +18,7 @@ import PersonalSchedule from './components/PersonalSchedule'; // Thêm trang thi
 import ServicesPage from './components/ServicesPage'; // Trang Dịch vụ Độc lập
 import ContactPage from './components/ContactPage';
 import ArticlePage from './components/ArticlePage'; // Trang Bài viết Footer
+import ArticlesPage from './components/ArticlesPage';
 
 // 1. Bảo vệ cơ bản: Chỉ cần có đăng nhập
 const ProtectedRoute = ({ children }) => {
@@ -79,6 +80,7 @@ function App() {
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         
+        <Route path="/articles" element={<ArticlesPage />} />
         <Route path="/article/:slug" element={<ArticlePage />} />
         <Route path="/tour/:id" element={<TourDetail />} />
         <Route path="/booking-form" element={<ProtectedRoute><BookingForm /></ProtectedRoute>} />

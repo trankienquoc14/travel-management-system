@@ -20,7 +20,8 @@ const services = {
   auth: process.env.AUTH_SERVICE_URL || 'http://localhost:5001',
   tour: process.env.TOUR_SERVICE_URL || 'http://localhost:5002',
   booking: process.env.BOOKING_SERVICE_URL || 'http://localhost:5003',
-  hr: process.env.HR_SERVICE_URL || 'http://localhost:5004'
+  hr: process.env.HR_SERVICE_URL || 'http://localhost:5004',
+  chat: process.env.CHAT_SERVICE_URL || 'http://localhost:5005'
 };
 
 // Set up proxy using router option to preserve paths
@@ -43,7 +44,8 @@ app.use('/', createProxyMiddleware({
     '/api/partners': services.hr,
     '/api/partner-services': services.hr,
     '/api/services': services.hr,
-    '/api/dashboard': services.hr
+    '/api/dashboard': services.hr,
+    '/api/chat': services.chat
   }
 }));
 

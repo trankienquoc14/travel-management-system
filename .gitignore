@@ -1,1 +1,53 @@
+# ==========================================
+# GITIGNORE CHO DỰ ÁN TRAVEL MANAGEMENT
+# ==========================================
+
+# 1. Environment variables & API keys (TUYỆT ĐỐI KHÔNG PUSH LÊN GIT)
+.env
+.env.local
+.env.*.local
+*.env
+**/.env
+**/.env.*
+frontend/.env*
+
+# Cho phép push các file mẫu template .env.example
+!.env.example
+!**/.env.example
+
+# 2. Dependencies
 node_modules/
+*/node_modules/
+**/node_modules/
+
+# 3. Production build outputs
+dist/
+dist-ssr/
+frontend/dist/
+build/
+*.local
+
+# 4. Logs & Debugging
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# 5. OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 6. Temporary scratch & caches
+scratch/
+tmp/
+temp/
+.cache/

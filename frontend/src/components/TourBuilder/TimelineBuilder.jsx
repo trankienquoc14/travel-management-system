@@ -1,6 +1,7 @@
 
 import React from 'react';
 import DayCard from './DayCard';
+import { formatVehicleDisplayName } from '../../utils/vehicleDisplayHelper';
 
 const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, setDayImages, dayImagePreviews, setDayImagePreviews, costConfig, setCostConfig, requestData, tourName, setTourName, tourDescription, setTourDescription }) => {
     const addDay = () => {
@@ -79,9 +80,7 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
                     return isEnd ? 'Điểm đến' : 'Điểm xuất phát';
                 };
 
-                const transportName = typeof costConfig.selectedTransport === 'object' && costConfig.selectedTransport !== null
-                    ? (costConfig.selectedTransport.service_name || costConfig.selectedTransport.name || costConfig.selectedTransport.title || 'Phương tiện di chuyển') 
-                    : (typeof costConfig.selectedTransport === 'string' && costConfig.selectedTransport ? costConfig.selectedTransport : 'Phương tiện di chuyển');
+                const transportName = formatVehicleDisplayName(costConfig.selectedTransport) || 'Phương tiện di chuyển';
 
                 const firstDay = days[0];
                 const lastDay = days[days.length - 1];

@@ -99,11 +99,38 @@ exports.createGroup = async (req, res) => {
             const childCode = `YC-${groupId}-${i+1}`;
             const content = JSON.stringify(svc.details);
             
-            await sequelize.query(
+            const [srInsertRes] = await sequelize.query(
                 `INSERT INTO service_requests (departure_id, group_id, partner_id, requested_by, service_type, quantity, request_content, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')`,
                 { replacements: [departure_id, groupId, svc.partner_id, userId, svc.service_type, svc.quantity, content] }
             );
+
+            // Gửi thông báo đích danh cho đối tác được chỉ định (Chỉ tài khoản đối tác này nhận, không gửi đồng loạt)
+            try {
+                const [targetPartnerUser] = await sequelize.query(`
+                    SELECT u.user_id, p.partner_name, t.tour_name, d.departure_date
+                    FROM partners p
+                    JOIN departures d ON d.departure_id = ?
+                    JOIN tours t ON d.tour_id = t.tour_id
+                    LEFT JOIN users u ON (u.email = p.email OR u.phone = p.phone OR u.full_name = p.partner_name OR (p.partner_id = 5 AND u.email = 'partner.muongthanh@travel.com')) AND u.role_id = 7
+                    WHERE p.partner_id = ?
+                    LIMIT 1
+                `, { replacements: [departure_id, svc.partner_id] });
+
+                if (targetPartnerUser.length > 0 && targetPartnerUser[0].user_id) {
+                    const pu = targetPartnerUser[0];
+                    const depDateStr = pu.departure_date ? new Date(pu.departure_date).toLocaleDateString('vi-VN') : 'Sắp tới';
+                    const notifTitle = `🛎️ Yêu cầu dịch vụ mới [${svc.service_type}] #${srInsertRes || ''}`;
+                    const notifContent = `Công ty TravelVN vừa gửi yêu cầu cung cấp dịch vụ ${svc.service_type} cho đoàn tour "${pu.tour_name}" (Khởi hành: ${depDateStr}). Vui lòng kiểm tra và xác nhận!`;
+
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, is_read, action_url, created_at)
+                        VALUES (?, 'PARTNER_SERVICE_REQUEST', 'PARTNER', ?, ?, ?, 0, 'partner_requests', NOW())
+                    `, { replacements: [pu.user_id, notifTitle, notifContent, departure_id] });
+                }
+            } catch (pNotifErr) {
+                console.error('Lỗi gửi thông báo cho đối tác:', pNotifErr);
+            }
         }
         
         res.status(201).json({ success: true, message: 'Tạo yêu cầu thành công', data: { id: groupId } });
@@ -146,11 +173,38 @@ exports.createSupplement = async (req, res) => {
             const svc = services[i];
             const content = JSON.stringify(svc.details);
             
-            await sequelize.query(
+            const [srInsertRes] = await sequelize.query(
                 `INSERT INTO service_requests (departure_id, group_id, partner_id, requested_by, service_type, quantity, request_content, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')`,
                 { replacements: [baseGroup.departure_id, groupId, svc.partner_id, userId, svc.service_type, svc.quantity, content] }
             );
+
+            // Gửi thông báo đích danh cho đối tác được chỉ định
+            try {
+                const [targetPartnerUser] = await sequelize.query(`
+                    SELECT u.user_id, p.partner_name, t.tour_name, d.departure_date
+                    FROM partners p
+                    JOIN departures d ON d.departure_id = ?
+                    JOIN tours t ON d.tour_id = t.tour_id
+                    LEFT JOIN users u ON (u.email = p.email OR u.phone = p.phone OR u.full_name = p.partner_name OR (p.partner_id = 5 AND u.email = 'partner.muongthanh@travel.com')) AND u.role_id = 7
+                    WHERE p.partner_id = ?
+                    LIMIT 1
+                `, { replacements: [baseGroup.departure_id, svc.partner_id] });
+
+                if (targetPartnerUser.length > 0 && targetPartnerUser[0].user_id) {
+                    const pu = targetPartnerUser[0];
+                    const depDateStr = pu.departure_date ? new Date(pu.departure_date).toLocaleDateString('vi-VN') : 'Sắp tới';
+                    const notifTitle = `🛎️ Yêu cầu dịch vụ bổ sung [${svc.service_type}] #${srInsertRes || ''}`;
+                    const notifContent = `Công ty TravelVN vừa gửi yêu cầu bổ sung dịch vụ ${svc.service_type} cho tour "${pu.tour_name}" (Khởi hành: ${depDateStr}). Vui lòng kiểm tra và xác nhận!`;
+
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, is_read, action_url, created_at)
+                        VALUES (?, 'PARTNER_SERVICE_REQUEST', 'PARTNER', ?, ?, ?, 0, 'partner_requests', NOW())
+                    `, { replacements: [pu.user_id, notifTitle, notifContent, baseGroup.departure_id] });
+                }
+            } catch (pNotifErr) {
+                console.error('Lỗi gửi thông báo cho đối tác:', pNotifErr);
+            }
         }
         
         res.status(201).json({ success: true, message: 'Tạo yêu cầu bổ sung thành công', data: { id: groupId } });

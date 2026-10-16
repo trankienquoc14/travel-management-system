@@ -10,6 +10,7 @@ import {
     CheckCircle as FiCheckCircle, ChevronRight as FiChevronRight, ChevronLeft as FiChevronLeft,
     Home as FiHome, Truck as FiTruck, Coffee as FiCoffee, Camera as FiCamera, Edit as FiEdit3
 } from 'lucide-react';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
 const CustomerTourBuilder = () => {
     const navigate = useNavigate();
@@ -202,7 +203,7 @@ const CustomerTourBuilder = () => {
                     participantBreakdown: participants,
                     hotelName: hotelMode === 'self' ? 'Khách tự túc' : hotelMode === 'company' ? 'Công ty tự sắp xếp' : (selectedHotel ? `${selectedHotel.partner_name || 'Hệ thống'} - ${selectedHotel.service_name}` : 'Không chọn'),
                     hotelPrice: hotelCost,
-                    transportName: transportMode === 'self' ? 'Khách tự túc' : transportMode === 'company' ? 'Công ty tự sắp xếp' : (selectedTransport ? `${selectedTransport.partner_name || 'Hệ thống'} - ${selectedTransport.service_name}` : 'Không chọn'),
+                    transportName: transportMode === 'self' ? 'Khách tự túc' : transportMode === 'company' ? 'Công ty tự sắp xếp' : (selectedTransport ? formatVehicleDisplayName(selectedTransport) : 'Không chọn'),
                     transportPrice: transportCost,
                     guide: guideMode === 'company' ? 'Cần Hướng dẫn viên' : 'Khách tự túc',
                     meal: mealMode === 'company' ? 'Công ty tự sắp xếp' : 'Khách tự túc',
@@ -442,7 +443,7 @@ const CustomerTourBuilder = () => {
                                             {preferences.transport === t.partner_service_id.toString() && <div className="check-badge"><FiCheckCircle /></div>}
                                         </div>
                                         <div className="card-info">
-                                            <strong>{t.service_name}</strong>
+                                            <strong>{formatVehicleDisplayName(t)}</strong>
                                             <span className="vendor">{t.partner_name || 'Hệ thống'}</span>
                                             <span className="price">Dự kiến: +{formatMoney(Number(t.price))}đ</span>
                                         </div>
@@ -542,7 +543,7 @@ const CustomerTourBuilder = () => {
                 </div>
                 <div className="summary-row">
                     <span className="s-label">Di chuyển:</span>
-                    <span className="s-val">{transportMode === 'self' ? 'Khách tự túc' : transportMode === 'company' ? 'Công ty tự sắp xếp' : (selectedTransport ? selectedTransport.service_name : <i>(Chưa chọn)</i>)}</span>
+                    <span className="s-val">{transportMode === 'self' ? 'Khách tự túc' : transportMode === 'company' ? 'Công ty tự sắp xếp' : (selectedTransport ? formatVehicleDisplayName(selectedTransport) : <i>(Chưa chọn)</i>)}</span>
                 </div>
                 <div className="summary-row">
                     <span className="s-label">Hướng dẫn viên:</span>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { FormattedDateInput } from './FormattedDateInput';
 
-const ServiceRequestCreate = ({ setActiveTab }) => {
+const ServiceRequestCreate = ({ setActiveTab, initialDepartureId }) => {
     const [departures, setDepartures] = useState([]);
     const [serviceGroups, setServiceGroups] = useState([]);
     const [filterRequestStatus, setFilterRequestStatus] = useState('CHUA_TAO');
@@ -11,8 +11,14 @@ const ServiceRequestCreate = ({ setActiveTab }) => {
     const [allServices, setAllServices] = useState([]);
     
     // Selection state
-    const [selectedDepId, setSelectedDepId] = useState('');
+    const [selectedDepId, setSelectedDepId] = useState(initialDepartureId || '');
     const [itineraryRows, setItineraryRows] = useState([]);
+
+    useEffect(() => {
+        if (initialDepartureId) {
+            setSelectedDepId(initialDepartureId);
+        }
+    }, [initialDepartureId]);
     
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);

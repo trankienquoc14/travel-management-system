@@ -14,11 +14,11 @@ router.get('/employees/:id/tour-stats', protect, restrictTo(1, 2), hrController.
 router.get('/performance', protect, restrictTo(1, 2), hrController.getAllPerformanceReviews);
 router.post('/performance', protect, restrictTo(1, 2), hrController.createPerformanceReview);
 
-// Các tuyến đường quản lý khách hàng (Admin [1], HR Manager [2], Office Staff [4])
-router.get('/customers', protect, restrictTo(1, 2, 4), hrController.getAllCustomers);
-router.post('/customers', protect, restrictTo(1, 2, 4), hrController.createCustomer);
-router.put('/customers/:id', protect, restrictTo(1, 2, 4), hrController.updateCustomer);
-router.delete('/customers/:id', protect, restrictTo(1, 2, 4), hrController.deleteCustomer);
+// Các tuyến đường quản lý khách hàng (Admin [1], HR Manager [2], Tour Manager [3], Office Staff [4])
+router.get('/customers', protect, restrictTo(1, 2, 3, 4), hrController.getAllCustomers);
+router.post('/customers', protect, restrictTo(1, 2, 3, 4), hrController.createCustomer);
+router.put('/customers/:id', protect, restrictTo(1, 2, 3, 4), hrController.updateCustomer);
+router.delete('/customers/:id', protect, restrictTo(1, 2, 3, 4), hrController.deleteCustomer);
 
 // Tuyến đường điểm danh / Chấm công GPS Realtime dành cho TOÀN BỘ nhân sự (trừ Khách hàng)
 router.post('/attendance/gps-checkin', protect, hrController.gpsCheckIn);

@@ -7,6 +7,7 @@ import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag
 
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -160,7 +161,7 @@ const BookingFormInner = () => {
     const transportType = parsedDesign?.costConfig?.selectedTransport?.service_type;
     const isFlight = transportType === 'Vé máy bay';
     const transportIcon = isFlight ? '✈️' : '🚌';
-    const transportName = isFlight ? (parsedDesign?.costConfig?.selectedTransport?.provider_name || 'Máy bay') : 'Xe khách du lịch';
+    const transportName = isFlight ? (parsedDesign?.costConfig?.selectedTransport?.provider_name || 'Máy bay') : (formatVehicleDisplayName(parsedDesign?.costConfig?.selectedTransport) || 'Xe khách du lịch');
 
     const safeDestinations = Array.isArray(destinations) ? destinations : [];
 
@@ -328,10 +329,28 @@ const BookingFormInner = () => {
     const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN').format(amount || 0) + 'đ';
 
 
+    // --- 1.1 KIỂM TRA HẠN CHÓT ĐẶT TOUR (TRƯỚC 30 NGÀY) ---
+    let isBookingCutoffClosed = false;
+    let cutoffDaysLeft = 999;
+    if (!isCustom && depDateObj && !isNaN(depDateObj.getTime())) {
+        const depD = new Date(depDateObj);
+        const now = new Date();
+        depD.setHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
+        cutoffDaysLeft = Math.ceil((depD.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (cutoffDaysLeft < 30) {
+            isBookingCutoffClosed = true;
+        }
+    }
+
     const isFormValid = privacyConsent && contactInfo.fullName.trim() !== '' && contactInfo.email.trim() !== '' && contactInfo.phone.trim() !== '';
 
     const submitBooking = async (e) => {
         e.preventDefault();
+        if (isBookingCutoffClosed) {
+            alert(`🔒 Đợt khởi hành này đã đóng nhận khách (chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với đối tác). Hiện chỉ còn ${cutoffDaysLeft > 0 ? cutoffDaysLeft : 0} ngày đến ngày đi.`);
+            return;
+        }
         if (!isFormValid) {
             alert('Vui lòng nhập đầy đủ thông tin liên hệ và đồng ý với chính sách!');
             return;
@@ -374,17 +393,22 @@ const BookingFormInner = () => {
         });
 
         try {
+            const dbPaymentMethod = paymentMethod === 'Cash' ? 'Cash' : 'VNPAY_QR';
+
             if (isCustom) {
                 const response = await axios.post(
                     `http://localhost:5000/api/custom-tours/quotes/${quote.quote_id}/book`,
-                    { payment_method: paymentMethod, notes: contactInfo.notes, passengers: passengersArray },
+                    { payment_method: dbPaymentMethod, notes: contactInfo.notes, passengers: passengersArray },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (response.data.success) {
-                    alert(paymentMethod === 'Cash' 
-                        ? '💵 Đặt tour thành công! Vui lòng đến văn phòng TravelERP để thanh toán tiền mặt.' 
-                        : '📸 Đặt tour thành công! Hệ thống chuyển sang trang Đơn Hàng để bạn quét mã QR thanh toán.');
-                    navigate('/my-bookings');
+                    const createdId = response.data?.data?.booking_id || response.data?.booking_id;
+                    if (paymentMethod === 'Cash') {
+                        alert('💵 Đặt tour thành công! Vui lòng đến văn phòng TravelERP để thanh toán tiền mặt.');
+                        navigate('/my-bookings');
+                    } else {
+                        navigate(`/my-bookings?pay=${createdId}&type=tour`);
+                    }
                 }
             } else {
                 const response = await axios.post('http://localhost:5000/api/bookings', {
@@ -392,16 +416,19 @@ const BookingFormInner = () => {
                     num_people: totalPax, // Gửi tổng số người xuống backend
                     total_amount: totalAmount,
                     breakdown: pax,
-                    payment_method: paymentMethod,
+                    payment_method: dbPaymentMethod,
                     notes: contactInfo.notes,
                     passengers: passengersArray
                 }, { headers: { Authorization: `Bearer ${token}` } });
 
                 if (response.data.success) {
-                    alert(paymentMethod === 'Cash' 
-                        ? '💵 Đặt tour thành công! Vui lòng đến văn phòng TravelERP để thanh toán tiền mặt.' 
-                        : '📸 Đặt tour thành công! Chuyển sang trang Đơn Hàng để quét mã QR.');
-                    navigate('/my-bookings');
+                    const createdId = response.data?.booking_id || response.data?.data?.booking_id;
+                    if (paymentMethod === 'Cash') {
+                        alert('💵 Đặt tour thành công! Vui lòng đến văn phòng TravelERP để thanh toán tiền mặt.');
+                        navigate('/my-bookings');
+                    } else {
+                        navigate(`/my-bookings?pay=${createdId}&type=tour`);
+                    }
                 }
             }
         } catch (error) {
@@ -421,6 +448,20 @@ const BookingFormInner = () => {
                 <div style={{ flex: '1' }}>
                     <h1 style={{ fontSize: '28px', color: '#0f172a', marginBottom: '8px' }}>Đặt tour của bạn</h1>
                     <p style={{ fontSize: '15px', color: '#64748b', marginBottom: '32px' }}>Hãy đảm bảo tất cả thông tin chi tiết trên trang này đã chính xác trước khi tiến hành thanh toán.</p>
+
+                    {isBookingCutoffClosed && (
+                        <div style={{ background: '#fef2f2', border: '1px solid #f87171', borderRadius: '16px', padding: '18px 24px', marginBottom: '24px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.1)' }}>
+                            <span style={{ fontSize: '32px' }}>🔒</span>
+                            <div>
+                                <strong style={{ fontSize: '16px', display: 'block', marginBottom: '4px', color: '#b91c1c' }}>
+                                    Đợt khởi hành đã đóng nhận khách (Chốt trước 30 ngày)
+                                </strong>
+                                <span style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                                    Đợt khởi hành này chỉ còn {cutoffDaysLeft > 0 ? cutoffDaysLeft : 0} ngày đến ngày đi. Hệ thống đã chính thức đóng nhận khách để chốt danh sách đặt khách sạn và nhà hàng với các nhà cung cấp. Bạn không thể hoàn tất đặt vé cho đợt này. Vui lòng quay lại chọn đợt khởi hành khác!
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Khối Thông tin liên lạc */}
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -571,23 +612,28 @@ const BookingFormInner = () => {
                         </div>
                     </div>
 
-                    {/* Khối Phương thức thanh toán (Custom addition to keep flow) */}
+                    {/* Khối Phương thức thanh toán (QR / Ngân hàng + Tiền mặt) */}
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '16px' }}>Phương thức thanh toán</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', border: paymentMethod === 'VNPAY_QR' ? '2px solid #2563eb' : '1px solid #e2e8f0', borderRadius: '12px', background: paymentMethod === 'VNPAY_QR' ? '#eff6ff' : '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
                                 <input type="radio" name="payment" checked={paymentMethod === 'VNPAY_QR'} onChange={() => setPaymentMethod('VNPAY_QR')} style={{ width: '20px', height: '20px', accentColor: '#2563eb' }} />
-                                <div>
-                                    <strong style={{ display: 'block', fontSize: '16px', color: '#0f172a' }}>Chuyển khoản / Quét mã VietQR</strong>
-                                    <span style={{ fontSize: '13px', color: '#64748b' }}>Hệ thống tự động duyệt đơn 24/7 ngay sau khi nhận được tiền.</span>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <strong style={{ fontSize: '16px', color: '#0f172a' }}>📱 Thanh toán bằng QR / Ngân hàng</strong>
+                                        <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '10px', fontWeight: '800' }}>ĐỀ XUẤT • TỰ ĐỘNG 24/7</span>
+                                    </div>
+                                    <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                                        Quét mã VietQR qua ứng dụng Mobile Banking hoặc ví điện tử. Hệ thống tự động xác nhận đơn hàng sau 3-5 giây.
+                                    </span>
                                 </div>
                             </label>
 
                             <label style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', border: paymentMethod === 'Cash' ? '2px solid #2563eb' : '1px solid #e2e8f0', borderRadius: '12px', background: paymentMethod === 'Cash' ? '#eff6ff' : '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
                                 <input type="radio" name="payment" checked={paymentMethod === 'Cash'} onChange={() => setPaymentMethod('Cash')} style={{ width: '20px', height: '20px', accentColor: '#2563eb' }} />
                                 <div>
-                                    <strong style={{ display: 'block', fontSize: '16px', color: '#0f172a' }}>Thanh toán Tiền mặt tại văn phòng</strong>
-                                    <span style={{ fontSize: '13px', color: '#64748b' }}>Bạn đến trực tiếp văn phòng TravelERP để đóng tiền. Đơn hàng sẽ chờ xác nhận.</span>
+                                    <strong style={{ display: 'block', fontSize: '16px', color: '#0f172a' }}>💵 Thanh toán bằng tiền mặt</strong>
+                                    <span style={{ fontSize: '13px', color: '#64748b' }}>Đến trực tiếp văn phòng TravelERP để đóng tiền. Đơn hàng sẽ ở trạng thái chờ xác nhận.</span>
                                 </div>
                             </label>
                         </div>
@@ -735,9 +781,15 @@ const BookingFormInner = () => {
                             <button style={{ width: '48px', height: '48px', borderRadius: '24px', background: '#1d4ed8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>
                                 <Phone size={20} />
                             </button>
-                            <button onClick={submitBooking} disabled={!isFormValid || isSubmitting} style={{ flex: 1, height: '48px', borderRadius: '24px', background: isFormValid ? '#dc2626' : '#f1f5f9', color: isFormValid ? '#fff' : '#94a3b8', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
-                                {isSubmitting ? 'Đang xử lý...' : (isFormValid ? 'Xác Nhận Đặt Tour' : 'Chưa nhập đủ thông tin')}
-                            </button>
+                            {isBookingCutoffClosed ? (
+                                <button disabled style={{ flex: 1, height: '48px', borderRadius: '24px', background: '#94a3b8', color: '#fff', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: 'not-allowed' }}>
+                                    🔒 Đã đóng nhận khách (Quá hạn 30 ngày)
+                                </button>
+                            ) : (
+                                <button onClick={submitBooking} disabled={!isFormValid || isSubmitting} style={{ flex: 1, height: '48px', borderRadius: '24px', background: isFormValid ? '#dc2626' : '#f1f5f9', color: isFormValid ? '#fff' : '#94a3b8', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
+                                    {isSubmitting ? 'Đang xử lý...' : (isFormValid ? 'Xác Nhận Đặt Tour' : 'Chưa nhập đủ thông tin')}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

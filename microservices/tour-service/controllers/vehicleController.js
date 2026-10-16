@@ -1,11 +1,21 @@
 const sequelize = require('../config/database');
 
-// 1. LẤY DANH SÁCH TẤT CẢ XE & TRẠNG THÁI HIỆN TẠI
+// 1. LẤY DANH SÁCH TẤT CẢ XE & TRẠNG THÁI HIỆN TẠI (LIÊN KẾT VỚI SERVICES & VEHICLE_SERVICE_DETAILS)
 exports.getAllVehicles = async (req, res) => {
   try {
+    const isPublic = req.path.includes('public-vehicles') || req.query.is_public === 'true';
+    const whereClause = isPublic ? "WHERE v.status != 'MAINTENANCE'" : "";
     const [vehicles] = await sequelize.query(`
       SELECT 
         v.*,
+        COALESCE(NULLIF(v.base_cost, 0), s.base_cost, 0) AS base_cost,
+        COALESCE(NULLIF(v.selling_price, 0), NULLIF(v.price, 0), s.selling_price, 0) AS selling_price,
+        COALESCE(NULLIF(v.price, 0), NULLIF(v.selling_price, 0), s.selling_price, 0) AS price,
+        s.service_name,
+        s.unit AS service_unit,
+        vsd.vehicle_service_id,
+        vsd.vehicle_model AS service_vehicle_model,
+        vsd.total_quantity AS service_total_quantity,
         (
           SELECT JSON_OBJECT('maintenance_id', vm.maintenance_id, 'reason', vm.reason, 'start_date', vm.start_date, 'end_date', vm.end_date)
           FROM vehicle_maintenances vm 
@@ -22,7 +32,10 @@ exports.getAllVehicles = async (req, res) => {
           LIMIT 1
         ) AS current_tour
       FROM vehicles v
-      ORDER BY v.vehicle_id DESC
+      LEFT JOIN services s ON v.service_id = s.service_id
+      LEFT JOIN vehicle_service_details vsd ON s.service_id = vsd.service_id
+      ${whereClause}
+      ORDER BY v.seat_capacity ASC, v.vehicle_id DESC
     `);
 
     // Parse JSON string fields if returned as string by MySQL
@@ -39,18 +52,60 @@ exports.getAllVehicles = async (req, res) => {
   }
 };
 
+// Helper: Tìm hoặc đồng bộ service_id từ bảng vehicle_service_details / services
+async function resolveVehicleServiceLink(service_id, seat_capacity, vehicle_type) {
+  let finalServiceId = service_id && service_id !== 'null' && service_id !== 'undefined' && service_id !== '' ? Number(service_id) : null;
+  let finalCapacity = Number(seat_capacity) || 7;
+  let finalVehicleType = vehicle_type || `Xe ${finalCapacity} chỗ`;
+
+  if (finalServiceId) {
+    const [vsdRows] = await sequelize.query(`
+      SELECT vsd.service_id, vsd.seat_capacity, vsd.vehicle_type
+      FROM vehicle_service_details vsd
+      WHERE vsd.service_id = ?
+      LIMIT 1
+    `, { replacements: [finalServiceId] });
+
+    if (vsdRows && vsdRows.length > 0) {
+      finalCapacity = Number(vsdRows[0].seat_capacity) || finalCapacity;
+      finalVehicleType = vsdRows[0].vehicle_type || finalVehicleType;
+      return { service_id: finalServiceId, seat_capacity: finalCapacity, vehicle_type: finalVehicleType };
+    }
+  }
+
+  // Nếu chưa truyền service_id, tự động tìm gói dịch vụ xe nội bộ theo seat_capacity
+  const [byCap] = await sequelize.query(`
+    SELECT vsd.service_id, vsd.seat_capacity, vsd.vehicle_type
+    FROM vehicle_service_details vsd
+    JOIN services s ON vsd.service_id = s.service_id
+    WHERE vsd.seat_capacity = ? AND s.partner_id IS NULL
+    ORDER BY s.status = 'Active' DESC, s.service_id ASC
+    LIMIT 1
+  `, { replacements: [finalCapacity] });
+
+  if (byCap && byCap.length > 0) {
+    return {
+      service_id: byCap[0].service_id,
+      seat_capacity: Number(byCap[0].seat_capacity) || finalCapacity,
+      vehicle_type: byCap[0].vehicle_type || finalVehicleType
+    };
+  }
+
+  return { service_id: null, seat_capacity: finalCapacity, vehicle_type: finalVehicleType };
+}
+
 // 2. THÊM MỚI XE VÀO ĐỘI XE
 exports.createVehicle = async (req, res) => {
   try {
-    const { vehicle_code, license_plate, seat_capacity, vehicle_type, brand_model, image_url, color, status, notes } = req.body;
+    const { service_id, vehicle_name, base_cost, selling_price, price, vehicle_code, license_plate, seat_capacity, vehicle_type, brand_model, image_url, color, status, notes } = req.body;
 
     let finalImageUrl = image_url;
     if (req.file) {
       finalImageUrl = `/uploads/${req.file.filename}`;
     }
 
-    if (!license_plate || !seat_capacity) {
-      return res.status(400).json({ success: false, message: 'Biển số xe và số chỗ ngồi là bắt buộc!' });
+    if (!license_plate) {
+      return res.status(400).json({ success: false, message: 'Biển số xe là bắt buộc!' });
     }
 
     const [existing] = await sequelize.query(`SELECT vehicle_id FROM vehicles WHERE license_plate = ?`, {
@@ -61,24 +116,43 @@ exports.createVehicle = async (req, res) => {
       return res.status(400).json({ success: false, message: `Biển số xe ${license_plate} đã tồn tại trong hệ thống!` });
     }
 
-    const autoCode = vehicle_code || `XE-${seat_capacity}C-${Date.now().toString().slice(-4)}`;
+    const resolved = await resolveVehicleServiceLink(service_id, seat_capacity, vehicle_type);
+    const autoCode = vehicle_code || `XE-${resolved.seat_capacity}C-${Date.now().toString().slice(-4)}`;
+    const finalVehicleName = vehicle_name || brand_model || `Xe ${resolved.seat_capacity} chỗ`;
+    const finalSellingPrice = selling_price !== undefined && selling_price !== '' ? Number(selling_price) : (price !== undefined && price !== '' ? Number(price) : 0);
+    const finalBaseCost = base_cost !== undefined && base_cost !== '' ? Number(base_cost) : 0;
 
     await sequelize.query(`
-      INSERT INTO vehicles (vehicle_code, license_plate, seat_capacity, vehicle_type, brand_model, image_url, color, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO vehicles (service_id, vehicle_code, vehicle_name, license_plate, seat_capacity, base_cost, selling_price, price, vehicle_type, brand_model, image_url, color, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, {
       replacements: [
+        resolved.service_id,
         autoCode.toUpperCase(),
+        finalVehicleName,
         license_plate.trim().toUpperCase(),
-        seat_capacity,
-        vehicle_type || `Xe ${seat_capacity} chỗ`,
-        brand_model || '',
+        resolved.seat_capacity,
+        finalBaseCost,
+        finalSellingPrice,
+        finalSellingPrice,
+        resolved.vehicle_type,
+        brand_model || finalVehicleName,
         finalImageUrl || '',
         color || '',
         status || 'AVAILABLE',
         notes || ''
       ]
     });
+
+    // Đồng bộ cập nhật giá dịch vụ định phí liên kết nếu có
+    if (resolved.service_id && (finalBaseCost > 0 || finalSellingPrice > 0)) {
+      await sequelize.query(`
+        UPDATE services 
+        SET base_cost = CASE WHEN ? > 0 THEN ? ELSE base_cost END,
+            selling_price = CASE WHEN ? > 0 THEN ? ELSE selling_price END
+        WHERE service_id = ?
+      `, { replacements: [finalBaseCost, finalBaseCost, finalSellingPrice, finalSellingPrice, resolved.service_id] });
+    }
 
     res.json({ success: true, message: 'Đã thêm xe mới vào Đội xe thành công!' });
   } catch (error) {
@@ -91,20 +165,51 @@ exports.createVehicle = async (req, res) => {
 exports.updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
-    const { vehicle_code, license_plate, seat_capacity, vehicle_type, brand_model, image_url, color, status, notes } = req.body;
+    const { service_id, vehicle_name, base_cost, selling_price, price, vehicle_code, license_plate, seat_capacity, vehicle_type, brand_model, image_url, color, status, notes } = req.body;
 
     let finalImageUrl = image_url;
     if (req.file) {
       finalImageUrl = `/uploads/${req.file.filename}`;
     }
 
+    const resolved = await resolveVehicleServiceLink(service_id, seat_capacity, vehicle_type);
+    const finalVehicleName = vehicle_name || brand_model;
+    const finalSellingPrice = selling_price !== undefined && selling_price !== '' ? Number(selling_price) : (price !== undefined && price !== '' ? Number(price) : 0);
+    const finalBaseCost = base_cost !== undefined && base_cost !== '' ? Number(base_cost) : 0;
+
     await sequelize.query(`
       UPDATE vehicles
-      SET vehicle_code = ?, license_plate = ?, seat_capacity = ?, vehicle_type = ?, brand_model = ?, image_url = ?, color = ?, status = ?, notes = ?
+      SET service_id = ?, vehicle_code = ?, vehicle_name = ?, license_plate = ?, seat_capacity = ?, base_cost = ?, selling_price = ?, price = ?, vehicle_type = ?, brand_model = ?, image_url = ?, color = ?, status = ?, notes = ?
       WHERE vehicle_id = ?
     `, {
-      replacements: [vehicle_code, license_plate.trim().toUpperCase(), seat_capacity, vehicle_type, brand_model, finalImageUrl, color, status, notes, id]
+      replacements: [
+        resolved.service_id,
+        vehicle_code,
+        finalVehicleName,
+        license_plate.trim().toUpperCase(),
+        resolved.seat_capacity,
+        finalBaseCost,
+        finalSellingPrice,
+        finalSellingPrice,
+        resolved.vehicle_type,
+        brand_model || finalVehicleName,
+        finalImageUrl,
+        color,
+        status,
+        notes,
+        id
+      ]
     });
+
+    // Đồng bộ cập nhật giá dịch vụ định phí liên kết nếu có
+    if (resolved.service_id && (finalBaseCost > 0 || finalSellingPrice > 0)) {
+      await sequelize.query(`
+        UPDATE services 
+        SET base_cost = CASE WHEN ? > 0 THEN ? ELSE base_cost END,
+            selling_price = CASE WHEN ? > 0 THEN ? ELSE selling_price END
+        WHERE service_id = ?
+      `, { replacements: [finalBaseCost, finalBaseCost, finalSellingPrice, finalSellingPrice, resolved.service_id] });
+    }
 
     res.json({ success: true, message: 'Đã cập nhật thông tin xe thành công!' });
   } catch (error) {
@@ -128,16 +233,21 @@ exports.deleteVehicle = async (req, res) => {
 // 5. TRA CỨU DANH SÁCH XE RẢNH THEO THỜI GIAN TOUR
 exports.getAvailableVehicles = async (req, res) => {
   try {
-    const { start_date, end_date, min_seats } = req.query;
+    const { start_date, end_date, min_seats, service_id } = req.query;
 
     let query = `
-      SELECT v.* 
+      SELECT v.*, s.service_name, s.base_cost, s.selling_price, vsd.vehicle_service_id
       FROM vehicles v
+      LEFT JOIN services s ON v.service_id = s.service_id
+      LEFT JOIN vehicle_service_details vsd ON s.service_id = vsd.service_id
       WHERE v.status != 'INACTIVE'
     `;
     const replacements = [];
 
-    if (min_seats) {
+    if (service_id) {
+      query += ` AND v.service_id = ?`;
+      replacements.push(Number(service_id));
+    } else if (min_seats) {
       query += ` AND v.seat_capacity >= ?`;
       replacements.push(Number(min_seats));
     }
@@ -334,6 +444,14 @@ exports.updateVehicleStatusStaff = async (req, res) => {
         VALUES (?, ?, ?, ?, 'IN_PROGRESS')
       `, {
         replacements: [id, start_date || new Date(), end_date || new Date(), reason || '']
+      });
+    } else if (new_status === 'AVAILABLE') {
+      await sequelize.query(`
+        UPDATE vehicle_maintenances 
+        SET status = 'COMPLETED'
+        WHERE vehicle_id = ? AND status = 'IN_PROGRESS'
+      `, {
+        replacements: [id]
       });
     }
 

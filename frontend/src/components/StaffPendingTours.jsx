@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
 const formatMoney = (amount) => {
     if (isNaN(amount) || amount === null || amount === undefined) return '0';
@@ -102,33 +103,25 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
     const getTransportName = (costCfg, parsedDsg, tourObj) => {
         const st = costCfg?.selectedTransport;
         if (st) {
-            if (typeof st === 'string') return st;
-            if (typeof st === 'object') {
-                const name = st.service_name || st.name || st.title || st.label || st.vehicle_type || st.provider_name;
-                if (name) return name;
-            }
+            return formatVehicleDisplayName(st);
         }
         if (parsedDsg?.fixedServices?.transport && Array.isArray(parsedDsg.fixedServices.transport)) {
             const ft = parsedDsg.fixedServices.transport[0];
             if (ft) {
-                if (typeof ft === 'string') return ft;
-                if (typeof ft === 'object') {
-                    const name = ft.service_name || ft.name || ft.title;
-                    if (name) return name;
-                }
+                return formatVehicleDisplayName(ft);
             }
         }
         if (parsedDsg?.days && Array.isArray(parsedDsg.days)) {
             for (const day of parsedDsg.days) {
                 if (day.activities && Array.isArray(day.activities)) {
                     const tAct = day.activities.find(a => a.type === 'Transport' || a.activity_type === 'Transport' || (a.name && (a.name.includes('Di chuyển') || a.name.includes('Xe'))));
-                    if (tAct && tAct.name) return tAct.name;
+                    if (tAct && tAct.name) return formatVehicleDisplayName(tAct.name);
                 }
             }
         }
         if (tourObj) {
             const tName = tourObj.transport_name || tourObj.transport || tourObj.vehicle_name || tourObj.vehicle_type;
-            if (tName) return tName;
+            if (tName) return formatVehicleDisplayName(tName);
         }
         return 'Xe du lịch chất lượng cao';
     };
@@ -564,33 +557,25 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                     const getTransportName = (costCfg, parsedDsg, tourObj) => {
                                         const st = costCfg?.selectedTransport;
                                         if (st) {
-                                            if (typeof st === 'string') return st;
-                                            if (typeof st === 'object') {
-                                                const name = st.service_name || st.name || st.title || st.label || st.vehicle_type || st.provider_name;
-                                                if (name) return name;
-                                            }
+                                            return formatVehicleDisplayName(st);
                                         }
                                         if (parsedDsg?.fixedServices?.transport && Array.isArray(parsedDsg.fixedServices.transport)) {
                                             const ft = parsedDsg.fixedServices.transport[0];
                                             if (ft) {
-                                                if (typeof ft === 'string') return ft;
-                                                if (typeof ft === 'object') {
-                                                    const name = ft.service_name || ft.name || ft.title;
-                                                    if (name) return name;
-                                                }
+                                                return formatVehicleDisplayName(ft);
                                             }
                                         }
                                         if (parsedDsg?.days && Array.isArray(parsedDsg.days)) {
                                             for (const day of parsedDsg.days) {
                                                 if (day.activities && Array.isArray(day.activities)) {
                                                     const tAct = day.activities.find(a => a.type === 'Transport' || a.activity_type === 'Transport' || (a.name && (a.name.includes('Di chuyển') || a.name.includes('Xe'))));
-                                                    if (tAct && tAct.name) return tAct.name;
+                                                    if (tAct && tAct.name) return formatVehicleDisplayName(tAct.name);
                                                 }
                                             }
                                         }
                                         if (tourObj) {
                                             const tName = tourObj.transport_name || tourObj.transport || tourObj.vehicle_name || tourObj.vehicle_type;
-                                            if (tName) return tName;
+                                            if (tName) return formatVehicleDisplayName(tName);
                                         }
                                         return 'Xe du lịch chất lượng cao';
                                     };

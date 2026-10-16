@@ -484,7 +484,7 @@ exports.bookCustomTourQuote = async (req, res) => {
         }
 
         // 7. TẠO PHIẾU CHỜ THANH TOÁN
-        const txnCode = 'TXN_' + Date.now();
+        const txnCode = payment_method === 'VNPAY_QR' ? `THANHTOAN${newBookingId}` : ('TXN_' + Date.now());
         await sequelize.query(`
             INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status)
             VALUES (?, ?, ?, ?, 'Pending')

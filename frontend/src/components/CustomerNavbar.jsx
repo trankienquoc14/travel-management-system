@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import UserProfile from './UserProfile';
 
 const CustomerNavbar = ({ activeTab = 'home' }) => {
@@ -13,33 +14,9 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [showFavoritesModal, setShowFavoritesModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-    // Notifications state
-    const [notifications, setNotifications] = useState([
-        {
-            id: 1,
-            title: '✨ Báo giá thiết kế mới!',
-            desc: 'Tour Phú Quốc 3N2Đ theo yêu cầu của bạn đã có báo giá chi tiết.',
-            time: '10 phút trước',
-            read: false,
-            link: '/my-quotes'
-        },
-        {
-            id: 2,
-            title: '✅ Đặt tour thành công',
-            desc: 'Đơn hàng của bạn đã được hệ thống ghi nhận thành công.',
-            time: '2 giờ trước',
-            read: false,
-            link: '/my-bookings'
-        },
-        {
-            id: 3,
-            title: '🎉 Ưu đãi du lịch mới',
-            desc: 'Khám phá danh sách các điểm đến thịnh hành mùa hè này.',
-            time: '1 ngày trước',
-            read: true,
-            link: '/home'
-        }
-    ]);
+    // Notifications state (Realtime từ Backend)
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // Favorites state
     const [favorites, setFavorites] = useState([
@@ -59,9 +36,38 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Fetch thông báo khách hàng từ backend
+    const fetchCustomerNotifications = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            const res = await axios.get('http://localhost:5000/api/bookings/customer-notifications', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setNotifications(res.data.data || []);
+                setUnreadCount(Number(res.data.unreadCount || 0));
+            }
+        } catch (err) {
+            console.error("Lỗi lấy thông báo khách hàng:", err);
+        }
+    };
+
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
-        if (storedUser) setUser(JSON.parse(storedUser));
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            fetchCustomerNotifications();
+        }
+
+        // Thiết lập Realtime Polling 15s/lần cho thông báo khách hàng
+        const notifTimer = setInterval(() => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                fetchCustomerNotifications();
+            }
+        }, 15000);
 
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -73,13 +79,18 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
         };
 
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            clearInterval(notifTimer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
+        setNotifications([]);
+        setUnreadCount(0);
         setShowDropdown(false);
         navigate('/home');
     };
@@ -88,10 +99,54 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
         navigate('/tours');
     };
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    // Bấm vào 1 thông báo: Đánh dấu đã đọc, đổi style không bôi đậm, và dẫn tới hoạt động đó
+    const handleNotificationClick = async (n) => {
+        setShowNotifications(false);
+        
+        // Đánh dấu đã đọc ngay lập tức ở frontend
+        setNotifications(prev => prev.map(x => x.notification_id === n.notification_id ? { ...x, is_read: 1 } : x));
+        if (!n.is_read) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+            const token = localStorage.getItem('token');
+            if (token) {
+                axios.put(`http://localhost:5000/api/bookings/customer-notifications/${n.notification_id}/read`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(err => console.error(err));
+            }
+        }
 
-    const markAllNotificationsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        // Dẫn tới hoạt động đó
+        navigate(n.action_url || '/my-bookings');
+    };
+
+    // Đọc tất cả thông báo
+    const markAllNotificationsRead = async () => {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+        setUnreadCount(0);
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                await axios.put('http://localhost:5000/api/bookings/customer-notifications/read-all', {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    };
+
+    // Định dạng thời gian
+    const formatTimeAgo = (dateStr) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffSec = Math.floor((now - date) / 1000);
+
+        if (diffSec < 60) return 'Vừa xong';
+        if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
+        if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
+        if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} ngày trước`;
+        return date.toLocaleDateString('vi-VN');
     };
 
     const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -178,6 +233,14 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
                                 >
                                     Về chúng tôi
+                                </div>
+                                <div 
+                                    onClick={() => navigate('/articles')}
+                                    style={{ padding: '10px 20px', color: '#475569', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0194f3'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                                >
+                                    Cẩm nang & Bài viết
                                 </div>
                                 <div 
                                     onClick={() => navigate('/contact')}
@@ -307,50 +370,116 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                                         position: 'absolute', 
                                         top: 'calc(100% + 12px)', 
                                         right: 0, 
-                                        width: '320px', 
+                                        width: '360px', 
+                                        maxWidth: '92vw',
                                         background: '#ffffff', 
                                         borderRadius: '20px', 
-                                        boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)', 
+                                        boxShadow: '0 20px 45px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(0,0,0,0.06)', 
                                         border: '1px solid #e2e8f0', 
                                         zIndex: 9999, 
-                                        overflow: 'hidden'
+                                        overflow: 'hidden',
+                                        animation: 'dropdownFadeIn 0.2s ease-out'
                                     }}>
-                                        <div style={{ padding: '16px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <strong style={{ fontSize: '15px', color: '#0f172a' }}>🔔 Thông báo của bạn</strong>
+                                        <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '16px' }}>🔔</span>
+                                                <strong style={{ fontSize: '14.5px', color: '#ffffff', fontWeight: '700' }}>Thông báo của bạn</strong>
+                                                {unreadCount > 0 && (
+                                                    <span style={{ background: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '10px' }}>
+                                                        {unreadCount} mới
+                                                    </span>
+                                                )}
+                                            </div>
                                             {unreadCount > 0 && (
                                                 <button 
                                                     onClick={markAllNotificationsRead}
-                                                    style={{ border: 'none', background: 'none', color: '#0284c7', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                                                    style={{ border: 'none', background: 'rgba(255,255,255,0.15)', color: '#ffffff', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px' }}
+                                                    title="Đánh dấu tất cả thông báo là đã đọc"
                                                 >
-                                                    Đọc tất cả
+                                                    ✓ Đọc tất cả
                                                 </button>
                                             )}
                                         </div>
 
-                                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                            {notifications.map(n => (
-                                                <div 
-                                                    key={n.id}
-                                                    onClick={() => {
-                                                        setShowNotifications(false);
-                                                        setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
-                                                        navigate(n.link);
-                                                    }}
-                                                    style={{ 
-                                                        padding: '14px 18px', 
-                                                        borderBottom: '1px solid #f1f5f9', 
-                                                        background: n.read ? '#fff' : '#f0f9ff', 
-                                                        cursor: 'pointer',
-                                                        transition: 'background 0.2s'
-                                                    }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                                                    onMouseLeave={e => e.currentTarget.style.background = n.read ? '#fff' : '#f0f9ff'}
-                                                >
-                                                    <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>{n.title}</div>
-                                                    <div style={{ fontSize: '12.5px', color: '#64748b', lineHeight: '1.4' }}>{n.desc}</div>
-                                                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px', fontWeight: '600' }}>{n.time}</div>
+                                        <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                                            {notifications.length === 0 ? (
+                                                <div style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>📭</div>
+                                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Chưa có thông báo nào</div>
+                                                    <div style={{ fontSize: '12px', marginTop: '4px' }}>Thông tin đặt tour, hủy/đổi lịch sẽ hiển thị tại đây.</div>
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                notifications.map(n => {
+                                                    const isUnread = !n.is_read;
+                                                    return (
+                                                        <div 
+                                                            key={n.notification_id || n.id}
+                                                            onClick={() => handleNotificationClick(n)}
+                                                            style={{ 
+                                                                padding: '14px 18px', 
+                                                                borderBottom: '1px solid #f1f5f9', 
+                                                                background: isUnread ? '#f0f9ff' : '#ffffff', 
+                                                                borderLeft: isUnread ? '4px solid #0194f3' : '4px solid transparent',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s ease',
+                                                                position: 'relative'
+                                                            }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = isUnread ? '#e0f2fe' : '#f8fafc'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = isUnread ? '#f0f9ff' : '#ffffff'}
+                                                        >
+                                                            {/* Tiêu đề & Chấm tròn trạng thái */}
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '4px' }}>
+                                                                <div style={{ 
+                                                                    fontSize: '13.5px', 
+                                                                    fontWeight: isUnread ? '800' : '500', 
+                                                                    color: isUnread ? '#0f172a' : '#64748b', 
+                                                                    lineHeight: '1.4' 
+                                                                }}>
+                                                                    {n.title}
+                                                                </div>
+                                                                {isUnread && (
+                                                                    <span 
+                                                                        title="Chưa đọc"
+                                                                        style={{ 
+                                                                            width: '8px', 
+                                                                            height: '8px', 
+                                                                            borderRadius: '50%', 
+                                                                            background: '#0194f3', 
+                                                                            flexShrink: 0,
+                                                                            marginTop: '4px',
+                                                                            boxShadow: '0 0 0 2px rgba(1, 148, 243, 0.2)'
+                                                                        }} 
+                                                                    />
+                                                                )}
+                                                            </div>
+
+                                                            {/* Nội dung thông báo: Bôi đậm khi chưa đọc, không bôi đậm khi đã đọc */}
+                                                            <div style={{ 
+                                                                fontSize: '12.5px', 
+                                                                fontWeight: isUnread ? '600' : '400', 
+                                                                color: isUnread ? '#334155' : '#94a3b8', 
+                                                                lineHeight: '1.45' 
+                                                            }}>
+                                                                {n.content || n.desc}
+                                                            </div>
+
+                                                            {/* Thời gian */}
+                                                            <div style={{ 
+                                                                fontSize: '11px', 
+                                                                color: isUnread ? '#0284c7' : '#cbd5e1', 
+                                                                marginTop: '6px', 
+                                                                fontWeight: isUnread ? '700' : '500',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px'
+                                                            }}>
+                                                                <span>🕒</span>
+                                                                <span>{formatTimeAgo(n.created_at || n.time)}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
                                         </div>
                                     </div>
                                 )}

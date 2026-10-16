@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../index.css';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
 const GuideTimelineCalendar = ({ guides, guideSchedules, selectedMonth, currentYear }) => {
     let year, month;
@@ -505,11 +506,31 @@ const TourOperationalManager = () => {
                 const d = res.data.data;
                 setSelectedTour(d);
 
+                let parsedTourDesign = null;
+                if (d?.design_data) {
+                    if (typeof d.design_data === 'string') {
+                        try { parsedTourDesign = JSON.parse(d.design_data); } catch(e) {}
+                    } else {
+                        parsedTourDesign = d.design_data;
+                    }
+                }
+                const tourTransport = parsedTourDesign?.costConfig?.selectedTransport || parsedTourDesign?.selectedTransport || null;
+                const tourReqServiceId = tourTransport?.service_id ? Number(tourTransport.service_id) : null;
+                const tourTransportName = tourTransport?.service_name || tourTransport?.name || '';
+                const tourIsFlight = Boolean(
+                    tourTransport?.service_type === 'Vé máy bay' ||
+                    tourTransport?.vehicle_detail_type?.toLowerCase().includes('máy bay') ||
+                    tourTransportName.toLowerCase().includes('máy bay') ||
+                    tourTransportName.toLowerCase().includes('hàng không') ||
+                    tourReqServiceId === 1 ||
+                    tourReqServiceId === 2
+                );
+
                 const loadedDepartures = (d.departures || []).map(dep => ({
                     ...dep,
                     guide_id: (dep.guide_id && guides.some(g => g.user_id === Number(dep.guide_id))) ? Number(dep.guide_id) : null,
-                    driver_id: (dep.driver_id && drivers.some(drv => drv.user_id === Number(dep.driver_id))) ? Number(dep.driver_id) : null,
-                    vehicle_number: dep.vehicle_number || '',
+                    driver_id: tourIsFlight ? null : ((dep.driver_id && drivers.some(drv => drv.user_id === Number(dep.driver_id))) ? Number(dep.driver_id) : null),
+                    vehicle_number: tourIsFlight ? '' : (dep.vehicle_number || ''),
                     original_max_slots: dep.max_slots,
                     original_available_slots: dep.available_slots
                 }));
@@ -574,8 +595,36 @@ const TourOperationalManager = () => {
 
     const formatMoney = (val) => Number(val || 0).toLocaleString('vi-VN') + ' ₫';
 
+    const parseDateToMs = (dStr) => {
+        if (!dStr) return null;
+        const parts = String(dStr).split('T')[0].split('-');
+        if (parts.length < 3) return null;
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime();
+    };
+
     const handleSaveDepartures = async () => {
         if (!selectedTour) return;
+
+        // Kiểm tra tour có phải là di chuyển bằng máy bay
+        let parsedDesign = null;
+        if (selectedTour?.design_data) {
+            if (typeof selectedTour.design_data === 'string') {
+                try { parsedDesign = JSON.parse(selectedTour.design_data); } catch(e) {}
+            } else {
+                parsedDesign = selectedTour.design_data;
+            }
+        }
+        const selectedTransportObj = parsedDesign?.costConfig?.selectedTransport || parsedDesign?.selectedTransport || null;
+        const reqServiceId = selectedTransportObj?.service_id ? Number(selectedTransportObj.service_id) : null;
+        const transportName = selectedTransportObj?.service_name || selectedTransportObj?.name || '';
+        const isFlightTour = Boolean(
+            selectedTransportObj?.service_type === 'Vé máy bay' ||
+            selectedTransportObj?.vehicle_detail_type?.toLowerCase().includes('máy bay') ||
+            transportName.toLowerCase().includes('máy bay') ||
+            transportName.toLowerCase().includes('hàng không') ||
+            reqServiceId === 1 ||
+            reqServiceId === 2
+        );
 
         // Lấy tất cả lịch trình của CÁC tour khác để kiểm tra trùng lịch / khoảng nghỉ
         const otherSchedules = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
@@ -673,47 +722,90 @@ const TourOperationalManager = () => {
                 }
             }
 
-            // KIỂM TRA RÀNG BUỘC TÀI XẾ (Rảnh trong vòng 5 ngày)
-            if (dep.driver_id) {
-                const assignedDriverId = Number(dep.driver_id);
-                const driverName = drivers.find(d => d.user_id === assignedDriverId)?.full_name || 'Tài xế';
-                
-                const depStart = new Date(dep.departure_date).getTime();
-                const depEnd = new Date(dep.return_date).getTime();
-                const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
-                
-                const otherDriverSchedules = driverSchedules ? driverSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id || sch.departure_id !== dep.departure_id) : [];
-                const drvOtherSchs = otherDriverSchedules.filter(s => Number(s.driver_id) === assignedDriverId && s.departure_date && s.return_date);
-                const drvSameTourSchs = departures.filter((d, idx) => idx !== i && Number(d.driver_id) === assignedDriverId && d.departure_date && d.return_date);
-                
-                const allToCheck = [
-                    ...drvOtherSchs.map(s => ({
-                        tour_name: s.tour_name || 'Chuyến xe khác',
-                        start: new Date(s.departure_date).getTime(),
-                        end: new Date(s.return_date).getTime()
-                    })),
-                    ...drvSameTourSchs.map(d => ({
-                        tour_name: 'một đợt khởi hành khác của tour này',
-                        start: new Date(d.departure_date).getTime(),
-                        end: new Date(d.return_date).getTime()
-                    }))
-                ];
-                
-                for (const sch of allToCheck) {
-                    if (depStart <= sch.end && depEnd >= sch.start) {
-                        alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn Tài xế rảnh!`);
-                        return;
-                    }
+            // ĐỐI VỚI TOUR KHÔNG PHẢI MÁY BAY: KIỂM TRA TÀI XẾ & XE NỘI BỘ
+            if (!isFlightTour) {
+                // KIỂM TRA RÀNG BUỘC TÀI XẾ (Rảnh trong vòng 5 ngày - Giữ nguyên logic)
+                if (dep.driver_id) {
+                    const assignedDriverId = Number(dep.driver_id);
+                    const driverName = drivers.find(d => d.user_id === assignedDriverId)?.full_name || 'Tài xế';
                     
-                    if (depEnd < sch.start && (sch.start - depEnd) < FIVE_DAYS_MS) {
-                        const gapDays = Math.ceil((sch.start - depEnd) / (24 * 60 * 60 * 1000));
-                        alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày trước "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                    const depStart = new Date(dep.departure_date).getTime();
+                    const depEnd = new Date(dep.return_date).getTime();
+                    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+                    
+                    const otherDriverSchedules = driverSchedules ? driverSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id || sch.departure_id !== dep.departure_id) : [];
+                    const drvOtherSchs = otherDriverSchedules.filter(s => Number(s.driver_id) === assignedDriverId && s.departure_date && s.return_date);
+                    const drvSameTourSchs = departures.filter((d, idx) => idx !== i && Number(d.driver_id) === assignedDriverId && d.departure_date && d.return_date);
+                    
+                    const allToCheck = [
+                        ...drvOtherSchs.map(s => ({
+                            tour_name: s.tour_name || 'Chuyến xe khác',
+                            start: new Date(s.departure_date).getTime(),
+                            end: new Date(s.return_date).getTime()
+                        })),
+                        ...drvSameTourSchs.map(d => ({
+                            tour_name: 'một đợt khởi hành khác của tour này',
+                            start: new Date(d.departure_date).getTime(),
+                            end: new Date(d.return_date).getTime()
+                        }))
+                    ];
+                    
+                    for (const sch of allToCheck) {
+                        if (depStart <= sch.end && depEnd >= sch.start) {
+                            alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn Tài xế rảnh!`);
+                            return;
+                        }
+                        
+                        if (depEnd < sch.start && (sch.start - depEnd) < FIVE_DAYS_MS) {
+                            const gapDays = Math.ceil((sch.start - depEnd) / (24 * 60 * 60 * 1000));
+                            alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày trước "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                            return;
+                        }
+                        if (depStart > sch.end && (depStart - sch.end) < FIVE_DAYS_MS) {
+                            const gapDays = Math.ceil((depStart - sch.end) / (24 * 60 * 60 * 1000));
+                            alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày sau "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                            return;
+                        }
+                    }
+                }
+
+                // KIỂM TRA RÀNG BUỘC XE (Bảo dưỡng & Rảnh trước sau 1 ngày)
+                if (dep.vehicle_number) {
+                    const assignedVehicle = (fleetVehicles || []).find(v => v.license_plate === dep.vehicle_number);
+                    if (assignedVehicle && (assignedVehicle.status === 'MAINTENANCE' || assignedVehicle.status === 'REPAIR' || assignedVehicle.status === 'INACTIVE' || assignedVehicle.status === 'Bảo dưỡng' || assignedVehicle.current_maintenance)) {
+                        alert(`⚠️ Đợt #${i + 1}: Xe ${dep.vehicle_number} hiện đang ở trạng thái bảo dưỡng/không hoạt động.\nVui lòng chọn xe khác!`);
                         return;
                     }
-                    if (depStart > sch.end && (depStart - sch.end) < FIVE_DAYS_MS) {
-                        const gapDays = Math.ceil((depStart - sch.end) / (24 * 60 * 60 * 1000));
-                        alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày sau "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
-                        return;
+
+                    const depStart = parseDateToMs(dep.departure_date);
+                    const depEnd = parseDateToMs(dep.return_date);
+                    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+                    const otherSchs = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
+                    const vOtherSchs = otherSchs.filter(s => s.vehicle_number === dep.vehicle_number && s.departure_date && s.return_date);
+                    const vSameTourSchs = departures.filter((d, idx) => idx !== i && d.vehicle_number === dep.vehicle_number && d.departure_date && d.return_date);
+
+                    const allVehToCheck = [
+                        ...vOtherSchs.map(s => ({
+                            tour_name: s.tour_name || 'Tour khác',
+                            start: parseDateToMs(s.departure_date),
+                            end: parseDateToMs(s.return_date)
+                        })),
+                        ...vSameTourSchs.map(d => ({
+                            tour_name: 'một đợt khởi hành khác của tour này',
+                            start: parseDateToMs(d.departure_date),
+                            end: parseDateToMs(d.return_date)
+                        }))
+                    ];
+
+                    for (const sch of allVehToCheck) {
+                        if (!sch.start || !sch.end) continue;
+                        const blockedStart = sch.start - ONE_DAY_MS;
+                        const blockedEnd = sch.end + ONE_DAY_MS;
+                        if (depStart <= blockedEnd && depEnd >= blockedStart) {
+                            alert(`⚠️ Đợt #${i + 1}: Xe ${dep.vehicle_number} chưa đảm bảo rảnh trước và sau 1 ngày so với lịch chạy "${sch.tour_name}".\n(Ví dụ: Lịch chạy 12-14 thì xe không được chạy từ 11-15)\nVui lòng chọn xe khác!`);
+                            return;
+                        }
                     }
                 }
             }
@@ -722,6 +814,17 @@ const TourOperationalManager = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            const departuresToSave = departures.map(dep => {
+                if (isFlightTour) {
+                    return {
+                        ...dep,
+                        driver_id: null,
+                        vehicle_number: null
+                    };
+                }
+                return dep;
+            });
+
             const res = await axios.post(`http://localhost:5000/api/tours/admin/save`, {
                 tour_id: selectedTour.tour_id,
                 tour_name: selectedTour.tour_name,
@@ -734,7 +837,7 @@ const TourOperationalManager = () => {
                 markup_percent: markupPercent,
                 base_price: basePrice,
                 itineraryDays: JSON.stringify(itineraryDays),
-                departures: JSON.stringify(departures)
+                departures: JSON.stringify(departuresToSave)
             }, { headers: { Authorization: `Bearer ${token}` } });
 
             if (res.data.success) {
@@ -1149,14 +1252,22 @@ const TourOperationalManager = () => {
                                                                                 availableDrivers.push({ ...currentDriver, full_name: currentDriver.full_name + ' (Bận / Dưới 5 ngày rảnh)' });
                                                                             }
 
-                                                                            const parsedDesign = selectedTour?.design_data ? (typeof selectedTour.design_data === 'string' ? JSON.parse(selectedTour.design_data) : selectedTour.design_data) : null;
+                                                                            let parsedDesign = null;
+                                                                            if (selectedTour?.design_data) {
+                                                                                if (typeof selectedTour.design_data === 'string') {
+                                                                                    try { parsedDesign = JSON.parse(selectedTour.design_data); } catch(err) { console.error("Error parsing design_data:", err); }
+                                                                                } else {
+                                                                                    parsedDesign = selectedTour.design_data;
+                                                                                }
+                                                                            }
                                                                             const minPax = parsedDesign?.costConfig?.minimumPax || 15;
                                                                             
-                                                                            // LẤY TÊN VÀ SỐ CHỖ PHƯƠNG TIỆN YÊU CẦU TỪ LỊCH TRÌNH CHI TIẾT / THIẾT KẾ TOUR
-                                                                            let vehicleNameToDisplay = parsedDesign?.costConfig?.selectedTransport?.service_name 
-                                                                                || parsedDesign?.costConfig?.selectedTransport?.name 
-                                                                                || parsedDesign?.selectedTransport?.service_name 
-                                                                                || parsedDesign?.selectedTransport?.name;
+                                                                            // LẤY TÊN, SERVICE_ID VÀ SỐ CHỖ PHƯƠNG TIỆN YÊU CẦU TỪ LỊCH TRÌNH CHI TIẾT / THIẾT KẾ TOUR
+                                                                            const selectedTransportObj = parsedDesign?.costConfig?.selectedTransport || parsedDesign?.selectedTransport || null;
+                                                                            const reqServiceId = selectedTransportObj?.service_id ? Number(selectedTransportObj.service_id) : null;
+
+                                                                            let vehicleNameToDisplay = selectedTransportObj?.service_name 
+                                                                                || selectedTransportObj?.name;
 
                                                                             if (!vehicleNameToDisplay) {
                                                                                 const days = selectedTour?.itineraryDays || selectedTour?.itineraries || parsedDesign?.days || [];
@@ -1173,9 +1284,22 @@ const TourOperationalManager = () => {
                                                                             }
                                                                             if (!vehicleNameToDisplay) vehicleNameToDisplay = 'Theo hợp đồng tour';
 
-                                                                            // LỌC XE THEO SỐ CHỖ VÀ ĐỘ RẢNH LỊCH TRÌNH
-                                                                            let reqCap = 0;
-                                                                            if (vehicleNameToDisplay) {
+                                                                            // Nhận diện tour Máy bay / Hàng không
+                                                                            const isFlight = Boolean(
+                                                                                selectedTransportObj?.service_type === 'Vé máy bay' ||
+                                                                                selectedTransportObj?.vehicle_detail_type?.toLowerCase().includes('máy bay') ||
+                                                                                selectedTransportObj?.service_name?.toLowerCase().includes('máy bay') ||
+                                                                                selectedTransportObj?.service_name?.toLowerCase().includes('hàng không') ||
+                                                                                vehicleNameToDisplay?.toLowerCase().includes('máy bay') ||
+                                                                                vehicleNameToDisplay?.toLowerCase().includes('hàng không') ||
+                                                                                reqServiceId === 1 ||
+                                                                                reqServiceId === 2
+                                                                            );
+
+                                                                            // LỌC XE THEO SERVICE_ID (LIÊN KẾT BẢNG SERVICES) HOẶC SỐ CHỖ VÀ ĐỘ RẢNH LỊCH TRÌNH
+                                                                            let reqCap = Number(selectedTransportObj?.seat_capacity || selectedTransportObj?.capacity || 0);
+                                                                            if (reqCap >= 180) reqCap = 0; // Nếu là máy bay, không dùng làm số chỗ xe ô tô
+                                                                            if (reqCap === 0 && vehicleNameToDisplay) {
                                                                                 const matches = [...vehicleNameToDisplay.matchAll(/(\d+)/g)];
                                                                                 if (matches && matches.length > 0) {
                                                                                     const validCaps = [4, 7, 9, 11, 16, 29, 35, 45];
@@ -1189,64 +1313,78 @@ const TourOperationalManager = () => {
                                                                                 const s = Number(dep.max_slots);
                                                                                 if (s <= 4) reqCap = 4;
                                                                                 else if (s <= 7) reqCap = 7;
+                                                                                else if (s <= 9) reqCap = 9;
+                                                                                else if (s <= 11) reqCap = 11;
                                                                                 else if (s <= 16) reqCap = 16;
                                                                                 else if (s <= 29) reqCap = 29;
                                                                                 else reqCap = 45;
                                                                             }
 
-                                                                            const freeVehicles = (fleetVehicles || []).filter(v => {
-                                                                                if (v.status === 'MAINTENANCE' || v.status === 'INACTIVE') return false;
+                                                                            const targetCapacity = reqCap || 0;
+                                                                            const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+                                                                            // LỌC XE CHO TOUR Ô TÔ:
+                                                                            // 1. Loại trừ xe đang bảo dưỡng / không hoạt động
+                                                                            // 2. Chỉ chọn xe có cùng số chỗ đã thiết kế trong tour
+                                                                            // 3. Rảnh trước và sau 1 ngày của lịch trình (Ví dụ: sch 12-14 thì không hiển thị từ 11-15)
+                                                                            const freeVehicles = isFlight ? [] : (fleetVehicles || []).filter(v => {
+                                                                                if (v.status === 'MAINTENANCE' || v.status === 'INACTIVE' || v.status === 'REPAIR' || v.status === 'Bảo dưỡng' || v.current_maintenance) {
+                                                                                    return false;
+                                                                                }
+
+                                                                                // Chỉ lấy các xe CÙNG SỐ CHỖ ĐÃ THIẾT KẾ
+                                                                                const isSameCapacity = (targetCapacity > 0)
+                                                                                    ? (Number(v.seat_capacity) === targetCapacity || (reqServiceId && reqServiceId !== 1 && reqServiceId !== 2 && Number(v.service_id) === reqServiceId))
+                                                                                    : true;
+                                                                                if (!isSameCapacity) return false;
+
                                                                                 if (!dep.departure_date || !dep.return_date) return true;
 
-                                                                                const depStart = new Date(dep.departure_date).getTime();
-                                                                                const depEnd = new Date(dep.return_date).getTime();
+                                                                                const depStart = parseDateToMs(dep.departure_date);
+                                                                                const depEnd = parseDateToMs(dep.return_date);
+                                                                                if (!depStart || !depEnd) return true;
 
                                                                                 const otherSchedules = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
                                                                                 const vOtherSchs = otherSchedules.filter(s => s.vehicle_number === v.license_plate && s.departure_date && s.return_date);
                                                                                 const vSameTourSchs = departures.filter((d, i) => i !== idx && d.vehicle_number === v.license_plate && d.departure_date && d.return_date);
 
                                                                                 const allToCheck = [
-                                                                                    ...vOtherSchs.map(s => ({ start: new Date(s.departure_date).getTime(), end: new Date(s.return_date).getTime() })),
-                                                                                    ...vSameTourSchs.map(d => ({ start: new Date(d.departure_date).getTime(), end: new Date(d.return_date).getTime() }))
+                                                                                    ...vOtherSchs.map(s => ({ start: parseDateToMs(s.departure_date), end: parseDateToMs(s.return_date) })),
+                                                                                    ...vSameTourSchs.map(d => ({ start: parseDateToMs(d.departure_date), end: parseDateToMs(d.return_date) }))
                                                                                 ];
 
                                                                                 for (const sch of allToCheck) {
-                                                                                    if (depStart <= sch.end && depEnd >= sch.start) return false;
+                                                                                    if (!sch.start || !sch.end) continue;
+                                                                                    // Khoảng bận mở rộng ±1 ngày: [sch.start - 1 ngày, sch.end + 1 ngày]
+                                                                                    const blockedStart = sch.start - ONE_DAY_MS;
+                                                                                    const blockedEnd = sch.end + ONE_DAY_MS;
+                                                                                    if (depStart <= blockedEnd && depEnd >= blockedStart) {
+                                                                                        return false; // Trùng hoặc không đủ 1 ngày rảnh trước/sau
+                                                                                    }
                                                                                 }
                                                                                 return true;
                                                                             });
 
-                                                                            let filteredVehicles = [];
-                                                                            if (reqCap > 0) {
-                                                                                const exactMatches = freeVehicles.filter(v => Number(v.seat_capacity) === reqCap);
-                                                                                if (exactMatches.length > 0) {
-                                                                                    filteredVehicles = exactMatches;
-                                                                                } else {
-                                                                                    filteredVehicles = freeVehicles.filter(v => Number(v.seat_capacity) >= reqCap);
-                                                                                }
-                                                                            } else {
-                                                                                filteredVehicles = freeVehicles;
-                                                                            }
-
-                                                                            const availableVehicles = filteredVehicles.map(v => ({ ...v, raw_plate: v.license_plate }));
+                                                                            const availableVehicles = freeVehicles.map(v => ({ ...v, raw_plate: v.license_plate }));
                                                                             const currentVehiclePlate = dep.vehicle_number;
-                                                                            if (currentVehiclePlate) {
+                                                                            if (currentVehiclePlate && !isFlight) {
                                                                                 const isAlreadyListed = availableVehicles.some(v => v.raw_plate === currentVehiclePlate);
                                                                                 if (!isAlreadyListed) {
                                                                                     const foundInFleet = fleetVehicles.find(v => v.license_plate === currentVehiclePlate);
                                                                                     if (foundInFleet) {
+                                                                                        const isMaint = foundInFleet.status === 'MAINTENANCE' || foundInFleet.status === 'REPAIR' || foundInFleet.status === 'INACTIVE' || Boolean(foundInFleet.current_maintenance);
                                                                                         availableVehicles.push({
                                                                                             ...foundInFleet,
                                                                                             raw_plate: currentVehiclePlate,
-                                                                                            license_plate_display: `${foundInFleet.license_plate} (Bận / Khác loại)`
+                                                                                            license_plate_display: `${foundInFleet.license_plate} (${isMaint ? 'Đang bảo dưỡng' : 'Bận / Không đủ rảnh ±1 ngày'})`
                                                                                         });
                                                                                     } else {
                                                                                         availableVehicles.push({
                                                                                             vehicle_id: 'current_' + currentVehiclePlate,
                                                                                             raw_plate: currentVehiclePlate,
-                                                                                            license_plate_display: `${currentVehiclePlate} (Bận / Khác loại)`,
+                                                                                            license_plate_display: `${currentVehiclePlate} (Đã gán)`,
                                                                                             brand_model: 'Đã gán',
-                                                                                            seat_capacity: 0
+                                                                                            seat_capacity: targetCapacity
                                                                                         });
                                                                                     }
                                                                                 }
@@ -1299,7 +1437,7 @@ const TourOperationalManager = () => {
                                                                                                         const up = [...departures]; 
                                                                                                         up[idx].max_slots = val; 
                                                                                                         setDepartures(up); 
-                                                                                                    }}
+                                                                                                    }} 
                                                                                                     disabled={disableSlot} 
                                                                                                     title={isPastTour ? "Tour đã kết thúc (CLOSED) không thể đổi số chỗ" : ""}
                                                                                                     style={{ width: '56px', padding: '3px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'center', background: disableSlot ? '#f1f5f9' : '#fff', outline: 'none' }} 
@@ -1314,57 +1452,110 @@ const TourOperationalManager = () => {
 
                                                                                     {/* PHÂN CÔNG TÀI XẾ & BIỂN SỐ XE & HDV & TRẠNG THÁI */}
                                                                                     <div style={{ flex: '1', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                                                                        {/* Select Tài xế */}
-                                                                                        <select 
-                                                                                            value={dep.driver_id || ''} 
-                                                                                            onChange={e => { const up = [...departures]; up[idx].driver_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
-                                                                                            disabled={isPastTour}
-                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể phân công/thay đổi tài xế" : "Chọn tài xế đang rảnh trong vòng 5 ngày"}
-                                                                                            style={{ flex: '1 1 150px', minWidth: '130px', padding: '8px 10px', border: dep.driver_id ? '1px solid #fed7aa' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.driver_id ? '#fff7ed' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.driver_id ? '#c2410c' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
-                                                                                        >
-                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>🚗 Chưa chọn Tài xế</option>
-                                                                                            {availableDrivers.map(drv => (
-                                                                                                <option key={drv.user_id} value={drv.user_id} style={{ background: '#fff', color: '#111827' }}>🚗 {drv.full_name}</option>
-                                                                                            ))}
-                                                                                        </select>
+                                                                                        {isFlight ? (
+                                                                                            <>
+                                                                                                {/* Phương tiện Máy bay */}
+                                                                                                <div 
+                                                                                                    title={vehicleNameToDisplay}
+                                                                                                    style={{ 
+                                                                                                        padding: '8px 14px', 
+                                                                                                        border: '1px solid #bfdbfe', 
+                                                                                                        background: '#eff6ff', 
+                                                                                                        borderRadius: '8px', 
+                                                                                                        color: '#1d4ed8', 
+                                                                                                        fontSize: '13px', 
+                                                                                                        fontWeight: '700', 
+                                                                                                        display: 'flex', 
+                                                                                                        alignItems: 'center', 
+                                                                                                        gap: '6px',
+                                                                                                        whiteSpace: 'nowrap'
+                                                                                                    }}
+                                                                                                >
+                                                                                                    ✈️ {vehicleNameToDisplay}
+                                                                                                </div>
 
-                                                                                        {/* Loại xe */}
-                                                                                        <div 
-                                                                                            title={vehicleNameToDisplay}
-                                                                                            style={{ 
-                                                                                                width: '180px', 
-                                                                                                padding: '8px 10px', 
-                                                                                                border: '1px solid #e2e8f0', 
-                                                                                                background: '#f8fafc', 
-                                                                                                borderRadius: '8px', 
-                                                                                                color: '#475569', 
-                                                                                                fontSize: '13px', 
-                                                                                                fontWeight: '600', 
-                                                                                                display: 'flex', 
-                                                                                                alignItems: 'center', 
-                                                                                                whiteSpace: 'nowrap', 
-                                                                                                overflow: 'hidden', 
-                                                                                                textOverflow: 'ellipsis' 
-                                                                                            }}
-                                                                                        >
-                                                                                            🚌 {vehicleNameToDisplay}
-                                                                                        </div>
+                                                                                                {/* Badge Không phân công Tài xế & Xe */}
+                                                                                                <div 
+                                                                                                    style={{ 
+                                                                                                        padding: '8px 12px', 
+                                                                                                        border: '1px dashed #cbd5e1', 
+                                                                                                        background: '#f8fafc', 
+                                                                                                        borderRadius: '8px', 
+                                                                                                        color: '#64748b', 
+                                                                                                        fontSize: '12px', 
+                                                                                                        fontWeight: '600',
+                                                                                                        display: 'flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        gap: '6px',
+                                                                                                        whiteSpace: 'nowrap'
+                                                                                                    }}
+                                                                                                    title="Tour di chuyển bằng máy bay: Không cần phân công tài xế và xe ô tô nội bộ"
+                                                                                                >
+                                                                                                    🚫 Không điều phối Tài xế & Xe
+                                                                                                </div>
+                                                             </>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                {/* Select Tài xế */}
+                                                                                                <select 
+                                                                                                    value={dep.driver_id || ''} 
+                                                                                                    onChange={e => { const up = [...departures]; up[idx].driver_id = e.target.value ? Number(e.target.value) : null; setDepartures(up); }} 
+                                                                                                    disabled={isPastTour}
+                                                                                                    title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể phân công/thay đổi tài xế" : "Chọn tài xế đang rảnh trong vòng 5 ngày"}
+                                                                                                    style={{ flex: '1 1 150px', minWidth: '130px', padding: '8px 10px', border: dep.driver_id ? '1px solid #fed7aa' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.driver_id ? '#fff7ed' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.driver_id ? '#c2410c' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
+                                                                                                >
+                                                                                                    <option value="" style={{ background: '#fff', color: '#111827' }}>🚗 Chưa chọn Tài xế</option>
+                                                                                                    {availableDrivers.map(drv => (
+                                                                                                        <option key={drv.user_id} value={drv.user_id} style={{ background: '#fff', color: '#111827' }}>🚗 {drv.full_name}</option>
+                                                                                                    ))}
+                                                                                                </select>
 
-                                                                                        {/* Select Biển số xe cụ thể */}
-                                                                                        <select 
-                                                                                            value={dep.vehicle_number || ''} 
-                                                                                            onChange={e => { const up = [...departures]; up[idx].vehicle_number = e.target.value; setDepartures(up); }} 
-                                                                                            disabled={isPastTour}
-                                                                                            title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể chọn xe" : "Chọn biển số xe cụ thể phù hợp số chỗ và độ rảnh"}
-                                                                                            style={{ flex: '1 1 150px', minWidth: '135px', padding: '8px 10px', border: dep.vehicle_number ? '1px solid #fde047' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.vehicle_number ? '#fefce8' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.vehicle_number ? '#854d0e' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
-                                                                                        >
-                                                                                            <option value="" style={{ background: '#fff', color: '#111827' }}>🚘 Chọn Biển Số Xe</option>
-                                                                                            {availableVehicles.map(v => (
-                                                                                                <option key={v.vehicle_id || v.raw_plate} value={v.raw_plate || v.license_plate} style={{ background: '#fff', color: '#111827' }}>
-                                                                                                    🚘 {v.license_plate_display || v.license_plate} ({v.brand_model || v.vehicle_type || 'Xe'}{v.seat_capacity ? ` - ${v.seat_capacity} chỗ` : ''})
-                                                                                                </option>
-                                                                                            ))}
-                                                                                        </select>
+                                                                                                {/* Loại xe */}
+                                                                                                <div 
+                                                                                                    title={vehicleNameToDisplay}
+                                                                                                    style={{ 
+                                                                                                        width: '180px', 
+                                                                                                        padding: '8px 10px', 
+                                                                                                        border: '1px solid #e2e8f0', 
+                                                                                                        background: '#f8fafc', 
+                                                                                                        borderRadius: '8px', 
+                                                                                                        color: '#475569', 
+                                                                                                        fontSize: '13px', 
+                                                                                                        fontWeight: '600', 
+                                                                                                        display: 'flex', 
+                                                                                                        alignItems: 'center', 
+                                                                                                        whiteSpace: 'nowrap', 
+                                                                                                        overflow: 'hidden', 
+                                                                                                        textOverflow: 'ellipsis' 
+                                                                                                    }}
+                                                                                                >
+                                                                                                    🚌 {formatVehicleDisplayName(selectedTransportObj) || vehicleNameToDisplay}
+                                                                                                </div>
+
+                                                                                                {/* Select Biển số xe cụ thể */}
+                                                                                                <select 
+                                                                                                    value={dep.vehicle_number || ''} 
+                                                                                                    onChange={e => { const up = [...departures]; up[idx].vehicle_number = e.target.value; setDepartures(up); }} 
+                                                                                                    disabled={isPastTour}
+                                                                                                    title={isPastTour ? "Tour đã kết thúc (CLOSED) - Không thể chọn xe" : `Chọn xe ${targetCapacity ? `(${targetCapacity} chỗ)` : ''} rảnh trước & sau 1 ngày lịch trình`}
+                                                                                                    style={{ flex: '1 1 150px', minWidth: '135px', padding: '8px 10px', border: dep.vehicle_number ? '1px solid #fde047' : '1px solid #cbd5e1', background: isPastTour ? '#f1f5f9' : (dep.vehicle_number ? '#fefce8' : '#fff'), borderRadius: '8px', color: isPastTour ? '#9ca3af' : (dep.vehicle_number ? '#854d0e' : '#4b5563'), fontSize: '13px', fontWeight: '600', outline: 'none', cursor: isPastTour ? 'not-allowed' : 'pointer' }}
+                                                                                                >
+                                                                                                    <option value="" style={{ background: '#fff', color: '#111827' }}>
+                                                                                                        🚘 {dep.vehicle_number ? 'Bỏ chọn xe' : `Chọn Xe ${targetCapacity ? `(${targetCapacity} chỗ)` : ''}`}
+                                                                                                    </option>
+                                                                                                    {availableVehicles.length === 0 && (
+                                                                                                        <option value="" disabled style={{ color: '#ef4444' }}>
+                                                                                                            ⚠️ Hết xe ${targetCapacity ? `(${targetCapacity} chỗ) ` : ''}rảnh (cần rảnh ±1 ngày)
+                                                                                                        </option>
+                                                                                                    )}
+                                                                                                    {availableVehicles.map(v => (
+                                                                                                        <option key={v.vehicle_id || v.raw_plate} value={v.raw_plate || v.license_plate} style={{ background: '#fff', color: '#111827' }}>
+                                                                                                            🚘 {v.license_plate_display || `${v.vehicle_name || v.brand_model || v.vehicle_type || 'Xe'} (${v.seat_capacity || targetCapacity || '?'} chỗ) - ${v.license_plate}`}
+                                                                                                        </option>
+                                                                                                    ))}
+                                                                                                </select>
+                                                                                            </>
+                                                                                        )}
 
                                                                                         {/* Select HDV */}
                                                                                         <select 

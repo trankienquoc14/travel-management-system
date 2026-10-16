@@ -25,12 +25,17 @@ exports.getAllServices = async (req, res) => {
         const [services] = await sequelize.query(`
             SELECT s.*, p.partner_name, d.destination_name, s.base_cost as proposed_cost,
                    vsd.vehicle_service_id, vsd.seat_capacity as capacity, vsd.vehicle_type as vehicle_detail_type, vsd.vehicle_model,
+                   vsd.total_quantity,
                    hsd.max_adults, hsd.max_children, hsd.max_infants, hsd.min_adults, hsd.single_room_allowed, hsd.single_room_supplement,
                    (
                        SELECT COUNT(*) FROM travel_management.vehicles v 
-                       WHERE v.seat_capacity = vsd.seat_capacity 
+                       WHERE (v.service_id = s.service_id OR (v.service_id IS NULL AND v.seat_capacity = vsd.seat_capacity))
                        AND v.status = 'AVAILABLE'
-                   ) as available_vehicles_count
+                   ) as available_vehicles_count,
+                   (
+                       SELECT COUNT(*) FROM travel_management.vehicles v 
+                       WHERE (v.service_id = s.service_id OR (v.service_id IS NULL AND v.seat_capacity = vsd.seat_capacity))
+                   ) as total_vehicles_count
             FROM services s
             LEFT JOIN partners p ON s.partner_id = p.partner_id
             LEFT JOIN travel_management.destinations d ON s.destination_id = d.destination_id
@@ -49,7 +54,7 @@ exports.getAllServices = async (req, res) => {
 exports.createService = async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        const { service_name, service_type, description, status, partner_id, destination_id, unit, base_cost, selling_price, capacity, attributes, max_adults, max_children, max_infants, min_adults, single_room_allowed, single_room_supplement } = req.body;
+        const { service_name, service_type, description, status, partner_id, destination_id, unit, base_cost, selling_price, capacity, total_quantity, attributes, max_adults, max_children, max_infants, min_adults, single_room_allowed, single_room_supplement } = req.body;
 
         let finalImageUrl = '';
         if (req.file) finalImageUrl = `/uploads/${req.file.filename}`;
@@ -107,7 +112,7 @@ exports.updateService = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
-        const { service_name, service_type, description, status, partner_id, destination_id, unit, base_cost, selling_price, capacity, attributes, existing_image_url, max_adults, max_children, max_infants, min_adults, single_room_allowed, single_room_supplement } = req.body;
+        const { service_name, service_type, description, status, partner_id, destination_id, unit, base_cost, selling_price, capacity, total_quantity, attributes, existing_image_url, max_adults, max_children, max_infants, min_adults, single_room_allowed, single_room_supplement } = req.body;
 
         let finalImageUrl = existing_image_url || '';
         if (req.file) finalImageUrl = `/uploads/${req.file.filename}`;

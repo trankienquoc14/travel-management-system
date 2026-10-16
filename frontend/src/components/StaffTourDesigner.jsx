@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TimelineBuilder from './TourBuilder/TimelineBuilder';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
 const formatMoneyLocal = (amount) => {
     if (isNaN(amount) || amount === null || amount === undefined) return '0';
@@ -96,13 +97,14 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 if (resDest.data.success) setDestinations(resDest.data.data);
                 if (resServ.data.success) {
                     setAllServices(resServ.data.data);
-                    setTransportServices(resServ.data.data.filter(s => 
+                    const transports = resServ.data.data.filter(s => 
                         (s.vehicle_service_id !== null && s.vehicle_service_id !== undefined) ||
                         s.service_type === 'Xe vận chuyển' ||
                         s.service_type === 'Vé máy bay' ||
                         s.service_type === 'Phương tiện' ||
                         s.service_type === 'Transport'
-                    ));
+                    ).sort((a, b) => Number(a.capacity || a.seat_capacity || 0) - Number(b.capacity || b.seat_capacity || 0));
+                    setTransportServices(transports);
                 }
             } catch (error) { console.error('Lỗi tải dữ liệu', error); }
         };
@@ -471,7 +473,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                         <strong style={{ color: '#0f172a' }}>Ngân sách khách:</strong> <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatMoneyLocal(requestData.budget)} đ/người</span>
                                     </div>
                                     <div>
-                                        <strong style={{ color: '#0f172a' }}>Phương tiện:</strong> {prefs.transportName || 'Không rõ'}
+                                        <strong style={{ color: '#0f172a' }}>Phương tiện:</strong> {formatVehicleDisplayName(prefs.transportName) || 'Không rõ'}
                                     </div>
                                     <div>
                                         <strong style={{ color: '#0f172a' }}>Lưu trú:</strong> {prefs.hotelName || 'Không rõ'}
@@ -498,10 +500,10 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                 >
                                     <option value="">-- Tự túc / Không chọn --</option>
                                     {costConfig.selectedTransport?.service_id === 'custom' && (
-                                        <option value="custom">{costConfig.selectedTransport.service_name} (Tự động từ yêu cầu: {Number(costConfig.selectedTransport.base_cost).toLocaleString('vi-VN')}đ)</option>
+                                        <option value="custom">{formatVehicleDisplayName(costConfig.selectedTransport)}</option>
                                     )}
                                     {transportServices.map(t => (
-                                        <option key={t.service_id} value={t.service_id}>{t.service_name} (Từ {Number(t.base_cost).toLocaleString('vi-VN')}đ)</option>
+                                        <option key={t.service_id} value={t.service_id}>{formatVehicleDisplayName(t)}</option>
                                     ))}
                                 </select>
                             </div>

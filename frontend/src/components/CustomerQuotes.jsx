@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 import '../index.css';
 
 
@@ -110,9 +111,9 @@ const renderFixedServices = (itineraryData) => {
         const parsedData = typeof itineraryData === 'string' ? JSON.parse(itineraryData) : itineraryData;
         let transports = [];
         if (parsedData.dragDropState?.fixedServices?.transport) {
-            transports = parsedData.dragDropState.fixedServices.transport.map(t => t.name);
+            transports = parsedData.dragDropState.fixedServices.transport.map(t => formatVehicleDisplayName(t.name || t));
         } else if (parsedData.costConfig?.selectedTransport) {
-            transports.push(parsedData.costConfig.selectedTransport.service_name);
+            transports.push(formatVehicleDisplayName(parsedData.costConfig.selectedTransport));
         }
         let accommodations = [];
         if (parsedData.dragDropState?.fixedServices?.accommodation) {

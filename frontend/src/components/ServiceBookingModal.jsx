@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const ServiceBookingModal = ({ service, onClose, user }) => {
+    const navigate = useNavigate();
     const [usageDate, setUsageDate] = useState('');
     const [quantity, setQuantity] = useState(1);
-    const [paymentMethod, setPaymentMethod] = useState('Pay_at_Location'); // Default
+    const [paymentMethod, setPaymentMethod] = useState('Prepaid'); // Mặc định Thanh toán trực tuyến SePay QR
     const [loading, setLoading] = useState(false);
 
     const totalAmount = service.selling_price * quantity;
@@ -33,8 +35,14 @@ const ServiceBookingModal = ({ service, onClose, user }) => {
             });
 
             if (res.data.success) {
-                alert('Gửi yêu cầu đặt dịch vụ thành công! Nhân viên sẽ liên hệ để xác nhận sớm nhất.');
+                const newSrvBookingId = res.data?.data?.booking_id || res.data?.booking_id;
                 onClose();
+                if (paymentMethod === 'Prepaid' && newSrvBookingId) {
+                    navigate(`/my-bookings?pay=${newSrvBookingId}&type=service&mode=qr`);
+                } else {
+                    alert('Gửi yêu cầu đặt dịch vụ thành công! Nhân viên sẽ liên hệ để xác nhận sớm nhất.');
+                    navigate('/my-bookings');
+                }
             } else {
                 alert(res.data.message || 'Lỗi khi đặt dịch vụ');
             }

@@ -405,29 +405,80 @@ exports.saveTourOperationalSchedule = async (req, res) => {
             replacements: [targetDepId, realGuideId],
             transaction
           });
+
+          // Gửi thông báo phân công trực tiếp cho HDV
+          try {
+            const [gUser] = await sequelize.query(`
+              SELECT g.user_id, t.tour_name, d.departure_date
+              FROM guides g
+              JOIN departures d ON d.departure_id = ?
+              JOIN tours t ON d.tour_id = t.tour_id
+              WHERE g.guide_id = ?
+            `, { replacements: [targetDepId, realGuideId], transaction });
+
+            if (gUser.length > 0 && gUser[0].user_id) {
+              const u = gUser[0];
+              const depDateStr = u.departure_date ? new Date(u.departure_date).toLocaleDateString('vi-VN') : 'Sắp tới';
+              const title = `🚩 Phân công HDV: ${u.tour_name}`;
+              const content = `Bạn đã được phân công dẫn đoàn cho tour "${u.tour_name}" - Ngày khởi hành: ${depDateStr}. Vui lòng kiểm tra lịch trình và danh sách đoàn!`;
+
+              await sequelize.query(`
+                INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, is_read, action_url, created_at)
+                VALUES (?, 'GUIDE_ASSIGNED', 'GUIDE', ?, ?, ?, 0, 'guide_assigned', NOW())
+              `, { replacements: [u.user_id, title, content, targetDepId], transaction });
+            }
+          } catch (gErr) {
+            console.warn("Lỗi tạo thông báo HDV:", gErr.message);
+          }
         }
 
-        if (targetDepId && vehToSave && dIdToSave) {
-          try {
+        if (targetDepId) {
+          if (vehToSave && dIdToSave) {
+            try {
+              await sequelize.query(`DELETE FROM tour_vehicle_assignments WHERE departure_id = ?`, {
+                replacements: [targetDepId],
+                transaction
+              });
+              const [vRows] = await sequelize.query(`SELECT vehicle_id FROM vehicles WHERE license_plate = ? LIMIT 1`, {
+                replacements: [vehToSave],
+                transaction
+              });
+              if (vRows.length > 0) {
+                await sequelize.query(`
+                  INSERT INTO tour_vehicle_assignments (departure_id, vehicle_id, driver_id, start_date, end_date, status)
+                  VALUES (?, ?, ?, ?, ?, 'ASSIGNED')
+                `, {
+                  replacements: [targetDepId, vRows[0].vehicle_id, dIdToSave, dep.departure_date, dep.return_date],
+                  transaction
+                });
+              }
+
+              // Gửi thông báo phân công trực tiếp cho tài xế
+              const [dInfo] = await sequelize.query(`
+                SELECT t.tour_name, d.departure_date
+                FROM departures d
+                JOIN tours t ON d.tour_id = t.tour_id
+                WHERE d.departure_id = ?
+              `, { replacements: [targetDepId], transaction });
+
+              if (dInfo.length > 0) {
+                const depDateStr = dInfo[0].departure_date ? new Date(dInfo[0].departure_date).toLocaleDateString('vi-VN') : 'Sắp tới';
+                const title = `🚌 Phân công lái xe: ${dInfo[0].tour_name}`;
+                const content = `Bạn được phân công phụ trách xe cho tour "${dInfo[0].tour_name}" (Xe: ${vehToSave}) - Ngày khởi hành: ${depDateStr}. Vui lòng kiểm tra phương tiện sẵn sàng!`;
+
+                await sequelize.query(`
+                  INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, is_read, action_url, created_at)
+                  VALUES (?, 'DRIVER_ASSIGNED', 'DRIVER', ?, ?, ?, 0, 'driver_assigned', NOW())
+                `, { replacements: [dIdToSave, title, content, targetDepId], transaction });
+              }
+            } catch(ve) {
+              console.warn("Không thể đồng bộ tour_vehicle_assignments:", ve.message);
+            }
+          } else {
             await sequelize.query(`DELETE FROM tour_vehicle_assignments WHERE departure_id = ?`, {
               replacements: [targetDepId],
               transaction
             });
-            const [vRows] = await sequelize.query(`SELECT vehicle_id FROM vehicles WHERE license_plate = ? LIMIT 1`, {
-              replacements: [vehToSave],
-              transaction
-            });
-            if (vRows.length > 0) {
-              await sequelize.query(`
-                INSERT INTO tour_vehicle_assignments (departure_id, vehicle_id, driver_id, start_date, end_date, status)
-                VALUES (?, ?, ?, ?, ?, 'ASSIGNED')
-              `, {
-                replacements: [targetDepId, vRows[0].vehicle_id, dIdToSave, dep.departure_date, dep.return_date],
-                transaction
-              });
-            }
-          } catch(ve) {
-            console.warn("Không thể đồng bộ tour_vehicle_assignments:", ve.message);
           }
         }
       }
@@ -581,7 +632,7 @@ exports.saveFixedTourDesign = async (req, res) => {
 exports.getAllFixedTours = async (req, res) => {
     try {
         const [tours] = await sequelize.query(`
-            SELECT t.tour_id, t.tour_name, t.destination, t.duration_days, t.status, t.base_price, t.image_url, t.markup_percent, t.is_custom,
+            SELECT t.tour_id, t.tour_name, t.destination, t.duration_days, t.status, t.base_price, t.image_url, t.markup_percent, t.base_cost, t.design_data, t.is_custom,
                    GROUP_CONCAT(d.departure_date ORDER BY d.departure_date ASC) as departure_dates
             FROM tours t
             LEFT JOIN departures d ON t.tour_id = d.tour_id AND d.status != 'Completed'
@@ -692,14 +743,28 @@ exports.getDestinationResources = async (req, res) => {
 exports.updateTourPrice = async (req, res) => {
     try {
         const { id } = req.params;
-        const { base_price, markup_percent } = req.body;
-        await sequelize.query(
-            "UPDATE tours SET base_price=?, markup_percent=? WHERE tour_id=?", 
-            { replacements: [base_price, markup_percent, id] }
-        );
-        res.status(200).json({ success: true, message: "Cáº­p nháº­t giĂ¡ thĂ nh cĂ´ng!" });
+        const { base_price, markup_percent, base_cost, design_data } = req.body;
+        
+        let query = "UPDATE tours SET base_price = ?, markup_percent = ?";
+        const replacements = [Number(base_price), Number(markup_percent || 0)];
+
+        if (base_cost !== undefined && base_cost !== null) {
+            query += ", base_cost = ?";
+            replacements.push(Number(base_cost));
+        }
+
+        if (design_data !== undefined && design_data !== null) {
+            query += ", design_data = ?";
+            replacements.push(typeof design_data === 'object' ? JSON.stringify(design_data) : design_data);
+        }
+
+        query += " WHERE tour_id = ?";
+        replacements.push(id);
+
+        await sequelize.query(query, { replacements });
+        res.status(200).json({ success: true, message: "Cập nhật giá và chi phí tour thành công!" });
     } catch (error) {
-        console.error("Lá»—i cáº­p nháº­t giĂ¡:", error);
+        console.error("Lỗi cập nhật giá:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -731,8 +796,22 @@ exports.getVehicles = async (req, res) => {
                 s.service_id,
                 s.service_name,
                 s.service_type,
+                s.base_cost,
+                s.selling_price,
+                s.unit,
                 vsd.seat_capacity as capacity,
+                vsd.total_quantity,
                 vsd.vehicle_service_id,
+                vsd.vehicle_type as vehicle_detail_type,
+                vsd.vehicle_model,
+                (
+                    SELECT COUNT(*) FROM travel_management.vehicles v 
+                    WHERE v.service_id = s.service_id
+                ) as total_vehicles_count,
+                (
+                    SELECT COUNT(*) FROM travel_management.vehicles v 
+                    WHERE v.service_id = s.service_id AND v.status = 'AVAILABLE'
+                ) as available_vehicles_count,
                 s.status,
                 COALESCE(p.partner_name, 'Nội bộ') as partner_name
             FROM services s

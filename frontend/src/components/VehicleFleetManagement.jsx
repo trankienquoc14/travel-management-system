@@ -5,6 +5,7 @@ const GATEWAY_URL = 'http://localhost:5000';
 
 const VehicleFleetManagement = () => {
   const [vehicles, setVehicles] = useState([]);
+  const [vehicleServices, setVehicleServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMaintModal, setShowMaintModal] = useState(false);
@@ -19,6 +20,11 @@ const VehicleFleetManagement = () => {
 
   // Form state
   const [formData, setFormData] = useState({
+    vehicle_name: '',
+    base_cost: 0,
+    selling_price: 0,
+    price: 0,
+    service_id: '',
     vehicle_code: '',
     license_plate: '',
     seat_capacity: 7,
@@ -72,11 +78,19 @@ const VehicleFleetManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${GATEWAY_URL}/api/tours/fleet/vehicles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data && res.data.success) {
-        setVehicles(res.data.data || []);
+      const headers = { Authorization: `Bearer ${token}` };
+      const [resVehicles, resServices] = await Promise.all([
+        axios.get(`${GATEWAY_URL}/api/tours/fleet/vehicles`, { headers }),
+        axios.get(`${GATEWAY_URL}/api/services`, { headers }).catch(() => ({ data: { data: [] } }))
+      ]);
+      if (resVehicles.data && resVehicles.data.success) {
+        setVehicles(resVehicles.data.data || []);
+      }
+      if (resServices.data && resServices.data.data) {
+        const internalRoadServices = resServices.data.data
+          .filter(s => s.vehicle_service_id != null && s.service_type === 'Xe vận chuyển' && !s.partner_id)
+          .sort((a, b) => Number(a.capacity || 0) - Number(b.capacity || 0));
+        setVehicleServices(internalRoadServices);
       }
     } catch (err) {
       console.error("Lỗi khi tải danh sách đội xe:", err);
@@ -90,6 +104,11 @@ const VehicleFleetManagement = () => {
     if (veh) {
       setEditVehicle(veh);
       setFormData({
+        vehicle_name: veh.vehicle_name || veh.brand_model || '',
+        base_cost: veh.base_cost !== undefined && veh.base_cost !== null ? veh.base_cost : 0,
+        selling_price: veh.selling_price !== undefined && veh.selling_price !== null ? veh.selling_price : (veh.price || 0),
+        price: veh.selling_price !== undefined && veh.selling_price !== null ? veh.selling_price : (veh.price || 0),
+        service_id: veh.service_id || '',
         vehicle_code: veh.vehicle_code || '',
         license_plate: veh.license_plate || '',
         seat_capacity: veh.seat_capacity || 7,
@@ -102,12 +121,18 @@ const VehicleFleetManagement = () => {
         notes: veh.notes || ''
       });
     } else {
+      const defaultSvc = vehicleServices.find(s => Number(s.capacity) === 7) || vehicleServices[0];
       setEditVehicle(null);
       setFormData({
+        vehicle_name: '',
+        base_cost: defaultSvc ? Number(defaultSvc.base_cost || 0) : 0,
+        selling_price: defaultSvc ? Number(defaultSvc.selling_price || 0) : 0,
+        price: defaultSvc ? Number(defaultSvc.selling_price || defaultSvc.base_cost || 0) : 0,
+        service_id: defaultSvc ? defaultSvc.service_id : '',
         vehicle_code: '',
         license_plate: '',
-        seat_capacity: 7,
-        vehicle_type: 'Xe 7 chỗ',
+        seat_capacity: defaultSvc ? Number(defaultSvc.capacity) : 7,
+        vehicle_type: defaultSvc ? (defaultSvc.vehicle_detail_type || `Xe ${defaultSvc.capacity} chỗ`) : 'Xe 7 chỗ',
         imagePreview: '',
         brand_model: '',
         image_url: '',
@@ -328,14 +353,20 @@ const VehicleFleetManagement = () => {
           
           {Object.keys(groupedVehicles).map(catName => {
             const listInCat = groupedVehicles[catName];
+            const firstVeh = listInCat[0] || {};
             return (
               <div key={catName} style={{ backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #cbd5e1', padding: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                 
-                {/* Tiêu Đề Loại Xe */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', paddingBottom: '12px' }}>
-                  <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e3a8a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    🚌 {catName.toUpperCase()}
-                  </h2>
+                {/* Tiêu Đề Loại Xe & Liên Kết Bảng Services */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e3a8a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🚌 {catName.toUpperCase()}
+                      <span style={{ fontSize: '12px', fontWeight: '700', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 10px', borderRadius: '20px' }}>
+                        🏢 Xe nội bộ công ty
+                      </span>
+                    </h2>
+                  </div>
                   <div style={{ display: 'flex', gap: '10px', fontSize: '12px', fontWeight: '700' }}>
                     <span style={{ background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '12px' }}>
                       🟢 Sẵn sàng: {listInCat.filter(v => v.status === 'AVAILABLE').length}
@@ -387,13 +418,31 @@ const VehicleFleetManagement = () => {
 
                           <div style={{ fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #f1f5f9' }}>
-                              <span style={{ color: '#64748b' }}>🏎️ Dòng/Đời xe:</span>
-                              <strong>{v.brand_model || 'Chưa cập nhật'}</strong>
+                              <span style={{ color: '#64748b' }}>🏎️ Tên xe:</span>
+                              <strong>{v.vehicle_name || v.brand_model || 'Chưa cập nhật'}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #f1f5f9' }}>
+                              <span style={{ color: '#64748b' }}>💰 Giá vốn:</span>
+                              <strong style={{ color: '#059669', textAlign: 'right' }}>
+                                {Number(v.base_cost || 0).toLocaleString('vi-VN')} đ/ngày
+                              </strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #f1f5f9' }}>
+                              <span style={{ color: '#64748b' }}>🏷️ Giá bán:</span>
+                              <strong style={{ color: '#d97706', textAlign: 'right' }}>
+                                {Number(v.selling_price || v.price || 0).toLocaleString('vi-VN')} đ/ngày
+                              </strong>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #f1f5f9' }}>
                               <span style={{ color: '#64748b' }}>🎨 Màu xe & Số chỗ:</span>
                               <strong>{v.color || 'Trắng'} - <span style={{ color: '#0284c7' }}>{v.seat_capacity} chỗ</span></strong>
                             </div>
+                            {v.brand_model && v.brand_model !== v.vehicle_name && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed #f1f5f9' }}>
+                                <span style={{ color: '#64748b' }}>🏷️ Dòng/Đời xe:</span>
+                                <span>{v.brand_model}</span>
+                              </div>
+                            )}
                           </div>
 
                           {v.current_maintenance && (
@@ -463,7 +512,7 @@ const VehicleFleetManagement = () => {
           <div style={{ ...styles.modalCard, width: '800px', maxWidth: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '20px' }}>
               <h2 style={{ margin: 0, fontSize: '22px', color: '#1e293b', fontWeight: '600' }}>
-                {editVehicle ? `Chỉnh sửa thông tin xe (${editVehicle.license_plate})` : 'Thêm xe mới'}
+                {editVehicle ? `Chỉnh sửa thông tin xe (${editVehicle.license_plate})` : 'Thêm xe mới vào Đội xe Nội bộ'}
               </h2>
               <button type="button" onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
             </div>
@@ -471,6 +520,60 @@ const VehicleFleetManagement = () => {
             <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
               <form id="vehicleForm" onSubmit={handleFormSubmit}>
                 
+                {/* Tên xe & Giá vốn - Giá bán */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={styles.label}>Tên xe *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="VD: VinFast Lux A2.0 Turbo, Toyota Fortuner Legender..."
+                    value={formData.vehicle_name}
+                    onChange={(e) => setFormData({ ...formData, vehicle_name: e.target.value })}
+                    style={{ ...styles.input, height: '42px', fontWeight: '600', borderColor: '#3b82f6' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={styles.label}>💰 Giá vốn (VNĐ/ngày) *</label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="VD: 800.000"
+                        value={formData.base_cost !== undefined && formData.base_cost !== null ? Number(formData.base_cost).toLocaleString('vi-VN') : '0'}
+                        onChange={(e) => {
+                          const rawVal = Number(e.target.value.replace(/\D/g, '')) || 0;
+                          setFormData({ ...formData, base_cost: rawVal });
+                        }}
+                        style={{ ...styles.input, height: '42px', paddingRight: '60px', fontWeight: '700', color: '#059669', borderColor: '#10b981' }}
+                      />
+                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#059669', fontSize: '13px', fontWeight: '700' }}>
+                        đ/ngày
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={styles.label}>🏷️ Giá bán (VNĐ/ngày) *</label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="VD: 950.000"
+                        value={formData.selling_price !== undefined && formData.selling_price !== null ? Number(formData.selling_price).toLocaleString('vi-VN') : '0'}
+                        onChange={(e) => {
+                          const rawVal = Number(e.target.value.replace(/\D/g, '')) || 0;
+                          setFormData({ ...formData, selling_price: rawVal, price: rawVal });
+                        }}
+                        style={{ ...styles.input, height: '42px', paddingRight: '60px', fontWeight: '700', color: '#d97706', borderColor: '#f59e0b' }}
+                      />
+                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#d97706', fontSize: '13px', fontWeight: '700' }}>
+                        đ/ngày
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                   <div>
                     <label style={styles.label}>Mã quản lý xe</label>
@@ -497,17 +600,22 @@ const VehicleFleetManagement = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                   <div>
-                    <label style={styles.label}>Số chỗ ngồi *</label>
+                    <label style={styles.label}>Số chỗ ngồi (Theo hạng dịch vụ) *</label>
                     <input 
                       type="number" 
                       required 
                       value={formData.seat_capacity}
                       onChange={(e) => {
                         const seats = parseInt(e.target.value, 10) || 0;
+                        const matchedSvc = vehicleServices.find(s => Number(s.capacity) === seats);
                         setFormData({ 
                           ...formData, 
                           seat_capacity: seats,
-                          vehicle_type: `Xe ${seats} chỗ` 
+                          service_id: matchedSvc ? matchedSvc.service_id : formData.service_id,
+                          vehicle_type: matchedSvc ? (matchedSvc.vehicle_detail_type || `Xe ${seats} chỗ`) : `Xe ${seats} chỗ`,
+                          base_cost: matchedSvc && (!formData.base_cost || !editVehicle) ? Number(matchedSvc.base_cost || 0) : formData.base_cost,
+                          selling_price: matchedSvc && (!formData.selling_price || !editVehicle) ? Number(matchedSvc.selling_price || 0) : formData.selling_price,
+                          price: matchedSvc && (!formData.price || !editVehicle) ? Number(matchedSvc.selling_price || matchedSvc.base_cost || 0) : formData.price
                         });
                       }}
                       style={{ ...styles.input, height: '42px' }}

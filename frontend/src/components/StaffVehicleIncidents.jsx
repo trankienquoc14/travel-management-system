@@ -80,7 +80,7 @@ const StaffVehicleIncidents = () => {
     <div style={styles.container}>
       <div style={styles.headerArea}>
         <div>
-          <h1 style={styles.pageTitle}>Báo cáo sự cố xe (Office Staff)</h1>
+          <h1 style={styles.pageTitle}>Báo cáo sự cố xe</h1>
           <p style={styles.pageSubtitle}>Tiếp nhận và xử lý sự cố từ tài xế</p>
         </div>
         <div>

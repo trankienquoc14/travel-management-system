@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TimelineBuilder from './TourBuilder/TimelineBuilder';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 export const formatMoneyLocal = (amount) => {
     if (isNaN(amount) || amount === null || amount === undefined) return '0';
     return Number(amount).toLocaleString('vi-VN');
@@ -91,6 +92,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                     s.service_type === 'Phương tiện' ||
                     s.service_type === 'Transport'
                 );
+                transports.sort((a, b) => Number(a.capacity || a.seat_capacity || 0) - Number(b.capacity || b.seat_capacity || 0));
                 setTransportServices(transports);
             }
         } catch (error) { console.error('Lỗi tải danh sách phương tiện', error); }
@@ -656,7 +658,9 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                                 >
                                     <option value="">-- Tự túc / Không chọn --</option>
                                     {transportServices.map(t => (
-                                        <option key={t.service_id} value={t.service_id}>{t.service_name} (Từ {Number(t.base_cost).toLocaleString('vi-VN')}đ)</option>
+                                        <option key={t.service_id} value={t.service_id}>
+                                            {formatVehicleDisplayName(t)}
+                                        </option>
                                     ))}
                                 </select>
                             </div>

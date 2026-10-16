@@ -137,6 +137,34 @@ exports.checkinPassenger = async (req, res) => {
     const { passengerId } = req.params;
     const { is_checked_in } = req.body; // 1 hoặc 0
 
+    // Kiểm tra trạng thái đơn hàng: Nếu đã HỦY thì không cho phép điểm danh
+    let bookingStatus = null;
+    let bId = null;
+
+    if (typeof passengerId === 'string' && passengerId.startsWith('b')) {
+      bId = parseInt(passengerId.substring(1));
+      const [bRows] = await sequelize.query(`SELECT booking_status FROM bookings WHERE booking_id = ?`, { replacements: [bId] });
+      if (bRows.length > 0) bookingStatus = bRows[0].booking_status;
+    } else {
+      const [pRows] = await sequelize.query(`
+        SELECT b.booking_status, b.booking_id 
+        FROM booking_passengers bp 
+        JOIN bookings b ON bp.booking_id = b.booking_id 
+        WHERE bp.passenger_id = ?
+      `, { replacements: [passengerId] });
+      if (pRows.length > 0) {
+        bookingStatus = pRows[0].booking_status;
+        bId = pRows[0].booking_id;
+      }
+    }
+
+    if (bookingStatus === 'Cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: `🚫 VÉ ĐÃ BỊ HỦY! Đơn vé #${bId} đã được hủy/hoàn tiền. Vé này không còn hiệu lực để điểm danh.`
+      });
+    }
+
     if (typeof passengerId === 'string' && passengerId.startsWith('b')) {
       const bookingId = parseInt(passengerId.substring(1));
 
@@ -229,7 +257,7 @@ exports.qrCheckinPassenger = async (req, res) => {
     if (bookingId !== null) {
       // Tìm danh sách hành khách của bookingId
       const [passList] = await sequelize.query(`
-        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, b.booking_id, b.departure_id
+        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, b.booking_id, b.departure_id, b.booking_status
         FROM bookings b
         LEFT JOIN booking_passengers bp ON b.booking_id = bp.booking_id
         WHERE b.booking_id = ?
@@ -238,6 +266,14 @@ exports.qrCheckinPassenger = async (req, res) => {
 
       if (passList.length === 0) {
         return res.status(404).json({ success: false, message: `❌ Mã QR sai! Không tìm thấy mã đơn vé #${bookingId} trong hệ thống.` });
+      }
+
+      // 🔴 KIỂM TRA ĐƠN HÀNG ĐÃ BỊ HỦY -> VÔ HIỆU HÓA QR CHECK-IN HOÀN TOÀN
+      if (passList[0].booking_status === 'Cancelled') {
+        return res.status(400).json({
+          success: false,
+          message: `🚫 VÉ ĐÃ BỊ HỦY (VOID)! Mã đơn vé #${bookingId} đã được nhân viên chấp thuận hủy vé. Toàn bộ mã QR check-in của vé này đã hết hiệu lực và bị vô hiệu hóa hoàn toàn.`
+        });
       }
 
       // Kiểm tra xem vé này có thuộc đoàn tour đang điểm danh hay không
@@ -284,7 +320,7 @@ exports.qrCheckinPassenger = async (req, res) => {
       }
     } else if (passengerId !== null) {
       const [pRow] = await sequelize.query(`
-        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, bp.booking_id, b.departure_id
+        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, bp.booking_id, b.departure_id, b.booking_status
         FROM booking_passengers bp
         JOIN bookings b ON bp.booking_id = b.booking_id
         WHERE bp.passenger_id = ?
@@ -292,6 +328,14 @@ exports.qrCheckinPassenger = async (req, res) => {
 
       if (pRow.length === 0) {
         return res.status(404).json({ success: false, message: `❌ Mã QR sai! Không tìm thấy dữ liệu hành khách trong hệ thống.` });
+      }
+
+      // 🔴 KIỂM TRA ĐƠN HÀNG ĐÃ BỊ HỦY -> VÔ HIỆU HÓA QR CHECK-IN HOÀN TOÀN
+      if (pRow[0].booking_status === 'Cancelled') {
+        return res.status(400).json({
+          success: false,
+          message: `🚫 VÉ ĐÃ BỊ HỦY (VOID)! Hành khách thuộc đơn vé #${pRow[0].booking_id} đã được hủy vé. Mã QR check-in này đã hết hiệu lực và bị vô hiệu hóa hoàn toàn.`
+        });
       }
 
       const passengerDepId = pRow[0].departure_id;

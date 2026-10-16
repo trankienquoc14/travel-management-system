@@ -558,16 +558,25 @@ exports.getPayroll = async (req, res) => {
     if (!month) return res.status(400).json({ success: false, message: 'Thiếu tháng tính lương!' });
 
     try {
-      // 1. Lấy danh sách nhân viên đang hoạt động
+      // 1. Lấy danh sách nhân viên đang hoạt động (Tất cả các role trừ Admin(1), Customer(6), Partner(7))
       const [employees] = await sequelize.query(`
-        SELECT u.user_id, u.full_name, u.email, r.role_name
+        SELECT u.user_id, u.full_name, u.email, r.role_name, r.role_id
         FROM users u
         JOIN roles r ON u.role_id = r.role_id
-        WHERE u.role_id IN (2, 3, 4, 5) AND u.status = 'Active'
-        ORDER BY u.user_id ASC
+        WHERE u.role_id IN (2, 3, 4, 5, 8) AND u.status = 'Active'
+        ORDER BY 
+          CASE u.role_id
+            WHEN 2 THEN 1
+            WHEN 3 THEN 2
+            WHEN 4 THEN 3
+            WHEN 5 THEN 4
+            WHEN 8 THEN 5
+            ELSE 6
+          END,
+          u.user_id ASC
       `);
 
-      // 2. Lấy số ngày công thực tế tính từ bảng timekeeping của tháng này (nếu bảng tồn tại)
+      // 2. Lấy số ngày công thực tế tính từ bảng timekeeping của tháng này (nếu có)
       let workDaysMap = {};
       try {
         const [timekeepingDays] = await sequelize.query(`
@@ -583,10 +592,94 @@ exports.getPayroll = async (req, res) => {
           workDaysMap[row.employee_id] = parseFloat(row.calculated_days || 0);
         });
       } catch (err) {
-        console.warn('Lưu ý: Bảng timekeeping chưa tồn tại hoặc bị lỗi, số ngày công mặc định là 26.', err.message);
+        console.warn('Lưu ý: Bảng timekeeping chưa tồn tại hoặc bị lỗi:', err.message);
       }
 
-      // 3. Lấy dữ liệu bảng lương đã lưu (nếu bảng tồn tại)
+      // 3. Lấy dữ liệu tour được phân công của Hướng dẫn viên trong tháng
+      let guideToursMap = {};
+      try {
+        const [guideTours] = await sequelize.query(`
+          SELECT 
+            d.departure_id, d.tour_id, t.tour_name, d.departure_date, d.return_date,
+            t.duration_days, t.design_data,
+            u.user_id
+          FROM departures d
+          JOIN tours t ON d.tour_id = t.tour_id
+          JOIN users u ON (
+            d.guide_id = u.user_id 
+            OR d.guide_id IN (SELECT guide_id FROM guides WHERE user_id = u.user_id) 
+            OR d.departure_id IN (SELECT ga.departure_id FROM guide_assignments ga JOIN guides g ON ga.guide_id = g.guide_id WHERE g.user_id = u.user_id)
+          )
+          WHERE u.role_id = 5 
+            AND DATE_FORMAT(d.departure_date, '%Y-%m') = ?
+          ORDER BY d.departure_date ASC
+        `, { replacements: [month] });
+
+        guideTours.forEach(gt => {
+          let design = gt.design_data;
+          if (typeof design === 'string') {
+            try { design = JSON.parse(design); } catch(e) {}
+          }
+          const guideRate = Number(design?.costConfig?.fixed?.guidePerDay) || 500000;
+          const days = Number(gt.duration_days) || 1;
+          const tourPay = days * guideRate;
+
+          if (!guideToursMap[gt.user_id]) guideToursMap[gt.user_id] = [];
+          guideToursMap[gt.user_id].push({
+            departure_id: gt.departure_id,
+            tour_name: gt.tour_name,
+            departure_date: gt.departure_date,
+            return_date: gt.return_date,
+            duration_days: days,
+            guide_rate: guideRate,
+            tour_pay: tourPay
+          });
+        });
+      } catch (err) {
+        console.warn('Lỗi lấy danh sách tour HDV:', err.message);
+      }
+
+      // 4. Lấy dữ liệu chuyến xe được phân công của Tài xế trong tháng
+      let driverTripsMap = {};
+      try {
+        const [driverTrips] = await sequelize.query(`
+          SELECT 
+            d.departure_id, d.tour_id, t.tour_name, d.departure_date, d.return_date,
+            t.duration_days, d.vehicle_number,
+            u.user_id
+          FROM departures d
+          JOIN tours t ON d.tour_id = t.tour_id
+          JOIN users u ON (
+            d.driver_id = u.user_id 
+            OR d.departure_id IN (SELECT tva.departure_id FROM tour_vehicle_assignments tva WHERE tva.driver_id = u.user_id)
+          )
+          WHERE u.role_id = 8 
+            AND DATE_FORMAT(d.departure_date, '%Y-%m') = ?
+          ORDER BY d.departure_date ASC
+        `, { replacements: [month] });
+
+        driverTrips.forEach(dt => {
+          const days = Number(dt.duration_days) || 1;
+          const dailyRate = 400000; // Đề xuất chuẩn ERP: 400.000 ₫/ngày chạy tour
+          const tripPay = days * dailyRate;
+
+          if (!driverTripsMap[dt.user_id]) driverTripsMap[dt.user_id] = [];
+          driverTripsMap[dt.user_id].push({
+            departure_id: dt.departure_id,
+            tour_name: dt.tour_name,
+            departure_date: dt.departure_date,
+            return_date: dt.return_date,
+            duration_days: days,
+            vehicle_number: dt.vehicle_number || 'Xe du lịch',
+            daily_rate: dailyRate,
+            trip_pay: tripPay
+          });
+        });
+      } catch (err) {
+        console.warn('Lỗi lấy danh sách chuyến xe tài xế:', err.message);
+      }
+
+      // 5. Lấy dữ liệu bảng lương đã lưu (nếu có)
       let payrollMap = {};
       let needsMigration = false;
       try {
@@ -605,31 +698,81 @@ exports.getPayroll = async (req, res) => {
         }
       }
 
-      // 4. Tổ hợp dữ liệu lương trả về cho frontend
+      // 6. Tổ hợp dữ liệu lương trả về cho frontend
       const payrollData = employees.map(emp => {
         const saved = payrollMap[emp.user_id] || {};
-        const calculatedDays = workDaysMap[emp.user_id] !== undefined ? workDaysMap[emp.user_id] : 26.0;
+        const isGuide = emp.role_id === 5 || emp.role_name === 'Tour Guide';
+        const isDriver = emp.role_id === 8 || emp.role_name === 'Driver';
 
-        // Đặt mức lương cơ bản mặc định theo vai trò nếu không có dữ liệu lưu trước đó
-        let defaultBase = 8000000.00; // Mức mặc định
-        if (emp.role_name === 'HR Manager') defaultBase = 12000000.00;
-        else if (emp.role_name === 'Tour Guide') defaultBase = 10000000.00;
-        else if (emp.role_name === 'Tour Operator') defaultBase = 9000000.00;
+        const myGuideTours = guideToursMap[emp.user_id] || [];
+        const myDriverTrips = driverTripsMap[emp.user_id] || [];
+
+        const totalGuideDays = myGuideTours.reduce((acc, t) => acc + t.duration_days, 0);
+        const totalGuidePay = myGuideTours.reduce((acc, t) => acc + t.tour_pay, 0);
+
+        const totalDriverDays = myDriverTrips.reduce((acc, t) => acc + t.duration_days, 0);
+        const totalDriverTripPay = myDriverTrips.reduce((acc, t) => acc + t.trip_pay, 0);
+
+        let defaultBase = 8000000.00;
+        let defaultDays = workDaysMap[emp.user_id] !== undefined ? workDaysMap[emp.user_id] : 26.0;
+        let defaultAllowance = 0.00;
+        let defaultNet = 0;
+        let defaultNotes = '';
+        let salaryType = 'office'; // 'office' | 'guide' | 'driver'
+
+        if (isGuide) {
+          salaryType = 'guide';
+          // Đối với Hướng dẫn viên: Lấy theo tour đã thiết kế bao nhiêu tiền/ngày
+          defaultBase = totalGuidePay;
+          defaultDays = totalGuideDays;
+          defaultAllowance = 0.00;
+          defaultNet = totalGuidePay;
+          defaultNotes = totalGuideDays > 0 
+            ? `Thù lao ${totalGuideDays} ngày dẫn tour theo giá thiết kế tour` 
+            : 'Chưa có lịch tour trong tháng';
+        } else if (isDriver) {
+          salaryType = 'driver';
+          // Đối với Tài xế: Đề xuất Lương cứng 5.000.000 ₫ + Công tác phí chạy tour 400.000 ₫/ngày tour
+          defaultBase = 5000000.00;
+          defaultDays = totalDriverDays > 0 ? totalDriverDays : defaultDays;
+          defaultAllowance = totalDriverTripPay;
+          defaultNet = defaultBase + totalDriverTripPay;
+          defaultNotes = totalDriverDays > 0 
+            ? `Lương cứng 5tr + công tác phí ${totalDriverDays} ngày tour (400k/ngày)` 
+            : 'Lương cứng hỗ trợ trực xe';
+        } else {
+          // Khối văn phòng
+          salaryType = 'office';
+          if (emp.role_name === 'HR Manager') defaultBase = 12000000.00;
+          else if (emp.role_name === 'Tour Manager') defaultBase = 10000000.00;
+          else if (emp.role_name === 'Office Staff') defaultBase = 8000000.00;
+          defaultNet = Math.round((defaultBase / 26.0) * defaultDays);
+        }
 
         const base_salary = saved.base_salary !== undefined ? parseFloat(saved.base_salary) : defaultBase;
-        const working_days = saved.working_days !== undefined ? parseFloat(saved.working_days) : calculatedDays;
-        const allowance = saved.allowance !== undefined ? parseFloat(saved.allowance) : 0.00;
+        const working_days = saved.working_days !== undefined ? parseFloat(saved.working_days) : defaultDays;
+        const allowance = saved.allowance !== undefined ? parseFloat(saved.allowance) : defaultAllowance;
         const bonus = saved.bonus !== undefined ? parseFloat(saved.bonus) : 0.00;
         const deductions = saved.deductions !== undefined ? parseFloat(saved.deductions) : 0.00;
 
-        // Công thức tính thực lĩnh: (Lương cơ bản / 26) * Ngày công + Phụ cấp + Thưởng - Phạt
-        const net_salary = Math.round((base_salary / 26.0) * working_days + allowance + bonus - deductions);
+        let net_salary = 0;
+        if (saved.net_salary !== undefined) {
+          net_salary = parseFloat(saved.net_salary);
+        } else if (isGuide) {
+          net_salary = Math.round(base_salary + allowance + bonus - deductions);
+        } else if (isDriver) {
+          net_salary = Math.round(base_salary + allowance + bonus - deductions);
+        } else {
+          net_salary = Math.round((base_salary / 26.0) * working_days + allowance + bonus - deductions);
+        }
 
         return {
           employee_id: emp.user_id,
           full_name: emp.full_name,
           email: emp.email,
           role_name: emp.role_name,
+          role_id: emp.role_id,
+          salary_type: salaryType,
           payroll_id: saved.payroll_id || null,
           base_salary,
           working_days,
@@ -638,7 +781,9 @@ exports.getPayroll = async (req, res) => {
           deductions,
           net_salary,
           status: saved.status || 'Draft',
-          notes: saved.notes || ''
+          notes: saved.notes || defaultNotes,
+          tours_detail: myGuideTours,
+          trips_detail: myDriverTrips
         };
       });
 

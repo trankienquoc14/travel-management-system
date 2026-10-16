@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CustomerFooter from './CustomerFooter';
 import CustomerNavbar from './CustomerNavbar';
+import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 import '../index.css';
 
 
@@ -154,11 +155,33 @@ const TourDetail = () => {
         }
     };
 
+    // Hàm kiểm tra thời hạn đặt tour (Hạn chót đóng nhận khách trước ngày khởi hành 30 ngày)
+    const checkDepartureCutoff = (depDateStr, status) => {
+        if (!depDateStr) return { isClosed: false, daysLeft: 999 };
+        const depDate = new Date(depDateStr);
+        const now = new Date();
+        depDate.setHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
+        const diffTime = depDate.getTime() - now.getTime();
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const isClosed = daysLeft < 30 || status === 'Closed';
+        return { isClosed, daysLeft };
+    };
+
     // Hàm chuyển hướng sang trang điền form Checkout
     const handleGoToBooking = () => {
         if (!selectedDeparture) {
             return alert('Vui lòng chọn ngày khởi hành!');
         }
+
+        const selDep = tour.departures?.find(d => String(d.departure_id) === String(selectedDeparture));
+        if (selDep) {
+            const { isClosed, daysLeft } = checkDepartureCutoff(selDep.departure_date, selDep.status);
+            if (isClosed) {
+                return alert(`🔒 Đợt khởi hành này đã đóng nhận khách (chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với nhà cung cấp). Hiện chỉ còn ${daysLeft > 0 ? daysLeft : 0} ngày đến ngày đi. Vui lòng chọn ngày khởi hành khác!`);
+            }
+        }
+
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Bạn cần đăng nhập để đặt tour!');
@@ -336,25 +359,17 @@ const TourDetail = () => {
                             const getTransportNameHelper = (costCfg, parsedDsg, tourObj) => {
                                 const st = costCfg?.selectedTransport;
                                 if (st) {
-                                    if (typeof st === 'string') return st;
-                                    if (typeof st === 'object') {
-                                        const name = st.service_name || st.name || st.title || st.label || st.vehicle_type || st.provider_name;
-                                        if (name) return name;
-                                    }
+                                    return formatVehicleDisplayName(st);
                                 }
                                 if (parsedDsg?.fixedServices?.transport && Array.isArray(parsedDsg.fixedServices.transport)) {
                                     const ft = parsedDsg.fixedServices.transport[0];
                                     if (ft) {
-                                        if (typeof ft === 'string') return ft;
-                                        if (typeof ft === 'object') {
-                                            const name = ft.service_name || ft.name || ft.title;
-                                            if (name) return name;
-                                        }
+                                        return formatVehicleDisplayName(ft);
                                     }
                                 }
                                 if (tourObj) {
                                     const tName = tourObj.transport_name || tourObj.transport || tourObj.vehicle_name || tourObj.vehicle_type;
-                                    if (tName) return tName;
+                                    if (tName) return formatVehicleDisplayName(tName);
                                 }
                                 return 'Xe du lịch chất lượng cao';
                             };
@@ -414,19 +429,29 @@ const TourDetail = () => {
                                             const d = new Date(dep.departure_date);
                                             const dayOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()];
                                             const dateStr = d.toLocaleDateString('vi-VN');
+                                            const { isClosed, daysLeft } = checkDepartureCutoff(dep.departure_date, dep.status);
                                             
                                             return (
-                                                <div key={dep.departure_id} onClick={() => setSelectedDeparture(dep.departure_id)} style={{ padding: '20px', borderRadius: '16px', border: isSelected ? '2px solid #1d4ed8' : '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', boxShadow: isSelected ? '0 4px 12px rgba(29, 78, 216, 0.15)' : 'none', transition: 'all 0.2s' }}>
+                                                <div key={dep.departure_id} onClick={() => setSelectedDeparture(dep.departure_id)} style={{ padding: '20px', borderRadius: '16px', border: isSelected ? (isClosed ? '2px solid #ef4444' : '2px solid #1d4ed8') : '1px solid #cbd5e1', background: isClosed ? '#fffbfb' : '#fff', cursor: 'pointer', boxShadow: isSelected ? (isClosed ? '0 4px 12px rgba(239, 68, 68, 0.15)' : '0 4px 12px rgba(29, 78, 216, 0.15)') : 'none', transition: 'all 0.2s' }}>
                                                     {/* Header Card */}
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                            <span style={{ background: '#f8fafc', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', color: '#1e40af', fontSize: '15px' }}>{dayOfWeek}, {dateStr}</span>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                                            <span style={{ background: isClosed ? '#fee2e2' : '#f8fafc', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', color: isClosed ? '#b91c1c' : '#1e40af', fontSize: '15px' }}>{dayOfWeek}, {dateStr}</span>
                                                             <span style={{ color: '#475569', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>🎟️ {tour.tour_code || `${tour.tour_id}-DEP`}</span>
+                                                            {isClosed ? (
+                                                                <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    🔒 Đã đóng đặt chỗ (Trước 30 ngày)
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    🟢 Đang mở nhận khách (Còn {daysLeft} ngày)
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                                                             <strong style={{ fontSize: '20px', color: '#0f172a' }}>{formatM(adultPrice)}</strong>
-                                                            <button style={{ background: isSelected ? '#1d4ed8' : '#f1f5f9', color: isSelected ? '#fff' : '#475569', padding: '10px 24px', borderRadius: '24px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                                                                {isSelected ? 'Đang chọn' : 'Chọn'}
+                                                            <button style={{ background: isSelected ? (isClosed ? '#ef4444' : '#1d4ed8') : '#f1f5f9', color: isSelected ? '#fff' : (isClosed ? '#dc2626' : '#475569'), padding: '10px 22px', borderRadius: '24px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '14px' }}>
+                                                                {isSelected ? (isClosed ? 'Đang xem (Đã khóa)' : 'Đang chọn') : (isClosed ? 'Đã khóa' : 'Chọn')}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -695,12 +720,54 @@ const TourDetail = () => {
                                             <span style={{ color: '#64748b' }}>💺 Số chỗ còn:</span>
                                             <strong style={{ color: '#0f172a' }}>Còn {selDep.available_slots} chỗ</strong>
                                         </div>
+
+                                        {(() => {
+                                            const { isClosed: selIsClosed, daysLeft: selDaysLeft } = checkDepartureCutoff(selDep.departure_date, selDep.status);
+                                            if (selIsClosed) {
+                                                return (
+                                                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px', fontSize: '13px', color: '#991b1b', lineHeight: '1.5', marginTop: '6px' }}>
+                                                        <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                                            <span>🔒 ĐÃ ĐÓNG ĐẶT CHỖ</span>
+                                                        </div>
+                                                        Đợt khởi hành này chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với đối tác (hiện chỉ còn {selDaysLeft > 0 ? selDaysLeft : 0} ngày). Vui lòng chọn đợt khởi hành khác!
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                         
                                         <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '16px', marginTop: '16px' }}></div>
                                         
-                                        <button onClick={handleGoToBooking} style={{ width: '100%', background: '#dc2626', color: '#fff', padding: '14px', borderRadius: '24px', fontSize: '16px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '16px', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)' }}>
-                                            Đặt ngay
-                                        </button>
+                                        {(() => {
+                                            const { isClosed: selIsClosed } = checkDepartureCutoff(selDep.departure_date, selDep.status);
+                                            if (selIsClosed) {
+                                                return (
+                                                    <button 
+                                                        disabled 
+                                                        style={{ 
+                                                            width: '100%', 
+                                                            background: '#94a3b8', 
+                                                            color: '#fff', 
+                                                            padding: '14px', 
+                                                            borderRadius: '24px', 
+                                                            fontSize: '15px', 
+                                                            fontWeight: 'bold', 
+                                                            border: 'none', 
+                                                            cursor: 'not-allowed', 
+                                                            marginTop: '8px'
+                                                        }}
+                                                        title="Đợt khởi hành này đã đóng nhận khách (trước 30 ngày)"
+                                                    >
+                                                        🔒 Đã khóa nhận khách (Quá hạn 30 ngày)
+                                                    </button>
+                                                );
+                                            }
+                                            return (
+                                                <button onClick={handleGoToBooking} style={{ width: '100%', background: '#dc2626', color: '#fff', padding: '14px', borderRadius: '24px', fontSize: '16px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '16px', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)' }}>
+                                                    Đặt ngay
+                                                </button>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             );
