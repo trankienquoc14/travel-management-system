@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT02_ThietKeTourVaBaoGia"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT02_ThietKeTourVaBaoGia">
+    <bpmn:participant id="Participant_QTT02_ThietKeTourVaBaoGia" name="Quy Trình Thiết Kế Tour Riêng Theo Nhu Cầu (Custom Tour Workflow)" processRef="Process_QTT02_ThietKeTourVaBaoGia" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT02_ThietKeTourVaBaoGia" name="Quy trình Yêu cầu thiết kế tour riêng, Báo giá và Phê duyệt" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT02_ThietKeTourVaBaoGia">
+      <bpmn:lane id="Lane_Customer" name="Khách hàng (Customer)">
+        <bpmn:flowNodeRef>Start_02</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FillRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CustomerReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_CustomerDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_CustomerRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_BookQuote</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Staff" name="Nhân viên thiết kế tour">
+        <bpmn:flowNodeRef>Task_InitialQuote</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DesignDetail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitManager</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendToCustomer</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Manager" name="Quản lý Tour (Tour Manager)">
+        <bpmn:flowNodeRef>Task_ReviewDesign</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ManagerApproval</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Hệ thống (Tour Service)">
+        <bpmn:flowNodeRef>Task_SavePending</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateTourAndBooking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_02_Success</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_02" name="Gửi yêu cầu thiết kế tour">
+      <bpmn:outgoing>Flow_Start_02_Task_FillRequest</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_FillRequest" name="Điền điểm đến, ngày đi/về, số người, ngân sách &amp; sở thích">
+      <bpmn:incoming>Flow_Start_02_Task_FillRequest</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_FillRequest_Task_SavePending</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_SavePending" name="Lưu custom_tour_requests (Pending) &amp; gửi thông báo">
+      <bpmn:incoming>Flow_Task_FillRequest_Task_SavePending</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SavePending_Task_InitialQuote</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_InitialQuote" name="Khảo sát nhu cầu &amp; gửi Báo giá sơ bộ (Initial_Quoted)">
+      <bpmn:incoming>Flow_Task_SavePending_Task_InitialQuote</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_InitialQuote_Task_DesignDetail</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_DesignDetail" name="Thiết kế lịch trình kéo thả &amp; tính chi phí vốn, giá bán">
+      <bpmn:incoming>Flow_Task_InitialQuote_Task_DesignDetail</bpmn:incoming>
+      <bpmn:incoming>Flow_GW_ManagerApproval_Task_DesignDetail</bpmn:incoming>
+      <bpmn:incoming>Flow_GW_CustomerDecision_Task_DesignDetail</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_DesignDetail_Task_SubmitManager</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_SubmitManager" name="Trình Quản lý duyệt (Pending_Manager_Approval)">
+      <bpmn:incoming>Flow_Task_DesignDetail_Task_SubmitManager</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SubmitManager_Task_ReviewDesign</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ReviewDesign" name="Thẩm định lịch trình, chi phí &amp; biên lợi nhuận">
+      <bpmn:incoming>Flow_Task_SubmitManager_Task_ReviewDesign</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ReviewDesign_GW_ManagerApproval</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_ManagerApproval" name="Quản lý phê duyệt?">
+      <bpmn:incoming>Flow_Task_ReviewDesign_GW_ManagerApproval</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_ManagerApproval_Task_DesignDetail</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_ManagerApproval_Task_SendToCustomer</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_SendToCustomer" name="Gửi bản thiết kế đã duyệt cho khách (Sent_To_Customer)">
+      <bpmn:incoming>Flow_GW_ManagerApproval_Task_SendToCustomer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SendToCustomer_Task_CustomerReview</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CustomerReview" name="Xem báo giá &amp; lịch trình đề xuất">
+      <bpmn:incoming>Flow_Task_SendToCustomer_Task_CustomerReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CustomerReview_GW_CustomerDecision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_CustomerDecision" name="Phản hồi của khách?">
+      <bpmn:incoming>Flow_Task_CustomerReview_GW_CustomerDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_CustomerDecision_End_CustomerRejected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_CustomerDecision_Task_DesignDetail</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_CustomerDecision_Task_BookQuote</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_CustomerRejected" name="Khách từ chối chốt tour">
+      <bpmn:incoming>Flow_GW_CustomerDecision_End_CustomerRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_BookQuote" name="Xác nhận đặt tour (Customer_Accepted)">
+      <bpmn:incoming>Flow_GW_CustomerDecision_Task_BookQuote</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_BookQuote_Task_CreateTourAndBooking</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_CreateTourAndBooking" name="Tạo Tour (is_custom=1), Departure Closed, Bookings &amp; Passengers">
+      <bpmn:incoming>Flow_Task_BookQuote_Task_CreateTourAndBooking</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CreateTourAndBooking_End_02_Success</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_02_Success" name="Chuyển sang thanh toán đơn hàng">
+      <bpmn:incoming>Flow_Task_CreateTourAndBooking_End_02_Success</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_02_Task_FillRequest" sourceRef="Start_02" targetRef="Task_FillRequest" />
+    <bpmn:sequenceFlow id="Flow_Task_FillRequest_Task_SavePending" sourceRef="Task_FillRequest" targetRef="Task_SavePending" />
+    <bpmn:sequenceFlow id="Flow_Task_SavePending_Task_InitialQuote" sourceRef="Task_SavePending" targetRef="Task_InitialQuote" />
+    <bpmn:sequenceFlow id="Flow_Task_InitialQuote_Task_DesignDetail" sourceRef="Task_InitialQuote" targetRef="Task_DesignDetail" />
+    <bpmn:sequenceFlow id="Flow_Task_DesignDetail_Task_SubmitManager" sourceRef="Task_DesignDetail" targetRef="Task_SubmitManager" />
+    <bpmn:sequenceFlow id="Flow_Task_SubmitManager_Task_ReviewDesign" sourceRef="Task_SubmitManager" targetRef="Task_ReviewDesign" />
+    <bpmn:sequenceFlow id="Flow_Task_ReviewDesign_GW_ManagerApproval" sourceRef="Task_ReviewDesign" targetRef="GW_ManagerApproval" />
+    <bpmn:sequenceFlow id="Flow_GW_ManagerApproval_Task_DesignDetail" sourceRef="GW_ManagerApproval" targetRef="Task_DesignDetail" name="Từ chối (kèm ghi chú)" />
+    <bpmn:sequenceFlow id="Flow_GW_ManagerApproval_Task_SendToCustomer" sourceRef="GW_ManagerApproval" targetRef="Task_SendToCustomer" name="Duyệt thiết kế" />
+    <bpmn:sequenceFlow id="Flow_Task_SendToCustomer_Task_CustomerReview" sourceRef="Task_SendToCustomer" targetRef="Task_CustomerReview" />
+    <bpmn:sequenceFlow id="Flow_Task_CustomerReview_GW_CustomerDecision" sourceRef="Task_CustomerReview" targetRef="GW_CustomerDecision" />
+    <bpmn:sequenceFlow id="Flow_GW_CustomerDecision_End_CustomerRejected" sourceRef="GW_CustomerDecision" targetRef="End_CustomerRejected" name="Từ chối" />
+    <bpmn:sequenceFlow id="Flow_GW_CustomerDecision_Task_DesignDetail" sourceRef="GW_CustomerDecision" targetRef="Task_DesignDetail" name="Yêu cầu sửa" />
+    <bpmn:sequenceFlow id="Flow_GW_CustomerDecision_Task_BookQuote" sourceRef="GW_CustomerDecision" targetRef="Task_BookQuote" name="Chấp nhận" />
+    <bpmn:sequenceFlow id="Flow_Task_BookQuote_Task_CreateTourAndBooking" sourceRef="Task_BookQuote" targetRef="Task_CreateTourAndBooking" />
+    <bpmn:sequenceFlow id="Flow_Task_CreateTourAndBooking_End_02_Success" sourceRef="Task_CreateTourAndBooking" targetRef="End_02_Success" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT02_ThietKeTourVaBaoGia">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT02_ThietKeTourVaBaoGia" bpmnElement="Collaboration_QTT02_ThietKeTourVaBaoGia">
+      <bpmndi:BPMNShape id="Participant_QTT02_ThietKeTourVaBaoGia_di" bpmnElement="Participant_QTT02_ThietKeTourVaBaoGia" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1720" height="760" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1690" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Staff_di" bpmnElement="Lane_Staff" isHorizontal="true">
+        <dc:Bounds x="70" y="270" width="1690" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Manager_di" bpmnElement="Lane_Manager" isHorizontal="true">
+        <dc:Bounds x="70" y="460" width="1690" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="640" width="1690" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_02_di" bpmnElement="Start_02">
+        <dc:Bounds x="180" y="125" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FillRequest_di" bpmnElement="Task_FillRequest">
+        <dc:Bounds x="260" y="108" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SavePending_di" bpmnElement="Task_SavePending">
+        <dc:Bounds x="260" y="685" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_InitialQuote_di" bpmnElement="Task_InitialQuote">
+        <dc:Bounds x="450" y="315" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DesignDetail_di" bpmnElement="Task_DesignDetail">
+        <dc:Bounds x="645" y="315" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitManager_di" bpmnElement="Task_SubmitManager">
+        <dc:Bounds x="845" y="315" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewDesign_di" bpmnElement="Task_ReviewDesign">
+        <dc:Bounds x="845" y="505" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ManagerApproval_di" bpmnElement="GW_ManagerApproval">
+        <dc:Bounds x="1030" y="515" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendToCustomer_di" bpmnElement="Task_SendToCustomer">
+        <dc:Bounds x="1030" y="315" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CustomerReview_di" bpmnElement="Task_CustomerReview">
+        <dc:Bounds x="1220" y="108" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_CustomerDecision_di" bpmnElement="GW_CustomerDecision">
+        <dc:Bounds x="1405" y="118" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_CustomerRejected_di" bpmnElement="End_CustomerRejected">
+        <dc:Bounds x="1412" y="210" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BookQuote_di" bpmnElement="Task_BookQuote">
+        <dc:Bounds x="1510" y="108" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateTourAndBooking_di" bpmnElement="Task_CreateTourAndBooking">
+        <dc:Bounds x="1510" y="685" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_02_Success_di" bpmnElement="End_02_Success">
+        <dc:Bounds x="1567" y="785" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_02_Task_FillRequest_di" bpmnElement="Flow_Start_02_Task_FillRequest">
+        <di:waypoint x="216" y="143" />
+        <di:waypoint x="260" y="143" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_FillRequest_Task_SavePending_di" bpmnElement="Flow_Task_FillRequest_Task_SavePending">
+        <di:waypoint x="335" y="178" />
+        <di:waypoint x="335" y="685" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SavePending_Task_InitialQuote_di" bpmnElement="Flow_Task_SavePending_Task_InitialQuote">
+        <di:waypoint x="410" y="720" />
+        <di:waypoint x="430" y="720" />
+        <di:waypoint x="430" y="350" />
+        <di:waypoint x="450" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_InitialQuote_Task_DesignDetail_di" bpmnElement="Flow_Task_InitialQuote_Task_DesignDetail">
+        <di:waypoint x="605" y="350" />
+        <di:waypoint x="645" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_DesignDetail_Task_SubmitManager_di" bpmnElement="Flow_Task_DesignDetail_Task_SubmitManager">
+        <di:waypoint x="805" y="350" />
+        <di:waypoint x="845" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SubmitManager_Task_ReviewDesign_di" bpmnElement="Flow_Task_SubmitManager_Task_ReviewDesign">
+        <di:waypoint x="917" y="385" />
+        <di:waypoint x="917" y="505" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ReviewDesign_GW_ManagerApproval_di" bpmnElement="Flow_Task_ReviewDesign_GW_ManagerApproval">
+        <di:waypoint x="990" y="540" />
+        <di:waypoint x="1030" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_ManagerApproval_Task_DesignDetail_di" bpmnElement="Flow_GW_ManagerApproval_Task_DesignDetail">
+        <di:waypoint x="1055" y="565" />
+        <di:waypoint x="1055" y="625" />
+        <di:waypoint x="725" y="625" />
+        <di:waypoint x="725" y="385" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1055" y="580" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_ManagerApproval_Task_SendToCustomer_di" bpmnElement="Flow_GW_ManagerApproval_Task_SendToCustomer">
+        <di:waypoint x="1055" y="515" />
+        <di:waypoint x="1105" y="385" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1080" y="435" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SendToCustomer_Task_CustomerReview_di" bpmnElement="Flow_Task_SendToCustomer_Task_CustomerReview">
+        <di:waypoint x="1180" y="350" />
+        <di:waypoint x="1200" y="350" />
+        <di:waypoint x="1200" y="143" />
+        <di:waypoint x="1220" y="143" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CustomerReview_GW_CustomerDecision_di" bpmnElement="Flow_Task_CustomerReview_GW_CustomerDecision">
+        <di:waypoint x="1365" y="143" />
+        <di:waypoint x="1405" y="143" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_CustomerDecision_End_CustomerRejected_di" bpmnElement="Flow_GW_CustomerDecision_End_CustomerRejected">
+        <di:waypoint x="1430" y="168" />
+        <di:waypoint x="1430" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1430" y="174" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_CustomerDecision_Task_DesignDetail_di" bpmnElement="Flow_GW_CustomerDecision_Task_DesignDetail">
+        <di:waypoint x="1405" y="143" />
+        <di:waypoint x="1365" y="143" />
+        <di:waypoint x="1365" y="200" />
+        <di:waypoint x="775" y="200" />
+        <di:waypoint x="775" y="315" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1040" y="210" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_CustomerDecision_Task_BookQuote_di" bpmnElement="Flow_GW_CustomerDecision_Task_BookQuote">
+        <di:waypoint x="1455" y="143" />
+        <di:waypoint x="1510" y="143" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1483" y="128" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_BookQuote_Task_CreateTourAndBooking_di" bpmnElement="Flow_Task_BookQuote_Task_CreateTourAndBooking">
+        <di:waypoint x="1585" y="178" />
+        <di:waypoint x="1585" y="685" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CreateTourAndBooking_End_02_Success_di" bpmnElement="Flow_Task_CreateTourAndBooking_End_02_Success">
+        <di:waypoint x="1585" y="755" />
+        <di:waypoint x="1585" y="785" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

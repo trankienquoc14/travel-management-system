@@ -1,4 +1,5 @@
 const sequelize = require('../config/database');
+const { sendBookingConfirmationEmail } = require('../utils/emailService');
 
 exports.createCustomRequest = async (req, res) => {
     try {
@@ -446,11 +447,16 @@ exports.bookCustomTourQuote = async (req, res) => {
             console.error("Error calculating exact total amount:", e);
         }
 
+        const contact_name = req.body.contact_name || req.body.contact_info?.fullName || null;
+        const contact_email = req.body.contact_email || req.body.contact_info?.email || null;
+        const contact_phone = req.body.contact_phone || req.body.contact_info?.phone || null;
+        const contact_address = req.body.contact_address || req.body.contact_info?.address || null;
+
         const [bookingInsert] = await sequelize.query(`
-            INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes)
-            VALUES (?, ?, ?, ?, NOW(), ?, 'Confirmed', 'Unpaid', ?)
+            INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, contact_name, contact_email, contact_phone, contact_address)
+            VALUES (?, ?, ?, ?, NOW(), ?, 'Confirmed', 'Unpaid', ?, ?, ?, ?, ?)
         `, {
-            replacements: [customerId, newDepartureId, quoteId, quote.people_count, exactTotalAmount, noteText],
+            replacements: [customerId, newDepartureId, quoteId, quote.people_count, exactTotalAmount, noteText, contact_name, contact_email, contact_phone, contact_address],
             transaction
         });
         const newBookingId = bookingInsert?.insertId ?? (typeof bookingInsert === 'number' ? bookingInsert : bookingInsert[0]);
@@ -491,6 +497,11 @@ exports.bookCustomTourQuote = async (req, res) => {
         `, { replacements: [newBookingId, payment_method, exactTotalAmount, txnCode], transaction });
 
         await transaction.commit();
+
+        // 8. Gửi email xác nhận đặt tour thiết kế riêng về email khách đã điền
+        sendBookingConfirmationEmail(newBookingId).catch(mailErr => {
+            console.error('❌ [EmailService] Lỗi gửi email xác nhận đặt tour thiết kế riêng:', mailErr);
+        });
 
         res.status(200).json({
             success: true,

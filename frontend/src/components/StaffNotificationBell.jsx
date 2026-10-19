@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import soundService from '../utils/soundService';
+import { notifyBell } from '../context/NotificationContext';
 
 const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
   const [notifications, setNotifications] = useState([]);
@@ -9,6 +11,8 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
   const [loading, setLoading] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const prevUnreadCountRef = useRef(0);
+  const knownIdsRef = useRef(new Set());
+  const isInitialFetchRef = useRef(true);
   const dropdownRef = useRef(null);
 
   // Fetch danh sách thông báo từ backend (theo đúng user_id và role)
@@ -26,10 +30,32 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
         const newNotifs = response.data.data || [];
         const newUnread = response.data.unreadCount || 0;
 
-        // Nếu số thông báo chưa đọc tăng lên -> kích hoạt hiệu ứng rung chuông Realtime
-        if (newUnread > prevUnreadCountRef.current && prevUnreadCountRef.current > 0) {
-          setIsShaking(true);
-          setTimeout(() => setIsShaking(false), 1200);
+        if (isInitialFetchRef.current) {
+          // Lưu danh sách ban đầu để không reo chuông dồn dập khi vừa mở trang
+          newNotifs.forEach(n => knownIdsRef.current.add(n.notification_id));
+          isInitialFetchRef.current = false;
+        } else {
+          // Tìm các thông báo mới xuất hiện
+          const newlyArrived = newNotifs.filter(n => !knownIdsRef.current.has(n.notification_id));
+          if (newlyArrived.length > 0) {
+            // Phát âm thanh chuông ngân vang
+            soundService.playNotificationBell();
+
+            // Rung chuông
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 1500);
+
+            // Bắn toast thông báo nổi màn hình cho thông báo mới nhất
+            const latest = newlyArrived[0];
+            notifyBell(latest.title, latest.content, latest.action_url);
+
+            // Cập nhật danh sách đã biết
+            newlyArrived.forEach(n => knownIdsRef.current.add(n.notification_id));
+          } else if (newUnread > prevUnreadCountRef.current && prevUnreadCountRef.current >= 0) {
+            soundService.playNotificationBell();
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 1500);
+          }
         }
 
         prevUnreadCountRef.current = newUnread;
@@ -43,13 +69,13 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
     }
   };
 
-  // Thiết lập Realtime Polling (15 giây / lần)
+  // Thiết lập Realtime Polling (4 giây / lần - đảm bảo phản hồi tức thì đúng lúc hành động)
   useEffect(() => {
     fetchNotifications();
 
     const intervalId = setInterval(() => {
       fetchNotifications(true);
-    }, 15000);
+    }, 4000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -208,6 +234,14 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
         return { icon: '🔄', badgeColor: '#ea580c', badgeBg: '#fff7ed', actionText: '🔄 Xử lý đổi/hủy vé' };
       case 'BOOKING_NEW':
         return { icon: '🛒', badgeColor: '#16a34a', badgeBg: '#f0fdf4', actionText: '🛒 Xem đơn hàng' };
+      case 'PAYMENT_SUCCESS':
+        return { icon: '💰', badgeColor: '#16a34a', badgeBg: '#f0fdf4', actionText: '💳 Xem thanh toán' };
+      case 'PARTNER_ACCEPTED':
+        return { icon: '✅', badgeColor: '#16a34a', badgeBg: '#f0fdf4', actionText: '📋 Xem yêu cầu NCC' };
+      case 'PARTNER_REJECTED':
+        return { icon: '❌', badgeColor: '#dc2626', badgeBg: '#fef2f2', actionText: '🔄 Đổi nhà cung cấp' };
+      case 'DRIVER_INCIDENT_UPDATE':
+        return { icon: '🔧', badgeColor: '#0284c7', badgeBg: '#f0f9ff', actionText: '🚌 Xem trạng thái xe' };
       default:
         return { icon: '📢', badgeColor: '#0284c7', badgeBg: '#f0f9ff', actionText: '➔ Xem chi tiết' };
     }

@@ -634,28 +634,40 @@ const TourOperationalManager = () => {
 
         for (let i = 0; i < departures.length; i++) {
             const dep = departures[i];
+            const isPastTour = dep.status === 'Closed' || dep.status === 'Completed' || (dep.return_date && dep.return_date < todayStr) || (dep.departure_date && dep.departure_date < todayStr);
+
+            const depD = dep.departure_date ? new Date(dep.departure_date) : null;
+            const depMonthNum = depD ? depD.getMonth() + 1 : null;
+            const depYearNum = depD ? depD.getFullYear() : null;
+            const depLabel = depD ? `Đợt ngày ${formatDateStr(dep.departure_date)} (Tháng ${depMonthNum}/${depYearNum})` : `Đợt #${i + 1}`;
+
             if (!dep.departure_date) {
                 alert(`⚠️ Đợt #${i + 1}: Vui lòng chọn Ngày khởi hành!`);
                 return;
             }
             if (!dep.departure_id && dep.departure_date < todayStr) {
-                alert(`⚠️ Đợt #${i + 1}: Ngày khởi hành (${formatDateStr(dep.departure_date)}) không được ở quá khứ! Vui lòng chọn từ ngày hôm nay (${formatDateStr(todayStr)}) trở đi.`);
+                alert(`⚠️ ${depLabel}: Ngày khởi hành không được ở quá khứ! Vui lòng chọn từ ngày hôm nay (${formatDateStr(todayStr)}) trở đi.`);
                 return;
             }
             if (dep.return_date && dep.return_date < dep.departure_date) {
-                alert(`⚠️ Đợt #${i + 1}: Ngày về (${formatDateStr(dep.return_date)}) không được trước Ngày khởi hành!`);
+                alert(`⚠️ ${depLabel}: Ngày về (${formatDateStr(dep.return_date)}) không được trước Ngày khởi hành!`);
                 return;
             }
             if (!dep.max_slots || dep.max_slots <= 0) {
-                alert(`⚠️ Đợt #${i + 1}: Số lượng khách tối đa phải lớn hơn 0!`);
+                alert(`⚠️ ${depLabel}: Số lượng khách tối đa phải lớn hơn 0!`);
                 return;
             }
             if (dep.departure_id && dep.original_max_slots !== undefined && dep.original_available_slots !== undefined) {
                 const bSlots = dep.original_max_slots - dep.original_available_slots;
                 if (dep.max_slots < bSlots) {
-                    alert(`⚠️ Đợt #${i + 1}: Không thể đặt tổng số chỗ nhỏ hơn số lượng khách đã đặt (${bSlots} khách)!`);
+                    alert(`⚠️ ${depLabel}: Không thể đặt tổng số chỗ nhỏ hơn số lượng khách đã đặt (${bSlots} khách)!`);
                     return;
                 }
+            }
+
+            // NẾU LÀ TOUR QUÁ KHỨ HOẶC ĐÃ KHÓA (CLOSED/COMPLETED): BỎ QUA KIỂM TRA ĐIỀU PHỐI (HDV, TÀI XẾ, XE)
+            if (isPastTour) {
+                continue;
             }
 
             // KIỂM TRA RÀNG BUỘC HƯỚNG DẪN VIÊN
@@ -665,8 +677,8 @@ const TourOperationalManager = () => {
                 
                 const depStart = new Date(dep.departure_date).getTime();
                 const depEnd = new Date(dep.return_date).getTime();
-                const depMonth = new Date(dep.departure_date).getMonth();
-                const depYear = new Date(dep.departure_date).getFullYear();
+                const depMonth = depD.getMonth();
+                const depYear = depD.getFullYear();
                 
                 const guideOtherSchs = otherSchedules.filter(s => s.guide_id === assignedGuideId && s.departure_date && s.return_date);
                 const guideSameTourSchs = departures.filter((d, idx) => idx !== i && Number(d.guide_id) === assignedGuideId && d.departure_date && d.return_date);
@@ -688,20 +700,23 @@ const TourOperationalManager = () => {
 
                 for (const sch of allToCheck) {
                     if (depStart <= sch.end && depEnd >= sch.start) {
-                        alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn HDV khác hoặc đổi ngày!`);
+                        alert(`⚠️ ${depLabel}: Hướng dẫn viên ${guideName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn HDV khác hoặc đổi ngày!`);
+                        if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                         return;
                     }
                     
                     if (depEnd < sch.start) {
                         const gapDays = (sch.start - depEnd) / ONE_DAY;
                         if (gapDays < 2) {
-                            alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} không đủ thời gian nghỉ ngơi trước khi chạy "${sch.tour_name}". (Cần nghỉ ít nhất 2 ngày)\nVui lòng xếp lại!`);
+                            alert(`⚠️ ${depLabel}: Hướng dẫn viên ${guideName} không đủ thời gian nghỉ ngơi trước khi chạy "${sch.tour_name}". (Cần nghỉ ít nhất 2 ngày)\nVui lòng xếp lại!`);
+                            if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                             return;
                         }
                     } else if (depStart > sch.end) {
                         const gapDays = (depStart - sch.end) / ONE_DAY;
                         if (gapDays < 2) {
-                            alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} không đủ thời gian nghỉ ngơi sau khi chạy "${sch.tour_name}". (Cần nghỉ ít nhất 2 ngày)\nVui lòng xếp lại!`);
+                            alert(`⚠️ ${depLabel}: Hướng dẫn viên ${guideName} không đủ thời gian nghỉ ngơi sau khi chạy "${sch.tour_name}". (Cần nghỉ ít nhất 2 ngày)\nVui lòng xếp lại!`);
+                            if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                             return;
                         }
                     }
@@ -717,7 +732,8 @@ const TourOperationalManager = () => {
                 }
 
                 if (toursInThisMonth > MAX_TOURS_PER_MONTH) {
-                    alert(`⚠️ Đợt #${i + 1}: Hướng dẫn viên ${guideName} đã vượt quá giới hạn nhận tour trong Tháng ${depMonth + 1}/${depYear} (Tối đa ${MAX_TOURS_PER_MONTH} tour/tháng).\nVui lòng phân công cho HDV khác!`);
+                    alert(`⚠️ ${depLabel}: Hướng dẫn viên ${guideName} đã vượt quá giới hạn nhận tour trong Tháng ${depMonth + 1}/${depYear} (Tối đa ${MAX_TOURS_PER_MONTH} tour/tháng).\nVui lòng phân công cho HDV khác!`);
+                    if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                     return;
                 }
             }
@@ -752,18 +768,21 @@ const TourOperationalManager = () => {
                     
                     for (const sch of allToCheck) {
                         if (depStart <= sch.end && depEnd >= sch.start) {
-                            alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn Tài xế rảnh!`);
+                            alert(`⚠️ ${depLabel}: Tài xế ${driverName} đã bị trùng lịch với "${sch.tour_name}".\nVui lòng chọn Tài xế rảnh!`);
+                            if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                             return;
                         }
                         
                         if (depEnd < sch.start && (sch.start - depEnd) < FIVE_DAYS_MS) {
                             const gapDays = Math.ceil((sch.start - depEnd) / (24 * 60 * 60 * 1000));
-                            alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày trước "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                            alert(`⚠️ ${depLabel}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày trước "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                            if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                             return;
                         }
                         if (depStart > sch.end && (depStart - sch.end) < FIVE_DAYS_MS) {
                             const gapDays = Math.ceil((depStart - sch.end) / (24 * 60 * 60 * 1000));
-                            alert(`⚠️ Đợt #${i + 1}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày sau "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                            alert(`⚠️ ${depLabel}: Tài xế ${driverName} chỉ rảnh ${gapDays} ngày sau "${sch.tour_name}" (Yêu cầu rảnh ít nhất 5 ngày).\nVui lòng chọn Tài xế rảnh trong vòng 5 ngày!`);
+                            if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
                             return;
                         }
                     }
@@ -773,38 +792,56 @@ const TourOperationalManager = () => {
                 if (dep.vehicle_number) {
                     const assignedVehicle = (fleetVehicles || []).find(v => v.license_plate === dep.vehicle_number);
                     if (assignedVehicle && (assignedVehicle.status === 'MAINTENANCE' || assignedVehicle.status === 'REPAIR' || assignedVehicle.status === 'INACTIVE' || assignedVehicle.status === 'Bảo dưỡng' || assignedVehicle.current_maintenance)) {
-                        alert(`⚠️ Đợt #${i + 1}: Xe ${dep.vehicle_number} hiện đang ở trạng thái bảo dưỡng/không hoạt động.\nVui lòng chọn xe khác!`);
-                        return;
+                        const statusText = (assignedVehicle.status === 'REPAIR' || assignedVehicle.status === 'MAINTENANCE' || assignedVehicle.status === 'Bảo dưỡng') ? 'bảo dưỡng/sửa chữa' : 'không hoạt động';
+                        const confirmRemove = window.confirm(
+                            `⚠️ ${depLabel}: Xe ${dep.vehicle_number} hiện đang ở trạng thái ${statusText}.\n\n` +
+                            `Bạn có muốn tự động BỎ CHỌN xe này cho đợt trên để hoàn tất lưu lịch trình không?\n\n` +
+                            `• Nhấn [OK]: Hệ thống tự động gỡ biển số xe này và tiếp tục lưu lịch trình.\n` +
+                            `• Nhấn [Hủy / Cancel]: Chuyển sang Tháng ${depMonthNum}/${depYearNum} để bạn tự tay chọn xe khác.`
+                        );
+
+                        if (confirmRemove) {
+                            dep.vehicle_number = '';
+                            const up = [...departures];
+                            up[i].vehicle_number = '';
+                            setDepartures(up);
+                        } else {
+                            if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
+                            return;
+                        }
                     }
 
-                    const depStart = parseDateToMs(dep.departure_date);
-                    const depEnd = parseDateToMs(dep.return_date);
-                    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                    if (dep.vehicle_number) {
+                        const depStart = parseDateToMs(dep.departure_date);
+                        const depEnd = parseDateToMs(dep.return_date);
+                        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-                    const otherSchs = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
-                    const vOtherSchs = otherSchs.filter(s => s.vehicle_number === dep.vehicle_number && s.departure_date && s.return_date);
-                    const vSameTourSchs = departures.filter((d, idx) => idx !== i && d.vehicle_number === dep.vehicle_number && d.departure_date && d.return_date);
+                        const otherSchs = guideSchedules ? guideSchedules.filter(sch => sch.tour_id !== selectedTour.tour_id) : [];
+                        const vOtherSchs = otherSchs.filter(s => s.vehicle_number === dep.vehicle_number && s.departure_date && s.return_date);
+                        const vSameTourSchs = departures.filter((d, idx) => idx !== i && d.vehicle_number === dep.vehicle_number && d.departure_date && d.return_date);
 
-                    const allVehToCheck = [
-                        ...vOtherSchs.map(s => ({
-                            tour_name: s.tour_name || 'Tour khác',
-                            start: parseDateToMs(s.departure_date),
-                            end: parseDateToMs(s.return_date)
-                        })),
-                        ...vSameTourSchs.map(d => ({
-                            tour_name: 'một đợt khởi hành khác của tour này',
-                            start: parseDateToMs(d.departure_date),
-                            end: parseDateToMs(d.return_date)
-                        }))
-                    ];
+                        const allVehToCheck = [
+                            ...vOtherSchs.map(s => ({
+                                tour_name: s.tour_name || 'Tour khác',
+                                start: parseDateToMs(s.departure_date),
+                                end: parseDateToMs(s.return_date)
+                            })),
+                            ...vSameTourSchs.map(d => ({
+                                tour_name: 'một đợt khởi hành khác của tour này',
+                                start: parseDateToMs(d.departure_date),
+                                end: parseDateToMs(d.return_date)
+                            }))
+                        ];
 
-                    for (const sch of allVehToCheck) {
-                        if (!sch.start || !sch.end) continue;
-                        const blockedStart = sch.start - ONE_DAY_MS;
-                        const blockedEnd = sch.end + ONE_DAY_MS;
-                        if (depStart <= blockedEnd && depEnd >= blockedStart) {
-                            alert(`⚠️ Đợt #${i + 1}: Xe ${dep.vehicle_number} chưa đảm bảo rảnh trước và sau 1 ngày so với lịch chạy "${sch.tour_name}".\n(Ví dụ: Lịch chạy 12-14 thì xe không được chạy từ 11-15)\nVui lòng chọn xe khác!`);
-                            return;
+                        for (const sch of allVehToCheck) {
+                            if (!sch.start || !sch.end) continue;
+                            const blockedStart = sch.start - ONE_DAY_MS;
+                            const blockedEnd = sch.end + ONE_DAY_MS;
+                            if (depStart <= blockedEnd && depEnd >= blockedStart) {
+                                alert(`⚠️ ${depLabel}: Xe ${dep.vehicle_number} chưa đảm bảo rảnh trước và sau 1 ngày so với lịch chạy "${sch.tour_name}".\n(Ví dụ: Lịch chạy 12-14 thì xe không được chạy từ 11-15)\nVui lòng chọn xe khác!`);
+                                if (depYearNum && depMonthNum) setSelectedMonth(`${depYearNum}-${String(depMonthNum).padStart(2, '0')}`);
+                                return;
+                            }
                         }
                     }
                 }

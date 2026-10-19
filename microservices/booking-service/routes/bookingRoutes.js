@@ -17,8 +17,10 @@ router.put('/:bookingId/pay', protect, bookingController.confirmPayment);
 router.put('/:bookingId/payment-status', protect, bookingController.confirmPayment);
 router.get('/admin/payments', protect, bookingController.getAllPayments);
 router.put('/:bookingId/confirm-cash', protect, bookingController.confirmCashByStaff);
+router.post('/:bookingId/resend-email', protect, bookingController.resendBookingEmail);
 
 // Quản lý tất cả Booking dành cho Nhân viên / Admin
+router.get('/admin/staff-dashboard-stats', protect, bookingController.getStaffDashboardStats);
 router.get('/admin/all-bookings', protect, bookingController.getAllBookings);
 router.put('/admin/bookings/:bookingId/status', protect, bookingController.updateBookingStatus);
 

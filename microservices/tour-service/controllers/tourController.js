@@ -925,9 +925,9 @@ exports.getOperationalDepartures = async (req, res) => {
         
         // Fetch all active bookings and their passengers to calculate exact room allocations
         const [allBookings] = await sequelize.query(`
-            SELECT b.booking_id, b.departure_id, p.passenger_type, p.single_room
+            SELECT b.booking_id, b.departure_id, b.num_people, p.passenger_id, p.passenger_type, p.single_room
             FROM bookings b
-            JOIN booking_passengers p ON b.booking_id = p.booking_id
+            LEFT JOIN booking_passengers p ON b.booking_id = p.booking_id
             WHERE b.booking_status != 'Cancelled'
         `);
         
@@ -936,12 +936,18 @@ exports.getOperationalDepartures = async (req, res) => {
         for (const row of allBookings) {
             if (!departureBookings[row.departure_id]) departureBookings[row.departure_id] = {};
             if (!departureBookings[row.departure_id][row.booking_id]) {
-                departureBookings[row.departure_id][row.booking_id] = { booking_id: row.booking_id, passengers: [] };
+                departureBookings[row.departure_id][row.booking_id] = { 
+                    booking_id: row.booking_id, 
+                    num_people: Number(row.num_people) || 1, 
+                    passengers: [] 
+                };
             }
-            departureBookings[row.departure_id][row.booking_id].passengers.push({
-                passenger_type: row.passenger_type,
-                single_room: row.single_room === 1 || row.single_room === true
-            });
+            if (row.passenger_id) {
+                departureBookings[row.departure_id][row.booking_id].passengers.push({
+                    passenger_type: row.passenger_type,
+                    single_room: row.single_room === 1 || row.single_room === true
+                });
+            }
         }
 
         const departures = await Promise.all(rows.map(async r => {
@@ -979,12 +985,28 @@ exports.getOperationalDepartures = async (req, res) => {
             let total_required_rooms = 0;
             const bksForDep = departureBookings[r.departure_id];
             if (bksForDep) {
+                for (const bId in bksForDep) {
+                    const bk = bksForDep[bId];
+                    if (bk.passengers.length === 0 && bk.num_people > 0) {
+                        for (let i = 0; i < bk.num_people; i++) {
+                            bk.passengers.push({ passenger_type: 'ADULT', single_room: false });
+                        }
+                    }
+                }
                 const bookingsArr = Object.values(bksForDep);
                 total_required_rooms = calculateDepartureCrossBooking(bookingsArr, roomRules);
             }
 
-            // Calculate current pax: max_slots - available_slots
-            const currentPax = (r.max_slots || 0) - (r.available_slots || 0);
+            // Calculate current pax: actual active passengers or sum of num_people from all active bookings
+            let actualPax = 0;
+            if (bksForDep) {
+                for (const bId in bksForDep) {
+                    const bk = bksForDep[bId];
+                    actualPax += Math.max((bk.passengers || []).length, bk.num_people || 0);
+                }
+            }
+            const calculatedPax = Math.max(0, (r.max_slots || 0) - (r.available_slots || 0));
+            const currentPax = actualPax > 0 ? actualPax : calculatedPax;
             
             // Calculate days until departure
             const today = new Date();

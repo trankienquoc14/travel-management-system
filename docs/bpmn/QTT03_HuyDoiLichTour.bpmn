@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT03_HuyDoiLichTour"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT03_HuyDoiLichTour">
+    <bpmn:participant id="Participant_QTT03_HuyDoiLichTour" name="Quy Trình Xử Lý Hủy Đổi Lịch Đơn Hàng (Booking Change &amp; Cancellation)" processRef="Process_QTT03_HuyDoiLichTour" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT03_HuyDoiLichTour" name="Quy trình Xử lý yêu cầu Hủy tour hoặc Đổi lịch trình" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT03_HuyDoiLichTour">
+      <bpmn:lane id="Lane_Customer" name="Khách hàng (Customer)">
+        <bpmn:flowNodeRef>Start_03</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FillChangeRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_AutoCancelled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ApprovedSuccess</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Hệ thống (Booking Service)">
+        <bpmn:flowNodeRef>Task_CheckPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_IsPaid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AutoCancelUnpaid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CalcPenalty</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SavePendingReq</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ReqType</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ExecuteCancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ExecuteReschedule</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyCustomer</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Staff" name="Nhân viên văn phòng">
+        <bpmn:flowNodeRef>Task_ReviewChangeReq</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_StaffApproval</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RejectChange</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ChangeRejected</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_03" name="Gửi yêu cầu Hủy / Đổi lịch">
+      <bpmn:outgoing>Flow_Start_03_Task_FillChangeRequest</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_FillChangeRequest" name="Chọn đơn hàng, loại yêu cầu (Cancel / Reschedule) &amp; lý do">
+      <bpmn:incoming>Flow_Start_03_Task_FillChangeRequest</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_FillChangeRequest_Task_CheckPayment</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_CheckPayment" name="Kiểm tra trạng thái thanh toán &amp; ngày khởi hành">
+      <bpmn:incoming>Flow_Task_FillChangeRequest_Task_CheckPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CheckPayment_GW_IsPaid</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_IsPaid" name="Đã thanh toán?">
+      <bpmn:incoming>Flow_Task_CheckPayment_GW_IsPaid</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_IsPaid_Task_AutoCancelUnpaid</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_IsPaid_Task_CalcPenalty</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_AutoCancelUnpaid" name="Tự động hủy đơn ngay, giải phóng vé &amp; phí 0đ">
+      <bpmn:incoming>Flow_GW_IsPaid_Task_AutoCancelUnpaid</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_AutoCancelUnpaid_End_AutoCancelled</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_AutoCancelled" name="Hủy đơn chưa thanh toán thành công">
+      <bpmn:incoming>Flow_Task_AutoCancelUnpaid_End_AutoCancelled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_CalcPenalty" name="Tính số ngày còn lại &amp; áp biểu phí phạt (10% - 100%)">
+      <bpmn:incoming>Flow_GW_IsPaid_Task_CalcPenalty</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CalcPenalty_Task_SavePendingReq</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_SavePendingReq" name="Lưu booking_change_requests (Pending) &amp; gửi thông báo">
+      <bpmn:incoming>Flow_Task_CalcPenalty_Task_SavePendingReq</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SavePendingReq_Task_ReviewChangeReq</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_ReviewChangeReq" name="Tiếp nhận, thẩm định lý do &amp; chính sách tài chính">
+      <bpmn:incoming>Flow_Task_SavePendingReq_Task_ReviewChangeReq</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ReviewChangeReq_GW_StaffApproval</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_StaffApproval" name="Nhân viên phê duyệt?">
+      <bpmn:incoming>Flow_Task_ReviewChangeReq_GW_StaffApproval</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_StaffApproval_Task_RejectChange</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_StaffApproval_GW_ReqType</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_RejectChange" name="Nhập ghi chú từ chối staff_note &amp; giữ nguyên đơn">
+      <bpmn:incoming>Flow_GW_StaffApproval_Task_RejectChange</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_RejectChange_End_ChangeRejected</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_ChangeRejected" name="Từ chối yêu cầu hủy/đổi">
+      <bpmn:incoming>Flow_Task_RejectChange_End_ChangeRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="GW_ReqType" name="Loại yêu cầu?">
+      <bpmn:incoming>Flow_GW_StaffApproval_GW_ReqType</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_ReqType_Task_ExecuteCancel</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_ReqType_Task_ExecuteReschedule</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ExecuteCancel" name="Hủy đơn, hoàn chỗ, vô hiệu hóa QR check-in &amp; Refunded">
+      <bpmn:incoming>Flow_GW_ReqType_Task_ExecuteCancel</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ExecuteCancel_Task_NotifyCustomer</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ExecuteReschedule" name="Đổi departure_id mới &amp; cập nhật vé điện tử">
+      <bpmn:incoming>Flow_GW_ReqType_Task_ExecuteReschedule</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ExecuteReschedule_Task_NotifyCustomer</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_NotifyCustomer" name="Gửi notification realtime thông báo kết quả cho khách">
+      <bpmn:incoming>Flow_Task_ExecuteCancel_Task_NotifyCustomer</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_ExecuteReschedule_Task_NotifyCustomer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_NotifyCustomer_End_ApprovedSuccess</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ApprovedSuccess" name="Hoàn tất xử lý hủy / đổi lịch">
+      <bpmn:incoming>Flow_Task_NotifyCustomer_End_ApprovedSuccess</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_03_Task_FillChangeRequest" sourceRef="Start_03" targetRef="Task_FillChangeRequest" />
+    <bpmn:sequenceFlow id="Flow_Task_FillChangeRequest_Task_CheckPayment" sourceRef="Task_FillChangeRequest" targetRef="Task_CheckPayment" />
+    <bpmn:sequenceFlow id="Flow_Task_CheckPayment_GW_IsPaid" sourceRef="Task_CheckPayment" targetRef="GW_IsPaid" />
+    <bpmn:sequenceFlow id="Flow_GW_IsPaid_Task_AutoCancelUnpaid" sourceRef="GW_IsPaid" targetRef="Task_AutoCancelUnpaid" name="Chưa thanh toán (Hủy)" />
+    <bpmn:sequenceFlow id="Flow_Task_AutoCancelUnpaid_End_AutoCancelled" sourceRef="Task_AutoCancelUnpaid" targetRef="End_AutoCancelled" />
+    <bpmn:sequenceFlow id="Flow_GW_IsPaid_Task_CalcPenalty" sourceRef="GW_IsPaid" targetRef="Task_CalcPenalty" name="Đã thanh toán / Đổi lịch" />
+    <bpmn:sequenceFlow id="Flow_Task_CalcPenalty_Task_SavePendingReq" sourceRef="Task_CalcPenalty" targetRef="Task_SavePendingReq" />
+    <bpmn:sequenceFlow id="Flow_Task_SavePendingReq_Task_ReviewChangeReq" sourceRef="Task_SavePendingReq" targetRef="Task_ReviewChangeReq" />
+    <bpmn:sequenceFlow id="Flow_Task_ReviewChangeReq_GW_StaffApproval" sourceRef="Task_ReviewChangeReq" targetRef="GW_StaffApproval" />
+    <bpmn:sequenceFlow id="Flow_GW_StaffApproval_Task_RejectChange" sourceRef="GW_StaffApproval" targetRef="Task_RejectChange" name="Từ chối" />
+    <bpmn:sequenceFlow id="Flow_Task_RejectChange_End_ChangeRejected" sourceRef="Task_RejectChange" targetRef="End_ChangeRejected" />
+    <bpmn:sequenceFlow id="Flow_GW_StaffApproval_GW_ReqType" sourceRef="GW_StaffApproval" targetRef="GW_ReqType" name="Chấp thuận" />
+    <bpmn:sequenceFlow id="Flow_GW_ReqType_Task_ExecuteCancel" sourceRef="GW_ReqType" targetRef="Task_ExecuteCancel" name="Hủy tour" />
+    <bpmn:sequenceFlow id="Flow_GW_ReqType_Task_ExecuteReschedule" sourceRef="GW_ReqType" targetRef="Task_ExecuteReschedule" name="Đổi lịch" />
+    <bpmn:sequenceFlow id="Flow_Task_ExecuteCancel_Task_NotifyCustomer" sourceRef="Task_ExecuteCancel" targetRef="Task_NotifyCustomer" />
+    <bpmn:sequenceFlow id="Flow_Task_ExecuteReschedule_Task_NotifyCustomer" sourceRef="Task_ExecuteReschedule" targetRef="Task_NotifyCustomer" />
+    <bpmn:sequenceFlow id="Flow_Task_NotifyCustomer_End_ApprovedSuccess" sourceRef="Task_NotifyCustomer" targetRef="End_ApprovedSuccess" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT03_HuyDoiLichTour">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT03_HuyDoiLichTour" bpmnElement="Collaboration_QTT03_HuyDoiLichTour">
+      <bpmndi:BPMNShape id="Participant_QTT03_HuyDoiLichTour_di" bpmnElement="Participant_QTT03_HuyDoiLichTour" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1660" height="620" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1630" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1630" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Staff_di" bpmnElement="Lane_Staff" isHorizontal="true">
+        <dc:Bounds x="70" y="490" width="1630" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_03_di" bpmnElement="Start_03">
+        <dc:Bounds x="180" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FillChangeRequest_di" bpmnElement="Task_FillChangeRequest">
+        <dc:Bounds x="260" y="113" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckPayment_di" bpmnElement="Task_CheckPayment">
+        <dc:Bounds x="260" y="325" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_IsPaid_di" bpmnElement="GW_IsPaid">
+        <dc:Bounds x="470" y="335" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AutoCancelUnpaid_di" bpmnElement="Task_AutoCancelUnpaid">
+        <dc:Bounds x="420" y="415" width="150" height="55" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AutoCancelled_di" bpmnElement="End_AutoCancelled">
+        <dc:Bounds x="475" y="210" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CalcPenalty_di" bpmnElement="Task_CalcPenalty">
+        <dc:Bounds x="580" y="325" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SavePendingReq_di" bpmnElement="Task_SavePendingReq">
+        <dc:Bounds x="775" y="325" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewChangeReq_di" bpmnElement="Task_ReviewChangeReq">
+        <dc:Bounds x="775" y="540" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_StaffApproval_di" bpmnElement="GW_StaffApproval">
+        <dc:Bounds x="990" y="550" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejectChange_di" bpmnElement="Task_RejectChange">
+        <dc:Bounds x="940" y="620" width="150" height="55" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ChangeRejected_di" bpmnElement="End_ChangeRejected">
+        <dc:Bounds x="1120" y="628" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ReqType_di" bpmnElement="GW_ReqType">
+        <dc:Bounds x="1130" y="335" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ExecuteCancel_di" bpmnElement="Task_ExecuteCancel">
+        <dc:Bounds x="1255" y="295" width="165" height="65" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ExecuteReschedule_di" bpmnElement="Task_ExecuteReschedule">
+        <dc:Bounds x="1255" y="395" width="165" height="65" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyCustomer_di" bpmnElement="Task_NotifyCustomer">
+        <dc:Bounds x="1475" y="325" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ApprovedSuccess_di" bpmnElement="End_ApprovedSuccess">
+        <dc:Bounds x="1535" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_03_Task_FillChangeRequest_di" bpmnElement="Flow_Start_03_Task_FillChangeRequest">
+        <di:waypoint x="216" y="148" />
+        <di:waypoint x="260" y="148" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_FillChangeRequest_Task_CheckPayment_di" bpmnElement="Flow_Task_FillChangeRequest_Task_CheckPayment">
+        <di:waypoint x="337" y="183" />
+        <di:waypoint x="337" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CheckPayment_GW_IsPaid_di" bpmnElement="Flow_Task_CheckPayment_GW_IsPaid">
+        <di:waypoint x="415" y="360" />
+        <di:waypoint x="470" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_IsPaid_Task_AutoCancelUnpaid_di" bpmnElement="Flow_GW_IsPaid_Task_AutoCancelUnpaid">
+        <di:waypoint x="495" y="385" />
+        <di:waypoint x="495" y="415" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="495" y="385" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_AutoCancelUnpaid_End_AutoCancelled_di" bpmnElement="Flow_Task_AutoCancelUnpaid_End_AutoCancelled">
+        <di:waypoint x="420" y="442" />
+        <di:waypoint x="230" y="442" />
+        <di:waypoint x="230" y="228" />
+        <di:waypoint x="475" y="228" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_IsPaid_Task_CalcPenalty_di" bpmnElement="Flow_GW_IsPaid_Task_CalcPenalty">
+        <di:waypoint x="520" y="360" />
+        <di:waypoint x="580" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="535" y="315" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CalcPenalty_Task_SavePendingReq_di" bpmnElement="Flow_Task_CalcPenalty_Task_SavePendingReq">
+        <di:waypoint x="735" y="360" />
+        <di:waypoint x="775" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SavePendingReq_Task_ReviewChangeReq_di" bpmnElement="Flow_Task_SavePendingReq_Task_ReviewChangeReq">
+        <di:waypoint x="852" y="395" />
+        <di:waypoint x="852" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ReviewChangeReq_GW_StaffApproval_di" bpmnElement="Flow_Task_ReviewChangeReq_GW_StaffApproval">
+        <di:waypoint x="930" y="575" />
+        <di:waypoint x="990" y="575" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_StaffApproval_Task_RejectChange_di" bpmnElement="Flow_GW_StaffApproval_Task_RejectChange">
+        <di:waypoint x="1015" y="600" />
+        <di:waypoint x="1015" y="620" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1015" y="595" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_RejectChange_End_ChangeRejected_di" bpmnElement="Flow_Task_RejectChange_End_ChangeRejected">
+        <di:waypoint x="1090" y="647.5" />
+        <di:waypoint x="1120" y="646" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_StaffApproval_GW_ReqType_di" bpmnElement="Flow_GW_StaffApproval_GW_ReqType">
+        <di:waypoint x="1040" y="575" />
+        <di:waypoint x="1075" y="575" />
+        <di:waypoint x="1075" y="360" />
+        <di:waypoint x="1130" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1060" y="530" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_ReqType_Task_ExecuteCancel_di" bpmnElement="Flow_GW_ReqType_Task_ExecuteCancel">
+        <di:waypoint x="1155" y="335" />
+        <di:waypoint x="1155" y="327" />
+        <di:waypoint x="1255" y="327" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1205" y="300" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_ReqType_Task_ExecuteReschedule_di" bpmnElement="Flow_GW_ReqType_Task_ExecuteReschedule">
+        <di:waypoint x="1155" y="385" />
+        <di:waypoint x="1155" y="427" />
+        <di:waypoint x="1255" y="427" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1205" y="370" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ExecuteCancel_Task_NotifyCustomer_di" bpmnElement="Flow_Task_ExecuteCancel_Task_NotifyCustomer">
+        <di:waypoint x="1420" y="327" />
+        <di:waypoint x="1450" y="327" />
+        <di:waypoint x="1450" y="350" />
+        <di:waypoint x="1475" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ExecuteReschedule_Task_NotifyCustomer_di" bpmnElement="Flow_Task_ExecuteReschedule_Task_NotifyCustomer">
+        <di:waypoint x="1420" y="427" />
+        <di:waypoint x="1450" y="427" />
+        <di:waypoint x="1450" y="370" />
+        <di:waypoint x="1475" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_NotifyCustomer_End_ApprovedSuccess_di" bpmnElement="Flow_Task_NotifyCustomer_End_ApprovedSuccess">
+        <di:waypoint x="1552" y="325" />
+        <di:waypoint x="1553" y="166" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

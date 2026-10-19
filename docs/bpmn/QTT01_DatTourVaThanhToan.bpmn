@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT01_DatTourVaThanhToan"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT01_DatTourVaThanhToan">
+    <bpmn:participant id="Participant_QTT01_DatTourVaThanhToan" name="Hệ Thống Quản Lý và Đặt Tour Du Lịch (TravelVN ERP)" processRef="Process_QTT01_DatTourVaThanhToan" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT01_DatTourVaThanhToan" name="Quy trình Đặt tour có sẵn và Thanh toán trực tuyến" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT01_DatTourVaThanhToan">
+      <bpmn:lane id="Lane_Customer" name="Khách hàng (Customer)">
+        <bpmn:flowNodeRef>Start_01</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FillBooking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_PaymentMethod</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Transfer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PayCash</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Success</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Hệ thống (Booking &amp; SePay)">
+        <bpmn:flowNodeRef>Task_ValidateBooking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Rejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateBooking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GenQR</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VerifySePay</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_PaymentSuccess</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CancelExpired</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Expired</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_IssueTicket</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Staff" name="Nhân viên VP / Thu ngân">
+        <bpmn:flowNodeRef>Task_ConfirmCash</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_01" name="Chọn tour &amp; đợt khởi hành">
+      <bpmn:outgoing>Flow_Start_01_Task_FillBooking</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_FillBooking" name="Điền thông tin đặt chỗ &amp; cơ cấu phòng">
+      <bpmn:incoming>Flow_Start_01_Task_FillBooking</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_FillBooking_Task_ValidateBooking</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_ValidateBooking" name="Kiểm tra quy tắc 30 ngày, phòng &amp; số chỗ trống">
+      <bpmn:incoming>Flow_Task_FillBooking_Task_ValidateBooking</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ValidateBooking_GW_Valid</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Valid" name="Đạt điều kiện?">
+      <bpmn:incoming>Flow_Task_ValidateBooking_GW_Valid</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_Valid_End_Rejected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_Valid_Task_CreateBooking</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Rejected" name="Từ chối nhận đặt vé">
+      <bpmn:incoming>Flow_GW_Valid_End_Rejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_CreateBooking" name="Tạo đơn hàng Pending, trừ slots, lưu hành khách">
+      <bpmn:incoming>Flow_GW_Valid_Task_CreateBooking</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CreateBooking_Task_SelectPayment</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_SelectPayment" name="Lựa chọn phương thức thanh toán">
+      <bpmn:incoming>Flow_Task_CreateBooking_Task_SelectPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SelectPayment_GW_PaymentMethod</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_PaymentMethod" name="Phương thức thanh toán?">
+      <bpmn:incoming>Flow_Task_SelectPayment_GW_PaymentMethod</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_PaymentMethod_Task_GenQR</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_PaymentMethod_Task_PayCash</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_GenQR" name="Sinh mã giao dịch &amp; QR SePay động">
+      <bpmn:incoming>Flow_GW_PaymentMethod_Task_GenQR</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_GenQR_Task_Transfer</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_Transfer" name="Quét mã VietQR trên Mobile Banking">
+      <bpmn:incoming>Flow_Task_GenQR_Task_Transfer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_Transfer_Task_VerifySePay</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_VerifySePay" name="Webhook SePay nhận giao dịch &amp; đối soát">
+      <bpmn:incoming>Flow_Task_Transfer_Task_VerifySePay</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_VerifySePay_GW_PaymentSuccess</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_PaymentSuccess" name="Thanh toán thành công?">
+      <bpmn:incoming>Flow_Task_VerifySePay_GW_PaymentSuccess</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_PaymentSuccess_Task_IssueTicket</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_PaymentSuccess_Task_CancelExpired</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_CancelExpired" name="Hủy đơn hết hạn &amp; hoàn trả chỗ trống">
+      <bpmn:incoming>Flow_GW_PaymentSuccess_Task_CancelExpired</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CancelExpired_End_Expired</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Expired" name="Đơn hàng bị hủy do quá hạn">
+      <bpmn:incoming>Flow_Task_CancelExpired_End_Expired</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_PayCash" name="Đến văn phòng nộp tiền mặt">
+      <bpmn:incoming>Flow_GW_PaymentMethod_Task_PayCash</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_PayCash_Task_ConfirmCash</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ConfirmCash" name="Thu tiền mặt &amp; bấm Xác nhận thu tiền">
+      <bpmn:incoming>Flow_Task_PayCash_Task_ConfirmCash</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ConfirmCash_Task_IssueTicket</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_IssueTicket" name="Cập nhật Paid, tạo vé điện tử &amp; QR check-in">
+      <bpmn:incoming>Flow_GW_PaymentSuccess_Task_IssueTicket</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_ConfirmCash_Task_IssueTicket</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_IssueTicket_End_Success</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Success" name="Nhận vé &amp; hoàn tất đặt tour">
+      <bpmn:incoming>Flow_Task_IssueTicket_End_Success</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_01_Task_FillBooking" sourceRef="Start_01" targetRef="Task_FillBooking" />
+    <bpmn:sequenceFlow id="Flow_Task_FillBooking_Task_ValidateBooking" sourceRef="Task_FillBooking" targetRef="Task_ValidateBooking" />
+    <bpmn:sequenceFlow id="Flow_Task_ValidateBooking_GW_Valid" sourceRef="Task_ValidateBooking" targetRef="GW_Valid" />
+    <bpmn:sequenceFlow id="Flow_GW_Valid_End_Rejected" sourceRef="GW_Valid" targetRef="End_Rejected" name="Không thỏa (&lt;30 ngày / hết chỗ)" />
+    <bpmn:sequenceFlow id="Flow_GW_Valid_Task_CreateBooking" sourceRef="GW_Valid" targetRef="Task_CreateBooking" name="Hợp lệ" />
+    <bpmn:sequenceFlow id="Flow_Task_CreateBooking_Task_SelectPayment" sourceRef="Task_CreateBooking" targetRef="Task_SelectPayment" />
+    <bpmn:sequenceFlow id="Flow_Task_SelectPayment_GW_PaymentMethod" sourceRef="Task_SelectPayment" targetRef="GW_PaymentMethod" />
+    <bpmn:sequenceFlow id="Flow_GW_PaymentMethod_Task_GenQR" sourceRef="GW_PaymentMethod" targetRef="Task_GenQR" name="Chuyển khoản SePay" />
+    <bpmn:sequenceFlow id="Flow_Task_GenQR_Task_Transfer" sourceRef="Task_GenQR" targetRef="Task_Transfer" />
+    <bpmn:sequenceFlow id="Flow_Task_Transfer_Task_VerifySePay" sourceRef="Task_Transfer" targetRef="Task_VerifySePay" />
+    <bpmn:sequenceFlow id="Flow_Task_VerifySePay_GW_PaymentSuccess" sourceRef="Task_VerifySePay" targetRef="GW_PaymentSuccess" />
+    <bpmn:sequenceFlow id="Flow_GW_PaymentSuccess_Task_IssueTicket" sourceRef="GW_PaymentSuccess" targetRef="Task_IssueTicket" name="Thành công" />
+    <bpmn:sequenceFlow id="Flow_GW_PaymentSuccess_Task_CancelExpired" sourceRef="GW_PaymentSuccess" targetRef="Task_CancelExpired" name="Quá hạn" />
+    <bpmn:sequenceFlow id="Flow_Task_CancelExpired_End_Expired" sourceRef="Task_CancelExpired" targetRef="End_Expired" />
+    <bpmn:sequenceFlow id="Flow_GW_PaymentMethod_Task_PayCash" sourceRef="GW_PaymentMethod" targetRef="Task_PayCash" name="Tiền mặt" />
+    <bpmn:sequenceFlow id="Flow_Task_PayCash_Task_ConfirmCash" sourceRef="Task_PayCash" targetRef="Task_ConfirmCash" />
+    <bpmn:sequenceFlow id="Flow_Task_ConfirmCash_Task_IssueTicket" sourceRef="Task_ConfirmCash" targetRef="Task_IssueTicket" />
+    <bpmn:sequenceFlow id="Flow_Task_IssueTicket_End_Success" sourceRef="Task_IssueTicket" targetRef="End_Success" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT01_DatTourVaThanhToan">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT01_DatTourVaThanhToan" bpmnElement="Collaboration_QTT01_DatTourVaThanhToan">
+      <bpmndi:BPMNShape id="Participant_QTT01_DatTourVaThanhToan_di" bpmnElement="Participant_QTT01_DatTourVaThanhToan" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1660" height="600" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1630" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1630" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Staff_di" bpmnElement="Lane_Staff" isHorizontal="true">
+        <dc:Bounds x="70" y="500" width="1630" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_01_di" bpmnElement="Start_01">
+        <dc:Bounds x="200" y="115" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FillBooking_di" bpmnElement="Task_FillBooking">
+        <dc:Bounds x="280" y="98" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateBooking_di" bpmnElement="Task_ValidateBooking">
+        <dc:Bounds x="480" y="315" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Valid_di" bpmnElement="GW_Valid">
+        <dc:Bounds x="670" y="325" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Rejected_di" bpmnElement="End_Rejected">
+        <dc:Bounds x="677" y="435" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateBooking_di" bpmnElement="Task_CreateBooking">
+        <dc:Bounds x="770" y="315" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SelectPayment_di" bpmnElement="Task_SelectPayment">
+        <dc:Bounds x="770" y="98" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_PaymentMethod_di" bpmnElement="GW_PaymentMethod">
+        <dc:Bounds x="965" y="108" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GenQR_di" bpmnElement="Task_GenQR">
+        <dc:Bounds x="965" y="315" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Transfer_di" bpmnElement="Task_Transfer">
+        <dc:Bounds x="1160" y="98" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VerifySePay_di" bpmnElement="Task_VerifySePay">
+        <dc:Bounds x="1160" y="315" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_PaymentSuccess_di" bpmnElement="GW_PaymentSuccess">
+        <dc:Bounds x="1350" y="325" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CancelExpired_di" bpmnElement="Task_CancelExpired">
+        <dc:Bounds x="1300" y="420" width="150" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Expired_di" bpmnElement="End_Expired">
+        <dc:Bounds x="1495" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PayCash_di" bpmnElement="Task_PayCash">
+        <dc:Bounds x="965" y="195" width="150" height="65" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConfirmCash_di" bpmnElement="Task_ConfirmCash">
+        <dc:Bounds x="1160" y="550" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IssueTicket_di" bpmnElement="Task_IssueTicket">
+        <dc:Bounds x="1475" y="315" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Success_di" bpmnElement="End_Success">
+        <dc:Bounds x="1535" y="115" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_01_Task_FillBooking_di" bpmnElement="Flow_Start_01_Task_FillBooking">
+        <di:waypoint x="236" y="133" />
+        <di:waypoint x="280" y="133" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_FillBooking_Task_ValidateBooking_di" bpmnElement="Flow_Task_FillBooking_Task_ValidateBooking">
+        <di:waypoint x="430" y="133" />
+        <di:waypoint x="460" y="133" />
+        <di:waypoint x="460" y="350" />
+        <di:waypoint x="480" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ValidateBooking_GW_Valid_di" bpmnElement="Flow_Task_ValidateBooking_GW_Valid">
+        <di:waypoint x="630" y="350" />
+        <di:waypoint x="670" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Valid_End_Rejected_di" bpmnElement="Flow_GW_Valid_End_Rejected">
+        <di:waypoint x="695" y="375" />
+        <di:waypoint x="695" y="435" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="730" y="395" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Valid_Task_CreateBooking_di" bpmnElement="Flow_GW_Valid_Task_CreateBooking">
+        <di:waypoint x="720" y="350" />
+        <di:waypoint x="770" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="745" y="335" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CreateBooking_Task_SelectPayment_di" bpmnElement="Flow_Task_CreateBooking_Task_SelectPayment">
+        <di:waypoint x="845" y="315" />
+        <di:waypoint x="845" y="168" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SelectPayment_GW_PaymentMethod_di" bpmnElement="Flow_Task_SelectPayment_GW_PaymentMethod">
+        <di:waypoint x="920" y="133" />
+        <di:waypoint x="965" y="133" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PaymentMethod_Task_GenQR_di" bpmnElement="Flow_GW_PaymentMethod_Task_GenQR">
+        <di:waypoint x="1015" y="133" />
+        <di:waypoint x="1040" y="133" />
+        <di:waypoint x="1040" y="315" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1040" y="165" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_GenQR_Task_Transfer_di" bpmnElement="Flow_Task_GenQR_Task_Transfer">
+        <di:waypoint x="1115" y="340" />
+        <di:waypoint x="1145" y="340" />
+        <di:waypoint x="1145" y="133" />
+        <di:waypoint x="1160" y="133" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_Transfer_Task_VerifySePay_di" bpmnElement="Flow_Task_Transfer_Task_VerifySePay">
+        <di:waypoint x="1232" y="168" />
+        <di:waypoint x="1232" y="315" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_VerifySePay_GW_PaymentSuccess_di" bpmnElement="Flow_Task_VerifySePay_GW_PaymentSuccess">
+        <di:waypoint x="1305" y="350" />
+        <di:waypoint x="1350" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PaymentSuccess_Task_IssueTicket_di" bpmnElement="Flow_GW_PaymentSuccess_Task_IssueTicket">
+        <di:waypoint x="1400" y="350" />
+        <di:waypoint x="1475" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1438" y="335" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PaymentSuccess_Task_CancelExpired_di" bpmnElement="Flow_GW_PaymentSuccess_Task_CancelExpired">
+        <di:waypoint x="1375" y="375" />
+        <di:waypoint x="1375" y="450" />
+        <di:waypoint x="1450" y="450" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1400" y="395" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CancelExpired_End_Expired_di" bpmnElement="Flow_Task_CancelExpired_End_Expired">
+        <di:waypoint x="1450" y="450" />
+        <di:waypoint x="1495" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PaymentMethod_Task_PayCash_di" bpmnElement="Flow_GW_PaymentMethod_Task_PayCash">
+        <di:waypoint x="990" y="158" />
+        <di:waypoint x="990" y="195" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="935" y="170" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_PayCash_Task_ConfirmCash_di" bpmnElement="Flow_Task_PayCash_Task_ConfirmCash">
+        <di:waypoint x="1115" y="227" />
+        <di:waypoint x="1140" y="227" />
+        <di:waypoint x="1140" y="585" />
+        <di:waypoint x="1160" y="585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ConfirmCash_Task_IssueTicket_di" bpmnElement="Flow_Task_ConfirmCash_Task_IssueTicket">
+        <di:waypoint x="1305" y="585" />
+        <di:waypoint x="1515" y="585" />
+        <di:waypoint x="1515" y="385" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_IssueTicket_End_Success_di" bpmnElement="Flow_Task_IssueTicket_End_Success">
+        <di:waypoint x="1552.5" y="315" />
+        <di:waypoint x="1553" y="151" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1720 860" width="1720" height="860">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="poolHeaderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="userTaskGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <linearGradient id="serviceTaskGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4" />
+      <stop offset="100%" stop-color="#dcfce7" />
+    </linearGradient>
+    <linearGradient id="gatewayGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7" />
+      <stop offset="100%" stop-color="#fde68a" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#334155" />
+    </marker>
+    <marker id="arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0284c7" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1720" height="860" fill="#f8fafc" />
+
+  <rect x="0" y="0" width="1720" height="60" fill="url(#headerGrad)" />
+  <text x="30" y="32" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="bold" fill="#38bdf8">QTT-08 | BPMN 2.0 SƠ ĐỒ NGHIỆP VỤ HỆ THỐNG</text>
+  <text x="30" y="52" font-family="'Segoe UI', Roboto, sans-serif" font-size="13" fill="#cbd5e1">Quy trình Đặt dịch vụ đơn lẻ và Phối hợp Đối tác - Mô hình hóa quá trình khách hàng đặt dịch vụ riêng lẻ (khách sạn, xe đưa đón, vé tham quan), tự động hoặc thủ công chuyển tiếp đối tác, xác nhận cung ứng và phát hành voucher điện tử</text>
+  <text x="1690" y="36" text-anchor="end" font-family="'Segoe UI', Roboto, sans-serif" font-size="12" fill="#94a3b8">Báo cáo Khóa luận tốt nghiệp</text>
+
+  <!-- POOL: Quy Trình Đặt Dịch Vụ Đơn Lẻ (Standalone Service Booking &amp; Partner Fulfillment) -->
+  <rect x="30" y="70" width="1660" height="720" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+  <rect x="30" y="70" width="35" height="720" fill="url(#poolHeaderGrad)" stroke="#64748b" stroke-width="1.5" />
+  <text x="52" y="430" font-family="'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle" transform="rotate(-90 52 430)">Quy Trình Đặt Dịch Vụ Đơn Lẻ (Standalone Service Booking &amp; Partner Fulfillment)</text>
+
+  <!-- LANE: Khách hàng (Customer) -->
+  <rect x="65" y="70" width="1625" height="180" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <rect x="65" y="70" width="135" height="180" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+  <text x="132.5" y="156" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">Khách hàng</text>
+  <text x="132.5" y="172" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">(Customer)</text>
+  <!-- LANE: Nhân viên văn phòng -->
+  <rect x="65" y="250" width="1625" height="180" fill="#fcfdfe" stroke="#cbd5e1" stroke-width="1" />
+  <rect x="65" y="250" width="135" height="180" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+  <text x="132.5" y="336" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">Nhân viên văn</text>
+  <text x="132.5" y="352" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">phòng</text>
+  <!-- LANE: Đối tác cung ứng (Partner) -->
+  <rect x="65" y="430" width="1625" height="180" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <rect x="65" y="430" width="135" height="180" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+  <text x="132.5" y="516" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">Đối tác cung ứng</text>
+  <text x="132.5" y="532" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">(Partner)</text>
+  <!-- LANE: Hệ thống (Booking Service) -->
+  <rect x="65" y="610" width="1625" height="180" fill="#fcfdfe" stroke="#cbd5e1" stroke-width="1" />
+  <rect x="65" y="610" width="135" height="180" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+  <text x="132.5" y="696" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">Hệ thống (Booking</text>
+  <text x="132.5" y="712" font-family="'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="middle">Service)</text>
+
+  <!-- SEQUENCE FLOW CONNECTORS -->
+  <polyline points="216,148 260,150" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="337,185 337,655" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="415,690 475,690" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="500,665 500,330 575,330" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <rect x="466" y="479" width="68" height="18" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" filter="url(#shadow)" />
+  <text x="500" y="492" font-family="'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600" fill="#0f172a" text-anchor="middle">Chưa gắn</text>
+  <polyline points="500,365 500,690 620,690" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="525,690 620,690" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <rect x="535.75" y="671" width="74.5" height="18" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" filter="url(#shadow)" />
+  <text x="573" y="684" font-family="'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600" fill="#0f172a" text-anchor="middle">Đã có sẵn</text>
+  <polyline points="775,690 805,690 805,510 825,510" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="980,510 1030,510" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="1055,535 1055,560" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <rect x="1024.25" y="529" width="61.5" height="18" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" filter="url(#shadow)" />
+  <text x="1055" y="542" font-family="'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600" fill="#0f172a" text-anchor="middle">Từ chối</text>
+  <polyline points="1130,585 1160,585" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="1080,510 1110,510 1110,330 1180,330" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <rect x="1054.5" y="491" width="81" height="18" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" filter="url(#shadow)" />
+  <text x="1095" y="504" font-family="'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600" fill="#0f172a" text-anchor="middle">Chấp thuận</text>
+  <polyline points="1335,330 1365,330 1365,690 1385,690" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+  <polyline points="1545,690 1613,690 1613,166" fill="none" stroke="#334155" stroke-width="1.75" marker-end="url(#arrow)" />
+
+  <!-- BPMN NODES -->
+  <!-- Node: Chọn dịch vụ lẻ (startEvent) -->
+  <g id="svg_Start_08">
+    <circle cx="198" cy="148" r="18" fill="#ecfdf5" stroke="#059669" stroke-width="2.5" filter="url(#shadow)" />
+    <text x="198" y="180" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#047857" text-anchor="middle">Chọn dịch vụ lẻ</text>
+  </g>
+  <!-- Node: Nhập số lượng, ngày sử dụng &amp; phương thức thanh toán (userTask) -->
+  <g id="svg_Task_BookService">
+    <rect x="260" y="115" width="155" height="70" rx="8" fill="url(#userTaskGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(268, 122) scale(0.65)">
+      <circle cx="8" cy="4" r="3.5" fill="none" stroke="#475569" stroke-width="1.8" />
+      <path d="M1 14 c0-4 4-5 7-5 s7 1 7 5" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" />
+    </g>
+    <text x="337.5" y="139" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Nhập số lượng, ngày</text>
+    <text x="337.5" y="153" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">sử dụng &amp; phương</text>
+    <text x="337.5" y="167" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">thức thanh toán</text>
+  </g>
+  <!-- Node: Kiểm tra service_id đã gắn đối tác cụ thể chưa (serviceTask) -->
+  <g id="svg_Task_CheckPartnerAssigned">
+    <rect x="260" y="655" width="155" height="70" rx="8" fill="url(#serviceTaskGrad)" stroke="#059669" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(268, 663) scale(0.65)">
+      <circle cx="8" cy="8" r="4" fill="none" stroke="#059669" stroke-width="2" />
+      <path d="M8 0v3M8 13v3M0 8h3M13 8h3M2.5 2.5l2.2 2.2M11.3 11.3l2.2 2.2M2.5 13.5l2.2-2.2M11.3 4.7l2.2-2.2" stroke="#059669" stroke-width="2" stroke-linecap="round" />
+    </g>
+    <text x="337.5" y="679" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Kiểm tra service_id</text>
+    <text x="337.5" y="693" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">đã gắn đối tác cụ</text>
+    <text x="337.5" y="707" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">thể chưa</text>
+  </g>
+  <!-- Node: Đã có đối tác gắn sẵn? (exclusiveGateway) -->
+  <g id="svg_GW_HasPartner">
+    <polygon points="500,665 525,690 500,715 475,690" fill="url(#gatewayGrad)" stroke="#d97706" stroke-width="2.5" filter="url(#shadow)" />
+    <path d="M 492 682 L 508 698 M 508 682 L 492 698" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" />
+    <text x="500" y="657" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#92400e" text-anchor="middle">Đã có đối tác gắn sẵn?</text>
+  </g>
+  <!-- Node: Chọn đối tác phù hợp &amp; bấm Chuyển sang cho đối tác (userTask) -->
+  <g id="svg_Task_StaffForward">
+    <rect x="425" y="295" width="150" height="70" rx="8" fill="url(#userTaskGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(433, 302) scale(0.65)">
+      <circle cx="8" cy="4" r="3.5" fill="none" stroke="#475569" stroke-width="1.8" />
+      <path d="M1 14 c0-4 4-5 7-5 s7 1 7 5" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" />
+    </g>
+    <text x="500" y="319" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Chọn đối tác phù</text>
+    <text x="500" y="333" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">hợp &amp; bấm Chuyển</text>
+    <text x="500" y="347" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">sang cho đối tác</text>
+  </g>
+  <!-- Node: Tạo service_requests (Pending) &amp; gửi thông báo (serviceTask) -->
+  <g id="svg_Task_AutoForward">
+    <rect x="620" y="655" width="155" height="70" rx="8" fill="url(#serviceTaskGrad)" stroke="#059669" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(628, 663) scale(0.65)">
+      <circle cx="8" cy="8" r="4" fill="none" stroke="#059669" stroke-width="2" />
+      <path d="M8 0v3M8 13v3M0 8h3M13 8h3M2.5 2.5l2.2 2.2M11.3 11.3l2.2 2.2M2.5 13.5l2.2-2.2M11.3 4.7l2.2-2.2" stroke="#059669" stroke-width="2" stroke-linecap="round" />
+    </g>
+    <text x="697.5" y="672" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Tạo</text>
+    <text x="697.5" y="686" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">service_requests</text>
+    <text x="697.5" y="700" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">(Pending) &amp; gửi</text>
+    <text x="697.5" y="714" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">thông báo</text>
+  </g>
+  <!-- Node: Xem yêu cầu trong cổng đối tác &amp; đối soát công suất (userTask) -->
+  <g id="svg_Task_PartnerReview">
+    <rect x="825" y="475" width="155" height="70" rx="8" fill="url(#userTaskGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(833, 482) scale(0.65)">
+      <circle cx="8" cy="4" r="3.5" fill="none" stroke="#475569" stroke-width="1.8" />
+      <path d="M1 14 c0-4 4-5 7-5 s7 1 7 5" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" />
+    </g>
+    <text x="902.5" y="499" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Xem yêu cầu trong</text>
+    <text x="902.5" y="513" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">cổng đối tác &amp; đối</text>
+    <text x="902.5" y="527" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">soát công suất</text>
+  </g>
+  <!-- Node: Đối tác xác nhận? (exclusiveGateway) -->
+  <g id="svg_GW_PartnerAccept">
+    <polygon points="1055,485 1080,510 1055,535 1030,510" fill="url(#gatewayGrad)" stroke="#d97706" stroke-width="2.5" filter="url(#shadow)" />
+    <path d="M 1047 502 L 1063 518 M 1063 502 L 1047 518" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" />
+    <text x="1055" y="477" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#92400e" text-anchor="middle">Đối tác xác nhận?</text>
+  </g>
+  <!-- Node: Từ chối yêu cầu (Không còn dịch vụ) (userTask) -->
+  <g id="svg_Task_RejectService">
+    <rect x="980" y="560" width="150" height="50" rx="8" fill="url(#userTaskGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(988, 567) scale(0.65)">
+      <circle cx="8" cy="4" r="3.5" fill="none" stroke="#475569" stroke-width="1.8" />
+      <path d="M1 14 c0-4 4-5 7-5 s7 1 7 5" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" />
+    </g>
+    <text x="1055" y="581" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Từ chối yêu cầu</text>
+    <text x="1055" y="595" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">(Không còn dịch vụ)</text>
+  </g>
+  <!-- Node: Từ chối &amp; hoàn tiền cho khách (endEvent) -->
+  <g id="svg_End_ServiceRejected">
+    <circle cx="1178" cy="585" r="18" fill="#fef2f2" stroke="#dc2626" stroke-width="4" filter="url(#shadow)" />
+    <text x="1178" y="617" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#b91c1c" text-anchor="middle">Từ chối &amp; hoàn</text>
+    <text x="1178" y="630" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#b91c1c" text-anchor="middle">tiền cho khách</text>
+  </g>
+  <!-- Node: Xác nhận dịch vụ trong phân hệ quản lý (userTask) -->
+  <g id="svg_Task_ConfirmService">
+    <rect x="1180" y="295" width="155" height="70" rx="8" fill="url(#userTaskGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(1188, 302) scale(0.65)">
+      <circle cx="8" cy="4" r="3.5" fill="none" stroke="#475569" stroke-width="1.8" />
+      <path d="M1 14 c0-4 4-5 7-5 s7 1 7 5" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" />
+    </g>
+    <text x="1257.5" y="319" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Xác nhận dịch vụ</text>
+    <text x="1257.5" y="333" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">trong phân hệ quản</text>
+    <text x="1257.5" y="347" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">lý</text>
+  </g>
+  <!-- Node: Tạo mã voucher VOUCHER-XXXXXX &amp; cập nhật Confirmed (serviceTask) -->
+  <g id="svg_Task_GenVoucher">
+    <rect x="1385" y="655" width="160" height="70" rx="8" fill="url(#serviceTaskGrad)" stroke="#059669" stroke-width="1.5" filter="url(#shadow)" />
+    <g transform="translate(1393, 663) scale(0.65)">
+      <circle cx="8" cy="8" r="4" fill="none" stroke="#059669" stroke-width="2" />
+      <path d="M8 0v3M8 13v3M0 8h3M13 8h3M2.5 2.5l2.2 2.2M11.3 11.3l2.2 2.2M2.5 13.5l2.2-2.2M11.3 4.7l2.2-2.2" stroke="#059669" stroke-width="2" stroke-linecap="round" />
+    </g>
+    <text x="1465" y="679" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">Tạo mã voucher</text>
+    <text x="1465" y="693" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">VOUCHER-XXXXXX &amp;</text>
+    <text x="1465" y="707" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">cập nhật Confirmed</text>
+  </g>
+  <!-- Node: Khách nhận Voucher &amp; sử dụng dịch vụ (endEvent) -->
+  <g id="svg_End_VoucherIssued">
+    <circle cx="1613" cy="148" r="18" fill="#fef2f2" stroke="#dc2626" stroke-width="4" filter="url(#shadow)" />
+    <text x="1613" y="180" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#b91c1c" text-anchor="middle">Khách nhận</text>
+    <text x="1613" y="193" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#b91c1c" text-anchor="middle">Voucher &amp; sử</text>
+    <text x="1613" y="206" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="bold" fill="#b91c1c" text-anchor="middle">dụng dịch vụ</text>
+  </g>
+
+  <!-- FOOTER & LEGEND -->
+  <g transform="translate(30, 810)">
+    <rect x="0" y="0" width="1660" height="36" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+    <text x="15" y="22" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="bold" fill="#334155">Ký hiệu BPMN 2.0:</text>
+    <circle cx="160" cy="18" r="8" fill="#ecfdf5" stroke="#059669" stroke-width="2" />
+    <text x="175" y="22" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" fill="#475569">Sự kiện bắt đầu</text>
+    <rect x="290" y="9" width="18" height="18" rx="3" fill="#ffffff" stroke="#334155" stroke-width="1.5" />
+    <text x="315" y="22" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" fill="#475569">Tác vụ người dùng</text>
+    <rect x="445" y="9" width="18" height="18" rx="3" fill="#dcfce7" stroke="#059669" stroke-width="1.5" />
+    <text x="470" y="22" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" fill="#475569">Tác vụ hệ thống tự động</text>
+    <polygon points="635,9 644,18 635,27 626,18" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" />
+    <text x="655" y="22" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" fill="#475569">Cổng rẽ nhánh (XOR)</text>
+    <circle cx="810" cy="18" r="8" fill="#fef2f2" stroke="#dc2626" stroke-width="2.5" />
+    <text x="825" y="22" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" fill="#475569">Sự kiện kết thúc</text>
+    <text x="1635" y="22" text-anchor="end" font-family="'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="600" fill="#64748b">TravelVN ERP Architecture</text>
+  </g>
+</svg>

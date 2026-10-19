@@ -65,12 +65,47 @@ const RootRedirect = () => {
   return <Navigate to="/home" replace />;
 };
 
+import { NotificationProvider, notifySuccess, notifyError, notifyBell } from './context/NotificationContext';
+import soundService from './utils/soundService';
+
+const GlobalActionNotifier = () => {
+  React.useEffect(() => {
+    const originalAlert = window.alert;
+    window.alert = function (message) {
+      const text = String(message || '');
+      const isSuccess = /thành công|hoàn tất|đã lưu|đã gửi|chấp thuận|đã duyệt/i.test(text);
+      const isError = /lỗi|thất bại|không thể|vui lòng|từ chối|hỏng|sai/i.test(text);
+
+      if (isSuccess) {
+        soundService.playSuccessChime();
+        notifySuccess('Thao tác thành công', text);
+      } else if (isError) {
+        soundService.playErrorChime();
+        notifyError('Cảnh báo / Lỗi', text);
+      } else {
+        soundService.playNotificationBell();
+        notifyBell('Thông báo hệ thống', text);
+      }
+
+      originalAlert.call(window, message);
+    };
+
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
+  return null;
+};
+
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<RootRedirect />} />
+    <NotificationProvider>
+      <GlobalActionNotifier />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<RootRedirect />} />
 
         {/* =========================================
             KHU VỰC DÀNH CHO KHÁCH HÀNG (MỌI ROLE ĐỀU VÀO ĐƯỢC) 
@@ -112,6 +147,7 @@ function App() {
         
       </Routes>
     </BrowserRouter>
+  </NotificationProvider>
   );
 }
 

@@ -274,6 +274,38 @@ exports.acceptRequest = async (req, res) => {
             'UPDATE service_requests SET status = "Accepted", responded_by = ?, responded_at = NOW(), response_note = "" WHERE request_id = ?',
             { replacements: [userId, id] }
         );
+
+        // Bắn thông báo Realtime cho Nhân viên điều hành (STAFF)
+        try {
+            const [srInfo] = await sequelize.query(`
+                SELECT sr.request_id, sr.requested_by, sr.service_type, sr.departure_id,
+                       p.partner_name, t.tour_name, d.departure_date
+                FROM service_requests sr
+                JOIN departures d ON sr.departure_id = d.departure_id
+                JOIN tours t ON d.tour_id = t.tour_id
+                LEFT JOIN partners p ON sr.partner_id = p.partner_id
+                WHERE sr.request_id = ?
+            `, { replacements: [id] });
+
+            if (srInfo.length > 0) {
+                const info = srInfo[0];
+                const pName = info.partner_name || 'Đối tác';
+                const depDateStr = info.departure_date ? new Date(info.departure_date).toLocaleDateString('vi-VN') : '';
+                await sequelize.query(`
+                    INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, is_read, action_url, created_at)
+                    VALUES (?, 'PARTNER_ACCEPTED', 'STAFF', ?, ?, ?, 0, 'partner_requests', NOW())
+                `, {
+                    replacements: [
+                        info.requested_by || null,
+                        `✅ Đối tác đã chấp nhận dịch vụ [${info.service_type}]`,
+                        `Đối tác "${pName}" đã XÁC NHẬN cung cấp dịch vụ ${info.service_type} cho đoàn "${info.tour_name}" (${depDateStr ? `Khởi hành: ${depDateStr}` : ''}) - Mã YC #${id}.`,
+                        info.departure_id
+                    ]
+                });
+            }
+        } catch (notifErr) {
+            console.error('Lỗi bắn notification acceptRequest:', notifErr);
+        }
         
         res.status(200).json({ success: true, message: 'Accepted successfully' });
     } catch(err) {
@@ -305,6 +337,38 @@ exports.rejectRequest = async (req, res) => {
             'UPDATE service_requests SET status = "Rejected", responded_by = ?, responded_at = NOW(), response_note = ? WHERE request_id = ?',
             { replacements: [userId, reason, id] }
         );
+
+        // Bắn thông báo Realtime cho Nhân viên điều hành (STAFF)
+        try {
+            const [srInfo] = await sequelize.query(`
+                SELECT sr.request_id, sr.requested_by, sr.service_type, sr.departure_id,
+                       p.partner_name, t.tour_name, d.departure_date
+                FROM service_requests sr
+                JOIN departures d ON sr.departure_id = d.departure_id
+                JOIN tours t ON d.tour_id = t.tour_id
+                LEFT JOIN partners p ON sr.partner_id = p.partner_id
+                WHERE sr.request_id = ?
+            `, { replacements: [id] });
+
+            if (srInfo.length > 0) {
+                const info = srInfo[0];
+                const pName = info.partner_name || 'Đối tác';
+                const depDateStr = info.departure_date ? new Date(info.departure_date).toLocaleDateString('vi-VN') : '';
+                await sequelize.query(`
+                    INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, is_read, action_url, created_at)
+                    VALUES (?, 'PARTNER_REJECTED', 'STAFF', ?, ?, ?, 0, 'partner_requests', NOW())
+                `, {
+                    replacements: [
+                        info.requested_by || null,
+                        `❌ Đối tác từ chối dịch vụ [${info.service_type}]`,
+                        `Đối tác "${pName}" đã TỪ CHỐI dịch vụ ${info.service_type} cho đoàn "${info.tour_name}" (${depDateStr ? `Khởi hành: ${depDateStr}` : ''}) - Mã YC #${id}. Lý do: ${reason}. Vui lòng liên hệ nhà cung cấp khác!`,
+                        info.departure_id
+                    ]
+                });
+            }
+        } catch (notifErr) {
+            console.error('Lỗi bắn notification rejectRequest:', notifErr);
+        }
         
         res.status(200).json({ success: true, message: 'Rejected successfully' });
     } catch(err) {

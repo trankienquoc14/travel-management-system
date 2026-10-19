@@ -523,7 +523,7 @@ const ServiceRequestCreate = ({ setActiveTab, initialDepartureId }) => {
                                                 </div>
                                             </td>
                                             <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>{new Date(d.departure_date).toLocaleDateString('vi-VN')}</td>
-                                            <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>{d.current_pax}/{d.max_slots}</td>
+                                            <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>{Math.max(0, d.current_pax || 0)}/{d.max_slots}</td>
                                             <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
                                                 {hasInitial ? (
                                                     <span style={{ display: 'inline-block', background: '#fef3c7', color: '#b45309', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>🟠 Đã tạo yêu cầu</span>

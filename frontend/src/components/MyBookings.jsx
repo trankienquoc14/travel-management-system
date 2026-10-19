@@ -1161,19 +1161,35 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                 const days = remoteDays;
                                 if (!days || days.length === 0) return <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>Không tìm thấy chi tiết lịch trình.</div>;
                                 
-                                let depLoc = 'Hồ Chí Minh';
+                                let depLoc = 'TP.HCM';
                                 let depTime = '06:00 AM';
                                 try {
                                     if (itineraryModalBooking.design_data) {
                                         const d = typeof itineraryModalBooking.design_data === 'string' ? JSON.parse(itineraryModalBooking.design_data) : itineraryModalBooking.design_data;
                                         if (d.departureCity) depLoc = d.departureCity;
                                         if (d.startTime) depTime = d.startTime;
+                                        if (!d.departureCity && d.days && d.days[0]) {
+                                            const fDay = d.days[0];
+                                            const rTitle = (fDay.route_title || '').toLowerCase();
+                                            const fAct = (fDay.activities?.[0]?.name || '').toLowerCase();
+                                            if (rTitle.includes('tp.hcm') || rTitle.includes('hồ chí minh') || fAct.includes('tp.hcm') || fAct.includes('hồ chí minh')) {
+                                                depLoc = 'TP.HCM';
+                                            } else if (rTitle.includes('hà nội') || fAct.includes('hà nội')) {
+                                                depLoc = 'Hà Nội';
+                                            } else if (rTitle.includes('đà nẵng') || fAct.includes('đà nẵng')) {
+                                                depLoc = 'Đà Nẵng';
+                                            } else if (fDay.start_destination_id) {
+                                                const foundD = (destinations || []).find(x => String(x.destination_id) === String(fDay.start_destination_id));
+                                                if (foundD) depLoc = foundD.destination_name;
+                                            }
+                                        }
                                     } else if (itineraryModalBooking.requirements) {
                                         const r = typeof itineraryModalBooking.requirements === 'string' ? JSON.parse(itineraryModalBooking.requirements) : itineraryModalBooking.requirements;
                                         if (r.departureCity) depLoc = r.departureCity;
                                         if (r.startTime) depTime = r.startTime;
                                     }
                                 } catch(e) {}
+                                if (depLoc === 'Hồ Chí Minh') depLoc = 'TP.HCM';
 
                                 return (
                                     <div className="itinerary-print-area" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>

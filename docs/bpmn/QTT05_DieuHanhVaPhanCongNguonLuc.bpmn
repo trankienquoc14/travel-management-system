@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT05_DieuHanhVaPhanCongNguonLuc"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT05_DieuHanhVaPhanCongNguonLuc">
+    <bpmn:participant id="Participant_QTT05_DieuHanhVaPhanCongNguonLuc" name="Quy Trình Điều Hành và Phân Công Nguồn Lực Tour (Tour Operations &amp; Dispatching)" processRef="Process_QTT05_DieuHanhVaPhanCongNguonLuc" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT05_DieuHanhVaPhanCongNguonLuc" name="Quy trình Điều hành, Đánh giá Khả thi và Phân công Nguồn lực Tour" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT05_DieuHanhVaPhanCongNguonLuc">
+      <bpmn:lane id="Lane_System" name="Hệ thống (Tour Service)">
+        <bpmn:flowNodeRef>Start_05</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CalcPax</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SaveAssignments</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DispatchNotifs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Fork_Notif</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Manager" name="Quản lý Tour (Tour Manager)">
+        <bpmn:flowNodeRef>Task_ReviewDepartures</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Decision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reviewing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CancelDeparture</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_DepartureCancelled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignResources</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Ready</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Guide" name="Hướng dẫn viên (Tour Guide)">
+        <bpmn:flowNodeRef>Task_GuideAccept</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Driver" name="Tài xế (Driver)">
+        <bpmn:flowNodeRef>Task_DriverAccept</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_05" name="Đến mốc T-21 / T-14 / T-7">
+      <bpmn:outgoing>Flow_Start_05_Task_CalcPax</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_CalcPax" name="Tính current_pax so với min_pax &amp; nhu cầu phòng">
+      <bpmn:incoming>Flow_Start_05_Task_CalcPax</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CalcPax_Task_ReviewDepartures</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_ReviewDepartures" name="Rà soát danh sách đợt khởi hành trong Tour Operations">
+      <bpmn:incoming>Flow_Task_CalcPax_Task_ReviewDepartures</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ReviewDepartures_GW_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Decision" name="Quyết định vận hành?">
+      <bpmn:incoming>Flow_Task_ReviewDepartures_GW_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_Decision_Task_Reviewing</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_Decision_Task_CancelDeparture</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_Decision_Task_AssignResources</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Reviewing" name="Tiếp tục xem xét (Reviewing) đến mốc kế tiếp">
+      <bpmn:incoming>Flow_GW_Decision_Task_Reviewing</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CancelDeparture" name="Đóng tour (Cancelled) - Kích hoạt bồi hoàn">
+      <bpmn:incoming>Flow_GW_Decision_Task_CancelDeparture</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CancelDeparture_End_DepartureCancelled</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_DepartureCancelled" name="Đợt khởi hành bị hủy">
+      <bpmn:incoming>Flow_Task_CancelDeparture_End_DepartureCancelled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_AssignResources" name="Chọn Hướng dẫn viên, Đội xe khả dụng &amp; Tài xế phụ trách">
+      <bpmn:incoming>Flow_GW_Decision_Task_AssignResources</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_AssignResources_Task_SaveAssignments</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_SaveAssignments" name="Lưu guide_assignments &amp; tour_vehicle_assignments (ASSIGNED)">
+      <bpmn:incoming>Flow_Task_AssignResources_Task_SaveAssignments</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SaveAssignments_Task_DispatchNotifs</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_DispatchNotifs" name="Phát thông báo GUIDE_ASSIGNED và DRIVER_ASSIGNED">
+      <bpmn:incoming>Flow_Task_SaveAssignments_Task_DispatchNotifs</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_DispatchNotifs_Fork_Notif</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Fork_Notif" name="Phân luồng thông báo">
+      <bpmn:incoming>Flow_Task_DispatchNotifs_Fork_Notif</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fork_Notif_Task_GuideAccept</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Fork_Notif_Task_DriverAccept</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_GuideAccept" name="Xem lịch trình, danh sách đoàn &amp; công tác đón khách">
+      <bpmn:incoming>Flow_Fork_Notif_Task_GuideAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_GuideAccept_End_Ready</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_DriverAccept" name="Kiểm tra xe, điểm đón &amp; phối hợp Hướng dẫn viên">
+      <bpmn:incoming>Flow_Fork_Notif_Task_DriverAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_DriverAccept_End_Ready</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Ready" name="Đoàn sẵn sàng xuất phát">
+      <bpmn:incoming>Flow_Task_GuideAccept_End_Ready</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_DriverAccept_End_Ready</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_05_Task_CalcPax" sourceRef="Start_05" targetRef="Task_CalcPax" />
+    <bpmn:sequenceFlow id="Flow_Task_CalcPax_Task_ReviewDepartures" sourceRef="Task_CalcPax" targetRef="Task_ReviewDepartures" />
+    <bpmn:sequenceFlow id="Flow_Task_ReviewDepartures_GW_Decision" sourceRef="Task_ReviewDepartures" targetRef="GW_Decision" />
+    <bpmn:sequenceFlow id="Flow_GW_Decision_Task_Reviewing" sourceRef="GW_Decision" targetRef="Task_Reviewing" name="Tiếp tục gom" />
+    <bpmn:sequenceFlow id="Flow_GW_Decision_Task_CancelDeparture" sourceRef="GW_Decision" targetRef="Task_CancelDeparture" name="Không đủ khách" />
+    <bpmn:sequenceFlow id="Flow_Task_CancelDeparture_End_DepartureCancelled" sourceRef="Task_CancelDeparture" targetRef="End_DepartureCancelled" />
+    <bpmn:sequenceFlow id="Flow_GW_Decision_Task_AssignResources" sourceRef="GW_Decision" targetRef="Task_AssignResources" name="Xác nhận vận hành" />
+    <bpmn:sequenceFlow id="Flow_Task_AssignResources_Task_SaveAssignments" sourceRef="Task_AssignResources" targetRef="Task_SaveAssignments" />
+    <bpmn:sequenceFlow id="Flow_Task_SaveAssignments_Task_DispatchNotifs" sourceRef="Task_SaveAssignments" targetRef="Task_DispatchNotifs" />
+    <bpmn:sequenceFlow id="Flow_Task_DispatchNotifs_Fork_Notif" sourceRef="Task_DispatchNotifs" targetRef="Fork_Notif" />
+    <bpmn:sequenceFlow id="Flow_Fork_Notif_Task_GuideAccept" sourceRef="Fork_Notif" targetRef="Task_GuideAccept" />
+    <bpmn:sequenceFlow id="Flow_Fork_Notif_Task_DriverAccept" sourceRef="Fork_Notif" targetRef="Task_DriverAccept" />
+    <bpmn:sequenceFlow id="Flow_Task_GuideAccept_End_Ready" sourceRef="Task_GuideAccept" targetRef="End_Ready" />
+    <bpmn:sequenceFlow id="Flow_Task_DriverAccept_End_Ready" sourceRef="Task_DriverAccept" targetRef="End_Ready" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT05_DieuHanhVaPhanCongNguonLuc">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT05_DieuHanhVaPhanCongNguonLuc" bpmnElement="Collaboration_QTT05_DieuHanhVaPhanCongNguonLuc">
+      <bpmndi:BPMNShape id="Participant_QTT05_DieuHanhVaPhanCongNguonLuc_di" bpmnElement="Participant_QTT05_DieuHanhVaPhanCongNguonLuc" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1720" height="710" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1690" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Manager_di" bpmnElement="Lane_Manager" isHorizontal="true">
+        <dc:Bounds x="70" y="250" width="1690" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Guide_di" bpmnElement="Lane_Guide" isHorizontal="true">
+        <dc:Bounds x="70" y="460" width="1690" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Driver_di" bpmnElement="Lane_Driver" isHorizontal="true">
+        <dc:Bounds x="70" y="620" width="1690" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_05_di" bpmnElement="Start_05">
+        <dc:Bounds x="180" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CalcPax_di" bpmnElement="Task_CalcPax">
+        <dc:Bounds x="260" y="115" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewDepartures_di" bpmnElement="Task_ReviewDepartures">
+        <dc:Bounds x="460" y="295" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Decision_di" bpmnElement="GW_Decision">
+        <dc:Bounds x="665" y="305" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Reviewing_di" bpmnElement="Task_Reviewing">
+        <dc:Bounds x="620" y="390" width="150" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CancelDeparture_di" bpmnElement="Task_CancelDeparture">
+        <dc:Bounds x="800" y="390" width="150" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_DepartureCancelled_di" bpmnElement="End_DepartureCancelled">
+        <dc:Bounds x="985" y="397" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AssignResources_di" bpmnElement="Task_AssignResources">
+        <dc:Bounds x="800" y="295" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SaveAssignments_di" bpmnElement="Task_SaveAssignments">
+        <dc:Bounds x="1030" y="115" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DispatchNotifs_di" bpmnElement="Task_DispatchNotifs">
+        <dc:Bounds x="1240" y="115" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Fork_Notif_di" bpmnElement="Fork_Notif">
+        <dc:Bounds x="1445" y="125" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GuideAccept_di" bpmnElement="Task_GuideAccept">
+        <dc:Bounds x="1520" y="505" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DriverAccept_di" bpmnElement="Task_DriverAccept">
+        <dc:Bounds x="1520" y="665" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Ready_di" bpmnElement="End_Ready">
+        <dc:Bounds x="1710" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_05_Task_CalcPax_di" bpmnElement="Flow_Start_05_Task_CalcPax">
+        <di:waypoint x="216" y="148" />
+        <di:waypoint x="260" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CalcPax_Task_ReviewDepartures_di" bpmnElement="Flow_Task_CalcPax_Task_ReviewDepartures">
+        <di:waypoint x="415" y="150" />
+        <di:waypoint x="440" y="150" />
+        <di:waypoint x="440" y="330" />
+        <di:waypoint x="460" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ReviewDepartures_GW_Decision_di" bpmnElement="Flow_Task_ReviewDepartures_GW_Decision">
+        <di:waypoint x="615" y="330" />
+        <di:waypoint x="665" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Decision_Task_Reviewing_di" bpmnElement="Flow_GW_Decision_Task_Reviewing">
+        <di:waypoint x="690" y="355" />
+        <di:waypoint x="695" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="693" y="358" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Decision_Task_CancelDeparture_di" bpmnElement="Flow_GW_Decision_Task_CancelDeparture">
+        <di:waypoint x="715" y="350" />
+        <di:waypoint x="800" y="415" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="758" y="368" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CancelDeparture_End_DepartureCancelled_di" bpmnElement="Flow_Task_CancelDeparture_End_DepartureCancelled">
+        <di:waypoint x="950" y="415" />
+        <di:waypoint x="985" y="415" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Decision_Task_AssignResources_di" bpmnElement="Flow_GW_Decision_Task_AssignResources">
+        <di:waypoint x="715" y="330" />
+        <di:waypoint x="800" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="758" y="315" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_AssignResources_Task_SaveAssignments_di" bpmnElement="Flow_Task_AssignResources_Task_SaveAssignments">
+        <di:waypoint x="960" y="330" />
+        <di:waypoint x="1010" y="330" />
+        <di:waypoint x="1010" y="150" />
+        <di:waypoint x="1030" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SaveAssignments_Task_DispatchNotifs_di" bpmnElement="Flow_Task_SaveAssignments_Task_DispatchNotifs">
+        <di:waypoint x="1190" y="150" />
+        <di:waypoint x="1240" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_DispatchNotifs_Fork_Notif_di" bpmnElement="Flow_Task_DispatchNotifs_Fork_Notif">
+        <di:waypoint x="1400" y="150" />
+        <di:waypoint x="1445" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Fork_Notif_Task_GuideAccept_di" bpmnElement="Flow_Fork_Notif_Task_GuideAccept">
+        <di:waypoint x="1470" y="175" />
+        <di:waypoint x="1470" y="540" />
+        <di:waypoint x="1520" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Fork_Notif_Task_DriverAccept_di" bpmnElement="Flow_Fork_Notif_Task_DriverAccept">
+        <di:waypoint x="1470" y="175" />
+        <di:waypoint x="1470" y="700" />
+        <di:waypoint x="1520" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_GuideAccept_End_Ready_di" bpmnElement="Flow_Task_GuideAccept_End_Ready">
+        <di:waypoint x="1670" y="540" />
+        <di:waypoint x="1690" y="540" />
+        <di:waypoint x="1690" y="338" />
+        <di:waypoint x="1710" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_DriverAccept_End_Ready_di" bpmnElement="Flow_Task_DriverAccept_End_Ready">
+        <di:waypoint x="1670" y="700" />
+        <di:waypoint x="1690" y="700" />
+        <di:waypoint x="1690" y="338" />
+        <di:waypoint x="1710" y="338" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

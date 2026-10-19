@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT08_DatDichVuDonLe"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT08_DatDichVuDonLe">
+    <bpmn:participant id="Participant_QTT08_DatDichVuDonLe" name="Quy Trình Đặt Dịch Vụ Đơn Lẻ (Standalone Service Booking &amp; Partner Fulfillment)" processRef="Process_QTT08_DatDichVuDonLe" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT08_DatDichVuDonLe" name="Quy trình Đặt dịch vụ đơn lẻ và Phối hợp Đối tác" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT08_DatDichVuDonLe">
+      <bpmn:lane id="Lane_Customer" name="Khách hàng (Customer)">
+        <bpmn:flowNodeRef>Start_08</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_BookService</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_VoucherIssued</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Staff" name="Nhân viên văn phòng">
+        <bpmn:flowNodeRef>Task_StaffForward</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfirmService</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Partner" name="Đối tác cung ứng (Partner)">
+        <bpmn:flowNodeRef>Task_PartnerReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_PartnerAccept</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RejectService</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ServiceRejected</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Hệ thống (Booking Service)">
+        <bpmn:flowNodeRef>Task_CheckPartnerAssigned</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_HasPartner</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AutoForward</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GenVoucher</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_08" name="Chọn dịch vụ lẻ">
+      <bpmn:outgoing>Flow_Start_08_Task_BookService</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_BookService" name="Nhập số lượng, ngày sử dụng &amp; phương thức thanh toán">
+      <bpmn:incoming>Flow_Start_08_Task_BookService</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_BookService_Task_CheckPartnerAssigned</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_CheckPartnerAssigned" name="Kiểm tra service_id đã gắn đối tác cụ thể chưa">
+      <bpmn:incoming>Flow_Task_BookService_Task_CheckPartnerAssigned</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CheckPartnerAssigned_GW_HasPartner</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_HasPartner" name="Đã có đối tác gắn sẵn?">
+      <bpmn:incoming>Flow_Task_CheckPartnerAssigned_GW_HasPartner</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_HasPartner_Task_StaffForward</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_HasPartner_Task_AutoForward</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_StaffForward" name="Chọn đối tác phù hợp &amp; bấm Chuyển sang cho đối tác">
+      <bpmn:incoming>Flow_GW_HasPartner_Task_StaffForward</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_StaffForward_Task_AutoForward</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_AutoForward" name="Tạo service_requests (Pending) &amp; gửi thông báo">
+      <bpmn:incoming>Flow_Task_StaffForward_Task_AutoForward</bpmn:incoming>
+      <bpmn:incoming>Flow_GW_HasPartner_Task_AutoForward</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_AutoForward_Task_PartnerReview</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_PartnerReview" name="Xem yêu cầu trong cổng đối tác &amp; đối soát công suất">
+      <bpmn:incoming>Flow_Task_AutoForward_Task_PartnerReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_PartnerReview_GW_PartnerAccept</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_PartnerAccept" name="Đối tác xác nhận?">
+      <bpmn:incoming>Flow_Task_PartnerReview_GW_PartnerAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_PartnerAccept_Task_RejectService</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_PartnerAccept_Task_ConfirmService</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_RejectService" name="Từ chối yêu cầu (Không còn dịch vụ)">
+      <bpmn:incoming>Flow_GW_PartnerAccept_Task_RejectService</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_RejectService_End_ServiceRejected</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_ServiceRejected" name="Từ chối &amp; hoàn tiền cho khách">
+      <bpmn:incoming>Flow_Task_RejectService_End_ServiceRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_ConfirmService" name="Xác nhận dịch vụ trong phân hệ quản lý">
+      <bpmn:incoming>Flow_GW_PartnerAccept_Task_ConfirmService</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ConfirmService_Task_GenVoucher</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_GenVoucher" name="Tạo mã voucher VOUCHER-XXXXXX &amp; cập nhật Confirmed">
+      <bpmn:incoming>Flow_Task_ConfirmService_Task_GenVoucher</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_GenVoucher_End_VoucherIssued</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_VoucherIssued" name="Khách nhận Voucher &amp; sử dụng dịch vụ">
+      <bpmn:incoming>Flow_Task_GenVoucher_End_VoucherIssued</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_08_Task_BookService" sourceRef="Start_08" targetRef="Task_BookService" />
+    <bpmn:sequenceFlow id="Flow_Task_BookService_Task_CheckPartnerAssigned" sourceRef="Task_BookService" targetRef="Task_CheckPartnerAssigned" />
+    <bpmn:sequenceFlow id="Flow_Task_CheckPartnerAssigned_GW_HasPartner" sourceRef="Task_CheckPartnerAssigned" targetRef="GW_HasPartner" />
+    <bpmn:sequenceFlow id="Flow_GW_HasPartner_Task_StaffForward" sourceRef="GW_HasPartner" targetRef="Task_StaffForward" name="Chưa gắn" />
+    <bpmn:sequenceFlow id="Flow_Task_StaffForward_Task_AutoForward" sourceRef="Task_StaffForward" targetRef="Task_AutoForward" />
+    <bpmn:sequenceFlow id="Flow_GW_HasPartner_Task_AutoForward" sourceRef="GW_HasPartner" targetRef="Task_AutoForward" name="Đã có sẵn" />
+    <bpmn:sequenceFlow id="Flow_Task_AutoForward_Task_PartnerReview" sourceRef="Task_AutoForward" targetRef="Task_PartnerReview" />
+    <bpmn:sequenceFlow id="Flow_Task_PartnerReview_GW_PartnerAccept" sourceRef="Task_PartnerReview" targetRef="GW_PartnerAccept" />
+    <bpmn:sequenceFlow id="Flow_GW_PartnerAccept_Task_RejectService" sourceRef="GW_PartnerAccept" targetRef="Task_RejectService" name="Từ chối" />
+    <bpmn:sequenceFlow id="Flow_Task_RejectService_End_ServiceRejected" sourceRef="Task_RejectService" targetRef="End_ServiceRejected" />
+    <bpmn:sequenceFlow id="Flow_GW_PartnerAccept_Task_ConfirmService" sourceRef="GW_PartnerAccept" targetRef="Task_ConfirmService" name="Chấp thuận" />
+    <bpmn:sequenceFlow id="Flow_Task_ConfirmService_Task_GenVoucher" sourceRef="Task_ConfirmService" targetRef="Task_GenVoucher" />
+    <bpmn:sequenceFlow id="Flow_Task_GenVoucher_End_VoucherIssued" sourceRef="Task_GenVoucher" targetRef="End_VoucherIssued" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT08_DatDichVuDonLe">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT08_DatDichVuDonLe" bpmnElement="Collaboration_QTT08_DatDichVuDonLe">
+      <bpmndi:BPMNShape id="Participant_QTT08_DatDichVuDonLe_di" bpmnElement="Participant_QTT08_DatDichVuDonLe" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1660" height="720" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1630" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Staff_di" bpmnElement="Lane_Staff" isHorizontal="true">
+        <dc:Bounds x="70" y="250" width="1630" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Partner_di" bpmnElement="Lane_Partner" isHorizontal="true">
+        <dc:Bounds x="70" y="430" width="1630" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="610" width="1630" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_08_di" bpmnElement="Start_08">
+        <dc:Bounds x="180" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BookService_di" bpmnElement="Task_BookService">
+        <dc:Bounds x="260" y="115" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckPartnerAssigned_di" bpmnElement="Task_CheckPartnerAssigned">
+        <dc:Bounds x="260" y="655" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_HasPartner_di" bpmnElement="GW_HasPartner">
+        <dc:Bounds x="475" y="665" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StaffForward_di" bpmnElement="Task_StaffForward">
+        <dc:Bounds x="425" y="295" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AutoForward_di" bpmnElement="Task_AutoForward">
+        <dc:Bounds x="620" y="655" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PartnerReview_di" bpmnElement="Task_PartnerReview">
+        <dc:Bounds x="825" y="475" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_PartnerAccept_di" bpmnElement="GW_PartnerAccept">
+        <dc:Bounds x="1030" y="485" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejectService_di" bpmnElement="Task_RejectService">
+        <dc:Bounds x="980" y="560" width="150" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ServiceRejected_di" bpmnElement="End_ServiceRejected">
+        <dc:Bounds x="1160" y="567" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConfirmService_di" bpmnElement="Task_ConfirmService">
+        <dc:Bounds x="1180" y="295" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GenVoucher_di" bpmnElement="Task_GenVoucher">
+        <dc:Bounds x="1385" y="655" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_VoucherIssued_di" bpmnElement="End_VoucherIssued">
+        <dc:Bounds x="1595" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_08_Task_BookService_di" bpmnElement="Flow_Start_08_Task_BookService">
+        <di:waypoint x="216" y="148" />
+        <di:waypoint x="260" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_BookService_Task_CheckPartnerAssigned_di" bpmnElement="Flow_Task_BookService_Task_CheckPartnerAssigned">
+        <di:waypoint x="337" y="185" />
+        <di:waypoint x="337" y="655" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CheckPartnerAssigned_GW_HasPartner_di" bpmnElement="Flow_Task_CheckPartnerAssigned_GW_HasPartner">
+        <di:waypoint x="415" y="690" />
+        <di:waypoint x="475" y="690" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_HasPartner_Task_StaffForward_di" bpmnElement="Flow_GW_HasPartner_Task_StaffForward">
+        <di:waypoint x="500" y="665" />
+        <di:waypoint x="500" y="330" />
+        <di:waypoint x="575" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="500" y="483" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_StaffForward_Task_AutoForward_di" bpmnElement="Flow_Task_StaffForward_Task_AutoForward">
+        <di:waypoint x="500" y="365" />
+        <di:waypoint x="500" y="690" />
+        <di:waypoint x="620" y="690" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_HasPartner_Task_AutoForward_di" bpmnElement="Flow_GW_HasPartner_Task_AutoForward">
+        <di:waypoint x="525" y="690" />
+        <di:waypoint x="620" y="690" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="573" y="675" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_AutoForward_Task_PartnerReview_di" bpmnElement="Flow_Task_AutoForward_Task_PartnerReview">
+        <di:waypoint x="775" y="690" />
+        <di:waypoint x="805" y="690" />
+        <di:waypoint x="805" y="510" />
+        <di:waypoint x="825" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_PartnerReview_GW_PartnerAccept_di" bpmnElement="Flow_Task_PartnerReview_GW_PartnerAccept">
+        <di:waypoint x="980" y="510" />
+        <di:waypoint x="1030" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PartnerAccept_Task_RejectService_di" bpmnElement="Flow_GW_PartnerAccept_Task_RejectService">
+        <di:waypoint x="1055" y="535" />
+        <di:waypoint x="1055" y="560" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1055" y="533" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_RejectService_End_ServiceRejected_di" bpmnElement="Flow_Task_RejectService_End_ServiceRejected">
+        <di:waypoint x="1130" y="585" />
+        <di:waypoint x="1160" y="585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PartnerAccept_Task_ConfirmService_di" bpmnElement="Flow_GW_PartnerAccept_Task_ConfirmService">
+        <di:waypoint x="1080" y="510" />
+        <di:waypoint x="1110" y="510" />
+        <di:waypoint x="1110" y="330" />
+        <di:waypoint x="1180" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1095" y="495" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ConfirmService_Task_GenVoucher_di" bpmnElement="Flow_Task_ConfirmService_Task_GenVoucher">
+        <di:waypoint x="1335" y="330" />
+        <di:waypoint x="1365" y="330" />
+        <di:waypoint x="1365" y="690" />
+        <di:waypoint x="1385" y="690" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_GenVoucher_End_VoucherIssued_di" bpmnElement="Flow_Task_GenVoucher_End_VoucherIssued">
+        <di:waypoint x="1545" y="690" />
+        <di:waypoint x="1613" y="690" />
+        <di:waypoint x="1613" y="166" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

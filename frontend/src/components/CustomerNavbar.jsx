@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import UserProfile from './UserProfile';
+import soundService from '../utils/soundService';
+import { notifyBell } from '../context/NotificationContext';
 
 const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [user, setUser] = useState(null);
@@ -17,6 +19,9 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
     // Notifications state (Realtime từ Backend)
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const prevCustUnreadCountRef = useRef(0);
+    const knownCustNotifIdsRef = useRef(new Set());
+    const isInitialCustFetchRef = useRef(true);
 
     // Favorites state
     const [favorites, setFavorites] = useState([
@@ -45,8 +50,27 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                setNotifications(res.data.data || []);
-                setUnreadCount(Number(res.data.unreadCount || 0));
+                const newNotifs = res.data.data || [];
+                const newUnread = Number(res.data.unreadCount || 0);
+
+                if (isInitialCustFetchRef.current) {
+                    newNotifs.forEach(n => knownCustNotifIdsRef.current.add(n.notification_id));
+                    isInitialCustFetchRef.current = false;
+                } else {
+                    const newlyArrived = newNotifs.filter(n => !knownCustNotifIdsRef.current.has(n.notification_id));
+                    if (newlyArrived.length > 0) {
+                        soundService.playNotificationBell();
+                        const latest = newlyArrived[0];
+                        notifyBell(latest.title, latest.content, latest.action_url || '/my-bookings');
+                        newlyArrived.forEach(n => knownCustNotifIdsRef.current.add(n.notification_id));
+                    } else if (newUnread > prevCustUnreadCountRef.current && prevCustUnreadCountRef.current >= 0) {
+                        soundService.playNotificationBell();
+                    }
+                }
+
+                prevCustUnreadCountRef.current = newUnread;
+                setNotifications(newNotifs);
+                setUnreadCount(newUnread);
             }
         } catch (err) {
             console.error("Lỗi lấy thông báo khách hàng:", err);
@@ -61,13 +85,13 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
             fetchCustomerNotifications();
         }
 
-        // Thiết lập Realtime Polling 15s/lần cho thông báo khách hàng
+        // Thiết lập Realtime Polling 4s/lần cho thông báo khách hàng
         const notifTimer = setInterval(() => {
             const token = localStorage.getItem('token');
             if (token) {
                 fetchCustomerNotifications();
             }
-        }, 15000);
+        }, 4000);
 
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

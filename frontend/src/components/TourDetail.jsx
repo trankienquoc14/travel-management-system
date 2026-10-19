@@ -710,7 +710,13 @@ const TourDetail = () => {
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                                             <span style={{ color: '#64748b' }}>📍 Khởi hành:</span>
-                                            <strong style={{ color: '#0f172a', textAlign: 'right' }}>{destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[0]?.start_destination_id))?.destination_name || 'Đang cập nhật'}</strong>
+                                            <strong style={{ color: '#0f172a', textAlign: 'right' }}>
+                                                {(() => {
+                                                    const dName = destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[0]?.start_destination_id))?.destination_name;
+                                                    if (dName === 'Hồ Chí Minh') return 'TP.HCM';
+                                                    return dName || 'Đang cập nhật';
+                                                })()}
+                                            </strong>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                                             <span style={{ color: '#64748b' }}>⏱️ Thời gian:</span>

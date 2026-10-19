@@ -43,6 +43,7 @@ import CustomerTourBuilder from './CustomerTourBuilder';
 import AdminUserManagement from './AdminUserManagement';
 import GPSCheckInWidget from './GPSCheckInWidget';
 import GeneralOverview from './GeneralOverview';
+import OfficeStaffDashboard from './OfficeStaffDashboard';
 import PersonalAttendance from './PersonalAttendance';
 import HRLeaveRequest from './HRLeaveRequest';
 import DriverWorkspace from './DriverWorkspace';
@@ -55,10 +56,10 @@ import StaffLiveChat from './StaffLiveChat';
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [isPersonalOpen, setIsPersonalOpen] = useState(false);
-  const [isWorkOpen, setIsWorkOpen] = useState(false);
+  const [isWorkOpen, setIsWorkOpen] = useState(true);
 
   // States toggle cho từng cụm menu trong Sidebar
-  const [isOverviewGroupOpen, setIsOverviewGroupOpen] = useState(false);
+  const [isOverviewGroupOpen, setIsOverviewGroupOpen] = useState(true);
   const [isRequestGroupOpen, setIsRequestGroupOpen] = useState(false);
   const [isServiceRequestGroupOpen, setIsServiceRequestGroupOpen] = useState(false);
   const [isTourGroupOpen, setIsTourGroupOpen] = useState(false);
@@ -269,9 +270,9 @@ const Dashboard = () => {
             <ul className="sidebar-menu" style={{ flex: 'none', overflowY: 'visible', paddingRight: 0 }}>
 
               {/* ========================================================= */}
-              {/* 1. TỔNG QUAN & PHÊ DUYỆT (Quản lý Tour & Admin)           */}
+              {/* 1. TỔNG QUAN & BÁO CÁO (Nhân viên VP, Quản lý Tour & Admin) */}
               {/* ========================================================= */}
-              {(isTourManager || isAdmin) && (
+              {(isOfficeStaff || isTourManager || isAdmin) && (
                 <>
                   <li 
                     onClick={() => setIsOverviewGroupOpen(!isOverviewGroupOpen)}
@@ -292,7 +293,7 @@ const Dashboard = () => {
                       borderLeft: '4px solid #3b82f6'
                     }}
                   >
-                    <span>📊 TỔNG QUAN & PHÊ DUYỆT</span>
+                    <span>📊 TỔNG QUAN & BÁO CÁO</span>
                     <span style={{ fontSize: '10px', color: '#64748b' }}>{isOverviewGroupOpen ? '▲' : '▼'}</span>
                   </li>
                   {isOverviewGroupOpen && (
@@ -300,9 +301,11 @@ const Dashboard = () => {
                       <li className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
                         📊 Tổng quan & Báo cáo
                       </li>
-                      <li className={activeTab === 'approve_quotes' ? 'active' : ''} onClick={() => setActiveTab('approve_quotes')}>
-                        📝 Phê duyệt Thiết kế
-                      </li>
+                      {(isTourManager || isAdmin) && (
+                        <li className={activeTab === 'approve_quotes' ? 'active' : ''} onClick={() => setActiveTab('approve_quotes')}>
+                          📝 Phê duyệt Thiết kế
+                        </li>
+                      )}
                     </>
                   )}
                 </>
@@ -867,8 +870,17 @@ const Dashboard = () => {
             />
           )}
 
-          {/* Vùng chung: Trung tâm Báo cáo Tổng quan Tập trung */}
-          {activeTab === 'overview' && (isTourManager || isAdmin) && <GeneralOverview />}
+          {/* Vùng chung: Trung tâm Báo cáo Tổng quan & Dashboard */}
+          {activeTab === 'overview' && (isOfficeStaff || isTourManager || isAdmin) && (
+            isOfficeStaff ? (
+              <OfficeStaffDashboard 
+                onNavigateToOrders={() => setActiveTab('orders')}
+                onNavigateToChangeRequests={() => setActiveTab('change_request')}
+              />
+            ) : (
+              <GeneralOverview />
+            )
+          )}
 
           {/* Vùng Tư vấn & Chat Trực Tuyến với Khách Hàng (Nhân viên VP, Quản lý Tour, Admin) */}
           {activeTab === 'staff_live_chat' && (isOfficeStaff || isAdmin || isTourManager) && (

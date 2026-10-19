@@ -370,11 +370,10 @@ exports.getEmployeeTourStats = async (req, res) => {
 
     // 3. Lấy tổng số hành khách đã dẫn dắt (Confirmed bookings)
     const [passengersGuided] = await sequelize.query(`
-      SELECT COUNT(bp.passenger_id) as count 
+      SELECT COALESCE(SUM(b.num_people), 0) as count 
       FROM guide_assignments ga 
       JOIN guides g ON ga.guide_id = g.guide_id 
       JOIN bookings b ON ga.departure_id = b.departure_id 
-      JOIN booking_passengers bp ON b.booking_id = bp.booking_id
       WHERE g.user_id = ? AND b.booking_status = 'Confirmed'
     `, { replacements: [id] });
 
@@ -403,7 +402,7 @@ exports.getEmployeeTourStats = async (req, res) => {
     const [departuresList] = await sequelize.query(`
       SELECT 
         d.departure_id, d.departure_date, d.status, t.tour_name, t.tour_id,
-        (SELECT COUNT(*) FROM bookings b JOIN booking_passengers bp ON b.booking_id = bp.booking_id WHERE b.departure_id = d.departure_id AND b.booking_status = 'Confirmed') as passenger_count,
+        (SELECT COALESCE(SUM(b.num_people), 0) FROM bookings b WHERE b.departure_id = d.departure_id AND b.booking_status = 'Confirmed') as passenger_count,
         (SELECT COUNT(*) FROM incident_reports ir WHERE ir.departure_id = d.departure_id) as incident_count
       FROM guide_assignments ga
       JOIN guides g ON ga.guide_id = g.guide_id

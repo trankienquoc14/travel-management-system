@@ -1,6 +1,7 @@
 const https = require('https');
 const { calculateRooms } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
+const { sendBookingConfirmationEmail, sendPaymentSuccessEmail } = require('../utils/emailService');
 
 // =========================================================================
 // CẤU HÌNH SEPAY & VIETQR REALTIME (TPBANK - DOAN THI TRAM - 00000419627)
@@ -219,25 +220,60 @@ let requiredRooms = 0; let singleRoomCount = 0;
       }
     }
 
+    const contact_name = req.body.contact_name || req.body.contact_info?.fullName || null;
+    const contact_email = req.body.contact_email || req.body.contact_info?.email || null;
+    const contact_phone = req.body.contact_phone || req.body.contact_info?.phone || null;
+    const contact_address = req.body.contact_address || req.body.contact_info?.address || null;
+
     // 1. Tạo đơn đặt hàng (Dùng dấu ? an toàn chống SQL Injection)
     const [result] = await sequelize.query(`
-      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown, required_rooms, single_room_count)
-      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?, ?, ?, ?)
+      INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown, required_rooms, single_room_count, contact_name, contact_email, contact_phone, contact_address)
+      VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?, ?, ?, ?, ?, ?, ?, ?)
     `, {
-      replacements: [customer_id, departure_id, count, amount, notes || null, req.body.breakdown ? JSON.stringify(req.body.breakdown) : null, requiredRooms, singleRoomCount],
+      replacements: [customer_id, departure_id, count, amount, notes || null, req.body.breakdown ? JSON.stringify(req.body.breakdown) : null, requiredRooms, singleRoomCount, contact_name, contact_email, contact_phone, contact_address],
       transaction
     });
 
     const newBookingId = result;
 
     // Insert passengers if provided
+    let insertedPaxCount = 0;
     if (req.body.passengers && Array.isArray(req.body.passengers)) {
       for (const p of req.body.passengers) {
+        if (p.full_name && p.full_name.trim() !== '') {
+          await sequelize.query(`
+            INSERT INTO booking_passengers (booking_id, full_name, identity_number, gender, birth_date, is_checked_in, passenger_type, single_room)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+          `, {
+            replacements: [newBookingId, p.full_name.trim(), p.identity_number || null, p.gender || 'Other', p.birth_date || null, p.passenger_type || 'ADULT', !!p.single_room],
+            transaction
+          });
+          insertedPaxCount++;
+        }
+      }
+    }
+
+    // Nếu khách hàng không nhập danh sách hành khách chi tiết, tự động tạo hành khách mặc định
+    if (insertedPaxCount < count) {
+      let defaultName = contact_name;
+      let defaultPhone = contact_phone;
+      if (!defaultName) {
+        const [uRows] = await sequelize.query('SELECT full_name, phone FROM users WHERE user_id = ?', {
+          replacements: [customer_id],
+          transaction
+        });
+        if (uRows.length > 0) {
+          defaultName = uRows[0].full_name;
+          defaultPhone = uRows[0].phone;
+        }
+      }
+      for (let i = insertedPaxCount; i < count; i++) {
+        const paxName = i === 0 ? (defaultName || 'Khách đặt tour') : `${defaultName || 'Hành khách'} (${i + 1})`;
         await sequelize.query(`
           INSERT INTO booking_passengers (booking_id, full_name, identity_number, gender, birth_date, is_checked_in, passenger_type, single_room)
-          VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+          VALUES (?, ?, ?, 'Other', NULL, 0, 'ADULT', 0)
         `, {
-          replacements: [newBookingId, p.full_name, p.identity_number || null, p.gender || 'Other', p.birth_date || null, p.passenger_type || 'ADULT', !!p.single_room],
+          replacements: [newBookingId, paxName, defaultPhone || null],
           transaction
         });
       }
@@ -277,11 +313,31 @@ let requiredRooms = 0; let singleRoomCount = 0;
         ],
         transaction
       });
+
+      // Bổ sung thông báo tức thì cho Nhân viên điều hành (STAFF)
+      const [custRow] = await sequelize.query(`SELECT full_name FROM users WHERE user_id = ?`, { replacements: [customer_id], transaction });
+      const customerFullName = custRow[0]?.full_name || contact_name || 'Khách hàng';
+      await sequelize.query(`
+        INSERT INTO notifications (type, target_role, title, content, is_read, action_url, created_at)
+        VALUES ('BOOKING_NEW', 'STAFF', ?, ?, 0, 'orders', NOW())
+      `, {
+        replacements: [
+          `🛒 Đơn đặt tour mới #${newBookingId}`,
+          `Khách hàng ${customerFullName} vừa đặt tour "${tourName}" (${count} khách - ${new Intl.NumberFormat('vi-VN').format(amount)} ₫). Mã đơn #${newBookingId}.`
+        ],
+        transaction
+      });
     } catch (notifErr) {
       console.error('Lỗi tạo notification createBooking:', notifErr);
     }
 
     await transaction.commit();
+
+    // 5. Gửi email xác nhận đặt tour kèm toàn bộ thông tin chi tiết về email khách đã điền
+    sendBookingConfirmationEmail(newBookingId).catch(mailErr => {
+      console.error('❌ [EmailService] Lỗi gửi email xác nhận đặt tour createBooking:', mailErr);
+    });
+
     res.status(200).json({ success: true, message: 'Đặt tour thành công!', booking_id: newBookingId, transfer_content: txnCode });
   } catch (error) {
     await transaction.rollback();
@@ -368,6 +424,18 @@ exports.confirmPayment = async (req, res) => {
           ],
           transaction
         });
+
+        // Bắn thông báo realtime cho Nhân viên (STAFF)
+        await sequelize.query(`
+          INSERT INTO notifications (type, target_role, title, content, is_read, action_url, created_at)
+          VALUES ('PAYMENT_SUCCESS', 'STAFF', ?, ?, 0, 'orders', NOW())
+        `, {
+          replacements: [
+            `💰 Đơn hàng #${bookingId} đã thanh toán`,
+            `Đơn tour #${bookingId} (${bkInfo[0].tour_name}) đã được xác nhận thanh toán thành công.`
+          ],
+          transaction
+        });
       }
     } catch(notifErr) {
       console.error('Lỗi tạo notification confirmPayment:', notifErr);
@@ -375,6 +443,9 @@ exports.confirmPayment = async (req, res) => {
 
     await transaction.commit();
     await autoSyncAttendanceForTourDate(bookingId);
+    sendPaymentSuccessEmail(bookingId).catch(mailErr => {
+      console.error('❌ [EmailService] Lỗi gửi email thanh toán thành công confirmPayment:', mailErr);
+    });
     res.status(200).json({ success: true, message: '✅ Cập nhật trạng thái thanh toán thành công!' });
   } catch (error) {
     await transaction.rollback();
@@ -464,6 +535,9 @@ exports.confirmCashByStaff = async (req, res) => {
 
     await transaction.commit();
     await autoSyncAttendanceForTourDate(bookingId);
+    sendPaymentSuccessEmail(bookingId).catch(mailErr => {
+      console.error('❌ [EmailService] Lỗi gửi email xác nhận tiền mặt confirmCashByStaff:', mailErr);
+    });
     res.status(200).json({ success: true, message: '✅ Xác nhận thu tiền mặt & chốt đơn thành công!' });
   } catch (error) {
     await transaction.rollback();
@@ -573,7 +647,7 @@ exports.createChangeRequest = async (req, res) => {
 
       if (booking.departure_id) {
         await sequelize.query(`
-          UPDATE departures SET available_slots = available_slots + ? WHERE departure_id = ?
+          UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
         `, { replacements: [booking.num_people || 1, booking.departure_id] });
       }
 
@@ -623,6 +697,17 @@ exports.createChangeRequest = async (req, res) => {
         VALUES (?, ?, ?, 'CHANGE_REQUEST_SENT', 'CUSTOMER', 0, '/my-bookings', NOW())
       `, {
         replacements: [customer_id, notifTitle, notifContent]
+      });
+
+      // Bổ sung thông báo tức thì cho Nhân viên điều hành (STAFF)
+      await sequelize.query(`
+        INSERT INTO notifications (type, target_role, title, content, is_read, action_url, created_at)
+        VALUES ('CHANGE_REQUEST_PENDING', 'STAFF', ?, ?, 0, 'change_request', NOW())
+      `, {
+        replacements: [
+          `📝 Yêu cầu ${isCancel ? 'Hủy tour' : 'Đổi lịch'} mới cho đơn #${booking_id}`,
+          `Khách hàng vừa gửi yêu cầu ${isCancel ? 'hủy tour & hoàn tiền' : 'đổi lịch'} cho đơn tour #${booking_id}. Vui lòng kiểm tra và xử lý!`
+        ]
       });
     } catch (notifErr) {
       console.error('Lỗi tạo notification createChangeRequest:', notifErr);
@@ -739,7 +824,7 @@ exports.processChangeRequest = async (req, res) => {
 
         if (bk.length > 0 && bk[0].departure_id) {
           await sequelize.query(`
-            UPDATE departures SET available_slots = available_slots + ? WHERE departure_id = ?
+            UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
           `, { replacements: [bk[0].num_people || 1, bk[0].departure_id], transaction });
         }
       } else if (request.request_type === 'Reschedule' && request.new_departure_id) {
@@ -965,7 +1050,7 @@ exports.updateBookingStatus = async (req, res) => {
       // 4. Giải phóng vé giữ chỗ
       if (bk.departure_id) {
         await sequelize.query(`
-          UPDATE departures SET available_slots = available_slots + ? WHERE departure_id = ?
+          UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
         `, { replacements: [bk.num_people || 1, bk.departure_id], transaction });
       }
 
@@ -1384,6 +1469,48 @@ const markOrderPaidFromSepay = async ({ type, bookingId, txAmount, txRef, txCont
                 SET status = 'Paid', voucher_code = COALESCE(voucher_code, ?)
                 WHERE booking_id = ?
             `, { replacements: [voucher_code, bookingId], transaction });
+
+            // Thông báo realtime cho đơn dịch vụ
+            try {
+                const [sbRows] = await sequelize.query(`
+                    SELECT sb.customer_id, s.service_name 
+                    FROM service_bookings sb
+                    LEFT JOIN services s ON sb.service_id = s.service_id
+                    WHERE sb.booking_id = ?
+                `, { replacements: [bookingId], transaction });
+
+                if (sbRows.length > 0) {
+                    const sName = sbRows[0].service_name || 'Dịch vụ du lịch';
+                    const custId = sbRows[0].customer_id;
+                    const amountText = txAmount ? ` (${new Intl.NumberFormat('vi-VN').format(txAmount)} ₫)` : '';
+
+                    if (custId) {
+                        await sequelize.query(`
+                            INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
+                            VALUES (?, '💳 Thanh toán dịch vụ thành công!', ?, 'PAYMENT_SUCCESS', 'CUSTOMER', 0, '/my-bookings', NOW())
+                        `, {
+                            replacements: [
+                                custId,
+                                `Đơn dịch vụ #${bookingId} (${sName}) đã thanh toán thành công${amountText}. Mã voucher sử dụng: ${voucher_code}.`
+                            ],
+                            transaction
+                        });
+                    }
+
+                    await sequelize.query(`
+                        INSERT INTO notifications (type, target_role, title, content, is_read, action_url, created_at)
+                        VALUES ('PAYMENT_SUCCESS', 'STAFF', ?, ?, 0, 'orders', NOW())
+                    `, {
+                        replacements: [
+                            `💰 Đơn dịch vụ #${bookingId} đã thanh toán`,
+                            `Hệ thống SePay đã nhận khoản thanh toán${amountText} cho đơn dịch vụ #${bookingId} (${sName}).`
+                        ],
+                        transaction
+                    });
+                }
+            } catch (notifErr) {
+                console.error('Lỗi tạo notification SePay service:', notifErr);
+            }
         } else {
             // Kiểm tra xem đã có dòng payment nào cho booking này chưa
             const [existingPay] = await sequelize.query(
@@ -1411,12 +1538,60 @@ const markOrderPaidFromSepay = async ({ type, bookingId, txAmount, txRef, txCont
                 SET payment_status = 'Paid', booking_status = 'Confirmed'
                 WHERE booking_id = ?
             `, { replacements: [bookingId], transaction });
+
+            // Thông báo realtime cho đơn Tour
+            try {
+                const [bkRows] = await sequelize.query(`
+                    SELECT b.customer_id, COALESCE(t.tour_name, CONCAT('Tour ', cr.destination), 'Tour du lịch') AS tour_name
+                    FROM bookings b
+                    LEFT JOIN departures d ON b.departure_id = d.departure_id
+                    LEFT JOIN tours t ON d.tour_id = t.tour_id
+                    LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+                    LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+                    WHERE b.booking_id = ?
+                `, { replacements: [bookingId], transaction });
+
+                if (bkRows.length > 0) {
+                    const cId = bkRows[0].customer_id;
+                    const tName = bkRows[0].tour_name;
+                    const amountText = txAmount ? ` (${new Intl.NumberFormat('vi-VN').format(txAmount)} ₫)` : '';
+
+                    if (cId) {
+                        await sequelize.query(`
+                            INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
+                            VALUES (?, '💳 Thanh toán thành công!', ?, 'PAYMENT_SUCCESS', 'CUSTOMER', 0, '/my-bookings', NOW())
+                        `, {
+                            replacements: [
+                                cId,
+                                `Đơn tour #${bookingId} (${tName}) đã thanh toán thành công${amountText} qua SePay. Vé điện tử và mã QR check-in đã sẵn sàng!`
+                            ],
+                            transaction
+                        });
+                    }
+
+                    await sequelize.query(`
+                        INSERT INTO notifications (type, target_role, title, content, is_read, action_url, created_at)
+                        VALUES ('PAYMENT_SUCCESS', 'STAFF', ?, ?, 0, 'orders', NOW())
+                    `, {
+                        replacements: [
+                            `💰 Đơn tour #${bookingId} đã thanh toán`,
+                            `Hệ thống SePay đã nhận thanh toán${amountText} cho đơn tour #${bookingId} (${tName}).`
+                        ],
+                        transaction
+                    });
+                }
+            } catch (notifErr) {
+                console.error('Lỗi tạo notification SePay tour:', notifErr);
+            }
         }
 
         await transaction.commit();
 
         if (type !== 'service') {
             await autoSyncAttendanceForTourDate(bookingId);
+            sendPaymentSuccessEmail(bookingId).catch(mailErr => {
+                console.error('❌ [EmailService] Lỗi gửi email thanh toán SePay:', mailErr);
+            });
         }
         console.log(`✅ [SePay Realtime] Đã tự động xác nhận thanh toán cho ${type.toUpperCase()} #${bookingId} (${txAmount}đ - ${txContent})`);
         return true;
@@ -1707,7 +1882,7 @@ exports.cancelExpiredBooking = async (req, res) => {
             // Hoàn lại số slot trống vào departure
             if (rows[0].departure_id && rows[0].num_people) {
                 await sequelize.query(
-                    `UPDATE departures SET available_slots = available_slots + ? WHERE departure_id = ?`,
+                    `UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?`,
                     { replacements: [rows[0].num_people, rows[0].departure_id], transaction }
                 );
             }
@@ -2157,7 +2332,7 @@ const autoSyncStaffRoleNotifications = async (currentUser) => {
     else if (roleId === 3) {
       // 1. Quét các tour đang chờ phê duyệt (Pending_Approval)
       const [pendingTours] = await sequelize.query(`
-        SELECT tour_id, tour_name, created_at 
+        SELECT tour_id, tour_name 
         FROM tours 
         WHERE status = 'Pending_Approval'
         ORDER BY tour_id DESC
@@ -2301,7 +2476,7 @@ exports.getStaffNotifications = async (req, res) => {
       whereClause = "WHERE (n.user_id = ? OR (n.target_role = 'STAFF' AND n.user_id IS NULL))";
     } else if (roleId === 1) {
       // Admin: Nhận thông báo quản trị và toàn quyền
-      whereClause = "WHERE (n.user_id = ? OR (n.target_role IN ('ADMIN', 'ALL') AND n.user_id IS NULL))";
+      whereClause = "WHERE (n.user_id = ? OR (n.target_role IN ('ADMIN', 'STAFF', 'MANAGER', 'HR', 'ALL') AND n.user_id IS NULL))";
     } else {
       whereClause = "WHERE n.user_id = ?";
     }
@@ -2398,7 +2573,7 @@ exports.markAllNotificationsAsRead = async (req, res) => {
     } else if (roleId === 4) {
       whereClause = "WHERE (user_id = ? OR (target_role = 'STAFF' AND user_id IS NULL))";
     } else if (roleId === 1) {
-      whereClause = "WHERE (user_id = ? OR (target_role IN ('ADMIN', 'ALL') AND user_id IS NULL))";
+      whereClause = "WHERE (user_id = ? OR (target_role IN ('ADMIN', 'STAFF', 'MANAGER', 'HR', 'ALL') AND user_id IS NULL))";
     } else {
       whereClause = "WHERE user_id = ?";
     }
@@ -2618,6 +2793,221 @@ exports.markAllCustomerNotificationsAsRead = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 4. GỬI LẠI EMAIL XÁC NHẬN / VÉ ĐIỆN TỬ
+// POST /api/bookings/:bookingId/resend-email
+exports.resendBookingEmail = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { type = 'confirmation' } = req.query; // 'confirmation' hoặc 'payment'
+
+    let result = null;
+    if (type === 'payment') {
+      result = await sendPaymentSuccessEmail(bookingId);
+    } else {
+      result = await sendBookingConfirmationEmail(bookingId);
+    }
+
+    if (result && result.success) {
+      return res.status(200).json({
+        success: true,
+        message: `Đã gửi lại email thành công tới ${result.recipient}!`,
+        data: result
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: result?.message || result?.error || 'Không thể gửi email'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Lỗi resendBookingEmail:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =========================================================================
+// BẢNG ĐIỀU KHIỂN & BÁO CÁO NGHIỆP VỤ NHÂN VIÊN VĂN PHÒNG (OFFICE STAFF DASHBOARD)
+// GET /api/bookings/admin/staff-dashboard-stats
+// =========================================================================
+exports.getStaffDashboardStats = async (req, res) => {
+  try {
+    const { period = 'month', startDate, endDate } = req.query;
+
+    let dateCondition = '';
+    let replacements = [];
+
+    if (period === 'today') {
+      dateCondition = 'AND DATE(b.booking_date) = CURDATE()';
+    } else if (period === 'week') {
+      dateCondition = 'AND b.booking_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+    } else if (period === 'month') {
+      dateCondition = 'AND b.booking_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+    } else if (period === 'quarter') {
+      dateCondition = 'AND b.booking_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+    } else if (period === 'year') {
+      dateCondition = 'AND YEAR(b.booking_date) = YEAR(CURDATE())';
+    } else if (period === 'custom' && startDate && endDate) {
+      dateCondition = 'AND DATE(b.booking_date) BETWEEN ? AND ?';
+      replacements.push(startDate, endDate);
+    }
+
+    // 1. Chỉ số KPIs kinh doanh & đặt tour
+    const [kpiRows] = await sequelize.query(`
+      SELECT 
+        COUNT(*) AS total_bookings,
+        COALESCE(SUM(CASE WHEN b.payment_status = 'Paid' THEN b.total_amount ELSE 0 END), 0) AS total_revenue,
+        COALESCE(SUM(CASE WHEN b.payment_status = 'Pending' AND b.booking_status != 'Cancelled' THEN b.total_amount ELSE 0 END), 0) AS pending_revenue,
+        COALESCE(SUM(CASE WHEN b.payment_status = 'Refunded' THEN b.total_amount ELSE 0 END), 0) AS refunded_amount,
+        COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0) AS total_passengers,
+        COUNT(CASE WHEN b.payment_status = 'Paid' THEN 1 END) AS paid_bookings_count,
+        COUNT(CASE WHEN b.payment_status = 'Pending' AND b.booking_status != 'Cancelled' THEN 1 END) AS pending_bookings_count,
+        COUNT(CASE WHEN b.booking_status = 'Cancelled' THEN 1 END) AS cancelled_bookings_count,
+        COUNT(CASE WHEN b.booking_status = 'Completed' THEN 1 END) AS completed_bookings_count
+      FROM bookings b
+      WHERE 1=1 ${dateCondition}
+    `, { replacements });
+
+    // 2. Yêu cầu đổi/hủy tour
+    const [changeReqRows] = await sequelize.query(`
+      SELECT 
+        COUNT(*) AS total_change_requests,
+        COUNT(CASE WHEN status = 'Pending' THEN 1 END) AS pending_change_requests,
+        COUNT(CASE WHEN status = 'Approved' THEN 1 END) AS approved_change_requests,
+        COUNT(CASE WHEN status = 'Rejected' THEN 1 END) AS rejected_change_requests,
+        COALESCE(SUM(CASE WHEN status = 'Approved' THEN refund_amount ELSE 0 END), 0) AS total_refund_approved
+      FROM booking_change_requests
+    `);
+
+    // 3. Đợt khởi hành & Tỷ lệ lấp đầy chỗ (Occupancy)
+    const [departures] = await sequelize.query(`
+      SELECT 
+        d.departure_id,
+        d.departure_date,
+        d.return_date,
+        d.max_slots,
+        d.available_slots,
+        GREATEST(0, d.max_slots - d.available_slots) AS booked_slots,
+        ROUND((GREATEST(0, d.max_slots - d.available_slots) / GREATEST(d.max_slots, 1)) * 100) AS occupancy_rate,
+        d.status,
+        t.tour_id,
+        t.tour_name,
+        t.destination,
+        t.base_price,
+        DATEDIFF(d.departure_date, CURDATE()) AS days_left
+      FROM departures d
+      JOIN tours t ON d.tour_id = t.tour_id
+      WHERE d.departure_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      ORDER BY d.departure_date ASC
+      LIMIT 20
+    `);
+
+    // 4. Top Tour bán chạy nhất
+    const [topTours] = await sequelize.query(`
+      SELECT 
+        t.tour_id,
+        t.tour_name,
+        t.destination,
+        COALESCE(t.image_url, '') AS image_url,
+        COUNT(b.booking_id) AS order_count,
+        COALESCE(SUM(b.num_people), 0) AS passenger_count,
+        COALESCE(SUM(CASE WHEN b.payment_status = 'Paid' THEN b.total_amount ELSE 0 END), 0) AS revenue,
+        t.base_price
+      FROM tours t
+      JOIN departures d ON t.tour_id = d.tour_id
+      JOIN bookings b ON d.departure_id = b.departure_id
+      WHERE b.booking_status != 'Cancelled'
+      GROUP BY t.tour_id, t.tour_name, t.destination, t.image_url, t.base_price
+      ORDER BY revenue DESC, order_count DESC
+      LIMIT 8
+    `);
+
+    // 5. Diễn biến doanh thu theo dòng thời gian (Timeline)
+    const [timelineRows] = await sequelize.query(`
+      SELECT 
+        DATE_FORMAT(b.booking_date, '%d/%m') AS date_label,
+        DATE(b.booking_date) as raw_date,
+        COALESCE(SUM(CASE WHEN b.payment_status = 'Paid' THEN b.total_amount ELSE 0 END), 0) AS revenue,
+        COUNT(b.booking_id) AS order_count,
+        COALESCE(SUM(b.num_people), 0) AS passenger_count
+      FROM bookings b
+      WHERE b.booking_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+      GROUP BY DATE(b.booking_date), DATE_FORMAT(b.booking_date, '%d/%m')
+      ORDER BY raw_date ASC
+    `);
+
+    // 6. Cơ cấu phương thức thanh toán
+    const [paymentMethods] = await sequelize.query(`
+      SELECT 
+        COALESCE(p.payment_method, 'VNPAY_QR') AS method,
+        COUNT(p.payment_id) AS count,
+        COALESCE(SUM(p.amount), 0) AS total_amount
+      FROM payments p
+      WHERE p.payment_status = 'Success'
+      GROUP BY p.payment_method
+    `);
+
+    // 7. Yêu cầu tour riêng / báo giá
+    const [customRequests] = await sequelize.query(`
+      SELECT 
+        COUNT(*) AS total_custom_requests,
+        COUNT(CASE WHEN status = 'Pending' THEN 1 END) AS pending_custom_requests,
+        COUNT(CASE WHEN status = 'Quoted' THEN 1 END) AS quoted_custom_requests,
+        COUNT(CASE WHEN status = 'Booked' THEN 1 END) AS booked_custom_requests
+      FROM custom_tour_requests
+    `);
+
+    // 8. Danh sách đơn hàng gần đây (Recent Bookings)
+    const [recentBookings] = await sequelize.query(`
+      SELECT 
+        b.booking_id,
+        b.booking_date,
+        b.total_amount,
+        b.num_people,
+        b.booking_status,
+        b.payment_status,
+        COALESCE(u.full_name, b.contact_name, 'Khách hàng') AS customer_name,
+        COALESCE(u.phone, b.contact_phone, '') AS customer_phone,
+        COALESCE(u.email, b.contact_email, '') AS customer_email,
+        COALESCE(t.tour_name, CONCAT('Tour: ', ctr.destination), 'Tour du lịch') AS tour_name,
+        COALESCE(d.departure_date, ctr.departure_date) AS departure_date,
+        COALESCE(pm.payment_method, 'Chuyển khoản QR') AS payment_method
+      FROM bookings b
+      LEFT JOIN users u ON b.customer_id = u.user_id
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests ctr ON q.request_id = ctr.request_id
+      LEFT JOIN (
+        SELECT booking_id, MAX(payment_method) AS payment_method 
+        FROM payments 
+        GROUP BY booking_id
+      ) pm ON b.booking_id = pm.booking_id
+      ORDER BY b.booking_id DESC
+      LIMIT 15
+    `);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        period,
+        kpis: kpiRows[0] || {},
+        changeRequests: changeReqRows[0] || {},
+        customRequests: customRequests[0] || {},
+        departures,
+        topTours,
+        timeline: timelineRows,
+        paymentMethods,
+        recentBookings
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Lỗi getStaffDashboardStats:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 
 

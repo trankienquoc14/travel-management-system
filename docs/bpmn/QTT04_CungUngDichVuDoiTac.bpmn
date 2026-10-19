@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT04_CungUngDichVuDoiTac"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT04_CungUngDichVuDoiTac">
+    <bpmn:participant id="Participant_QTT04_CungUngDichVuDoiTac" name="Quy Trình Cung Ứng Dịch Vụ Đối Tác (Partner Service Procurement)" processRef="Process_QTT04_CungUngDichVuDoiTac" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT04_CungUngDichVuDoiTac" name="Quy trình Quản lý Yêu cầu Cung ứng Dịch vụ Đối tác" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT04_CungUngDichVuDoiTac">
+      <bpmn:lane id="Lane_Operator" name="Điều hành tour (Tour Operations)">
+        <bpmn:flowNodeRef>Start_04</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateInitialGroup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateSupplement</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_OperatorResolveReject</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_GroupComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Hệ thống (Tour Service)">
+        <bpmn:flowNodeRef>Task_GenGroupCode</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendPartnerNotif</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckGroupStatus</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_AllAccepted</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Partner" name="Đối tác cung ứng (Partner)">
+        <bpmn:flowNodeRef>Task_PartnerReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_PartnerAccept</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PartnerReject</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PartnerAccept</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_04" name="Chốt đợt tour (trước 30 ngày)">
+      <bpmn:outgoing>Flow_Start_04_Task_CreateInitialGroup</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_CreateInitialGroup" name="Chọn đợt khởi hành &amp; lập cấu hình dịch vụ đoàn (INITIAL)">
+      <bpmn:incoming>Flow_Start_04_Task_CreateInitialGroup</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CreateInitialGroup_Task_GenGroupCode</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_GenGroupCode" name="Sinh mã YCT-XXXX, lưu nhóm PROCESSING &amp; phân tách yêu cầu con">
+      <bpmn:incoming>Flow_Task_CreateInitialGroup_Task_GenGroupCode</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_CreateSupplement_Task_GenGroupCode</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_GenGroupCode_Task_SendPartnerNotif</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_SendPartnerNotif" name="Gửi notification PARTNER_SERVICE_REQUEST đích danh">
+      <bpmn:incoming>Flow_Task_GenGroupCode_Task_SendPartnerNotif</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SendPartnerNotif_Task_PartnerReview</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_CreateSupplement" name="Tạo yêu cầu bổ sung YCB-XXXX khi tăng khách/phát sinh">
+      <bpmn:incoming>Flow_Task_OperatorResolveReject_Task_CreateSupplement</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CreateSupplement_Task_GenGroupCode</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_PartnerReview" name="Xem chi tiết số lượng, ngày dùng &amp; kiểm tra công suất">
+      <bpmn:incoming>Flow_Task_SendPartnerNotif_Task_PartnerReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_PartnerReview_GW_PartnerAccept</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_PartnerAccept" name="Khả năng đáp ứng?">
+      <bpmn:incoming>Flow_Task_PartnerReview_GW_PartnerAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_PartnerAccept_Task_PartnerReject</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_PartnerAccept_Task_PartnerAccept</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_PartnerReject" name="Từ chối yêu cầu (nhập lý do từ chối)">
+      <bpmn:incoming>Flow_GW_PartnerAccept_Task_PartnerReject</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_PartnerReject_Task_OperatorResolveReject</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_OperatorResolveReject" name="Nhận cảnh báo, tìm kiếm đối tác thay thế cho đoàn">
+      <bpmn:incoming>Flow_Task_PartnerReject_Task_OperatorResolveReject</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_OperatorResolveReject_Task_CreateSupplement</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_PartnerAccept" name="Xác nhận cung cấp dịch vụ (Accepted)">
+      <bpmn:incoming>Flow_GW_PartnerAccept_Task_PartnerAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_PartnerAccept_Task_CheckGroupStatus</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_CheckGroupStatus" name="Tổng hợp phản hồi các đối tác trong nhóm yêu cầu">
+      <bpmn:incoming>Flow_Task_PartnerAccept_Task_CheckGroupStatus</bpmn:incoming>
+      <bpmn:incoming>Flow_GW_AllAccepted_Task_CheckGroupStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CheckGroupStatus_GW_AllAccepted</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_AllAccepted" name="Đủ tất cả dịch vụ?">
+      <bpmn:incoming>Flow_Task_CheckGroupStatus_GW_AllAccepted</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_AllAccepted_Task_CheckGroupStatus</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_AllAccepted_End_GroupComplete</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_GroupComplete" name="Nhóm COMPLETED, sẵn sàng khởi hành">
+      <bpmn:incoming>Flow_GW_AllAccepted_End_GroupComplete</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_04_Task_CreateInitialGroup" sourceRef="Start_04" targetRef="Task_CreateInitialGroup" />
+    <bpmn:sequenceFlow id="Flow_Task_CreateInitialGroup_Task_GenGroupCode" sourceRef="Task_CreateInitialGroup" targetRef="Task_GenGroupCode" />
+    <bpmn:sequenceFlow id="Flow_Task_GenGroupCode_Task_SendPartnerNotif" sourceRef="Task_GenGroupCode" targetRef="Task_SendPartnerNotif" />
+    <bpmn:sequenceFlow id="Flow_Task_CreateSupplement_Task_GenGroupCode" sourceRef="Task_CreateSupplement" targetRef="Task_GenGroupCode" />
+    <bpmn:sequenceFlow id="Flow_Task_SendPartnerNotif_Task_PartnerReview" sourceRef="Task_SendPartnerNotif" targetRef="Task_PartnerReview" />
+    <bpmn:sequenceFlow id="Flow_Task_PartnerReview_GW_PartnerAccept" sourceRef="Task_PartnerReview" targetRef="GW_PartnerAccept" />
+    <bpmn:sequenceFlow id="Flow_GW_PartnerAccept_Task_PartnerReject" sourceRef="GW_PartnerAccept" targetRef="Task_PartnerReject" name="Không đủ chỗ" />
+    <bpmn:sequenceFlow id="Flow_Task_PartnerReject_Task_OperatorResolveReject" sourceRef="Task_PartnerReject" targetRef="Task_OperatorResolveReject" />
+    <bpmn:sequenceFlow id="Flow_Task_OperatorResolveReject_Task_CreateSupplement" sourceRef="Task_OperatorResolveReject" targetRef="Task_CreateSupplement" />
+    <bpmn:sequenceFlow id="Flow_GW_PartnerAccept_Task_PartnerAccept" sourceRef="GW_PartnerAccept" targetRef="Task_PartnerAccept" name="Đồng ý nhận" />
+    <bpmn:sequenceFlow id="Flow_Task_PartnerAccept_Task_CheckGroupStatus" sourceRef="Task_PartnerAccept" targetRef="Task_CheckGroupStatus" />
+    <bpmn:sequenceFlow id="Flow_Task_CheckGroupStatus_GW_AllAccepted" sourceRef="Task_CheckGroupStatus" targetRef="GW_AllAccepted" />
+    <bpmn:sequenceFlow id="Flow_GW_AllAccepted_Task_CheckGroupStatus" sourceRef="GW_AllAccepted" targetRef="Task_CheckGroupStatus" name="Còn chờ" />
+    <bpmn:sequenceFlow id="Flow_GW_AllAccepted_End_GroupComplete" sourceRef="GW_AllAccepted" targetRef="End_GroupComplete" name="Đủ dịch vụ" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT04_CungUngDichVuDoiTac">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT04_CungUngDichVuDoiTac" bpmnElement="Collaboration_QTT04_CungUngDichVuDoiTac">
+      <bpmndi:BPMNShape id="Participant_QTT04_CungUngDichVuDoiTac_di" bpmnElement="Participant_QTT04_CungUngDichVuDoiTac" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1660" height="630" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Operator_di" bpmnElement="Lane_Operator" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1630" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1630" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Partner_di" bpmnElement="Lane_Partner" isHorizontal="true">
+        <dc:Bounds x="70" y="490" width="1630" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_04_di" bpmnElement="Start_04">
+        <dc:Bounds x="180" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateInitialGroup_di" bpmnElement="Task_CreateInitialGroup">
+        <dc:Bounds x="260" y="115" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GenGroupCode_di" bpmnElement="Task_GenGroupCode">
+        <dc:Bounds x="470" y="325" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendPartnerNotif_di" bpmnElement="Task_SendPartnerNotif">
+        <dc:Bounds x="685" y="325" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateSupplement_di" bpmnElement="Task_CreateSupplement">
+        <dc:Bounds x="685" y="115" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PartnerReview_di" bpmnElement="Task_PartnerReview">
+        <dc:Bounds x="895" y="535" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_PartnerAccept_di" bpmnElement="GW_PartnerAccept">
+        <dc:Bounds x="1105" y="545" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PartnerReject_di" bpmnElement="Task_PartnerReject">
+        <dc:Bounds x="1055" y="625" width="150" height="55" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OperatorResolveReject_di" bpmnElement="Task_OperatorResolveReject">
+        <dc:Bounds x="1055" y="200" width="150" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PartnerAccept_di" bpmnElement="Task_PartnerAccept">
+        <dc:Bounds x="1215" y="535" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckGroupStatus_di" bpmnElement="Task_CheckGroupStatus">
+        <dc:Bounds x="1390" y="325" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_AllAccepted_di" bpmnElement="GW_AllAccepted">
+        <dc:Bounds x="1575" y="335" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_GroupComplete_di" bpmnElement="End_GroupComplete">
+        <dc:Bounds x="1635" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_04_Task_CreateInitialGroup_di" bpmnElement="Flow_Start_04_Task_CreateInitialGroup">
+        <di:waypoint x="216" y="148" />
+        <di:waypoint x="260" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CreateInitialGroup_Task_GenGroupCode_di" bpmnElement="Flow_Task_CreateInitialGroup_Task_GenGroupCode">
+        <di:waypoint x="337" y="185" />
+        <di:waypoint x="547" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_GenGroupCode_Task_SendPartnerNotif_di" bpmnElement="Flow_Task_GenGroupCode_Task_SendPartnerNotif">
+        <di:waypoint x="630" y="360" />
+        <di:waypoint x="685" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CreateSupplement_Task_GenGroupCode_di" bpmnElement="Flow_Task_CreateSupplement_Task_GenGroupCode">
+        <di:waypoint x="685" y="150" />
+        <di:waypoint x="630" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SendPartnerNotif_Task_PartnerReview_di" bpmnElement="Flow_Task_SendPartnerNotif_Task_PartnerReview">
+        <di:waypoint x="840" y="360" />
+        <di:waypoint x="875" y="360" />
+        <di:waypoint x="875" y="570" />
+        <di:waypoint x="895" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_PartnerReview_GW_PartnerAccept_di" bpmnElement="Flow_Task_PartnerReview_GW_PartnerAccept">
+        <di:waypoint x="1050" y="570" />
+        <di:waypoint x="1105" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PartnerAccept_Task_PartnerReject_di" bpmnElement="Flow_GW_PartnerAccept_Task_PartnerReject">
+        <di:waypoint x="1130" y="595" />
+        <di:waypoint x="1130" y="625" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1130" y="595" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_PartnerReject_Task_OperatorResolveReject_di" bpmnElement="Flow_Task_PartnerReject_Task_OperatorResolveReject">
+        <di:waypoint x="1205" y="652" />
+        <di:waypoint x="1220" y="652" />
+        <di:waypoint x="1220" y="230" />
+        <di:waypoint x="1205" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_OperatorResolveReject_Task_CreateSupplement_di" bpmnElement="Flow_Task_OperatorResolveReject_Task_CreateSupplement">
+        <di:waypoint x="1055" y="230" />
+        <di:waypoint x="840" y="145" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_PartnerAccept_Task_PartnerAccept_di" bpmnElement="Flow_GW_PartnerAccept_Task_PartnerAccept">
+        <di:waypoint x="1155" y="570" />
+        <di:waypoint x="1215" y="570" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1185" y="555" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_PartnerAccept_Task_CheckGroupStatus_di" bpmnElement="Flow_Task_PartnerAccept_Task_CheckGroupStatus">
+        <di:waypoint x="1290" y="535" />
+        <di:waypoint x="1465" y="395" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CheckGroupStatus_GW_AllAccepted_di" bpmnElement="Flow_Task_CheckGroupStatus_GW_AllAccepted">
+        <di:waypoint x="1540" y="360" />
+        <di:waypoint x="1575" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_AllAccepted_Task_CheckGroupStatus_di" bpmnElement="Flow_GW_AllAccepted_Task_CheckGroupStatus">
+        <di:waypoint x="1600" y="385" />
+        <di:waypoint x="1600" y="475" />
+        <di:waypoint x="1510" y="475" />
+        <di:waypoint x="1510" y="395" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1600" y="415" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_AllAccepted_End_GroupComplete_di" bpmnElement="Flow_GW_AllAccepted_End_GroupComplete">
+        <di:waypoint x="1625" y="360" />
+        <di:waypoint x="1653" y="360" />
+        <di:waypoint x="1653" y="166" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1639" y="345" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

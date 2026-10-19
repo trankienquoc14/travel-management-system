@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import OfficeStaffDashboard from './OfficeStaffDashboard';
 
 const GeneralOverview = () => {
   const [activeSubTab, setActiveSubTab] = useState('tour_reports'); // 'tour_reports', 'revenue', 'hr_stats', 'incidents', 'partners'
@@ -159,7 +160,7 @@ const GeneralOverview = () => {
             color: activeSubTab === 'revenue' ? '#ffffff' : '#475569'
           }}
         >
-          📈 2. Doanh Thu & Booking
+          📈 2. Doanh Thu & Bán Vé (Xuất PDF)
         </button>
 
         <button
@@ -353,36 +354,10 @@ const GeneralOverview = () => {
           )}
 
           {/* ========================================================= */}
-          {/* MỤC 2: BÁO CÁO DOANH THU & BOOKING                        */}
+          {/* MỤC 2: BÁO CÁO DOANH THU & BÁN VÉ LỮ HÀNH (XUẤT FILE PDF)  */}
           {/* ========================================================= */}
           {activeSubTab === 'revenue' && (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '14px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0284c7' }}>🛒 TỔNG SỐ BOOKING</div>
-                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', marginTop: '6px' }}>{bookingStats.totalBookings} đơn</div>
-                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Toàn hệ thống</div>
-                </div>
-
-                <div style={{ background: '#fff', border: '1px solid #bae6fd', padding: '20px', borderRadius: '14px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1' }}>💰 TỔNG DOANH THU BOOKING</div>
-                  <div style={{ fontSize: '24px', fontWeight: '900', color: '#0284c7', marginTop: '6px' }}>{formatVND(bookingStats.totalRevenue)}</div>
-                  <div style={{ fontSize: '11px', color: '#0369a1', marginTop: '4px' }}>Tổng giá trị tour đã bán</div>
-                </div>
-
-                <div style={{ background: '#fff', border: '1px solid #bbf7d0', padding: '20px', borderRadius: '14px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>✅ ĐÃ THU TIỀN</div>
-                  <div style={{ fontSize: '24px', fontWeight: '900', color: '#166534', marginTop: '6px' }}>{formatVND(bookingStats.paidAmount)}</div>
-                  <div style={{ fontSize: '11px', color: '#15803d', marginTop: '4px' }}>Đã thanh toán thực tế</div>
-                </div>
-
-                <div style={{ background: '#fff', border: '1px solid #fde68a', padding: '20px', borderRadius: '14px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#b45309' }}>⏳ CÒN PHẢI THU</div>
-                  <div style={{ fontSize: '24px', fontWeight: '900', color: '#92400e', marginTop: '6px' }}>{formatVND(bookingStats.pendingAmount)}</div>
-                  <div style={{ fontSize: '11px', color: '#b45309', marginTop: '4px' }}>Cần tiếp tục thu hồi công nợ</div>
-                </div>
-              </div>
-            </div>
+            <OfficeStaffDashboard />
           )}
 
           {/* ========================================================= */}

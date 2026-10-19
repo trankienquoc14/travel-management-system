@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT06_ThucThiTourVaXuLySuCo"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT06_ThucThiTourVaXuLySuCo">
+    <bpmn:participant id="Participant_QTT06_ThucThiTourVaXuLySuCo" name="Quy Trình Vận Hành Thực Địa và Xử Lý Sự Cố (Tour Execution &amp; Incident Management)" processRef="Process_QTT06_ThucThiTourVaXuLySuCo" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT06_ThucThiTourVaXuLySuCo" name="Quy trình Thực thi Tour, Điểm danh Hành khách và Xử lý Sự cố" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT06_ThucThiTourVaXuLySuCo">
+      <bpmn:lane id="Lane_Customer" name="Khách hàng (Customer)">
+        <bpmn:flowNodeRef>Start_06</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PresentQR</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Guide" name="Hướng dẫn viên (Tour Guide)">
+        <bpmn:flowNodeRef>Task_CheckinPassenger</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DepartTrip</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Fork_OnTour</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LiveUpdate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_OnTour</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Incident</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReportIncident</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CompleteTour</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitTripReport</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Driver" name="Tài xế (Driver)">
+        <bpmn:flowNodeRef>Task_DriverExpense</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Manager" name="Quản lý Tour (Tour Manager)">
+        <bpmn:flowNodeRef>Task_ResolveIncident</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApproveTripReport</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_TourSuccess</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_06" name="Tập trung tại điểm đón">
+      <bpmn:outgoing>Flow_Start_06_Task_PresentQR</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_PresentQR" name="Xuất trình vé điện tử có mã QR check-in">
+      <bpmn:incoming>Flow_Start_06_Task_PresentQR</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_PresentQR_Task_CheckinPassenger</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CheckinPassenger" name="Quét mã QR check-in &amp; chốt sĩ số đoàn">
+      <bpmn:incoming>Flow_Task_PresentQR_Task_CheckinPassenger</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CheckinPassenger_Task_DepartTrip</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_DepartTrip" name="Khởi hành chuyến đi (Trạng thái Ongoing)">
+      <bpmn:incoming>Flow_Task_CheckinPassenger_Task_DepartTrip</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_DepartTrip_Fork_OnTour</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Fork_OnTour" name="Tác vụ trong tour">
+      <bpmn:incoming>Flow_Task_DepartTrip_Fork_OnTour</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fork_OnTour_Task_LiveUpdate</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Fork_OnTour_Task_DriverExpense</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_LiveUpdate" name="Đăng tải cập nhật hành trình &amp; ảnh thực tế">
+      <bpmn:incoming>Flow_Fork_OnTour_Task_LiveUpdate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_LiveUpdate_Join_OnTour</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_DriverExpense" name="Kê khai chi phí xăng dầu, cầu đường &amp; ảnh hóa đơn">
+      <bpmn:incoming>Flow_Fork_OnTour_Task_DriverExpense</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_DriverExpense_Join_OnTour</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Join_OnTour" name="Hội tụ tác vụ">
+      <bpmn:incoming>Flow_Task_LiveUpdate_Join_OnTour</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_DriverExpense_Join_OnTour</bpmn:incoming>
+      <bpmn:outgoing>Flow_Join_OnTour_GW_Incident</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="GW_Incident" name="Phát sinh sự cố?">
+      <bpmn:incoming>Flow_Join_OnTour_GW_Incident</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_Incident_Task_CompleteTour</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_Incident_Task_ReportIncident</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ReportIncident" name="Lập báo cáo sự cố khẩn cấp (kèm mức độ &amp; ảnh hiện trường)">
+      <bpmn:incoming>Flow_GW_Incident_Task_ReportIncident</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ReportIncident_Task_ResolveIncident</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ResolveIncident" name="Chỉ đạo phương án cứu hộ, y tế &amp; cập nhật Resolved">
+      <bpmn:incoming>Flow_Task_ReportIncident_Task_ResolveIncident</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ResolveIncident_Task_CompleteTour</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CompleteTour" name="Đưa đoàn về điểm trả &amp; kết thúc hành trình di chuyển">
+      <bpmn:incoming>Flow_GW_Incident_Task_CompleteTour</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_ResolveIncident_Task_CompleteTour</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CompleteTour_Task_SubmitTripReport</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_SubmitTripReport" name="Lập Báo cáo tổng kết chuyến đi (đánh giá dịch vụ nhà cung cấp)">
+      <bpmn:incoming>Flow_Task_CompleteTour_Task_SubmitTripReport</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SubmitTripReport_Task_ApproveTripReport</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ApproveTripReport" name="Thẩm duyệt báo cáo chuyến đi &amp; đóng đợt Completed">
+      <bpmn:incoming>Flow_Task_SubmitTripReport_Task_ApproveTripReport</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ApproveTripReport_End_TourSuccess</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_TourSuccess" name="Hoàn tất đợt khởi hành">
+      <bpmn:incoming>Flow_Task_ApproveTripReport_End_TourSuccess</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_06_Task_PresentQR" sourceRef="Start_06" targetRef="Task_PresentQR" />
+    <bpmn:sequenceFlow id="Flow_Task_PresentQR_Task_CheckinPassenger" sourceRef="Task_PresentQR" targetRef="Task_CheckinPassenger" />
+    <bpmn:sequenceFlow id="Flow_Task_CheckinPassenger_Task_DepartTrip" sourceRef="Task_CheckinPassenger" targetRef="Task_DepartTrip" />
+    <bpmn:sequenceFlow id="Flow_Task_DepartTrip_Fork_OnTour" sourceRef="Task_DepartTrip" targetRef="Fork_OnTour" />
+    <bpmn:sequenceFlow id="Flow_Fork_OnTour_Task_LiveUpdate" sourceRef="Fork_OnTour" targetRef="Task_LiveUpdate" />
+    <bpmn:sequenceFlow id="Flow_Fork_OnTour_Task_DriverExpense" sourceRef="Fork_OnTour" targetRef="Task_DriverExpense" />
+    <bpmn:sequenceFlow id="Flow_Task_LiveUpdate_Join_OnTour" sourceRef="Task_LiveUpdate" targetRef="Join_OnTour" />
+    <bpmn:sequenceFlow id="Flow_Task_DriverExpense_Join_OnTour" sourceRef="Task_DriverExpense" targetRef="Join_OnTour" />
+    <bpmn:sequenceFlow id="Flow_Join_OnTour_GW_Incident" sourceRef="Join_OnTour" targetRef="GW_Incident" />
+    <bpmn:sequenceFlow id="Flow_GW_Incident_Task_CompleteTour" sourceRef="GW_Incident" targetRef="Task_CompleteTour" name="Bình thường" />
+    <bpmn:sequenceFlow id="Flow_GW_Incident_Task_ReportIncident" sourceRef="GW_Incident" targetRef="Task_ReportIncident" name="Có sự cố" />
+    <bpmn:sequenceFlow id="Flow_Task_ReportIncident_Task_ResolveIncident" sourceRef="Task_ReportIncident" targetRef="Task_ResolveIncident" />
+    <bpmn:sequenceFlow id="Flow_Task_ResolveIncident_Task_CompleteTour" sourceRef="Task_ResolveIncident" targetRef="Task_CompleteTour" name="Khắc phục xong" />
+    <bpmn:sequenceFlow id="Flow_Task_CompleteTour_Task_SubmitTripReport" sourceRef="Task_CompleteTour" targetRef="Task_SubmitTripReport" />
+    <bpmn:sequenceFlow id="Flow_Task_SubmitTripReport_Task_ApproveTripReport" sourceRef="Task_SubmitTripReport" targetRef="Task_ApproveTripReport" />
+    <bpmn:sequenceFlow id="Flow_Task_ApproveTripReport_End_TourSuccess" sourceRef="Task_ApproveTripReport" targetRef="End_TourSuccess" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT06_ThucThiTourVaXuLySuCo">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT06_ThucThiTourVaXuLySuCo" bpmnElement="Collaboration_QTT06_ThucThiTourVaXuLySuCo">
+      <bpmndi:BPMNShape id="Participant_QTT06_ThucThiTourVaXuLySuCo_di" bpmnElement="Participant_QTT06_ThucThiTourVaXuLySuCo" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1720" height="720" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1690" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Guide_di" bpmnElement="Lane_Guide" isHorizontal="true">
+        <dc:Bounds x="70" y="230" width="1690" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Driver_di" bpmnElement="Lane_Driver" isHorizontal="true">
+        <dc:Bounds x="70" y="440" width="1690" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Manager_di" bpmnElement="Lane_Manager" isHorizontal="true">
+        <dc:Bounds x="70" y="610" width="1690" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_06_di" bpmnElement="Start_06">
+        <dc:Bounds x="180" y="125" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PresentQR_di" bpmnElement="Task_PresentQR">
+        <dc:Bounds x="260" y="108" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckinPassenger_di" bpmnElement="Task_CheckinPassenger">
+        <dc:Bounds x="260" y="290" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DepartTrip_di" bpmnElement="Task_DepartTrip">
+        <dc:Bounds x="460" y="290" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Fork_OnTour_di" bpmnElement="Fork_OnTour">
+        <dc:Bounds x="655" y="300" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_LiveUpdate_di" bpmnElement="Task_LiveUpdate">
+        <dc:Bounds x="740" y="250" width="150" height="65" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DriverExpense_di" bpmnElement="Task_DriverExpense">
+        <dc:Bounds x="740" y="490" width="150" height="65" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_OnTour_di" bpmnElement="Join_OnTour">
+        <dc:Bounds x="935" y="300" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Incident_di" bpmnElement="GW_Incident">
+        <dc:Bounds x="1030" y="300" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReportIncident_di" bpmnElement="Task_ReportIncident">
+        <dc:Bounds x="1125" y="345" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ResolveIncident_di" bpmnElement="Task_ResolveIncident">
+        <dc:Bounds x="1125" y="665" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CompleteTour_di" bpmnElement="Task_CompleteTour">
+        <dc:Bounds x="1335" y="290" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitTripReport_di" bpmnElement="Task_SubmitTripReport">
+        <dc:Bounds x="1530" y="290" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ApproveTripReport_di" bpmnElement="Task_ApproveTripReport">
+        <dc:Bounds x="1530" y="665" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_TourSuccess_di" bpmnElement="End_TourSuccess">
+        <dc:Bounds x="1720" y="680" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_06_Task_PresentQR_di" bpmnElement="Flow_Start_06_Task_PresentQR">
+        <di:waypoint x="216" y="143" />
+        <di:waypoint x="260" y="143" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_PresentQR_Task_CheckinPassenger_di" bpmnElement="Flow_Task_PresentQR_Task_CheckinPassenger">
+        <di:waypoint x="335" y="178" />
+        <di:waypoint x="335" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CheckinPassenger_Task_DepartTrip_di" bpmnElement="Flow_Task_CheckinPassenger_Task_DepartTrip">
+        <di:waypoint x="410" y="325" />
+        <di:waypoint x="460" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_DepartTrip_Fork_OnTour_di" bpmnElement="Flow_Task_DepartTrip_Fork_OnTour">
+        <di:waypoint x="610" y="325" />
+        <di:waypoint x="655" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Fork_OnTour_Task_LiveUpdate_di" bpmnElement="Flow_Fork_OnTour_Task_LiveUpdate">
+        <di:waypoint x="680" y="300" />
+        <di:waypoint x="740" y="282" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Fork_OnTour_Task_DriverExpense_di" bpmnElement="Flow_Fork_OnTour_Task_DriverExpense">
+        <di:waypoint x="680" y="350" />
+        <di:waypoint x="680" y="522" />
+        <di:waypoint x="740" y="522" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_LiveUpdate_Join_OnTour_di" bpmnElement="Flow_Task_LiveUpdate_Join_OnTour">
+        <di:waypoint x="890" y="282" />
+        <di:waypoint x="960" y="282" />
+        <di:waypoint x="960" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_DriverExpense_Join_OnTour_di" bpmnElement="Flow_Task_DriverExpense_Join_OnTour">
+        <di:waypoint x="890" y="522" />
+        <di:waypoint x="960" y="522" />
+        <di:waypoint x="960" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Join_OnTour_GW_Incident_di" bpmnElement="Flow_Join_OnTour_GW_Incident">
+        <di:waypoint x="985" y="325" />
+        <di:waypoint x="1030" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Incident_Task_CompleteTour_di" bpmnElement="Flow_GW_Incident_Task_CompleteTour">
+        <di:waypoint x="1080" y="325" />
+        <di:waypoint x="1335" y="325" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1208" y="310" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_Incident_Task_ReportIncident_di" bpmnElement="Flow_GW_Incident_Task_ReportIncident">
+        <di:waypoint x="1055" y="350" />
+        <di:waypoint x="1055" y="380" />
+        <di:waypoint x="1125" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1055" y="350" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ReportIncident_Task_ResolveIncident_di" bpmnElement="Flow_Task_ReportIncident_Task_ResolveIncident">
+        <di:waypoint x="1205" y="415" />
+        <di:waypoint x="1205" y="665" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ResolveIncident_Task_CompleteTour_di" bpmnElement="Flow_Task_ResolveIncident_Task_CompleteTour">
+        <di:waypoint x="1285" y="700" />
+        <di:waypoint x="1375" y="700" />
+        <di:waypoint x="1375" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1330" y="685" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CompleteTour_Task_SubmitTripReport_di" bpmnElement="Flow_Task_CompleteTour_Task_SubmitTripReport">
+        <di:waypoint x="1490" y="325" />
+        <di:waypoint x="1530" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SubmitTripReport_Task_ApproveTripReport_di" bpmnElement="Flow_Task_SubmitTripReport_Task_ApproveTripReport">
+        <di:waypoint x="1607" y="360" />
+        <di:waypoint x="1607" y="665" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ApproveTripReport_End_TourSuccess_di" bpmnElement="Flow_Task_ApproveTripReport_End_TourSuccess">
+        <di:waypoint x="1685" y="700" />
+        <di:waypoint x="1720" y="698" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
-import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag, MessageSquare, ShieldCheck, ChevronDown, Check, X, Calendar } from 'lucide-react';
+import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag, MessageSquare, ShieldCheck, ChevronDown, Check, X, Calendar, CheckCircle2, AlertCircle, AlertTriangle, ArrowRight, Banknote, CreditCard } from 'lucide-react';
 
 
 import CustomerNavbar from './CustomerNavbar';
@@ -78,6 +78,10 @@ const BookingFormInner = () => {
     const [showPassengerModal, setShowPassengerModal] = useState(false);
     const [showItineraryModal, setShowItineraryModal] = useState(false);
     const [passengerDetails, setPassengerDetails] = useState({});
+    
+    // Notification & Success Modals
+    const [successModal, setSuccessModal] = useState(null);
+    const [alertModal, setAlertModal] = useState(null);
     
     const [destinations, setDestinations] = useState([]);
     useEffect(() => {
@@ -166,7 +170,50 @@ const BookingFormInner = () => {
     const safeDestinations = Array.isArray(destinations) ? destinations : [];
 
     // --- 3. START LOCATION (Điểm xuất phát) ---
+    // A. Bóc tách từ hành trình ngày 1 (route_title) nếu có dạng "TP.HCM - ..." hoặc "Hà Nội - ..."
+    let routeOrigin = '';
+    if (firstDay?.route_title) {
+        const rawFirst = firstDay.route_title.split(/[-–]/)[0]?.trim();
+        if (rawFirst) {
+            const low = rawFirst.toLowerCase();
+            if (low.includes('tp.hcm') || low.includes('tphcm') || low.includes('hồ chí minh') || low.includes('sài gòn')) {
+                routeOrigin = 'TP.HCM';
+            } else if (low.includes('hà nội')) {
+                routeOrigin = 'Hà Nội';
+            } else if (low.includes('đà nẵng')) {
+                routeOrigin = 'Đà Nẵng';
+            } else if (low.includes('cần thơ')) {
+                routeOrigin = 'Cần Thơ';
+            }
+        }
+    }
+
+    // B. Kiểm tra hoạt động đầu tiên ngày 1 (nếu có đón khách tại...)
+    let actOrigin = '';
+    const firstActStr = (firstDay?.activities?.[0]?.name || firstDay?.activities?.[0]?.title || '').toLowerCase();
+    if (firstActStr.includes('tp.hcm') || firstActStr.includes('tphcm') || firstActStr.includes('hồ chí minh') || firstActStr.includes('sài gòn')) {
+        actOrigin = 'TP.HCM';
+    } else if (firstActStr.includes('hà nội')) {
+        actOrigin = 'Hà Nội';
+    } else if (firstActStr.includes('đà nẵng')) {
+        actOrigin = 'Đà Nẵng';
+    } else if (firstActStr.includes('cần thơ')) {
+        actOrigin = 'Cần Thơ';
+    }
+
     let startLocD = safeDestinations.find(x => String(x.destination_id) === String(firstDay?.start_destination_id))?.destination_name;
+    if (startLocD === 'Hồ Chí Minh') startLocD = 'TP.HCM';
+
+    // Nếu startLocD bị trùng với điểm đến của tour nhưng thực tế xuất phát từ TP.HCM/Hà Nội
+    const tourDestName = safeDestinations.find(x => String(x.destination_id) === String(tour?.destination))?.destination_name || tour?.destination;
+    if ((routeOrigin || actOrigin) && (startLocD === tourDestName || !startLocD)) {
+        startLocD = routeOrigin || actOrigin;
+    } else if (routeOrigin && !startLocD) {
+        startLocD = routeOrigin;
+    } else if (actOrigin && !startLocD) {
+        startLocD = actOrigin;
+    }
+
     if (!startLocD && firstDay?.start_destination_id && isNaN(Number(firstDay.start_destination_id))) {
         startLocD = firstDay.start_destination_id;
     }
@@ -186,8 +233,9 @@ const BookingFormInner = () => {
         else if (tour.tour_name.includes('Cần Thơ')) startLocD = 'Cần Thơ';
     }
     if (!startLocD) {
-        startLocD = 'Hà Nội';
+        startLocD = 'TP.HCM';
     }
+    if (startLocD === 'Hồ Chí Minh') startLocD = 'TP.HCM';
 
     // --- 4. END LOCATION (Điểm đến) ---
     let endLocD = safeDestinations.find(x => String(x.destination_id) === String(lastDay?.end_destination_id || firstDay?.end_destination_id))?.destination_name;
@@ -348,11 +396,19 @@ const BookingFormInner = () => {
     const submitBooking = async (e) => {
         e.preventDefault();
         if (isBookingCutoffClosed) {
-            alert(`🔒 Đợt khởi hành này đã đóng nhận khách (chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với đối tác). Hiện chỉ còn ${cutoffDaysLeft > 0 ? cutoffDaysLeft : 0} ngày đến ngày đi.`);
+            setAlertModal({
+                type: 'warning',
+                title: 'Đợt khởi hành đã đóng nhận khách',
+                message: `Đợt khởi hành này chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với đối tác. Hiện chỉ còn ${cutoffDaysLeft > 0 ? cutoffDaysLeft : 0} ngày đến ngày đi.`
+            });
             return;
         }
         if (!isFormValid) {
-            alert('Vui lòng nhập đầy đủ thông tin liên hệ và đồng ý với chính sách!');
+            setAlertModal({
+                type: 'warning',
+                title: 'Thiếu thông tin liên hệ',
+                message: 'Vui lòng nhập đầy đủ Họ tên, Email, Số điện thoại liên hệ và tích đồng ý với Chính sách bảo vệ dữ liệu cá nhân!'
+            });
             return;
         }
         setIsSubmitting(true);
@@ -398,17 +454,26 @@ const BookingFormInner = () => {
             if (isCustom) {
                 const response = await axios.post(
                     `http://localhost:5000/api/custom-tours/quotes/${quote.quote_id}/book`,
-                    { payment_method: dbPaymentMethod, notes: contactInfo.notes, passengers: passengersArray },
+                    { 
+                        payment_method: dbPaymentMethod, 
+                        notes: contactInfo.notes, 
+                        passengers: passengersArray,
+                        contact_name: contactInfo.fullName,
+                        contact_email: contactInfo.email,
+                        contact_phone: contactInfo.phone,
+                        contact_address: contactInfo.address,
+                        contact_info: contactInfo
+                    },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (response.data.success) {
                     const createdId = response.data?.data?.booking_id || response.data?.booking_id;
-                    if (paymentMethod === 'Cash') {
-                        alert('💵 Đặt tour thành công! Vui lòng đến văn phòng TravelERP để thanh toán tiền mặt.');
-                        navigate('/my-bookings');
-                    } else {
-                        navigate(`/my-bookings?pay=${createdId}&type=tour`);
-                    }
+                    setSuccessModal({
+                        bookingId: createdId,
+                        email: contactInfo.email,
+                        paymentMethod: paymentMethod,
+                        isCustom: true
+                    });
                 }
             } else {
                 const response = await axios.post('http://localhost:5000/api/bookings', {
@@ -418,21 +483,30 @@ const BookingFormInner = () => {
                     breakdown: pax,
                     payment_method: dbPaymentMethod,
                     notes: contactInfo.notes,
-                    passengers: passengersArray
+                    passengers: passengersArray,
+                    contact_name: contactInfo.fullName,
+                    contact_email: contactInfo.email,
+                    contact_phone: contactInfo.phone,
+                    contact_address: contactInfo.address,
+                    contact_info: contactInfo
                 }, { headers: { Authorization: `Bearer ${token}` } });
 
                 if (response.data.success) {
                     const createdId = response.data?.booking_id || response.data?.data?.booking_id;
-                    if (paymentMethod === 'Cash') {
-                        alert('💵 Đặt tour thành công! Vui lòng đến văn phòng TravelERP để thanh toán tiền mặt.');
-                        navigate('/my-bookings');
-                    } else {
-                        navigate(`/my-bookings?pay=${createdId}&type=tour`);
-                    }
+                    setSuccessModal({
+                        bookingId: createdId,
+                        email: contactInfo.email,
+                        paymentMethod: paymentMethod,
+                        isCustom: false
+                    });
                 }
             }
         } catch (error) {
-            alert('Có lỗi xảy ra: ' + (error.response?.data?.message || error.message));
+            setAlertModal({
+                type: 'error',
+                title: 'Không thể hoàn tất đặt tour',
+                message: error.response?.data?.message || error.message || 'Đã có lỗi xảy ra trong quá trình xử lý đơn hàng.'
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -1034,6 +1108,259 @@ const BookingFormInner = () => {
                     </div>
                 </div>
             )}
+
+            {/* SUCCESS MODAL */}
+            {successModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: '#ffffff',
+                        width: '100%',
+                        maxWidth: '480px',
+                        borderRadius: '24px',
+                        overflow: 'hidden',
+                        boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.35)',
+                        textAlign: 'center',
+                        padding: '36px 28px 28px',
+                        position: 'relative',
+                        border: '1px solid #e2e8f0'
+                    }}>
+                        {/* Glowing Success Badge */}
+                        <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+                            margin: '0 auto 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 12px 28px rgba(34, 197, 94, 0.25)'
+                        }}>
+                            <CheckCircle2 size={46} color="#16a34a" strokeWidth={2.5} />
+                        </div>
+
+                        {/* Title & Booking Code */}
+                        <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>
+                            Đặt Tour Thành Công!
+                        </h2>
+                        {successModal.bookingId && (
+                            <div style={{ display: 'inline-block', background: '#f1f5f9', color: '#0284c7', padding: '4px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', marginBottom: '20px' }}>
+                                Mã Booking: #BKG-{String(successModal.bookingId).padStart(4, '0')}
+                            </div>
+                        )}
+
+                        {/* Email Notification Card */}
+                        <div style={{
+                            background: '#f0fdf4',
+                            border: '1px solid #bbf7d0',
+                            borderRadius: '16px',
+                            padding: '16px',
+                            marginBottom: '16px',
+                            textAlign: 'left',
+                            display: 'flex',
+                            gap: '12px',
+                            alignItems: 'center'
+                        }}>
+                            <div style={{
+                                background: '#16a34a',
+                                color: '#ffffff',
+                                borderRadius: '50%',
+                                width: '38px',
+                                height: '38px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                            }}>
+                                <Mail size={20} />
+                            </div>
+                            <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '600', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
+                                    Thông tin vé đã gửi về email:
+                                </div>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#14532d', wordBreak: 'break-all' }}>
+                                    {successModal.email}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Payment Instruction Card */}
+                        {successModal.paymentMethod === 'Cash' ? (
+                            <div style={{
+                                background: '#fffbeb',
+                                border: '1px solid #fde68a',
+                                borderRadius: '16px',
+                                padding: '14px 16px',
+                                marginBottom: '24px',
+                                textAlign: 'left',
+                                display: 'flex',
+                                gap: '12px',
+                                alignItems: 'flex-start'
+                            }}>
+                                <div style={{ fontSize: '22px', lineHeight: 1 }}>💵</div>
+                                <div style={{ fontSize: '13px', color: '#92400e', lineHeight: '1.5' }}>
+                                    <strong style={{ display: 'block', marginBottom: '2px', color: '#78350f' }}>Thanh toán tiền mặt:</strong>
+                                    Vui lòng đến văn phòng TravelERP để hoàn tất thanh toán và nhận vé bản cứng trước ngày khởi hành.
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{
+                                background: '#eff6ff',
+                                border: '1px solid #bfdbfe',
+                                borderRadius: '16px',
+                                padding: '14px 16px',
+                                marginBottom: '24px',
+                                textAlign: 'left',
+                                display: 'flex',
+                                gap: '12px',
+                                alignItems: 'flex-start'
+                            }}>
+                                <div style={{ fontSize: '22px', lineHeight: 1 }}>💳</div>
+                                <div style={{ fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
+                                    <strong style={{ display: 'block', marginBottom: '2px', color: '#1e3a8a' }}>Thanh toán Chuyển khoản / VietQR:</strong>
+                                    Hệ thống đã chuẩn bị mã QR thanh toán tự động, bạn có thể quét mã ngay để giữ chỗ tức thì.
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (successModal.paymentMethod === 'Cash') {
+                                        navigate('/my-bookings');
+                                    } else {
+                                        navigate(`/my-bookings?pay=${successModal.bookingId}&type=tour`);
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px',
+                                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '14px',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <span>{successModal.paymentMethod === 'Cash' ? 'Xem Đơn Hàng Của Tôi' : 'Tiến Hành Thanh Toán QR Ngay'}</span>
+                                <ArrowRight size={18} />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/')}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: '#f8fafc',
+                                    color: '#64748b',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '14px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Về Trang Chủ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ALERT / WARNING MODAL */}
+            {alertModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: '#ffffff',
+                        width: '100%',
+                        maxWidth: '440px',
+                        borderRadius: '24px',
+                        overflow: 'hidden',
+                        boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.35)',
+                        textAlign: 'center',
+                        padding: '32px 24px 24px',
+                        position: 'relative',
+                        border: '1px solid #e2e8f0'
+                    }}>
+                        <div style={{
+                            width: '70px',
+                            height: '70px',
+                            borderRadius: '50%',
+                            background: alertModal.type === 'error' ? '#fee2e2' : '#fef3c7',
+                            margin: '0 auto 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            {alertModal.type === 'error' ? (
+                                <AlertCircle size={40} color="#dc2626" />
+                            ) : (
+                                <AlertTriangle size={40} color="#d97706" />
+                            )}
+                        </div>
+                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '0 0 10px 0' }}>
+                            {alertModal.title}
+                        </h3>
+                        <p style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', margin: '0 0 24px 0' }}>
+                            {alertModal.message}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setAlertModal(null)}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: alertModal.type === 'error' ? '#dc2626' : '#d97706',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Đã Hiểu
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="no-print"><CustomerFooter /></div>
         </div>
     );

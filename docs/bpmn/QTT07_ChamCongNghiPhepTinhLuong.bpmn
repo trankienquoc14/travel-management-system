@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_QTT07_ChamCongNghiPhepTinhLuong"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:collaboration id="Collaboration_QTT07_ChamCongNghiPhepTinhLuong">
+    <bpmn:participant id="Participant_QTT07_ChamCongNghiPhepTinhLuong" name="Quy Trình Quản Trị Nhân Sự và Tính Lương (HR Attendance &amp; Payroll)" processRef="Process_QTT07_ChamCongNghiPhepTinhLuong" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_QTT07_ChamCongNghiPhepTinhLuong" name="Quy trình Chấm công GPS, Nghỉ phép và Tính lương Nhân sự" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_QTT07_ChamCongNghiPhepTinhLuong">
+      <bpmn:lane id="Lane_Employee" name="Nhân viên / HDV / Tài xế">
+        <bpmn:flowNodeRef>Start_Attendance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GpsCheckin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Start_LeaveReq</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateLeave</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Payroll</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Hệ thống (HR Service)">
+        <bpmn:flowNodeRef>Task_VerifyGps</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SyncLeaveTimekeeping</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AggregateData</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_IssuePayslip</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_HRManager" name="Quản lý Nhân sự (HR Manager)">
+        <bpmn:flowNodeRef>Task_ReviewLeave</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_LeaveApproval</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LeaveRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Start_PayrollMonth</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReviewPayroll</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SavePayroll</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Attendance" name="Bắt đầu ca làm việc">
+      <bpmn:outgoing>Flow_Start_Attendance_Task_GpsCheckin</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_GpsCheckin" name="Mở ứng dụng &amp; bấm Điểm danh GPS">
+      <bpmn:incoming>Flow_Start_Attendance_Task_GpsCheckin</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_GpsCheckin_Task_VerifyGps</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_VerifyGps" name="Xác thực tọa độ định vị &amp; ghi nhận timekeeping (Present)">
+      <bpmn:incoming>Flow_Task_GpsCheckin_Task_VerifyGps</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_VerifyGps_Task_AggregateData</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="Start_LeaveReq" name="Phát sinh nhu cầu nghỉ phép">
+      <bpmn:outgoing>Flow_Start_LeaveReq_Task_CreateLeave</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_CreateLeave" name="Tạo đơn xin nghỉ phép / Giải trình kèm minh chứng">
+      <bpmn:incoming>Flow_Start_LeaveReq_Task_CreateLeave</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_CreateLeave_Task_ReviewLeave</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ReviewLeave" name="Thẩm định lý do &amp; hạn mức phép còn lại">
+      <bpmn:incoming>Flow_Task_CreateLeave_Task_ReviewLeave</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ReviewLeave_GW_LeaveApproval</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_LeaveApproval" name="HR duyệt nghỉ phép?">
+      <bpmn:incoming>Flow_Task_ReviewLeave_GW_LeaveApproval</bpmn:incoming>
+      <bpmn:outgoing>Flow_GW_LeaveApproval_End_LeaveRejected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GW_LeaveApproval_Task_SyncLeaveTimekeeping</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_LeaveRejected" name="Từ chối duyệt đơn">
+      <bpmn:incoming>Flow_GW_LeaveApproval_End_LeaveRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_SyncLeaveTimekeeping" name="Đồng bộ ngày nghỉ phép hợp lệ vào bảng công (Leave)">
+      <bpmn:incoming>Flow_GW_LeaveApproval_Task_SyncLeaveTimekeeping</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SyncLeaveTimekeeping_Task_AggregateData</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="Start_PayrollMonth" name="Đến kỳ quyết toán tháng">
+      <bpmn:outgoing>Flow_Start_PayrollMonth_Task_AggregateData</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_AggregateData" name="Tự động tổng hợp công GPS, số tour dẫn/lái &amp; điểm KPI">
+      <bpmn:incoming>Flow_Start_PayrollMonth_Task_AggregateData</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_SyncLeaveTimekeeping_Task_AggregateData</bpmn:incoming>
+      <bpmn:incoming>Flow_Task_VerifyGps_Task_AggregateData</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_AggregateData_Task_ReviewPayroll</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_ReviewPayroll" name="Rà soát bảng lương, điều chỉnh thưởng phạt &amp; phụ cấp tour">
+      <bpmn:incoming>Flow_Task_AggregateData_Task_ReviewPayroll</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_ReviewPayroll_Task_SavePayroll</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_SavePayroll" name="Bấm Lưu &amp; Chốt bảng lương (Trạng thái Paid)">
+      <bpmn:incoming>Flow_Task_ReviewPayroll_Task_SavePayroll</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_SavePayroll_Task_IssuePayslip</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_IssuePayslip" name="Phát hành phiếu lương điện tử cho nhân viên">
+      <bpmn:incoming>Flow_Task_SavePayroll_Task_IssuePayslip</bpmn:incoming>
+      <bpmn:outgoing>Flow_Task_IssuePayslip_End_Payroll</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Payroll" name="Hoàn tất chi trả lương tháng">
+      <bpmn:incoming>Flow_Task_IssuePayslip_End_Payroll</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Attendance_Task_GpsCheckin" sourceRef="Start_Attendance" targetRef="Task_GpsCheckin" />
+    <bpmn:sequenceFlow id="Flow_Task_GpsCheckin_Task_VerifyGps" sourceRef="Task_GpsCheckin" targetRef="Task_VerifyGps" />
+    <bpmn:sequenceFlow id="Flow_Start_LeaveReq_Task_CreateLeave" sourceRef="Start_LeaveReq" targetRef="Task_CreateLeave" />
+    <bpmn:sequenceFlow id="Flow_Task_CreateLeave_Task_ReviewLeave" sourceRef="Task_CreateLeave" targetRef="Task_ReviewLeave" />
+    <bpmn:sequenceFlow id="Flow_Task_ReviewLeave_GW_LeaveApproval" sourceRef="Task_ReviewLeave" targetRef="GW_LeaveApproval" />
+    <bpmn:sequenceFlow id="Flow_GW_LeaveApproval_End_LeaveRejected" sourceRef="GW_LeaveApproval" targetRef="End_LeaveRejected" name="Từ chối" />
+    <bpmn:sequenceFlow id="Flow_GW_LeaveApproval_Task_SyncLeaveTimekeeping" sourceRef="GW_LeaveApproval" targetRef="Task_SyncLeaveTimekeeping" name="Duyệt nghỉ phép" />
+    <bpmn:sequenceFlow id="Flow_Start_PayrollMonth_Task_AggregateData" sourceRef="Start_PayrollMonth" targetRef="Task_AggregateData" />
+    <bpmn:sequenceFlow id="Flow_Task_SyncLeaveTimekeeping_Task_AggregateData" sourceRef="Task_SyncLeaveTimekeeping" targetRef="Task_AggregateData" />
+    <bpmn:sequenceFlow id="Flow_Task_VerifyGps_Task_AggregateData" sourceRef="Task_VerifyGps" targetRef="Task_AggregateData" />
+    <bpmn:sequenceFlow id="Flow_Task_AggregateData_Task_ReviewPayroll" sourceRef="Task_AggregateData" targetRef="Task_ReviewPayroll" />
+    <bpmn:sequenceFlow id="Flow_Task_ReviewPayroll_Task_SavePayroll" sourceRef="Task_ReviewPayroll" targetRef="Task_SavePayroll" />
+    <bpmn:sequenceFlow id="Flow_Task_SavePayroll_Task_IssuePayslip" sourceRef="Task_SavePayroll" targetRef="Task_IssuePayslip" />
+    <bpmn:sequenceFlow id="Flow_Task_IssuePayslip_End_Payroll" sourceRef="Task_IssuePayslip" targetRef="End_Payroll" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_QTT07_ChamCongNghiPhepTinhLuong">
+    <bpmndi:BPMNPlane id="BPMNPlane_QTT07_ChamCongNghiPhepTinhLuong" bpmnElement="Collaboration_QTT07_ChamCongNghiPhepTinhLuong">
+      <bpmndi:BPMNShape id="Participant_QTT07_ChamCongNghiPhepTinhLuong_di" bpmnElement="Participant_QTT07_ChamCongNghiPhepTinhLuong" isHorizontal="true">
+        <dc:Bounds x="40" y="70" width="1660" height="600" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Employee_di" bpmnElement="Lane_Employee" isHorizontal="true">
+        <dc:Bounds x="70" y="70" width="1630" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="70" y="270" width="1630" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_HRManager_di" bpmnElement="Lane_HRManager" isHorizontal="true">
+        <dc:Bounds x="70" y="470" width="1630" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Attendance_di" bpmnElement="Start_Attendance">
+        <dc:Bounds x="180" y="135" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GpsCheckin_di" bpmnElement="Task_GpsCheckin">
+        <dc:Bounds x="255" y="118" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VerifyGps_di" bpmnElement="Task_VerifyGps">
+        <dc:Bounds x="255" y="325" width="145" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_LeaveReq_di" bpmnElement="Start_LeaveReq">
+        <dc:Bounds x="450" y="210" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateLeave_di" bpmnElement="Task_CreateLeave">
+        <dc:Bounds x="520" y="190" width="155" height="65" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewLeave_di" bpmnElement="Task_ReviewLeave">
+        <dc:Bounds x="520" y="530" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_LeaveApproval_di" bpmnElement="GW_LeaveApproval">
+        <dc:Bounds x="730" y="540" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LeaveRejected_di" bpmnElement="End_LeaveRejected">
+        <dc:Bounds x="737" y="620" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SyncLeaveTimekeeping_di" bpmnElement="Task_SyncLeaveTimekeeping">
+        <dc:Bounds x="825" y="325" width="155" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_PayrollMonth_di" bpmnElement="Start_PayrollMonth">
+        <dc:Bounds x="1025" y="545" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AggregateData_di" bpmnElement="Task_AggregateData">
+        <dc:Bounds x="1100" y="325" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewPayroll_di" bpmnElement="Task_ReviewPayroll">
+        <dc:Bounds x="1305" y="530" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SavePayroll_di" bpmnElement="Task_SavePayroll">
+        <dc:Bounds x="1510" y="530" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IssuePayslip_di" bpmnElement="Task_IssuePayslip">
+        <dc:Bounds x="1510" y="325" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Payroll_di" bpmnElement="End_Payroll">
+        <dc:Bounds x="1565" y="135" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_Attendance_Task_GpsCheckin_di" bpmnElement="Flow_Start_Attendance_Task_GpsCheckin">
+        <di:waypoint x="216" y="153" />
+        <di:waypoint x="255" y="153" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_GpsCheckin_Task_VerifyGps_di" bpmnElement="Flow_Task_GpsCheckin_Task_VerifyGps">
+        <di:waypoint x="327" y="188" />
+        <di:waypoint x="327" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Start_LeaveReq_Task_CreateLeave_di" bpmnElement="Flow_Start_LeaveReq_Task_CreateLeave">
+        <di:waypoint x="486" y="228" />
+        <di:waypoint x="520" y="222.5" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_CreateLeave_Task_ReviewLeave_di" bpmnElement="Flow_Task_CreateLeave_Task_ReviewLeave">
+        <di:waypoint x="597" y="255" />
+        <di:waypoint x="597" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ReviewLeave_GW_LeaveApproval_di" bpmnElement="Flow_Task_ReviewLeave_GW_LeaveApproval">
+        <di:waypoint x="675" y="565" />
+        <di:waypoint x="730" y="565" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_LeaveApproval_End_LeaveRejected_di" bpmnElement="Flow_GW_LeaveApproval_End_LeaveRejected">
+        <di:waypoint x="755" y="590" />
+        <di:waypoint x="755" y="620" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="755" y="590" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GW_LeaveApproval_Task_SyncLeaveTimekeeping_di" bpmnElement="Flow_GW_LeaveApproval_Task_SyncLeaveTimekeeping">
+        <di:waypoint x="780" y="565" />
+        <di:waypoint x="805" y="565" />
+        <di:waypoint x="805" y="360" />
+        <di:waypoint x="825" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="793" y="550" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Start_PayrollMonth_Task_AggregateData_di" bpmnElement="Flow_Start_PayrollMonth_Task_AggregateData">
+        <di:waypoint x="1043" y="545" />
+        <di:waypoint x="1080" y="545" />
+        <di:waypoint x="1080" y="360" />
+        <di:waypoint x="1100" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SyncLeaveTimekeeping_Task_AggregateData_di" bpmnElement="Flow_Task_SyncLeaveTimekeeping_Task_AggregateData">
+        <di:waypoint x="980" y="360" />
+        <di:waypoint x="1100" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_VerifyGps_Task_AggregateData_di" bpmnElement="Flow_Task_VerifyGps_Task_AggregateData">
+        <di:waypoint x="400" y="360" />
+        <di:waypoint x="1080" y="360" />
+        <di:waypoint x="1080" y="360" />
+        <di:waypoint x="1100" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_AggregateData_Task_ReviewPayroll_di" bpmnElement="Flow_Task_AggregateData_Task_ReviewPayroll">
+        <di:waypoint x="1260" y="360" />
+        <di:waypoint x="1285" y="360" />
+        <di:waypoint x="1285" y="565" />
+        <di:waypoint x="1305" y="565" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_ReviewPayroll_Task_SavePayroll_di" bpmnElement="Flow_Task_ReviewPayroll_Task_SavePayroll">
+        <di:waypoint x="1465" y="565" />
+        <di:waypoint x="1510" y="565" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_SavePayroll_Task_IssuePayslip_di" bpmnElement="Flow_Task_SavePayroll_Task_IssuePayslip">
+        <di:waypoint x="1585" y="530" />
+        <di:waypoint x="1585" y="395" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Task_IssuePayslip_End_Payroll_di" bpmnElement="Flow_Task_IssuePayslip_End_Payroll">
+        <di:waypoint x="1585" y="325" />
+        <di:waypoint x="1583" y="171" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

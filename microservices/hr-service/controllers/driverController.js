@@ -43,12 +43,12 @@ exports.getAssignedTrips = async (req, res) => {
 
     const isAdminOrManager = [1, 2, 3, '1', '2', '3'].includes(userRole);
 
-    let whereClause = `WHERE d.driver_id = :driverId`;
+    let whereClause = `WHERE (tva.driver_id = :driverId OR (tva.driver_id IS NULL AND d.driver_id = :driverId AND d.vehicle_number IS NOT NULL AND d.vehicle_number != ''))`;
     let targetDriverId = userId;
 
     if (isAdminOrManager) {
       if (requestedDriverId === 'all' || !requestedDriverId) {
-        whereClause = `WHERE d.driver_id IS NOT NULL`;
+        whereClause = `WHERE (tva.driver_id IS NOT NULL OR (d.driver_id IS NOT NULL AND d.vehicle_number IS NOT NULL AND d.vehicle_number != ''))`;
       } else {
         targetDriverId = requestedDriverId;
       }
@@ -63,21 +63,26 @@ exports.getAssignedTrips = async (req, res) => {
         d.max_slots,
         d.available_slots,
         d.status,
-        d.vehicle_number,
+        COALESCE(v.license_plate, d.vehicle_number) AS vehicle_number,
         d.guide_id,
-        d.driver_id,
+        COALESCE(tva.driver_id, d.driver_id) AS driver_id,
         t.tour_name,
         CONCAT('TOUR-', t.tour_id) as tour_code,
         t.destination,
         t.duration_days,
-        COALESCE(g.full_name, g_user.full_name) as guide_name,
-        COALESCE(g.phone, g_user.phone) as guide_phone,
-        COALESCE(g.email, g_user.email) as guide_email
+        COALESCE(gu.full_name, g_user.full_name, g_alt.full_name) as guide_name,
+        COALESCE(gu.phone, g_user.phone, g_alt.phone) as guide_phone,
+        COALESCE(gu.email, g_user.email, g_alt.email) as guide_email
       FROM departures d
       JOIN tours t ON d.tour_id = t.tour_id
-      LEFT JOIN users g ON d.guide_id = g.user_id
+      LEFT JOIN tour_vehicle_assignments tva ON d.departure_id = tva.departure_id AND tva.status != 'CANCELLED'
+      LEFT JOIN vehicles v ON tva.vehicle_id = v.vehicle_id
+      LEFT JOIN users gu ON d.guide_id = gu.user_id
       LEFT JOIN guides g_table ON d.guide_id = g_table.guide_id
       LEFT JOIN users g_user ON g_table.user_id = g_user.user_id
+      LEFT JOIN guide_assignments ga ON ga.departure_id = d.departure_id
+      LEFT JOIN guides g ON ga.guide_id = g.guide_id
+      LEFT JOIN users g_alt ON g.user_id = g_alt.user_id
       ${whereClause}
       ORDER BY d.departure_date DESC;
     `, {
@@ -119,12 +124,25 @@ function formatActivitiesToDescription(day) {
 }
 
 async function getTourItinerariesWithFallback(tourId) {
+  let targetTourId = Number(tourId);
+
+  // Tự động kiểm tra nếu tourId thực chất là departure_id
+  const [depRows] = await sequelize.query(`
+    SELECT tour_id FROM departures WHERE departure_id = ? LIMIT 1
+  `, { replacements: [tourId] });
+  if (depRows.length > 0 && depRows[0].tour_id) {
+    const [tourCheck] = await sequelize.query(`SELECT tour_id FROM tours WHERE tour_id = ? LIMIT 1`, { replacements: [targetTourId] });
+    if (tourCheck.length === 0) {
+      targetTourId = Number(depRows[0].tour_id);
+    }
+  }
+
   let [itineraries] = await sequelize.query(`
     SELECT itinerary_id, tour_id, day_number, title, description
     FROM itineraries 
     WHERE tour_id = ? 
     ORDER BY day_number ASC
-  `, { replacements: [tourId] });
+  `, { replacements: [targetTourId] });
 
   if (itineraries.length > 0) {
     return itineraries;
@@ -133,7 +151,7 @@ async function getTourItinerariesWithFallback(tourId) {
   // Fallback 1: Parse design_data from tours table for custom tours
   const [tours] = await sequelize.query(`
     SELECT tour_id, tour_name, design_data, description FROM tours WHERE tour_id = ?
-  `, { replacements: [tourId] });
+  `, { replacements: [targetTourId] });
 
   if (tours.length > 0) {
     const tour = tours[0];
@@ -374,6 +392,27 @@ exports.reportVehicleIncident = async (req, res) => {
         image_url
       }
     });
+
+    // Bắn thông báo Realtime cho Nhân viên điều hành (STAFF) và Quản trị
+    try {
+      const [driverRow] = await sequelize.query(`SELECT full_name, phone FROM users WHERE user_id = :driverId`, { replacements: { driverId } });
+      const driverName = driverRow[0]?.full_name || 'Tài xế';
+      const notifTitle = `🚨 Báo cáo sự cố xe (${vehicle_number}) #${result}`;
+      const notifContent = `Tài xế ${driverName} vừa báo cáo sự cố xe ${vehicle_number}: "${title}" - ${description}. Địa điểm: ${location || 'Trên đường'}. Vui lòng xử lý cứu hộ/sửa chữa!`;
+
+      await sequelize.query(`
+        INSERT INTO notifications (type, target_role, title, content, departure_id, is_read, action_url, created_at)
+        VALUES ('TOUR_INCIDENT', 'STAFF', :notifTitle, :notifContent, :departure_id, 0, 'vehicle_incidents', NOW())
+      `, {
+        replacements: {
+          notifTitle,
+          notifContent,
+          departure_id: departure_id || null
+        }
+      });
+    } catch (notifErr) {
+      console.error('Lỗi tạo notification reportVehicleIncident:', notifErr);
+    }
 
     return res.status(201).json({
       success: true,
