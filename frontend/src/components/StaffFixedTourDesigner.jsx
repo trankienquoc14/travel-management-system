@@ -29,7 +29,8 @@ export const getInitialCostConfig = () => ({
         preset: 'custom'
     },
     selectedTransport: null,
-    transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
+    transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
+    transportLocations: { startD: '', endD: '', startR: '', endR: '' }
 });
 
 const StaffFixedTourDesigner = ({ editTourData }) => {
@@ -176,7 +177,8 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                 selectedTransport: null,
                 fixed: { ...costConfig.fixed, transport: 0 },
                 variable: { ...costConfig.variable, transportTicket: 0 },
-                transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
+                transportTimes: costConfig.transportTimes || { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
+                transportLocations: costConfig.transportLocations || { startD: '', endD: '', startR: '', endR: '' }
             });
             return;
         }
@@ -187,7 +189,8 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
             selectedTransport: s || null,
             fixed: { ...costConfig.fixed, transport: (!isTicket && s) ? Number(s.base_cost) * days.length : 0 },
             variable: { ...costConfig.variable, transportTicket: (isTicket && s) ? Number(s.base_cost) : 0 },
-            transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
+            transportTimes: costConfig.transportTimes || { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
+            transportLocations: costConfig.transportLocations || { startD: '', endD: '', startR: '', endR: '' }
         });
     };
 
@@ -377,7 +380,8 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                                 fixed: { ...baseConfig.fixed, ...(parsed.costConfig.fixed || {}) },
                                 variable: { ...baseConfig.variable, ...(parsed.costConfig.variable || {}) },
                                 ageMultiplier: { ...baseConfig.ageMultiplier, ...parsedAgeMult },
-                                transportTimes: { ...baseConfig.transportTimes, ...(parsed.costConfig.transportTimes || {}) }
+                                transportTimes: { ...baseConfig.transportTimes, ...(parsed.costConfig.transportTimes || {}) },
+                                transportLocations: { ...baseConfig.transportLocations, ...(parsed.costConfig.transportLocations || {}) }
                             });
                         } else {
                             setCostConfig(getInitialCostConfig());

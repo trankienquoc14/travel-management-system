@@ -47,6 +47,68 @@ const fetchSepayTransactions = (limit = 25) => {
 
 // 1. Tạo đơn đặt hàng cho Tour trọn gói cố định (Định nghĩa chính thức nằm ở dòng 96 phía dưới)
 
+// Hàm tự động quét và hủy các đơn thanh toán chuyển khoản (CK / QR) đã quá hạn 10 phút (600 giây)
+const PAYMENT_DEADLINE_SECONDS = 600; // 10 phút = 600 giây
+const autoCancelExpiredTransferBookings = async (customerId = null) => {
+  try {
+    const customerFilter = customerId ? 'AND b.customer_id = ?' : '';
+    const replacements = customerId ? [PAYMENT_DEADLINE_SECONDS, customerId] : [PAYMENT_DEADLINE_SECONDS];
+
+    const [expiredBookings] = await sequelize.query(`
+      SELECT b.booking_id, b.departure_id, b.num_people
+      FROM bookings b
+      LEFT JOIN (
+        SELECT booking_id, MAX(payment_method) AS payment_method
+        FROM payments
+        GROUP BY booking_id
+      ) p ON b.booking_id = p.booking_id
+      WHERE b.payment_status = 'Unpaid'
+        AND b.booking_status NOT IN ('Cancelled', 'Completed', 'Confirmed')
+        AND LOWER(COALESCE(p.payment_method, 'vnpay_qr')) NOT IN ('cash', 'tiền mặt')
+        AND TIMESTAMPDIFF(SECOND, b.booking_date, NOW()) >= ?
+        ${customerFilter}
+    `, { replacements });
+
+    for (const exp of expiredBookings) {
+      const tx = await sequelize.transaction();
+      try {
+        await sequelize.query(`
+          UPDATE bookings
+          SET booking_status = 'Cancelled',
+              notes = CASE
+                WHEN notes IS NULL OR notes = '' THEN '[Tự động hủy: Hết thời gian thanh toán chuyển khoản 10 phút]'
+                WHEN notes LIKE '%[Tự động hủy:%' THEN notes
+                ELSE CONCAT(notes, ' [Tự động hủy: Hết thời gian thanh toán chuyển khoản 10 phút]')
+              END
+          WHERE booking_id = ? AND payment_status = 'Unpaid' AND booking_status != 'Cancelled'
+        `, { replacements: [exp.booking_id], transaction: tx });
+
+        if (exp.departure_id && exp.num_people) {
+          await sequelize.query(`
+            UPDATE departures
+            SET available_slots = LEAST(max_slots, available_slots + ?)
+            WHERE departure_id = ?
+          `, { replacements: [exp.num_people, exp.departure_id], transaction: tx });
+        }
+
+        await sequelize.query(`
+          UPDATE payments
+          SET payment_status = 'Failed'
+          WHERE booking_id = ? AND payment_status = 'Pending'
+        `, { replacements: [exp.booking_id], transaction: tx });
+
+        await tx.commit();
+        console.log(`⏱️ [Auto-Cancel] Đã tự động hủy đơn tour CK #${exp.booking_id} do quá hạn thanh toán 10 phút.`);
+      } catch (innerErr) {
+        await tx.rollback();
+        console.error(`Lỗi auto-cancel đơn #${exp.booking_id}:`, innerErr.message);
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi autoCancelExpiredTransferBookings:', err.message);
+  }
+};
+
 // 2. Lấy danh sách đơn hàng của khách hàng (HỖ TRỢ CẢ TOUR TRỌN GÓI VÀ TOUR THIẾT KẾ RIÊNG)
 exports.getMyBookings = async (req, res) => {
   try {
@@ -55,6 +117,9 @@ exports.getMyBookings = async (req, res) => {
     if (!customer_id) {
       return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập!' });
     }
+
+    // Tự động hủy các đơn chuyển khoản (CK) chưa thanh toán đã quá hạn 10 phút trước khi trả danh sách
+    await autoCancelExpiredTransferBookings(customer_id);
 
     // Dùng LEFT JOIN và COALESCE để lấy thông tin toàn diện cho cả 2 loại tour
     const [bookings] = await sequelize.query(`
@@ -65,6 +130,7 @@ exports.getMyBookings = async (req, res) => {
         b.booking_status, 
         b.payment_status,
         b.booking_date,
+        GREATEST(0, TIMESTAMPDIFF(SECOND, b.booking_date, NOW())) AS elapsed_seconds,
         b.notes,
         b.breakdown,
         b.quote_id,
@@ -76,6 +142,10 @@ exports.getMyBookings = async (req, res) => {
         (SELECT fee_amount FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_fee_amount,
         (SELECT refund_amount FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_refund_amount,
         (SELECT days_before_departure FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_days,
+        
+        COALESCE(t.tour_id, d.tour_id) AS tour_id,
+        (SELECT review_id FROM reviews WHERE booking_id = b.booking_id OR (customer_id = b.customer_id AND tour_id = COALESCE(t.tour_id, d.tour_id)) LIMIT 1) AS reviewed_id,
+        (SELECT rating FROM reviews WHERE booking_id = b.booking_id OR (customer_id = b.customer_id AND tour_id = COALESCE(t.tour_id, d.tour_id)) LIMIT 1) AS user_rating,
         
         COALESCE(t.tour_name, CONCAT('Tour ', cr.destination)) AS tour_name,
         COALESCE(t.destination, cr.destination, 'Việt Nam') AS destination,
@@ -92,7 +162,7 @@ exports.getMyBookings = async (req, res) => {
         u.full_name AS customer_name,
         u.phone AS customer_phone,
         u.email AS customer_email,
-        p_method.payment_method
+        COALESCE(p_method.payment_method, 'VNPAY_QR') AS payment_method
 
       FROM bookings b
       LEFT JOIN users u ON b.customer_id = u.user_id
@@ -583,6 +653,10 @@ exports.createChangeRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Đơn hàng này đã được hủy trước đó!' });
     }
 
+    if (booking.booking_status === 'Completed') {
+      return res.status(400).json({ success: false, message: 'Chuyến đi này đã hoàn thành, không thể gửi yêu cầu hủy hoặc đổi lịch!' });
+    }
+
     // Tính số ngày còn lại trước ngày khởi hành
     let daysBeforeDeparture = null;
     if (booking.departure_date) {
@@ -595,6 +669,14 @@ exports.createChangeRequest = async (req, res) => {
     }
 
     const isPaid = booking.payment_status === 'Paid';
+
+    // Chặn yêu cầu hủy / đổi lịch nếu đã hết thời gian hủy/đổi theo quy định (< 3 ngày trước ngày khởi hành hoặc đã khởi hành)
+    if (daysBeforeDeparture !== null && daysBeforeDeparture < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn tour này đã hết thời gian hỗ trợ hủy / đổi lịch (quy định: phải thực hiện trước ngày khởi hành tối thiểu 3 ngày)!'
+      });
+    }
     const totalAmount = Number(booking.total_amount || 0);
 
     let feePercentage = 0;
@@ -900,6 +982,7 @@ exports.processChangeRequest = async (req, res) => {
 // 4. LẤY TẤT CẢ BOOKING DÀNH CHO NHÂN VIÊN VĂN PHÒNG & ADMIN
 exports.getAllBookings = async (req, res) => {
   try {
+    await autoCancelExpiredTransferBookings();
     const [bookings] = await sequelize.query(`
       SELECT 
         b.booking_id, 
@@ -2857,11 +2940,11 @@ exports.getStaffDashboardStats = async (req, res) => {
       SELECT 
         COUNT(*) AS total_bookings,
         COALESCE(SUM(CASE WHEN b.payment_status = 'Paid' THEN b.total_amount ELSE 0 END), 0) AS total_revenue,
-        COALESCE(SUM(CASE WHEN b.payment_status = 'Pending' AND b.booking_status != 'Cancelled' THEN b.total_amount ELSE 0 END), 0) AS pending_revenue,
+        COALESCE(SUM(CASE WHEN b.payment_status IN ('Pending', 'Unpaid') AND b.booking_status != 'Cancelled' THEN b.total_amount ELSE 0 END), 0) AS pending_revenue,
         COALESCE(SUM(CASE WHEN b.payment_status = 'Refunded' THEN b.total_amount ELSE 0 END), 0) AS refunded_amount,
         COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0) AS total_passengers,
         COUNT(CASE WHEN b.payment_status = 'Paid' THEN 1 END) AS paid_bookings_count,
-        COUNT(CASE WHEN b.payment_status = 'Pending' AND b.booking_status != 'Cancelled' THEN 1 END) AS pending_bookings_count,
+        COUNT(CASE WHEN b.payment_status IN ('Pending', 'Unpaid') AND b.booking_status != 'Cancelled' THEN 1 END) AS pending_bookings_count,
         COUNT(CASE WHEN b.booking_status = 'Cancelled' THEN 1 END) AS cancelled_bookings_count,
         COUNT(CASE WHEN b.booking_status = 'Completed' THEN 1 END) AS completed_bookings_count
       FROM bookings b
@@ -2966,9 +3049,9 @@ exports.getStaffDashboardStats = async (req, res) => {
         b.num_people,
         b.booking_status,
         b.payment_status,
-        COALESCE(u.full_name, b.contact_name, 'Khách hàng') AS customer_name,
-        COALESCE(u.phone, b.contact_phone, '') AS customer_phone,
-        COALESCE(u.email, b.contact_email, '') AS customer_email,
+        COALESCE(u.full_name, 'Khách hàng') AS customer_name,
+        COALESCE(u.phone, '') AS customer_phone,
+        COALESCE(u.email, '') AS customer_email,
         COALESCE(t.tour_name, CONCAT('Tour: ', ctr.destination), 'Tour du lịch') AS tour_name,
         COALESCE(d.departure_date, ctr.departure_date) AS departure_date,
         COALESCE(pm.payment_method, 'Chuyển khoản QR') AS payment_method

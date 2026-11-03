@@ -589,6 +589,12 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                     if (startLastDay === 'Điểm xuất phát' && endDay1 && endDay1 !== 'Điểm đến') startLastDay = endDay1;
                                     if (endLastDay === 'Điểm đến' && startDay1 && startDay1 !== 'Điểm xuất phát') endLastDay = startDay1;
 
+                                    const transLocs = costConfig.transportLocations || {};
+                                    const dispStartD = transLocs.startD || startDay1;
+                                    const dispEndD = transLocs.endD || endDay1;
+                                    const dispStartR = transLocs.startR || ((startLastDay && startLastDay !== startDay1) ? startLastDay : endDay1);
+                                    const dispEndR = transLocs.endR || endLastDay;
+
                                     return (
                                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
                                             {/* CỘT TRÁI: LỊCH TRÌNH CHI TIẾT */}
@@ -652,8 +658,8 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                                                                     <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endD || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                                                 </div>
                                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
-                                                                                    <span>{startDay1}</span>
-                                                                                    <span>{endDay1}</span>
+                                                                                    <span>{dispStartD}</span>
+                                                                                    <span>{dispEndD}</span>
                                                                                 </div>
                                                                             </div>
                                                                             
@@ -667,8 +673,8 @@ const StaffPendingTours = ({ onEditDesign, onEditFixedDesign }) => {
                                                                                     <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endR || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                                                 </div>
                                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
-                                                                                    <span>{startLastDay}</span>
-                                                                                    <span>{endLastDay}</span>
+                                                                                    <span>{dispStartR}</span>
+                                                                                    <span>{dispEndR}</span>
                                                                                 </div>
                                                                             </div>
                                                                         </div>

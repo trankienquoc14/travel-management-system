@@ -70,12 +70,15 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
   const [assignedSearchTerm, setAssignedSearchTerm] = useState('');
   const [assignedStatusFilter, setAssignedStatusFilter] = useState('all');
 
-  // Trạng thái Quét mã QR Điểm danh
+  // Trạng thái Quét mã QR Điểm danh & Điểm danh thủ công
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrActiveTab, setQrActiveTab] = useState('camera'); // 'camera' | 'manual' | 'file'
   const [qrInputText, setQrInputText] = useState('');
   const [qrScanMsg, setQrScanMsg] = useState(null);
   const [qrSubmitting, setQrSubmitting] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState('idle'); // 'idle' | 'requesting' | 'active' | 'denied'
+  const [checkinToast, setCheckinToast] = useState(null);
+  const [previewTicketPax, setPreviewTicketPax] = useState(null);
 
   const storedUser = localStorage.getItem('user');
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
@@ -228,7 +231,8 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
-  const handleCheckinToggle = async (passengerId, currentStatus) => {
+  // Luồng sự kiện thay thế 1.1 & 1.2: Điểm danh thủ công trên danh sách
+  const handleCheckinToggle = async (passengerId, currentStatus, passengerName = '') => {
     try {
       const token = localStorage.getItem('token');
       const newStatus = currentStatus === 1 ? 0 : 1;
@@ -238,12 +242,38 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.success) {
+        if (newStatus === 1) {
+          playBeepSound();
+        }
+        const nowTime = res.data.data?.checked_in_time || new Date().toTimeString().split(' ')[0];
+        const nowIso = res.data.data?.checked_in_at || new Date().toISOString();
         setPassengers(prev => 
-          prev.map(p => p.passenger_id === passengerId ? { ...p, is_checked_in: newStatus } : p)
+          prev.map(p => p.passenger_id === passengerId ? {
+            ...p,
+            is_checked_in: newStatus,
+            checked_in_at: newStatus === 1 ? nowIso : null,
+            checked_in_time: newStatus === 1 ? nowTime : null
+          } : p)
         );
+        setCheckinToast({
+          type: newStatus === 1 ? 'success' : 'info',
+          text: newStatus === 1
+            ? `✅ Đã xác nhận điểm danh thủ công cho hành khách "${passengerName || '#' + passengerId}" vào lúc ${nowTime}.`
+            : `🔄 Đã đặt lại trạng thái điểm danh của hành khách "${passengerName || '#' + passengerId}".`
+        });
+        setTimeout(() => setCheckinToast(null), 5000);
+        // Nếu là bản ghi giả định 'b...' vừa được tạo thật trong DB, tải lại danh sách để đồng bộ passenger_id
+        if (String(passengerId).startsWith('b') && selectedDeparture) {
+          fetchPassengersAndIncidents(selectedDeparture.departure_id);
+        }
       }
     } catch (error) {
-      alert('Không thể cập nhật trạng thái điểm danh: ' + (error.response?.data?.message || error.message));
+      const errMsg = error.response?.data?.message || error.message;
+      setCheckinToast({
+        type: 'error',
+        text: '❌ Không thể cập nhật trạng thái điểm danh: ' + errMsg
+      });
+      setTimeout(() => setCheckinToast(null), 5000);
     }
   };
 
@@ -264,10 +294,11 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
+  // Luồng sự kiện chính 4, 5, 6 & Luồng thay thế 5.1, 5.2: Xử lý dữ liệu mã QR vé điện tử
   const handleProcessQrCode = async (codeToProcess) => {
     const qrStr = codeToProcess || qrInputText;
     if (!qrStr || !qrStr.trim()) {
-      setQrScanMsg({ type: 'error', text: 'Vui lòng nhập hoặc quét mã QR hợp lệ!' });
+      setQrScanMsg({ type: 'error', text: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này' });
       return;
     }
     setQrSubmitting(true);
@@ -285,20 +316,44 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
 
       if (res.data.success) {
         playBeepSound();
-        setQrScanMsg({ type: 'success', text: res.data.message });
+        setQrScanMsg({
+          type: 'success',
+          text: res.data.message,
+          passengerName: res.data.data?.full_name,
+          checkedInTime: res.data.data?.checked_in_time
+        });
+        setCheckinToast({
+          type: 'success',
+          text: `🎉 ${res.data.message}`
+        });
+        setTimeout(() => setCheckinToast(null), 5000);
         setQrInputText('');
         if (selectedDeparture) {
           fetchPassengersAndIncidents(selectedDeparture.departure_id);
         }
       } else {
-        setQrScanMsg({ type: 'error', text: res.data.message || 'Điểm danh thất bại!' });
+        setQrScanMsg({ type: 'error', text: res.data.message || 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này' });
       }
     } catch (err) {
-      const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : null) || err.message;
-      setQrScanMsg({
-        type: 'error',
-        text: serverMsg || 'Có lỗi xảy ra khi xác thực mã QR vé tour.'
-      });
+      const errData = err.response?.data || {};
+      const errCode = errData.error_code;
+      const serverMsg = errData.message || (typeof errData === 'string' ? errData : null) || 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này';
+
+      // Luồng thay thế 5.1: Mã vé đã được điểm danh trước đó
+      if (errCode === 'ALREADY_CHECKED_IN' || (serverMsg && serverMsg.includes('đã được điểm danh vào lúc'))) {
+        setQrScanMsg({
+          type: 'warning',
+          text: serverMsg,
+          passengerName: errData.passenger_name,
+          checkedInTime: errData.checked_in_time
+        });
+      } else {
+        // Luồng thay thế 5.2: Mã vé không hợp lệ hoặc không thuộc đoàn này
+        setQrScanMsg({
+          type: 'error',
+          text: serverMsg
+        });
+      }
     } finally {
       setQrSubmitting(false);
     }
@@ -314,34 +369,57 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
       const qrCodeMessage = await html5QrCode.scanFile(file, true);
       await handleProcessQrCode(qrCodeMessage);
     } catch (err) {
-      setQrScanMsg({ type: 'error', text: 'Không quét được mã QR từ tệp ảnh này. Vui lòng thử ảnh rõ nét hơn hoặc nhập mã thủ công.' });
+      setQrScanMsg({ type: 'error', text: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này (Không đọc được mã QR từ ảnh).' });
     } finally {
       setQrSubmitting(false);
     }
   };
 
+  // Luồng sự kiện chính Bước 2: Yêu cầu quyền truy cập camera của thiết bị, khởi động máy quét mã QR
   useEffect(() => {
     let scanner = null;
+    let isCancelled = false;
+
     if (showQrModal && qrActiveTab === 'camera') {
-      const timer = setTimeout(() => {
-        const container = document.getElementById('qr-reader-container');
-        if (container) {
-          scanner = new Html5QrcodeScanner(
-            'qr-reader-container',
-            { fps: 10, qrbox: { width: 220, height: 220 } },
-            false
-          );
-          scanner.render(
-            (decodedText) => {
-              scanner.clear().catch(console.error);
-              handleProcessQrCode(decodedText);
-            },
-            () => {}
-          );
+      setCameraStatus('requesting');
+      const initCameraAndScanner = async () => {
+        try {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+          }
+          if (isCancelled) return;
+          setCameraStatus('active');
+        } catch (camErr) {
+          if (isCancelled) return;
+          setCameraStatus('denied');
         }
-      }, 300);
+
+        setTimeout(() => {
+          if (isCancelled) return;
+          const container = document.getElementById('qr-reader-container');
+          if (container) {
+            scanner = new Html5QrcodeScanner(
+              'qr-reader-container',
+              { fps: 10, qrbox: { width: 220, height: 220 } },
+              false
+            );
+            scanner.render(
+              (decodedText) => {
+                scanner.clear().catch(console.error);
+                handleProcessQrCode(decodedText);
+              },
+              () => {}
+            );
+          }
+        }, 200);
+      };
+
+      initCameraAndScanner();
+
       return () => {
-        clearTimeout(timer);
+        isCancelled = true;
+        setCameraStatus('idle');
         if (scanner) {
           scanner.clear().catch(() => {});
         }
@@ -695,10 +773,18 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
     }
   };
 
-  const filteredPassengers = passengers.filter(p => 
-    p.full_name?.toLowerCase().includes(searchPassenger.toLowerCase()) ||
-    p.identity_number?.toLowerCase().includes(searchPassenger.toLowerCase())
-  );
+  const filteredPassengers = passengers.filter(p => {
+    const q = searchPassenger.toLowerCase().trim();
+    if (!q) return true;
+    const ticketCode = (p.qr_ticket_code || `BKG-${p.booking_id}-PAX-${p.pax_index || 0}`).toLowerCase();
+    return (
+      p.full_name?.toLowerCase().includes(q) ||
+      p.identity_number?.toLowerCase().includes(q) ||
+      ticketCode.includes(q) ||
+      String(p.booking_id || '').includes(q) ||
+      p.booker_phone?.toLowerCase().includes(q)
+    );
+  });
 
   const checkedInCount = passengers.filter(p => p.is_checked_in === 1).length;
   const activeToursCount = works.filter(w => w.status === 'Closed').length;
@@ -1352,44 +1438,117 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
             {/* CỘT TRÁI - NỘI DUNG TỪNG TRANG CHI TIẾT */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* CHI TIẾT: Điểm danh hành khách */}
+              {/* CHI TIẾT: Điểm danh khách hàng (Theo Bảng 3.14 Đặc tả Use Case) */}
               {activeTab === 'guide_passengers' && (
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  {/* Header & Nút Quét mã QR Điểm danh */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                    <h4 style={{ margin: 0, fontSize: '16px', color: '#0f172a', fontWeight: '700' }}>📋 Danh sách Điểm danh đoàn</h4>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '17px', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        📋 Điểm danh khách hàng
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '3px 10px',
+                          borderRadius: '20px',
+                          fontWeight: '700',
+                          background: selectedDeparture?.status === 'Completed' ? '#fee2e2' : '#dcfce7',
+                          color: selectedDeparture?.status === 'Completed' ? '#991b1b' : '#166534'
+                        }}>
+                          {selectedDeparture?.status === 'Open' ? '🟢 Chuẩn bị xuất phát' : selectedDeparture?.status === 'Closed' ? '🚌 Đang diễn ra' : '🔒 Đã kết thúc'}
+                        </span>
+                      </h4>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                        Điểm danh hành khách khi lên xe hoặc tập trung tại các điểm dừng chân qua quét mã QR vé điện tử hoặc xác nhận thủ công.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <button
                         type="button"
+                        disabled={selectedDeparture?.status === 'Completed'}
                         onClick={() => {
+                          setQrActiveTab('camera');
                           setShowQrModal(true);
                           setQrScanMsg(null);
                         }}
                         style={{
-                          padding: '7px 14px',
-                          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                          padding: '9px 16px',
+                          background: selectedDeparture?.status === 'Completed' ? '#94a3b8' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                           color: '#fff',
                           border: 'none',
                           borderRadius: '8px',
                           fontSize: '13px',
                           fontWeight: '700',
-                          cursor: 'pointer',
+                          cursor: selectedDeparture?.status === 'Completed' ? 'not-allowed' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          boxShadow: '0 2px 8px rgba(2,132,199,0.3)'
+                          boxShadow: selectedDeparture?.status === 'Completed' ? 'none' : '0 2px 8px rgba(2,132,199,0.3)'
                         }}
                       >
-                        📷 Quét Mã QR Điểm Danh
+                        📷 Quét mã QR Điểm danh
                       </button>
                       <input 
                         type="text" 
-                        placeholder="Tìm theo tên hành khách, CMND..." 
+                        placeholder="Tìm tên khách trên danh sách, mã vé, CCCD..." 
                         value={searchPassenger}
                         onChange={(e) => setSearchPassenger(e.target.value)}
-                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', width: '240px' }}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', width: '270px' }}
                       />
                     </div>
                   </div>
+
+                  {/* THANH TIẾN ĐỘ QUÂN SỐ ĐOÀN (Hậu điều kiện Bảng 3.14) */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '14px 16px',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                        📊 Thanh tiến độ quân số đoàn: <span style={{ color: '#0284c7' }}>{checkedInCount} / {passengers.length}</span> hành khách ({passengers.length > 0 ? Math.round((checkedInCount / passengers.length) * 100) : 0}%)
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '12px', fontWeight: '700' }}>
+                        <span style={{ color: '#166534', background: '#dcfce7', padding: '2px 10px', borderRadius: '12px' }}>
+                          ✓ Đã điểm danh (is_checked_in = 1): {checkedInCount}
+                        </span>
+                        <span style={{ color: '#b91c1c', background: '#fee2e2', padding: '2px 10px', borderRadius: '12px' }}>
+                          ⏳ Chưa điểm danh: {passengers.length - checkedInCount}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${passengers.length > 0 ? (checkedInCount / passengers.length) * 100 : 0}%`,
+                        height: '100%',
+                        background: checkedInCount === passengers.length && passengers.length > 0
+                          ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                          : 'linear-gradient(90deg, #0284c7 0%, #10b981 100%)',
+                        transition: 'width 0.35s ease'
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Thông báo phản hồi nhanh khi điểm danh */}
+                  {checkinToast && (
+                    <div style={{
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      marginBottom: '14px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      background: checkinToast.type === 'success' ? '#dcfce7' : checkinToast.type === 'error' ? '#fee2e2' : '#e0f2fe',
+                      color: checkinToast.type === 'success' ? '#166534' : checkinToast.type === 'error' ? '#991b1b' : '#0369a1',
+                      border: `1px solid ${checkinToast.type === 'success' ? '#bbf7d0' : checkinToast.type === 'error' ? '#fca5a5' : '#bae6fd'}`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span>{checkinToast.text}</span>
+                      <button onClick={() => setCheckinToast(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: '800', color: 'inherit' }}>✕</button>
+                    </div>
+                  )}
 
                   {passengersLoading ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Đang tải danh sách khách...</div>
@@ -1398,45 +1557,134 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                         <thead>
                           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600' }}>Hành khách</th>
-                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600' }}>Giới tính</th>
-                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600' }}>Ngày sinh</th>
-                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600' }}>CMND/CCCD</th>
-                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600' }}>Người liên hệ</th>
-                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '600', textAlign: 'center' }}>Điểm danh</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700' }}>Hành khách</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700' }}>Mã vé điện tử QR</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700' }}>Giới tính / Ngày sinh</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700' }}>CMND/CCCD</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700' }}>Người liên hệ</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700', textAlign: 'center' }}>Thời điểm điểm danh</th>
+                            <th style={{ padding: '12px 14px', color: '#64748b', fontWeight: '700', textAlign: 'center' }}>Điểm danh thủ công</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredPassengers.length === 0 ? (
                             <tr>
-                              <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Không tìm thấy khách hàng nào.</td>
+                              <td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Không tìm thấy khách hàng nào.</td>
                             </tr>
                           ) : (
-                            filteredPassengers.map(p => (
-                              <tr key={p.passenger_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '12px 14px', fontWeight: '700', color: '#334155' }}>{p.full_name}</td>
-                                <td style={{ padding: '12px 14px' }}>{p.gender === 'Male' ? 'Nam' : p.gender === 'Female' ? 'Nữ' : 'Khác'}</td>
-                                <td style={{ padding: '12px 14px' }}>{p.birth_date ? new Date(p.birth_date).toLocaleDateString('vi-VN') : '—'}</td>
-                                <td style={{ padding: '12px 14px' }}>{p.identity_number || '—'}</td>
-                                <td style={{ padding: '12px 14px' }}>
-                                  <div style={{ fontWeight: '500' }}>{p.booker_name}</div>
-                                  <div style={{ fontSize: '11px', color: '#64748b' }}>SĐT: {p.booker_phone}</div>
-                                </td>
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                                    <input 
-                                      type="checkbox" 
-                                      checked={p.is_checked_in === 1}
-                                      onChange={() => handleCheckinToggle(p.passenger_id, p.is_checked_in)}
-                                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                                    />
-                                    <span style={{ fontSize: '12px', fontWeight: '700', color: p.is_checked_in === 1 ? '#166534' : '#ef4444' }}>
-                                      {p.is_checked_in === 1 ? 'Đã có mặt' : 'Vắng'}
-                                    </span>
-                                  </label>
-                                </td>
-                              </tr>
-                            ))
+                            filteredPassengers.map((p, idx) => {
+                              const ticketCode = p.qr_ticket_code || `BKG-${p.booking_id}-PAX-${p.pax_index ?? idx}`;
+                              const isChecked = Number(p.is_checked_in) === 1;
+                              const timeDisplay = p.checked_in_time || (p.checked_in_at ? new Date(p.checked_in_at).toTimeString().split(' ')[0] : null);
+
+                              return (
+                                <tr key={p.passenger_id} style={{ borderBottom: '1px solid #f1f5f9', background: isChecked ? '#f0fdf4' : '#ffffff' }}>
+                                  <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                    <div>{p.full_name}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '500' }}>Đơn #{p.booking_id}</div>
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <code style={{ background: '#eff6ff', color: '#1d4ed8', padding: '3px 8px', borderRadius: '6px', fontWeight: '700', fontSize: '12px', border: '1px solid #bfdbfe' }}>
+                                        {ticketCode}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewTicketPax({ ...p, ticketCode })}
+                                        title="Xem vé điện tử QR của hành khách"
+                                        style={{ padding: '3px 7px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: '600', color: '#334155' }}
+                                      >
+                                        🎫 QR
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <div>{p.gender === 'Male' ? 'Nam' : p.gender === 'Female' ? 'Nữ' : 'Khác'}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748b' }}>
+                                      {p.birth_date ? new Date(p.birth_date).toLocaleDateString('vi-VN') : '—'}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>{p.identity_number || '—'}</td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <div style={{ fontWeight: '600', color: '#334155' }}>{p.booker_name}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748b' }}>SĐT: {p.booker_phone}</div>
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                    {isChecked ? (
+                                      <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        background: '#dcfce7',
+                                        color: '#166534',
+                                        padding: '4px 10px',
+                                        borderRadius: '12px',
+                                        fontSize: '12px',
+                                        fontWeight: '700'
+                                      }}>
+                                        ⏱️ {timeDisplay || 'Đã ghi nhận'}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                    {!isChecked ? (
+                                      /* Luồng sự kiện thay thế 1.1: HDV tìm tên khách trên danh sách và nhấn nút "Check-in" */
+                                      <button
+                                        type="button"
+                                        disabled={selectedDeparture?.status === 'Completed'}
+                                        onClick={() => handleCheckinToggle(p.passenger_id, 0, p.full_name)}
+                                        style={{
+                                          padding: '6px 14px',
+                                          background: selectedDeparture?.status === 'Completed' ? '#cbd5e1' : '#0284c7',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: '8px',
+                                          fontSize: '12px',
+                                          fontWeight: '700',
+                                          cursor: selectedDeparture?.status === 'Completed' ? 'not-allowed' : 'pointer',
+                                          boxShadow: '0 2px 4px rgba(2,132,199,0.2)'
+                                        }}
+                                      >
+                                        Check-in
+                                      </button>
+                                    ) : (
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{
+                                          padding: '5px 10px',
+                                          background: '#16a34a',
+                                          color: '#fff',
+                                          borderRadius: '8px',
+                                          fontSize: '12px',
+                                          fontWeight: '700'
+                                        }}>
+                                          ✓ Đã điểm danh
+                                        </span>
+                                        {selectedDeparture?.status !== 'Completed' && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCheckinToggle(p.passenger_id, 1, p.full_name)}
+                                            title="Đặt lại trạng thái chưa điểm danh"
+                                            style={{
+                                              padding: '4px 8px',
+                                              background: '#fff',
+                                              color: '#64748b',
+                                              border: '1px solid #cbd5e1',
+                                              borderRadius: '6px',
+                                              fontSize: '11px',
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            Hủy
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
                         </tbody>
                       </table>
@@ -2544,7 +2792,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
         </div>
       )}
 
-      {/* 🌟 MODAL QUÉT MÃ QR ĐIỂM DANH HÀNH KHÁCH */}
+      {/* 🌟 MODAL QUÉT MÃ QR ĐIỂM DANH KHÁCH HÀNG (THEO ĐẶC TẢ BẢNG 3.14) */}
       {showQrModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -2553,13 +2801,13 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
         }}>
           <div style={{
             background: '#fff', padding: '24px', borderRadius: '16px',
-            width: '100%', maxWidth: '480px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
+            width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
             maxHeight: '90vh', overflowY: 'auto'
           }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
               <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                📷 Quét Mã QR Vé Tour Điểm Danh
+                📷 Quét mã QR Điểm danh
               </h3>
               <button 
                 onClick={() => {
@@ -2572,9 +2820,14 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
               </button>
             </div>
 
-            {/* Subheader info */}
-            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#0369a1' }}>
-              <strong>Đoàn #{selectedDeparture?.departure_id}</strong> - {selectedDeparture?.tour_name}
+            {/* Subheader info & Tiến độ đoàn */}
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#0369a1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <strong>Đoàn #{selectedDeparture?.departure_id}</strong> - {selectedDeparture?.tour_name}
+              </div>
+              <span style={{ background: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '800', color: '#0284c7' }}>
+                Quân số: {checkedInCount}/{passengers.length}
+              </span>
             </div>
 
             {/* Tabs selection */}
@@ -2588,7 +2841,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                   color: qrActiveTab === 'camera' ? '#fff' : '#475569'
                 }}
               >
-                📷 Camera trực tiếp
+                📷 Camera thiết bị
               </button>
               <button
                 type="button"
@@ -2599,7 +2852,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                   color: qrActiveTab === 'file' ? '#fff' : '#475569'
                 }}
               >
-                🖼️ Tải tệp ảnh QR
+                🖼️ Tải ảnh vé QR
               </button>
               <button
                 type="button"
@@ -2610,28 +2863,46 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                   color: qrActiveTab === 'manual' ? '#fff' : '#475569'
                 }}
               >
-                ⌨️ Nhập mã tay
+                ⌨️ Nhập mã vé QR
               </button>
             </div>
 
-            {/* Notification message box */}
+            {/* Notification message box: Hỗ trợ Luồng chính 6 (success), Luồng thay thế 5.1 (warning), Luồng thay thế 5.2 (error) */}
             {qrScanMsg && (
               <div style={{
-                padding: '12px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', fontWeight: '600',
-                background: qrScanMsg.type === 'success' ? '#dcfce7' : '#fee2e2',
-                color: qrScanMsg.type === 'success' ? '#15803d' : '#991b1b',
-                border: `1px solid ${qrScanMsg.type === 'success' ? '#bbf7d0' : '#fca5a5'}`
+                padding: '12px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', fontWeight: '700',
+                background: qrScanMsg.type === 'success' ? '#dcfce7' : qrScanMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
+                color: qrScanMsg.type === 'success' ? '#15803d' : qrScanMsg.type === 'warning' ? '#b45309' : '#991b1b',
+                border: `1px solid ${qrScanMsg.type === 'success' ? '#bbf7d0' : qrScanMsg.type === 'warning' ? '#fde68a' : '#fca5a5'}`
               }}>
-                {qrScanMsg.type === 'success' ? '🎉 ' : '❌ '}{qrScanMsg.text}
+                <div>
+                  {qrScanMsg.type === 'success' ? '🎉 ' : qrScanMsg.type === 'warning' ? '⚠️ ' : '❌ '}
+                  {qrScanMsg.text}
+                </div>
+                {qrScanMsg.passengerName && qrScanMsg.type === 'warning' && (
+                  <div style={{ fontSize: '11.5px', fontWeight: '600', marginTop: '4px', opacity: 0.9 }}>
+                    Hành khách: {qrScanMsg.passengerName}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Tab contents */}
             {qrActiveTab === 'camera' && (
               <div style={{ textAlign: 'center' }}>
+                {cameraStatus === 'requesting' && (
+                  <div style={{ padding: '10px', marginBottom: '10px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '8px', fontSize: '12px', fontWeight: '600' }}>
+                    ⏳ Hệ thống đang yêu cầu quyền truy cập camera thiết bị và khởi động máy quét mã QR...
+                  </div>
+                )}
+                {cameraStatus === 'denied' && (
+                  <div style={{ padding: '10px 12px', marginBottom: '10px', background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', borderRadius: '8px', fontSize: '12px', textAlign: 'left' }}>
+                    ⚠️ <strong>Chưa cấp quyền truy cập Camera hoặc thiết bị không có Camera:</strong> Bạn có thể cấp quyền Camera trên trình duyệt hoặc chọn tab <strong>"🖼️ Tải ảnh vé QR"</strong> / <strong>"⌨️ Nhập mã vé QR"</strong> để tiếp tục.
+                  </div>
+                )}
                 <div id="qr-reader-container" style={{ width: '100%', maxWidth: '360px', margin: '0 auto', border: '2px dashed #0284c7', borderRadius: '12px', overflow: 'hidden', padding: '10px' }}></div>
                 <p style={{ fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
-                  💡 Giữ mã QR trên vé tour của hành khách thẳng trước camera thiết bị để tự động ghi nhận điểm danh.
+                  💡 Hướng camera vào mã QR vé điện tử trên điện thoại hoặc bản in của khách hàng để tự động trích xuất mã vé và điểm danh.
                 </p>
               </div>
             )}
@@ -2641,7 +2912,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                 <div style={{ border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '24px 16px', background: '#f8fafc' }}>
                   <div style={{ fontSize: '32px', marginBottom: '10px' }}>🖼️</div>
                   <label style={{ display: 'inline-block', padding: '10px 20px', background: '#0284c7', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                    Chọn tệp ảnh QR vé tour
+                    Chọn tệp ảnh QR vé điện tử
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -2651,7 +2922,7 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                     />
                   </label>
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '10px', margin: 0 }}>
-                    Hỗ trợ định dạng JPG, PNG từ máy hoặc điện thoại.
+                    Hỗ trợ đọc dữ liệu trực tiếp từ ảnh chụp vé điện tử QR (JPG, PNG).
                   </p>
                 </div>
                 <div id="qr-file-scanner-temp" style={{ display: 'none' }}></div>
@@ -2662,18 +2933,18 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
               <form onSubmit={(e) => { e.preventDefault(); handleProcessQrCode(); }}>
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                    Nhập mã QR / Mã vé đơn tour *
+                    Mã hành khách / Mã vé điện tử QR *
                   </label>
                   <input
                     type="text"
                     value={qrInputText}
                     onChange={(e) => setQrInputText(e.target.value)}
-                    placeholder="Ví dụ: BKG-12-PAX-0, BKG-12 hoặc 12"
+                    placeholder="Ví dụ: BKG-12-PAX-0, BKG-12 hoặc PAX-45"
                     required
                     style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px' }}
                   />
                   <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                    * Hỗ trợ định dạng <code>BKG-[ID]-PAX-[STT]</code>, <code>BKG-[ID]</code>, <code>PAX-[ID]</code> hoặc mã ID số đơn hàng.
+                    * Hỗ trợ định dạng mã vé <code>BKG-[Mã đơn]-PAX-[STT]</code>, <code>BKG-[Mã đơn]</code>, <code>PAX-[Mã khách]</code>.
                   </span>
                 </div>
                 <button
@@ -2684,13 +2955,48 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                     fontSize: '14px', fontWeight: '700', cursor: qrSubmitting ? 'not-allowed' : 'pointer', opacity: qrSubmitting ? 0.7 : 1
                   }}
                 >
-                  {qrSubmitting ? '⏳ Đang kiểm tra & điểm danh...' : '⚡ Xác Nhận Điểm Danh'}
+                  {qrSubmitting ? '⏳ Đang kiểm tra & điểm danh...' : '⚡ Gửi Yêu Cầu Điểm Danh'}
                 </button>
               </form>
             )}
 
+            {/* Danh sách chọn nhanh vé QR của đoàn để kiểm thử / đối chiếu */}
+            {passengers.length > 0 && (
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>
+                  🎫 Danh sách mã vé điện tử QR trong đoàn (Nhấp để mô phỏng quét QR):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '110px', overflowY: 'auto' }}>
+                  {passengers.map((p, idx) => {
+                    const code = p.qr_ticket_code || `BKG-${p.booking_id}-PAX-${p.pax_index ?? idx}`;
+                    const checked = Number(p.is_checked_in) === 1;
+                    return (
+                      <button
+                        key={p.passenger_id}
+                        type="button"
+                        onClick={() => handleProcessQrCode(code)}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          border: `1px solid ${checked ? '#86efac' : '#bae6fd'}`,
+                          background: checked ? '#f0fdf4' : '#f0f9ff',
+                          color: checked ? '#166534' : '#0369a1'
+                        }}
+                        title={checked ? `Đã điểm danh lúc ${p.checked_in_time || ''} - Nhấp để kiểm tra cảnh báo 5.1` : `Nhấp để quét mã vé của ${p.full_name}`}
+                      >
+                        {checked ? '✓ ' : '📷 '}{code} ({p.full_name})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Modal Footer */}
-            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 type="button"
                 onClick={() => {
@@ -2698,6 +3004,65 @@ const GuideWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, se
                   setQrScanMsg(null);
                 }}
                 style={{ padding: '8px 16px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL XEM VÉ ĐIỆN TỬ QR CỦA HÀNH KHÁCH */}
+      {previewTicketPax && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff', padding: '24px', borderRadius: '16px',
+            width: '100%', maxWidth: '380px', textAlign: 'center',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>🎫 Vé Điện Tử QR Hành Khách</h4>
+              <button onClick={() => setPreviewTicketPax(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e3a8a', marginBottom: '4px' }}>
+              {previewTicketPax.full_name}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+              Đoàn #{selectedDeparture?.departure_id} • {selectedDeparture?.tour_name}
+            </div>
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'inline-block', marginBottom: '12px' }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(previewTicketPax.ticketCode)}`}
+                alt="QR E-Ticket"
+                style={{ width: '160px', height: '160px', display: 'block' }}
+              />
+            </div>
+            <div style={{ marginBottom: '14px' }}>
+              <code style={{ background: '#eff6ff', color: '#1d4ed8', padding: '4px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '13px', border: '1px solid #bfdbfe' }}>
+                {previewTicketPax.ticketCode}
+              </code>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const code = previewTicketPax.ticketCode;
+                  setPreviewTicketPax(null);
+                  setShowQrModal(true);
+                  handleProcessQrCode(code);
+                }}
+                style={{ padding: '8px 14px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                📷 Quét thử mã vé này
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTicketPax(null)}
+                style={{ padding: '8px 14px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
               >
                 Đóng
               </button>

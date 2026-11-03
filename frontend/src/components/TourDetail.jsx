@@ -4,6 +4,8 @@ import axios from 'axios';
 import CustomerFooter from './CustomerFooter';
 import CustomerNavbar from './CustomerNavbar';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
+import TourReviewModal from './TourReviewModal';
+import { Star, Image as ImageIcon, Camera, ThumbsUp, ShieldCheck, X } from 'lucide-react';
 import '../index.css';
 
 
@@ -112,6 +114,43 @@ const TourDetail = () => {
     const [selectedDeparture, setSelectedDeparture] = useState('');
     const [numPeople, setNumPeople] = useState(1);
     const [selectedMonthTab, setSelectedMonthTab] = useState('');
+    const [reviewStats, setReviewStats] = useState(null);
+    const [reviewsList, setReviewsList] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [selectedImageModal, setSelectedImageModal] = useState(null);
+    const [canReview, setCanReview] = useState(false);
+
+    const fetchReviews = async () => {
+        try {
+            setLoadingReviews(true);
+            const res = await axios.get(`http://localhost:5000/api/tours/${id}/reviews`);
+            if (res.data.success) {
+                setReviewStats(res.data.data);
+                setReviewsList(res.data.data.reviews || []);
+            }
+        } catch (e) {
+            console.error('Lỗi khi tải đánh giá tour:', e);
+        } finally {
+            setLoadingReviews(false);
+        }
+    };
+
+    const checkReviewEligibility = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            const res = await axios.get(`http://localhost:5000/api/tours/${id}/my-review`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                // Cho phép review nếu đã review trước đó (Cập nhật) hoặc nếu người dùng đã đăng nhập
+                setCanReview(true);
+            }
+        } catch (e) {
+            // Không đủ điều kiện hoặc chưa hoàn thành tour
+        }
+    };
 
     const fetchTourDetail = async () => {
         try {
@@ -137,6 +176,8 @@ const TourDetail = () => {
 
     useEffect(() => {
         fetchTourDetail();
+        fetchReviews();
+        checkReviewEligibility();
     }, [id]);
 
     const getDestString = (tourObj, design) => {
@@ -243,6 +284,16 @@ const TourDetail = () => {
                     <span className="badge-location">📍 {getDestString(tour, parsedDesign)}</span>
                     <h1>{tour.tour_name}</h1>
                     <p>{tour.duration_days} Ngày {Math.max(0, tour.duration_days - 1)} Đêm | Trải nghiệm đẳng cấp</p>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '6px 16px', borderRadius: '30px', marginTop: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontWeight: '800', fontSize: '15px' }}>
+                            <Star size={18} fill="#f59e0b" color="#f59e0b" />
+                            <span>{reviewStats?.average_rating ? Number(reviewStats.average_rating).toFixed(1) : (tour.average_rating ? Number(tour.average_rating).toFixed(1) : '5.0')} / 5</span>
+                        </div>
+                        <span style={{ color: '#cbd5e1', fontSize: '13.5px' }}>•</span>
+                        <span style={{ color: '#f1f5f9', fontSize: '13.5px', fontWeight: '600' }}>
+                            {reviewStats?.review_count || tour.review_count || 0} lượt đánh giá thực tế
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -382,6 +433,13 @@ const TourDetail = () => {
                             let endLastDayName = getDestNameHelper(lastDay?.end_destination_id, lastDay, true);
                             if (startLastDayName === 'Điểm đi' && endDay1Name && endDay1Name !== 'Điểm đến') startLastDayName = endDay1Name;
                             if (endLastDayName === 'Điểm đến' && startDay1Name && startDay1Name !== 'Điểm đi') endLastDayName = startDay1Name;
+
+                            const transLocs = parsedDesign?.costConfig?.transportLocations || {};
+                            const finalStartDay1Name = transLocs.startD || startDay1Name;
+                            const finalEndDay1Name = transLocs.endD || endDay1Name;
+                            const finalStartLastDayName = transLocs.startR || ((startLastDayName && startLastDayName !== startDay1Name) ? startLastDayName : endDay1Name);
+                            const finalEndLastDayName = transLocs.endR || endLastDayName;
+
                             const transportVehName = getTransportNameHelper(parsedDesign?.costConfig, parsedDesign, tour);
 
                             return (
@@ -475,7 +533,7 @@ const TourDetail = () => {
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.startD || '05:30'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {startDay1Name}
+                                                                                {finalStartDay1Name}
                                                                             </span>
                                                                         </div>
                                                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
@@ -487,7 +545,7 @@ const TourDetail = () => {
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.endD || '12:00'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {endDay1Name}
+                                                                                {finalEndDay1Name}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -504,7 +562,7 @@ const TourDetail = () => {
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.startR || '12:00'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {startLastDayName}
+                                                                                {finalStartLastDayName}
                                                                             </span>
                                                                         </div>
                                                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
@@ -516,7 +574,7 @@ const TourDetail = () => {
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                             <strong style={{ fontSize: '18px', color: '#1e293b' }}>{parsedDesign?.costConfig?.transportTimes?.endR || '17:30'}</strong>
                                                                             <span style={{ fontWeight: '600', fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                                                                                {endLastDayName}
+                                                                                {finalEndLastDayName}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -654,6 +712,310 @@ const TourDetail = () => {
                         </div>
                     </div>
 
+                
+                    {/* ========================================================================= */}
+                    {/* HỆ THỐNG ĐÁNH GIÁ & NHẬN XÉT TỪ KHÁCH HÀNG (CUSTOMER REVIEWS & RATINGS) */}
+                    {/* ========================================================================= */}
+                    <div className="tour-reviews-section" style={{ marginTop: '40px', background: '#ffffff', borderRadius: '24px', padding: '36px', boxShadow: '0 4px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '28px', borderBottom: '2px solid #f1f5f9', paddingBottom: '16px' }}>
+                            <div>
+                                <h2 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
+                                    ⭐ Đánh giá & Nhận xét từ du khách
+                                </h2>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '14.5px' }}>
+                                    Trải nghiệm và chia sẻ thực tế từ các khách hàng đã hoàn thành chuyến đi.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    const token = localStorage.getItem('token');
+                                    if (!token) {
+                                        alert('Vui lòng đăng nhập để gửi đánh giá chuyến đi!');
+                                        return navigate('/login');
+                                    }
+                                    setIsReviewModalOpen(true);
+                                }}
+                                style={{
+                                    padding: '12px 24px',
+                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '14px',
+                                    fontWeight: '800',
+                                    fontSize: '14.5px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.35)',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <Star size={18} fill="#ffffff" color="#ffffff" />
+                                Viết đánh giá chuyến đi
+                            </button>
+                        </div>
+
+                        {/* Tổng quan Điểm số & Tiêu chí chi tiết */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                            gap: '24px',
+                            background: '#f8fafc',
+                            borderRadius: '20px',
+                            padding: '24px',
+                            border: '1px solid #e2e8f0',
+                            marginBottom: '32px'
+                        }}>
+                            {/* Cột 1: Điểm số trung bình tổng thể */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                                <div style={{ fontSize: '54px', fontWeight: '900', color: '#0f172a', lineHeight: 1 }}>
+                                    {reviewStats?.average_rating ? Number(reviewStats.average_rating).toFixed(1) : (tour.average_rating ? Number(tour.average_rating).toFixed(1) : '5.0')}
+                                    <span style={{ fontSize: '24px', color: '#94a3b8', fontWeight: '600' }}>/5</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', margin: '12px 0 6px 0' }}>
+                                    {[1, 2, 3, 4, 5].map(st => {
+                                        const avg = reviewStats?.average_rating || tour.average_rating || 5.0;
+                                        return (
+                                            <Star
+                                                key={st}
+                                                size={22}
+                                                fill={st <= Math.round(avg) ? '#f59e0b' : 'none'}
+                                                color={st <= Math.round(avg) ? '#f59e0b' : '#cbd5e1'}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                <div style={{ fontSize: '13.5px', color: '#64748b', fontWeight: '600' }}>
+                                    Dựa trên {reviewStats?.review_count || tour.review_count || 0} lượt đánh giá thực tế
+                                </div>
+                            </div>
+
+                            {/* Cột 2: Điểm số chi tiết từng tiêu chí theo Đặc Tả */}
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '14px', borderLeft: '1px solid #e2e8f0', paddingLeft: '20px' }}>
+                                <strong style={{ fontSize: '13px', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Điểm theo tiêu chí:
+                                </strong>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                                        <span style={{ color: '#334155', fontWeight: '600' }}>👨‍💼 Hướng dẫn viên:</span>
+                                        <strong style={{ color: '#d97706' }}>{reviewStats?.criteria?.guide || 5.0} / 5 ⭐</strong>
+                                    </div>
+                                    <div style={{ height: '7px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${((reviewStats?.criteria?.guide || 5.0) / 5) * 100}%`, height: '100%', background: '#f59e0b', borderRadius: '10px' }}></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                                        <span style={{ color: '#334155', fontWeight: '600' }}>🚗 Phương tiện xe:</span>
+                                        <strong style={{ color: '#d97706' }}>{reviewStats?.criteria?.vehicle || 5.0} / 5 ⭐</strong>
+                                    </div>
+                                    <div style={{ height: '7px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${((reviewStats?.criteria?.vehicle || 5.0) / 5) * 100}%`, height: '100%', background: '#3b82f6', borderRadius: '10px' }}></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                                        <span style={{ color: '#334155', fontWeight: '600' }}>🏨 Bữa ăn & Khách sạn:</span>
+                                        <strong style={{ color: '#d97706' }}>{reviewStats?.criteria?.service || 5.0} / 5 ⭐</strong>
+                                    </div>
+                                    <div style={{ height: '7px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${((reviewStats?.criteria?.service || 5.0) / 5) * 100}%`, height: '100%', background: '#10b981', borderRadius: '10px' }}></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cột 3: Thanh phân bổ số sao */}
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px', borderLeft: '1px solid #e2e8f0', paddingLeft: '20px' }}>
+                                <strong style={{ fontSize: '13px', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Phân bổ mức độ hài lòng:
+                                </strong>
+                                {[5, 4, 3, 2, 1].map(st => {
+                                    const total = reviewStats?.review_count || 0;
+                                    const cnt = reviewStats?.star_counts?.[st] || 0;
+                                    const pct = total > 0 ? Math.round((cnt / total) * 100) : (st === 5 ? 100 : 0);
+                                    return (
+                                        <div key={st} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                            <span style={{ width: '38px', color: '#475569', fontWeight: '700' }}>{st} sao</span>
+                                            <div style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${pct}%`, height: '100%', background: '#f59e0b', borderRadius: '10px' }}></div>
+                                            </div>
+                                            <span style={{ width: '28px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>{cnt}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Danh sách các Đánh giá */}
+                        {loadingReviews ? (
+                            <div style={{ textAlign: 'center', padding: '40px', color: '#0284c7', fontWeight: '700' }}>
+                                ⏳ Đang tải nhận xét từ du khách...
+                            </div>
+                        ) : reviewsList.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '40px 24px', background: '#f8fafc', borderRadius: '20px', border: '1.5px dashed #cbd5e1' }}>
+                                <div style={{ fontSize: '40px', marginBottom: '10px' }}>✨</div>
+                                <h4 style={{ margin: '0 0 6px 0', fontSize: '17px', color: '#0f172a', fontWeight: '800' }}>
+                                    Chưa có đánh giá nào cho chuyến đi này
+                                </h4>
+                                <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
+                                    Hãy là du khách đầu tiên chia sẻ cảm nhận và hình ảnh thực tế sau khi hoàn thành tour!
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        const token = localStorage.getItem('token');
+                                        if (!token) return navigate('/login');
+                                        setIsReviewModalOpen(true);
+                                    }}
+                                    style={{
+                                        padding: '10px 22px',
+                                        background: '#0194f3',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ⭐ Viết đánh giá ngay
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {reviewsList.map((rev) => (
+                                    <div key={rev.review_id} style={{
+                                        background: '#ffffff',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '20px',
+                                        padding: '24px',
+                                        boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+                                    }}>
+                                        {/* Header người đánh giá */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                                            <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                                                <div style={{
+                                                    width: '46px',
+                                                    height: '46px',
+                                                    borderRadius: '50%',
+                                                    background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+                                                    color: '#ffffff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: '800',
+                                                    fontSize: '18px',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    {rev.customer_avatar ? (
+                                                        <img src={rev.customer_avatar.startsWith('http') ? rev.customer_avatar : `http://localhost:5000${rev.customer_avatar}`} alt={rev.customer_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        (rev.customer_name || 'K').charAt(0).toUpperCase()
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <strong style={{ fontSize: '15.5px', color: '#0f172a' }}>{rev.customer_name}</strong>
+                                                        <span style={{
+                                                            background: '#ecfdf5',
+                                                            color: '#059669',
+                                                            fontSize: '11px',
+                                                            fontWeight: '700',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '12px',
+                                                            border: '1px solid #a7f3d0',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '3px'
+                                                        }}>
+                                                            <ShieldCheck size={13} /> Đã trải nghiệm chuyến đi
+                                                        </span>
+                                                    </div>
+                                                    <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                                                        {new Date(rev.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Điểm sao */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                <div style={{ display: 'flex', gap: '3px' }}>
+                                                    {[1, 2, 3, 4, 5].map(st => (
+                                                        <Star
+                                                            key={st}
+                                                            size={18}
+                                                            fill={st <= Number(rev.rating) ? '#f59e0b' : 'none'}
+                                                            color={st <= Number(rev.rating) ? '#f59e0b' : '#cbd5e1'}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#d97706', marginTop: '2px' }}>
+                                                    {rev.rating}/5 sao
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Điểm từng tiêu chí chi tiết */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                                            <span style={{ fontSize: '12px', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#475569' }}>
+                                                👨‍💼 HDV: <strong>{rev.rating_guide || rev.rating}/5★</strong>
+                                            </span>
+                                            <span style={{ fontSize: '12px', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#475569' }}>
+                                                🚗 Xe cộ: <strong>{rev.rating_vehicle || rev.rating}/5★</strong>
+                                            </span>
+                                            <span style={{ fontSize: '12px', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#475569' }}>
+                                                🏨 Bữa ăn & KS: <strong>{rev.rating_service || rev.rating}/5★</strong>
+                                            </span>
+                                        </div>
+
+                                        {/* Nội dung nhận xét */}
+                                        {rev.comment && (
+                                            <p style={{ margin: '0 0 16px 0', fontSize: '14.5px', color: '#334155', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+                                                {rev.comment}
+                                            </p>
+                                        )}
+
+                                        {/* Thư viện ảnh thực tế chuyến đi */}
+                                        {rev.images && rev.images.length > 0 && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#64748b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                    <Camera size={14} /> Ảnh thực tế từ du khách ({rev.images.length}):
+                                                </div>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                                    {rev.images.map((imgUrl, imgIdx) => {
+                                                        const fullSrc = imgUrl.startsWith('http') ? imgUrl : `http://localhost:5000${imgUrl}`;
+                                                        return (
+                                                            <div
+                                                                key={imgIdx}
+                                                                onClick={() => setSelectedImageModal(fullSrc)}
+                                                                style={{
+                                                                    width: '90px',
+                                                                    height: '90px',
+                                                                    borderRadius: '12px',
+                                                                    overflow: 'hidden',
+                                                                    cursor: 'pointer',
+                                                                    border: '1.5px solid #e2e8f0',
+                                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                                                                    transition: 'transform 0.2s ease'
+                                                                }}
+                                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                            >
+                                                                <img src={fullSrc} alt={`Review photo ${imgIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                 </div>
 
                 <div className="detail-sidebar">
@@ -781,6 +1143,76 @@ const TourDetail = () => {
                     )}
                 </div>
             </div>
+            
+            {/* MODAL ĐÁNH GIÁ CHUYẾN ĐI (TOUR REVIEW MODAL) */}
+            <TourReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                tour={tour}
+                onReviewSubmitted={() => {
+                    fetchTourDetail();
+                    fetchReviews();
+                }}
+            />
+
+            {/* LIGHTBOX PHÓNG TO ẢNH ĐÁNH GIÁ THỰC TẾ */}
+            {selectedImageModal && (
+                <div
+                    onClick={() => setSelectedImageModal(null)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 100000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px',
+                        cursor: 'zoom-out'
+                    }}
+                >
+                    <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+                        <img
+                            src={selectedImageModal}
+                            alt="Phóng to ảnh đánh giá"
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '85vh',
+                                borderRadius: '16px',
+                                boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                                objectFit: 'contain'
+                            }}
+                        />
+                        <button
+                            onClick={() => setSelectedImageModal(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '-15px',
+                                right: '-15px',
+                                background: '#ffffff',
+                                color: '#0f172a',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '36px',
+                                height: '36px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <CustomerFooter />
         </div>
     );

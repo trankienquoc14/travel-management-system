@@ -670,7 +670,7 @@ const Dashboard = () => {
                   </li>
                   {isGuideGroupOpen && (
                     <>
-                      <li className={activeTab === 'guide_passengers' ? 'active' : ''} onClick={() => setActiveTab('guide_passengers')}>📋 Điểm danh hành khách</li>
+                      <li className={activeTab === 'guide_passengers' ? 'active' : ''} onClick={() => setActiveTab('guide_passengers')}>📋 Điểm danh khách hàng</li>
                       <li className={activeTab === 'guide_itinerary' ? 'active' : ''} onClick={() => setActiveTab('guide_itinerary')}>🗺️ Lịch trình chi tiết</li>
                       <li className={activeTab === 'guide_map' ? 'active' : ''} onClick={() => setActiveTab('guide_map')}>📍 Bản đồ & Định vị</li>
                       <li className={activeTab === 'guide_updates' ? 'active' : ''} onClick={() => setActiveTab('guide_updates')}>📝 Cập nhật hành trình</li>
@@ -872,13 +872,13 @@ const Dashboard = () => {
 
           {/* Vùng chung: Trung tâm Báo cáo Tổng quan & Dashboard */}
           {activeTab === 'overview' && (isOfficeStaff || isTourManager || isAdmin) && (
-            isOfficeStaff ? (
+            false ? (
               <OfficeStaffDashboard 
                 onNavigateToOrders={() => setActiveTab('orders')}
                 onNavigateToChangeRequests={() => setActiveTab('change_request')}
               />
             ) : (
-              <GeneralOverview />
+              <GeneralOverview onNavigateToOrders={() => setActiveTab('orders')} onNavigateToChangeRequests={() => setActiveTab('change_request')} />
             )
           )}
 

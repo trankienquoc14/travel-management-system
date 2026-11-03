@@ -1,12 +1,80 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
 import SepayPaymentModal from './SepayPaymentModal';
+import TourReviewModal from './TourReviewModal';
+import { Star } from 'lucide-react';
 
 const GATEWAY_URL = 'http://localhost:5000';
+const PAYMENT_DEADLINE_SECONDS = 600; // Thời hạn thanh toán chuyển khoản: 10 phút (600 giây)
+
+const getDaysLeftBeforeDeparture = (depDateStr) => {
+    if (!depDateStr) return null;
+    const depDate = new Date(depDateStr);
+    if (isNaN(depDate.getTime())) return null;
+    const today = new Date();
+    depDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diff = depDate.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+const isBookingCompleted = (booking) => {
+    if (!booking) return false;
+    if (booking.booking_status === 'Completed') return true;
+    if (booking.return_date) {
+        const retDate = new Date(booking.return_date);
+        const now = new Date();
+        if (!isNaN(retDate.getTime()) && retDate < now) return true;
+    }
+    return false;
+};
+
+const isBankTransferBooking = (booking) => {
+    const method = String(booking?.payment_method || 'VNPAY_QR').trim().toLowerCase();
+    return method !== 'cash' && method !== 'tiền mặt';
+};
+
+const getRemainingPaymentSeconds = (booking, fetchedAtMs, nowMs) => {
+    if (!booking) return 0;
+    const extraSec = Math.max(0, Math.floor((nowMs - fetchedAtMs) / 1000));
+    if (booking.elapsed_seconds !== undefined && booking.elapsed_seconds !== null) {
+        const totalElapsed = Number(booking.elapsed_seconds) + extraSec;
+        return Math.max(0, PAYMENT_DEADLINE_SECONDS - totalElapsed);
+    }
+    const rawDate = booking.booking_date || booking.created_at;
+    if (!rawDate) return PAYMENT_DEADLINE_SECONDS;
+    const createdMs = new Date(rawDate).getTime();
+    if (isNaN(createdMs)) return PAYMENT_DEADLINE_SECONDS;
+    const elapsed = Math.floor((nowMs - createdMs) / 1000);
+    return Math.max(0, PAYMENT_DEADLINE_SECONDS - elapsed);
+};
+
+const formatCountdown = (sec) => {
+    const safeSec = Math.max(0, Number(sec || 0));
+    const m = Math.floor(safeSec / 60).toString().padStart(2, '0');
+    const s = (safeSec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+};
+
+// Kiểm tra đơn tour còn trong thời gian cho phép Hủy / Đổi lịch hay không (trước ngày khởi hành >= 3 ngày và chưa hoàn thành/chưa hủy)
+const canCancelOrRescheduleBooking = (booking, remainingPaySec = PAYMENT_DEADLINE_SECONDS) => {
+    if (!booking) return false;
+    if (booking.booking_status === 'Cancelled' || isBookingCompleted(booking)) return false;
+    // Nếu là đơn CK chưa thanh toán nhưng đã hết hạn thanh toán -> sẽ tự hủy, không hiển thị nút Hủy/Đổi
+    if (booking.payment_status === 'Unpaid' && isBankTransferBooking(booking) && remainingPaySec <= 0) {
+        return false;
+    }
+    const daysLeft = getDaysLeftBeforeDeparture(booking.departure_date);
+    // Theo chính sách hủy/đổi tour: chỉ những đơn còn từ 3 ngày trở lên trước ngày khởi hành mới còn thời gian hủy/đổi
+    if (daysLeft !== null && daysLeft < 3) {
+        return false;
+    }
+    return true;
+};
 
 
 const renderPaxSummary = (b) => {
@@ -229,6 +297,7 @@ const MyBookings = () => {
     const [itineraryModalBooking, setItineraryModalBooking] = useState(null);
     const [remoteDays, setRemoteDays] = useState(null);
     const [loadingRemote, setLoadingRemote] = useState(false);
+    const [reviewModalData, setReviewModalData] = useState(null); // Modal Đánh giá tour
     
     useEffect(() => {
         const fetchRemote = async () => {
@@ -306,6 +375,67 @@ const MyBookings = () => {
     const [submitting, setSubmitting] = useState(false);
     const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
     const [sepayModalData, setSepayModalData] = useState(null);
+    const [fetchedAtMs, setFetchedAtMs] = useState(() => Date.now());
+    const [nowMs, setNowMs] = useState(() => Date.now());
+    const autoCancelledIdsRef = useRef(new Set());
+
+    // Bộ đếm thời gian 1 giây cho các đơn chuyển khoản (CK) đang chờ thanh toán
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNowMs(Date.now());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Tự động hủy đơn thanh toán chuyển khoản (CK) ngay khi hết hạn thanh toán (10 phút)
+    useEffect(() => {
+        if (!bookings || bookings.length === 0) return;
+
+        bookings.forEach((bk) => {
+            if (
+                bk.payment_status === 'Unpaid' &&
+                bk.booking_status !== 'Cancelled' &&
+                bk.booking_status !== 'Completed' &&
+                isBankTransferBooking(bk)
+            ) {
+                const remSec = getRemainingPaymentSeconds(bk, fetchedAtMs, nowMs);
+                if (remSec <= 0 && !autoCancelledIdsRef.current.has(`tour_${bk.booking_id}`)) {
+                    autoCancelledIdsRef.current.add(`tour_${bk.booking_id}`);
+                    // Cập nhật ngay trên giao diện sang trạng thái Đã hủy
+                    setBookings((prev) =>
+                        prev.map((item) =>
+                            item.booking_id === bk.booking_id
+                                ? {
+                                      ...item,
+                                      booking_status: 'Cancelled',
+                                      notes: `${item.notes || ''} [Tự động hủy: Hết thời gian thanh toán chuyển khoản 10 phút]`.trim()
+                                  }
+                                : item
+                        )
+                    );
+                    setDetailBooking((prev) =>
+                        prev && !prev.isService && prev.booking_id === bk.booking_id
+                            ? { ...prev, booking_status: 'Cancelled' }
+                            : prev
+                    );
+                    setAlertMsg({
+                        type: 'error',
+                        text: `⏱️ Đơn hàng #BKG-${String(bk.booking_id).padStart(4, '0')} (${bk.tour_name}) đã tự động hủy do hết hạn thanh toán chuyển khoản (10 phút).`
+                    });
+
+                    // Gọi API Backend để chốt hủy đơn và hoàn trả chỗ trống
+                    const token = localStorage.getItem('token');
+                    axios
+                        .put(
+                            `${GATEWAY_URL}/api/bookings/${bk.booking_id}/cancel-expired?type=tour`,
+                            {},
+                            { headers: { Authorization: `Bearer ${token}` } }
+                        )
+                        .catch((err) => console.warn('Auto-cancel expired booking warning:', err.message));
+                }
+            }
+        });
+    }, [nowMs, bookings, fetchedAtMs]);
 
     useEffect(() => {
         fetchMyBookings();
@@ -330,6 +460,9 @@ const MyBookings = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (response.data && response.data.success) {
+                const nowTime = Date.now();
+                setFetchedAtMs(nowTime);
+                setNowMs(nowTime);
                 setBookings(response.data.data || []);
             }
         } catch (error) {
@@ -421,6 +554,7 @@ const MyBookings = () => {
     // Filtered bookings list
     const filteredBookings = bookings.filter(b => {
         if (filterStatus === 'All') return true;
+        if (filterStatus === 'Completed') return b.booking_status === 'Completed' || (b.return_date && new Date(b.return_date) < new Date());
         if (filterStatus === 'Confirmed') return b.booking_status === 'Confirmed';
         if (filterStatus === 'Pending') return b.booking_status === 'Pending';
         if (filterStatus === 'Paid') return b.payment_status === 'Paid';
@@ -430,6 +564,7 @@ const MyBookings = () => {
 
     const filteredServiceBookings = serviceBookings.filter(b => {
         if (filterStatus === 'All') return true;
+        if (filterStatus === 'Completed') return b.status === 'Completed';
         if (filterStatus === 'Confirmed') return b.status === 'Confirmed' || b.status === 'Accepted';
         if (filterStatus === 'Pending') return b.status === 'Pending';
         if (filterStatus === 'Paid') return b.payment_status === 'Paid';
@@ -577,6 +712,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                         {[
                             { id: 'All', label: '📋 Tất cả đơn hàng' },
+                            { id: 'Completed', label: '🎉 Đã hoàn thành' },
                             { id: 'Confirmed', label: '✅ Đã xác nhận' },
                             { id: 'Pending', label: '⏳ Chờ xử lý' },
                             { id: 'Paid', label: '💵 Đã thanh toán' },
@@ -628,6 +764,16 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                         {viewMode === 'Tour' ? (
                             filteredBookings.map((booking) => {
                                 const isCustom = Boolean(booking.quote_id);
+                                const isTransfer = isBankTransferBooking(booking);
+                                const remainingPaySec = getRemainingPaymentSeconds(booking, fetchedAtMs, nowMs);
+                                const daysLeft = getDaysLeftBeforeDeparture(booking.departure_date);
+                                const allowCancelOrReschedule = canCancelOrRescheduleBooking(booking, remainingPaySec);
+                                const showPayNowBtn =
+                                    booking.payment_status === 'Unpaid' &&
+                                    booking.booking_status !== 'Cancelled' &&
+                                    !isBookingCompleted(booking) &&
+                                    isTransfer &&
+                                    remainingPaySec > 0;
 
                                 return (
                                     <div key={booking.booking_id} style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
@@ -657,6 +803,29 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                         {renderPaymentBadge(booking.payment_status)}
                                                     </div>
                                                 </div>
+
+                                                {/* Thông báo đếm ngược hạn thanh toán chuyển khoản (CK) */}
+                                                {showPayNowBtn && (
+                                                    <div style={{
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px',
+                                                        padding: '10px 14px', marginBottom: '12px', borderRadius: '12px',
+                                                        backgroundColor: remainingPaySec <= 120 ? '#fef2f2' : '#fffbeb',
+                                                        border: `1px solid ${remainingPaySec <= 120 ? '#fecaca' : '#fde68a'}`,
+                                                        color: remainingPaySec <= 120 ? '#b91c1c' : '#b45309',
+                                                        fontSize: '13px', fontWeight: '700'
+                                                    }}>
+                                                        <span>
+                                                            🏦 Đơn thanh toán Chuyển khoản (QR) • Vui lòng hoàn tất thanh toán trước khi hết hạn giữ chỗ
+                                                        </span>
+                                                        <span style={{
+                                                            padding: '3px 10px', borderRadius: '20px',
+                                                            backgroundColor: remainingPaySec <= 120 ? '#dc2626' : '#d97706',
+                                                            color: '#ffffff', fontWeight: '800', fontSize: '12.5px'
+                                                        }}>
+                                                            ⏱️ Còn {formatCountdown(remainingPaySec)}
+                                                        </span>
+                                                    </div>
+                                                )}
 
                                                 {/* Details Grid */}
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '16px', margin: '16px 0', border: '1px solid #f1f5f9', fontSize: '14px' }}>
@@ -688,7 +857,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                     </span>
                                                 </div>
 
-                                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                                                     {/* Button Nút Xem Chi Tiết */}
                                                     <button
                                                         onClick={() => setDetailBooking(booking)}
@@ -697,7 +866,37 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                         👁️ Xem Chi Tiết Đơn
                                                     </button>
 
-                                                    {booking.booking_status !== 'Cancelled' && (
+                                                    {/* Luồng chính 1: Khách hàng chọn tour có trạng thái "Đã hoàn thành" và nhấn nút "Đánh giá chuyến đi" */}
+                                                    {isBookingCompleted(booking) && booking.booking_status !== 'Cancelled' && (
+                                                        <button
+                                                            onClick={() => setReviewModalData({ tour: booking, booking })}
+                                                            style={{
+                                                                padding: '10px 18px',
+                                                                background: booking.reviewed_id
+                                                                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                                                                    : 'linear-gradient(135deg, #ff8c00 0%, #ea580c 100%)',
+                                                                color: '#ffffff',
+                                                                border: 'none',
+                                                                borderRadius: '12px',
+                                                                cursor: 'pointer',
+                                                                fontWeight: '800',
+                                                                fontSize: '13.5px',
+                                                                boxShadow: '0 4px 14px rgba(234, 88, 12, 0.3)',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                        >
+                                                            <Star size={16} fill="#ffffff" color="#ffffff" />
+                                                            {booking.reviewed_id
+                                                                ? `⭐ Đã đánh giá (${booking.user_rating || 5}★) - Cập nhật`
+                                                                : '⭐ Đánh giá chuyến đi'}
+                                                        </button>
+                                                    )}
+
+                                                    {/* Nút Hủy / Đổi Lịch: Chỉ hiển thị cho những đơn tour còn thời gian hủy/đổi (trước khởi hành >= 3 ngày và chưa hoàn thành/chưa hủy) */}
+                                                    {allowCancelOrReschedule ? (
                                                         booking.change_request_status === 'Pending' ? (
                                                             <span style={{ 
                                                                 padding: '8px 14px', 
@@ -722,19 +921,38 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                                     setAgreePolicy(false);
                                                                     setRefundBankInfo({ bankName: '', accountNumber: '', accountHolder: '' });
                                                                 }}
+                                                                title={daysLeft !== null ? `Còn ${daysLeft} ngày trước khởi hành (Đủ điều kiện Hủy / Đổi lịch)` : 'Gửi yêu cầu Hủy / Đổi lịch'}
                                                                 style={{ padding: '10px 18px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', transition: 'all 0.2s' }}
                                                             >
                                                                 🔄 Hủy / Đổi Lịch
                                                             </button>
                                                         )
+                                                    ) : (
+                                                        booking.booking_status !== 'Cancelled' &&
+                                                        !isBookingCompleted(booking) &&
+                                                        daysLeft !== null &&
+                                                        daysLeft < 3 && (
+                                                            <span style={{
+                                                                padding: '8px 14px',
+                                                                background: '#f8fafc',
+                                                                color: '#94a3b8',
+                                                                border: '1px solid #e2e8f0',
+                                                                borderRadius: '12px',
+                                                                fontWeight: '600',
+                                                                fontSize: '12.5px'
+                                                            }}>
+                                                                🔒 Đã hết hạn hủy/đổi
+                                                            </span>
+                                                        )
                                                     )}
 
-                                                    {booking.payment_status === 'Unpaid' && booking.booking_status !== 'Cancelled' && (
+                                                    {/* Nút Thanh Toán Ngay: Hiển thị cho đơn thanh toán bằng Chuyển khoản (CK) khi đang còn hạn thanh toán */}
+                                                    {showPayNowBtn && (
                                                         <button 
                                                             onClick={() => setSepayModalData({ bookingId: booking.booking_id, type: 'tour' })}
-                                                            style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                            style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.28)', display: 'flex', alignItems: 'center', gap: '6px' }}
                                                         >
-                                                            <span>📱 Thanh Toán Qua QR</span>
+                                                            <span>💳 Thanh Toán Ngay ({formatCountdown(remainingPaySec)})</span>
                                                         </button>
                                                     )}
                                                 </div>
@@ -1076,11 +1294,11 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                             <strong style={{ color: '#0f172a' }}>
                                                 {(() => {
                                                     const m = String(detailBooking.payment_method || '').toLowerCase();
-                                                    if (m === 'bank_transfer') return 'Chuyển khoản';
+                                                    if (m === 'bank_transfer' || m === 'vnpay_qr' || m === 'sepay') return 'Chuyển khoản ngân hàng (VietQR / SePay)';
                                                     if (m === 'momo') return 'Ví MoMo';
-                                                    if (m === 'cash') return 'Tiền mặt';
+                                                    if (m === 'cash' || m === 'tiền mặt') return 'Tiền mặt tại văn phòng';
                                                     if (m === 'vnpay') return 'VNPay';
-                                                    return detailBooking.payment_method || (detailBooking.payment_status === 'Paid' ? 'Đã thanh toán (N/A)' : 'Chưa thanh toán');
+                                                    return detailBooking.payment_method || (detailBooking.payment_status === 'Paid' ? 'Đã thanh toán' : 'Chuyển khoản ngân hàng');
                                                 })()}
                                             </strong>
                                         </div>
@@ -1112,7 +1330,75 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                         </div>
 
                         {/* Detail Modal Footer */}
-                        <div style={{ padding: '20px 32px', background: '#f8fafc', borderBottomLeftRadius: '28px', borderBottomRightRadius: '28px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <div style={{ padding: '20px 32px', background: '#f8fafc', borderBottomLeftRadius: '28px', borderBottomRightRadius: '28px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+                            {!detailBooking.isService && (() => {
+                                const detailRemSec = getRemainingPaymentSeconds(detailBooking, fetchedAtMs, nowMs);
+                                const detailCanChange = canCancelOrRescheduleBooking(detailBooking, detailRemSec);
+                                const detailShowPayNow =
+                                    detailBooking.payment_status === 'Unpaid' &&
+                                    detailBooking.booking_status !== 'Cancelled' &&
+                                    !isBookingCompleted(detailBooking) &&
+                                    isBankTransferBooking(detailBooking) &&
+                                    detailRemSec > 0;
+
+                                return (
+                                    <>
+                                        {detailCanChange && detailBooking.change_request_status !== 'Pending' && (
+                                            <button
+                                                onClick={() => {
+                                                    const bk = detailBooking;
+                                                    setDetailBooking(null);
+                                                    setSelectedBooking(bk);
+                                                    setRequestType('Cancel');
+                                                    setReason('');
+                                                    setAgreePolicy(false);
+                                                    setRefundBankInfo({ bankName: '', accountNumber: '', accountHolder: '' });
+                                                }}
+                                                style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}
+                                            >
+                                                🔄 Hủy / Đổi Lịch
+                                            </button>
+                                        )}
+                                        {detailShowPayNow && (
+                                            <button
+                                                onClick={() => {
+                                                    const bId = detailBooking.booking_id;
+                                                    setDetailBooking(null);
+                                                    setSepayModalData({ bookingId: bId, type: 'tour' });
+                                                }}
+                                                style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.28)' }}
+                                            >
+                                                💳 Thanh Toán Ngay ({formatCountdown(detailRemSec)})
+                                            </button>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                            {!detailBooking.isService && isBookingCompleted(detailBooking) && detailBooking.booking_status !== 'Cancelled' && (
+                                <button
+                                    onClick={() => {
+                                        setReviewModalData({ tour: detailBooking, booking: detailBooking });
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: detailBooking.reviewed_id
+                                            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                                            : 'linear-gradient(135deg, #ff8c00 0%, #ea580c 100%)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 4px 12px rgba(234, 88, 12, 0.25)'
+                                    }}
+                                >
+                                    <Star size={16} fill="#ffffff" color="#ffffff" />
+                                    {detailBooking.reviewed_id ? 'Cập nhật đánh giá' : 'Đánh giá chuyến đi'}
+                                </button>
+                            )}
                             {!detailBooking.isService && detailBooking.payment_status === 'Paid' && (
                                 <button onClick={() => setTicketBooking(detailBooking)} style={{ padding: '10px 24px', background: detailBooking.booking_status === 'Cancelled' ? '#ef4444' : '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <i className="fas fa-print"></i> {detailBooking.booking_status === 'Cancelled' ? 'Xem Vé (Đã Hủy)' : 'In Vé Điện Tử'}
@@ -1817,6 +2103,17 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                     }}
                 />
             )}
+
+            {/* MODAL 4: ĐÁNH GIÁ CHUYẾN ĐI (TOUR REVIEW MODAL) */}
+            <TourReviewModal
+                isOpen={Boolean(reviewModalData)}
+                onClose={() => setReviewModalData(null)}
+                tour={reviewModalData?.tour}
+                booking={reviewModalData?.booking}
+                onReviewSubmitted={() => {
+                    fetchMyBookings();
+                }}
+            />
 
             <CustomerFooter />
         </div>

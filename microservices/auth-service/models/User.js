@@ -8,10 +8,14 @@ const User = sequelize.define('User', {
   email: { type: DataTypes.STRING(150), allowNull: false, unique: true },
   password_hash: { type: DataTypes.STRING(255), allowNull: false },
   phone: { type: DataTypes.STRING(20) },
+  avatar: { type: DataTypes.TEXT },
+  gender: { type: DataTypes.ENUM('Male', 'Female', 'Other') },
+  date_of_birth: { type: DataTypes.DATEONLY },
+  address: { type: DataTypes.STRING(255) },
   status: { type: DataTypes.ENUM('Active', 'Inactive', 'Blocked'), defaultValue: 'Active' }
 }, {
   tableName: 'users',
-  timestamps: true, // Sequelize sẽ tự quản lý created_at, updated_at
+  timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at'
 });

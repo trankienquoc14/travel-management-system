@@ -11,5 +11,6 @@ router.post('/register', authController.register);
 // Routes Hồ sơ cá nhân (Dành cho tất cả các tài khoản)
 router.get('/me', protect, authController.getProfile);
 router.put('/profile', protect, authController.updateProfile);
+router.put('/change-password', protect, authController.changePassword);
 
 module.exports = router;

@@ -70,6 +70,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         variable: { accommPerNight: 0, breakfast: 200000, lunch: 200000, dinner: 200000, tickets: 0, insurance: 0 },
         selectedTransport: null,
         transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
+        transportLocations: { startD: '', endD: '', startR: '', endR: '' },
         ageMultiplier: {
             preset: 'custom',
             child: { percent: 0, fixed_surcharge: 0 },
@@ -311,7 +312,8 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 selectedTransport: null,
                 fixed: { ...prev.fixed, transport: 0 },
                 variable: { ...prev.variable, tickets: 0 },
-                transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' }
+                transportTimes: prev.transportTimes || { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
+                transportLocations: prev.transportLocations || { startD: '', endD: '', startR: '', endR: '' }
             }));
             return;
         }

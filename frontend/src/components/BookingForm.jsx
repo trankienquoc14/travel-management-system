@@ -259,8 +259,12 @@ const BookingFormInner = () => {
         endLocD = 'Nhiều điểm';
     }
 
-    const startLocR = endLocD;
-    const endLocR = startLocD;
+    const transLocs = parsedDesign?.costConfig?.transportLocations || {};
+    if (transLocs.startD) startLocD = transLocs.startD;
+    if (transLocs.endD) endLocD = transLocs.endD;
+
+    const startLocR = transLocs.startR || endLocD;
+    const endLocR = transLocs.endR || startLocD;
 
     const timeStartD = parsedDesign?.costConfig?.transportTimes?.startD || '06:00';
     const timeEndD = parsedDesign?.costConfig?.transportTimes?.endD || '09:00';

@@ -88,6 +88,47 @@ router.get('/fleet/staff/vehicles/:id/history', protect, restrictTo(1, 3, 4), ve
 
 
 
+// ==========================================
+// HỆ THỐNG ĐÁNH GIÁ TOUR (TOUR REVIEWS & RATINGS)
+// ==========================================
+const reviewController = require('../controllers/reviewController');
+
+const reviewUpload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB (Luồng 5.1)
+    fileFilter: function (req, file, cb) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            const err = new Error('INVALID_IMAGE_FORMAT');
+            err.code = 'INVALID_IMAGE_FORMAT';
+            return cb(err, false);
+        }
+        cb(null, true);
+    }
+});
+
+const handleReviewUpload = (req, res, next) => {
+    reviewUpload.array('images', 5)(req, res, function (err) {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE' || err.code === 'INVALID_IMAGE_FORMAT') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Ảnh đính kèm có dung lượng quá lớn (> 5MB) hoặc không đúng định dạng ảnh.'
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: 'Lỗi tải ảnh: ' + err.message
+            });
+        }
+        next();
+    });
+};
+
+router.get('/:id/reviews', reviewController.getTourReviews);
+router.get('/:id/my-review', protect, reviewController.getMyReviewForTour);
+router.post('/:id/reviews', protect, handleReviewUpload, reviewController.submitTourReview);
+
 router.get('/:id', tourController.getTourById);
 
 module.exports = router;

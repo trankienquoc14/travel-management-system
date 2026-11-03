@@ -33,6 +33,7 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
   const [dashboardData, setDashboardData] = useState(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [activeDetail, setActiveDetail] = useState(null); // null (charts view) | 'timeline' | 'top_tours' | 'occupancy' | 'orders'
   const printableReportRef = useRef(null);
 
   // Lấy thông tin user hiện tại
@@ -572,7 +573,7 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
         </div>
       ) : (
         <>
-          {/* 📊 1. KHU VỰC CHỈ SỐ KPI CHÍNH (6 CARDS CHUẨN NGHIỆP VỤ BÁN TOUR) */}
+          {/* 📊 1. KHU VỰC CHỈ SỐ KPI CHÍNH (BẤM VÀO ĐỂ XEM CHI TIẾT TỪNG MỤC) */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -580,14 +581,19 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
             marginBottom: '22px'
           }}>
             {/* THỰC THU */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              padding: '20px',
-              border: '1px solid #e2e8f0',
-              borderLeft: '5px solid #16a34a',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-            }}>
+            <div 
+              onClick={() => setActiveDetail('timeline')}
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '5px solid #16a34a',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Doanh Thu Thực Thu
@@ -599,21 +605,28 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '10px' }}>
                 {formatVND(kpis.total_revenue)}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle2 size={13} color="#16a34a" />
-                <span>Đã thu tiền từ <strong>{kpis.paid_bookings_count || 0}</strong> đơn</span>
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={13} color="#16a34a" />
+                  <span>Đã thu từ <strong>{kpis.paid_bookings_count || 0}</strong> đơn</span>
+                </span>
+                <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '11px' }}>Chi tiết →</span>
               </div>
             </div>
 
             {/* CHỜ THANH TOÁN */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              padding: '20px',
-              border: '1px solid #e2e8f0',
-              borderLeft: '5px solid #d97706',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-            }}>
+            <div 
+              onClick={() => setActiveDetail('orders')}
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '5px solid #d97706',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                cursor: 'pointer'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Doanh Số Chờ Thu
@@ -625,20 +638,25 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '10px' }}>
                 {formatVND(kpis.pending_revenue)}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>⏳ Cần đôn đốc <strong>{kpis.pending_bookings_count || 0}</strong> đơn hàng</span>
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>⏳ Cần đôn đốc <strong>{kpis.pending_bookings_count || 0}</strong> đơn</span>
+                <span style={{ color: '#d97706', fontWeight: '700', fontSize: '11px' }}>Chi tiết →</span>
               </div>
             </div>
 
             {/* TỔNG ĐƠN ĐẶT TOUR */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              padding: '20px',
-              border: '1px solid #e2e8f0',
-              borderLeft: '5px solid #0284c7',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-            }}>
+            <div 
+              onClick={() => setActiveDetail('orders')}
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '5px solid #0284c7',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                cursor: 'pointer'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Tổng Đơn Đặt Vé
@@ -650,20 +668,25 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '10px' }}>
                 {kpis.total_bookings || 0} <span style={{ fontSize: '14px', fontWeight: '600', color: '#64748b' }}>đơn</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                Tỷ lệ thanh toán: <strong>{kpis.total_bookings > 0 ? Math.round((kpis.paid_bookings_count / kpis.total_bookings) * 100) : 0}%</strong>
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Tỷ lệ TT: <strong>{kpis.total_bookings > 0 ? Math.round((kpis.paid_bookings_count / kpis.total_bookings) * 100) : 0}%</strong></span>
+                <span style={{ color: '#0284c7', fontWeight: '700', fontSize: '11px' }}>Chi tiết →</span>
               </div>
             </div>
 
             {/* HÀNH KHÁCH */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              padding: '20px',
-              border: '1px solid #e2e8f0',
-              borderLeft: '5px solid #8b5cf6',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-            }}>
+            <div 
+              onClick={() => setActiveDetail('occupancy')}
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '5px solid #8b5cf6',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                cursor: 'pointer'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Hành Khách Phục Vụ
@@ -675,14 +698,15 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '10px' }}>
                 {kpis.total_passengers || 0} <span style={{ fontSize: '14px', fontWeight: '600', color: '#64748b' }}>khách</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                Đã phục vụ trên các đoàn tour
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Trên các đoàn khởi hành</span>
+                <span style={{ color: '#8b5cf6', fontWeight: '700', fontSize: '11px' }}>Chi tiết →</span>
               </div>
             </div>
 
             {/* YÊU CẦU ĐỔI / HỦY VÉ */}
             <div 
-              onClick={() => onNavigateToChangeRequests && onNavigateToChangeRequests()}
+              onClick={() => onNavigateToChangeRequests ? onNavigateToChangeRequests() : setActiveDetail('orders')}
               style={{
                 background: '#ffffff',
                 borderRadius: '14px',
@@ -690,7 +714,7 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
                 border: '1px solid #e2e8f0',
                 borderLeft: '5px solid #ea580c',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                cursor: onNavigateToChangeRequests ? 'pointer' : 'default'
+                cursor: 'pointer'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -704,20 +728,25 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '10px' }}>
                 {changeReqs.pending_change_requests || 0} <span style={{ fontSize: '14px', fontWeight: '600', color: '#ea580c' }}>chờ duyệt</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                Đã xử lý: <strong>{changeReqs.approved_change_requests || 0}</strong> đã duyệt
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Đã xử lý: <strong>{changeReqs.approved_change_requests || 0}</strong> đơn</span>
+                <span style={{ color: '#ea580c', fontWeight: '700', fontSize: '11px' }}>Chi tiết →</span>
               </div>
             </div>
 
             {/* TIỀN HOÀN TRẢ */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              padding: '20px',
-              border: '1px solid #e2e8f0',
-              borderLeft: '5px solid #ef4444',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-            }}>
+            <div 
+              onClick={() => setActiveDetail('orders')}
+              style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '5px solid #ef4444',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                cursor: 'pointer'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Đã Hoàn Lại Cho Khách
@@ -729,390 +758,783 @@ const OfficeStaffDashboard = ({ onNavigateToOrders, onNavigateToChangeRequests }
               <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginTop: '10px' }}>
                 {formatVND(kpis.refunded_amount || changeReqs.total_refund_approved)}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                Áp dụng theo quy định khấu trừ hủy tour
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Theo quy định khấu trừ</span>
+                <span style={{ color: '#ef4444', fontWeight: '700', fontSize: '11px' }}>Chi tiết →</span>
               </div>
             </div>
           </div>
 
-          {/* 📈 2. KHU VỰC BIỂU ĐỒ DOANH THU & TOP TOUR BÁN CHẠY (2 CỘT) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '20px', marginBottom: '22px' }}>
-            
-            {/* CỘT 1: DIỄN BIẾN DOANH THU THEO NGÀY */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              padding: '22px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          {/* ========================================================================= */}
+          {/* CHẾ ĐỘ 1: BẢNG BIỂU ĐỒ DASHBOARD TRỰC QUAN (MẶC ĐỊNH)                      */}
+          {/* Bấm vào bất kỳ biểu đồ nào để mở xem bảng chi tiết của mục đó             */}
+          {/* ========================================================================= */}
+          {activeDetail === null ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+              
+              {/* BIỂU ĐỒ 1: CỘT & ĐƯỜNG DIỄN BIẾN DOANH THU */}
+              <div 
+                onClick={() => setActiveDetail('timeline')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-                    📈 Diễn Biến Doanh Thu Bán Vé
-                  </h3>
-                  <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
-                    Doanh thu thực thu và số lượng đơn hàng qua các mốc thời gian
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px' }}>
+                        BIỂU ĐỒ DOANH THU
+                      </span>
+                      <h3 style={{ margin: '8px 0 2px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                        📈 Biểu Đồ Diễn Biến Doanh Thu Theo Ngày
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                        Bấm vào biểu đồ để xem bảng kê doanh thu & kênh thanh toán chi tiết
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                      Xem chi tiết <ChevronRight size={15} />
+                    </span>
+                  </div>
+
+                  {/* SVG COLUMN + LINE CHART */}
+                  {timeline.length === 0 ? (
+                    <div style={{ height: '190px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '12px', color: '#94a3b8', fontSize: '13px' }}>
+                      Chưa có dữ liệu giao dịch trong kỳ
+                    </div>
+                  ) : (
+                    <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '10px', padding: '20px 12px 8px 12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                      {timeline.slice(-10).map((item, idx) => {
+                        const maxRev = Math.max(...timeline.map(t => Number(t.revenue || 0)), 1);
+                        const hPct = Math.max(Math.round((Number(item.revenue || 0) / maxRev) * 100), 8);
+                        return (
+                          <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: '#0284c7', marginBottom: '4px' }}>
+                              {Number(item.revenue) >= 1000000 ? `${(Number(item.revenue) / 1000000).toFixed(1)}tr` : `${Math.round(Number(item.revenue) / 1000)}k`}
+                            </div>
+                            <div style={{
+                              width: '100%',
+                              maxWidth: '34px',
+                              height: `${hPct}%`,
+                              background: 'linear-gradient(180deg, #0284c7 0%, #38bdf8 100%)',
+                              borderRadius: '6px 6px 2px 2px',
+                              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)'
+                            }} />
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginTop: '6px' }}>{item.date_label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                  <span>Tổng thực thu kỳ này: <strong style={{ color: '#16a34a' }}>{formatVND(kpis.total_revenue)}</strong></span>
+                  <span style={{ color: '#0284c7', fontWeight: '700' }}>🔍 Bấm để mở bảng chi tiết</span>
                 </div>
               </div>
 
-              {timeline.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-                  Chưa có giao dịch phát sinh trong kỳ này.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {timeline.map((item, idx) => {
-                    const maxRev = Math.max(...timeline.map(t => Number(t.revenue || 0)), 1);
-                    const pct = Math.round((Number(item.revenue || 0) / maxRev) * 100);
+              {/* BIỂU ĐỒ 2: DONUT CHART CƠ CẤU ĐƠN HÀNG & THANH TOÁN */}
+              <div 
+                onClick={() => setActiveDetail('orders')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#16a34a', background: '#dcfce7', padding: '3px 8px', borderRadius: '6px' }}>
+                        BIỂU ĐỒ TRÒN CƠ CẤU ĐƠN
+                      </span>
+                      <h3 style={{ margin: '8px 0 2px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                        🍩 Biểu Đồ Trạng Thái Đơn Hàng & Thanh Toán
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                        Bấm vào biểu đồ để xem danh sách 15 đơn đặt vé mới nhất
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                      Xem đơn hàng <ChevronRight size={15} />
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const paid = Number(kpis.paid_bookings_count || 0);
+                    const pending = Number(kpis.pending_bookings_count || 0);
+                    const cancelled = Number(kpis.cancelled_bookings_count || 0);
+                    const total = Math.max(paid + pending + cancelled, 1);
+                    const paidDeg = Math.round((paid / total) * 360);
+                    const pendingDeg = Math.round((pending / total) * 360);
 
                     return (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px' }}>
-                        <div style={{ width: '55px', fontWeight: '700', color: '#334155' }}>{item.date_label}</div>
-                        <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '22px', overflow: 'hidden', position: 'relative' }}>
-                          <div style={{
-                            width: `${Math.max(pct, 6)}%`,
-                            height: '100%',
-                            background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 100%)',
-                            borderRadius: '6px',
-                            transition: 'width 0.5s ease'
-                          }} />
-                          <span style={{
-                            position: 'absolute',
-                            left: '10px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            color: pct > 35 ? '#ffffff' : '#0f172a'
-                          }}>
-                            {formatVND(item.revenue)} ({item.order_count} đơn)
-                          </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '20px', padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                        <div style={{
+                          width: '145px',
+                          height: '145px',
+                          borderRadius: '50%',
+                          background: `conic-gradient(#16a34a 0deg ${paidDeg}deg, #f59e0b ${paidDeg}deg ${paidDeg + pendingDeg}deg, #ef4444 ${paidDeg + pendingDeg}deg 360deg)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                          flexShrink: 0
+                        }}>
+                          <div style={{ width: '92px', height: '92px', borderRadius: '50%', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a' }}>{kpis.total_bookings || 0}</span>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b' }}>TỔNG ĐƠN</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', fontWeight: '600' }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#16a34a' }} />
+                              Đã thanh toán
+                            </span>
+                            <strong style={{ color: '#16a34a' }}>{paid} đơn ({Math.round((paid / total) * 100)}%)</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', fontWeight: '600' }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }} />
+                              Chờ thanh toán
+                            </span>
+                            <strong style={{ color: '#d97706' }}>{pending} đơn ({Math.round((pending / total) * 100)}%)</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', fontWeight: '600' }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
+                              Đã hủy
+                            </span>
+                            <strong style={{ color: '#ef4444' }}>{cancelled} đơn ({Math.round((cancelled / total) * 100)}%)</strong>
+                          </div>
                         </div>
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
-              )}
 
-              {/* PHƯƠNG THỨC THANH TOÁN */}
-              <div style={{ marginTop: '22px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#334155', marginBottom: '10px' }}>
-                  💳 Tỷ Trọng Kênh Thanh Toán:
-                </div>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  {paymentMethods.map((pm, i) => (
-                    <div key={i} style={{
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '10px',
-                      padding: '10px 14px',
-                      flex: 1,
-                      minWidth: '140px'
-                    }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
-                        {pm.method === 'VNPAY_QR' ? '📱 Chuyển Khoản QR (SePay)' : '💵 Tiền Mặt Tại Quầy'}
-                      </div>
-                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginTop: '4px' }}>
-                        {formatVND(pm.total_amount)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: '700', marginTop: '2px' }}>
-                        {pm.count} giao dịch thành công
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                  <span>Kênh thanh toán: <strong>{paymentMethods.length} phương thức</strong></span>
+                  <span style={{ color: '#16a34a', fontWeight: '700' }}>🔍 Bấm để xem 15 đơn mới nhất</span>
                 </div>
               </div>
-            </div>
 
-            {/* CỘT 2: TOP TOUR BÁN CHẠY NHẤT */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              padding: '22px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
-                🌟 Top Tour Bán Chạy Nhất
-              </h3>
-              <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b' }}>
-                Xếp hạng các tuyến điểm thu hút đông đảo du khách nhất
-              </p>
-
-              {topTours.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-                  Chưa có dữ liệu đặt tour.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {topTours.map((t, idx) => (
-                    <div key={t.tour_id} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '10px',
-                      borderRadius: '10px',
-                      background: idx === 0 ? '#f0f9ff' : '#f8fafc',
-                      border: idx === 0 ? '1px solid #bae6fd' : '1px solid #f1f5f9'
-                    }}>
-                      <span style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        background: idx === 0 ? '#0284c7' : '#e2e8f0',
-                        color: idx === 0 ? '#fff' : '#475569',
-                        fontSize: '11px',
-                        fontWeight: '900',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
-                        {idx + 1}
+              {/* BIỂU ĐỒ 3: BIỂU ĐỒ CỘT ĐỨNG SO SÁNH TOP TOUR BÁN CHẠY */}
+              <div 
+                onClick={() => setActiveDetail('top_tours')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#4f46e5', textTransform: 'uppercase' }}>
+                        Biểu đồ Cột Đứng • So sánh Tour
                       </span>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {t.tour_name}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px' }}>
-                          <span>👥 {t.passenger_count} khách</span>
-                          <span>•</span>
-                          <span>🛒 {t.order_count} đơn</span>
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#16a34a' }}>
-                          {formatVND(t.revenue)}
-                        </div>
-                      </div>
+                      <h3 style={{ margin: '4px 0 2px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+                        So Sánh Doanh Thu Các Tuyến Tour Bán Chạy
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                        Bấm vào biểu đồ để xem chi tiết xếp hạng & số lượng khách từng tuyến
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                      Xem chi tiết <ChevronRight size={15} />
+                    </span>
+                  </div>
 
-          {/* 🚌 3. TIẾN ĐỘ LẤP ĐẦY GHẾ CÁC ĐỢT KHỞI HÀNH (TOUR OCCUPANCY RATE) */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '14px',
-            border: '1px solid #e2e8f0',
-            padding: '22px',
-            marginBottom: '22px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-                  🚌 Tình Hình Khởi Hành & Tỷ Lệ Lấp Đầy Ghế (Occupancy Rate)
-                </h3>
-                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
-                  Theo dõi số lượng chỗ trống, tỷ lệ lấp đầy để đôn đốc nhận khách hoặc chốt khóa dịch vụ
-                </p>
-              </div>
-            </div>
-
-            {departures.length === 0 ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-                Không có đợt khởi hành nào trong kỳ.
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
-                      <th style={{ padding: '10px 14px' }}>Mã Đợt</th>
-                      <th style={{ padding: '10px 14px' }}>Tour & Tuyến Điểm</th>
-                      <th style={{ padding: '10px 14px' }}>Ngày Khởi Hành</th>
-                      <th style={{ padding: '10px 14px' }}>Thời Gian Còn Lại</th>
-                      <th style={{ padding: '10px 14px' }}>Số Chỗ Đã Đặt</th>
-                      <th style={{ padding: '10px 14px', minWidth: '180px' }}>Tỷ Lệ Lấp Đầy (%)</th>
-                      <th style={{ padding: '10px 14px' }}>Trạng Thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {departures.map(d => {
-                      const occ = Number(d.occupancy_rate || 0);
-                      const isClosed = d.status === 'Closed' || d.days_left <= 30;
-
-                      return (
-                        <tr key={d.departure_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0284c7' }}>
-                            #{d.departure_id}
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <strong style={{ color: '#0f172a' }}>{d.tour_name}</strong>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {d.destination}</div>
-                          </td>
-                          <td style={{ padding: '12px 14px', color: '#334155' }}>
-                            {new Date(d.departure_date).toLocaleDateString('vi-VN')}
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            {d.days_left > 0 ? (
-                              <span style={{ color: d.days_left <= 30 ? '#ea580c' : '#16a34a', fontWeight: '700' }}>
-                                Còn {d.days_left} ngày
-                              </span>
-                            ) : (
-                              <span style={{ color: '#64748b' }}>Đã khởi hành</span>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 14px', fontWeight: '700' }}>
-                            <span style={{ color: '#0f172a' }}>{d.booked_slots}</span>
-                            <span style={{ color: '#94a3b8', fontWeight: '400' }}> / {d.max_slots} chỗ</span>
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '10px', overflow: 'hidden' }}>
-                                <div style={{
-                                  width: `${Math.min(occ, 100)}%`,
-                                  height: '100%',
-                                  background: occ >= 80 ? '#16a34a' : occ >= 50 ? '#0284c7' : '#f59e0b',
-                                  borderRadius: '6px'
-                                }} />
-                              </div>
-                              <span style={{ fontSize: '12px', fontWeight: '800', width: '38px', color: occ >= 80 ? '#16a34a' : '#0f172a' }}>
-                                {occ}%
-                              </span>
+                  {topTours.length === 0 ? (
+                    <div style={{ height: '185px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '10px', color: '#94a3b8', fontSize: '13px' }}>
+                      Chưa có dữ liệu xếp hạng tour
+                    </div>
+                  ) : (
+                    <div style={{ height: '195px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: '10px', padding: '18px 12px 10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                      {topTours.slice(0, 6).map((t) => {
+                        const maxTourRev = Math.max(...topTours.map(x => Number(x.revenue || 0)), 1);
+                        const hPct = Math.max(Math.round((Number(t.revenue || 0) / maxTourRev) * 100), 10);
+                        const shortLabel = t.tour_name && t.tour_name.length > 12 ? `${t.tour_name.slice(0, 12)}…` : t.tour_name;
+                        return (
+                          <div key={t.tour_id} style={{ flex: 1, maxWidth: '72px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: '#4f46e5', marginBottom: '4px', whiteSpace: 'nowrap' }}>
+                              {Number(t.revenue) >= 1000000 ? `${(Number(t.revenue) / 1000000).toFixed(1)}tr` : `${Math.round(Number(t.revenue) / 1000)}k`}
                             </div>
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            {isClosed ? (
-                              <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
-                                🔒 Đã khóa sổ
-                              </span>
-                            ) : (
-                              <span style={{ background: '#dcfce7', color: '#16a34a', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
-                                🟢 Đang mở bán
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                            <div style={{
+                              width: '100%',
+                              maxWidth: '34px',
+                              height: `${hPct}%`,
+                              background: '#4f46e5',
+                              borderRadius: '5px 5px 2px 2px'
+                            }} />
+                            <div style={{ fontSize: '11px', fontWeight: '600', color: '#334155', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }} title={t.tour_name}>
+                              {shortLabel}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-          {/* 📋 4. DANH SÁCH ĐƠN HÀNG MỚI NHẤT TRONG KỲ */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '14px',
-            border: '1px solid #e2e8f0',
-            padding: '22px',
-            marginBottom: '30px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-                  📋 Đơn Hàng Mới Nhất Cần Xử Lý & Theo Dõi
-                </h3>
-                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
-                  Các đơn đặt tour phát sinh gần đây nhất từ khách hàng
-                </p>
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                  <span>Tổng số tuyến có phát sinh đơn: <strong>{topTours.length} tour</strong></span>
+                  <span style={{ color: '#4f46e5', fontWeight: '600' }}>Bấm để xem bảng xếp hạng →</span>
+                </div>
               </div>
 
-              {onNavigateToOrders && (
+              {/* BIỂU ĐỒ 4: BIỂU ĐỒ CỘT ĐỨNG TỶ LỆ LẤP ĐẦY CHỖ KHỞI HÀNH */}
+              <div 
+                onClick={() => setActiveDetail('occupancy')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#d97706', textTransform: 'uppercase' }}>
+                        Biểu đồ Cột Đứng • Công suất Đoàn
+                      </span>
+                      <h3 style={{ margin: '4px 0 2px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+                        Tỷ Lệ Lấp Đầy Chỗ Các Đợt Khởi Hành (%)
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                        Bấm vào biểu đồ để xem chi tiết 20 lịch khởi hành & số ghế trống
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#d97706', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                      Xem lịch đoàn <ChevronRight size={15} />
+                    </span>
+                  </div>
+
+                  {departures.length === 0 ? (
+                    <div style={{ height: '185px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '10px', color: '#94a3b8', fontSize: '13px' }}>
+                      Không có đợt khởi hành nào trong kỳ
+                    </div>
+                  ) : (
+                    <div style={{ height: '195px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: '10px', padding: '18px 12px 10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                      {departures.slice(0, 6).map(d => {
+                        const occ = Number(d.occupancy_rate || 0);
+                        const hPct = Math.max(Math.min(occ, 100), 8);
+                        return (
+                          <div key={d.departure_id} style={{ flex: 1, maxWidth: '72px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: occ >= 80 ? '#059669' : occ >= 50 ? '#0284c7' : '#d97706', marginBottom: '4px' }}>
+                              {occ}%
+                            </div>
+                            <div style={{
+                              width: '100%',
+                              maxWidth: '34px',
+                              height: `${hPct}%`,
+                              background: occ >= 80 ? '#10b981' : occ >= 50 ? '#0284c7' : '#f59e0b',
+                              borderRadius: '5px 5px 2px 2px'
+                            }} />
+                            <div style={{ fontSize: '11px', fontWeight: '600', color: '#334155', marginTop: '6px' }}>
+                              Đoàn #{d.departure_id}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                  <span>Tổng đợt khởi hành sắp tới: <strong>{departures.length} đoàn</strong></span>
+                  <span style={{ color: '#d97706', fontWeight: '600' }}>Bấm để xem chi tiết từng đoàn →</span>
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            /* ========================================================================= */
+            /* CHẾ ĐỘ 2: XEM CHI TIẾT TỪNG MỤC KHI BẤM VÀO BIỂU ĐỒ                       */
+            /* ========================================================================= */
+            <div>
+              {/* THANH ĐIỀU HƯỚNG QUAY LẠI BẢNG BIỂU ĐỒ */}
+              <div style={{
+                background: '#ffffff',
+                padding: '12px 18px',
+                borderRadius: '14px',
+                border: '1px solid #bae6fd',
+                marginBottom: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.08)'
+              }}>
                 <button
-                  onClick={onNavigateToOrders}
+                  onClick={() => setActiveDetail(null)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    background: 'none',
+                    gap: '6px',
+                    background: '#0f172a',
+                    color: '#ffffff',
                     border: 'none',
-                    color: '#0284c7',
-                    fontWeight: '700',
+                    padding: '9px 16px',
+                    borderRadius: '10px',
                     fontSize: '13px',
+                    fontWeight: '800',
                     cursor: 'pointer'
                   }}
                 >
-                  <span>Xem toàn bộ đơn hàng</span>
-                  <ChevronRight size={16} />
+                  <span>← Quay lại Bảng Biểu Đồ Dashboard</span>
                 </button>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'timeline', label: '📈 Chi tiết Doanh thu & Kênh TT' },
+                    { id: 'top_tours', label: '🌟 Chi tiết Top Tour Bán Chạy' },
+                    { id: 'occupancy', label: '🚌 Chi tiết Lấp Đầy Khởi Hành' },
+                    { id: 'orders', label: '📋 Danh Sách 15 Đơn Hàng Mới' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveDetail(tab.id)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid',
+                        borderColor: activeDetail === tab.id ? '#0284c7' : '#e2e8f0',
+                        background: activeDetail === tab.id ? '#e0f2fe' : '#f8fafc',
+                        color: activeDetail === tab.id ? '#0369a1' : '#475569',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CHI TIẾT 1: DIỄN BIẾN DOANH THU THEO NGÀY & PHƯƠNG THỨC THANH TOÁN */}
+              {activeDetail === 'timeline' && (
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  marginBottom: '22px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                        📈 Chi Tiết Diễn Biến Doanh Thu Bán Vé & Kênh Thanh Toán
+                      </h3>
+                      <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                        Doanh thu thực thu và số lượng đơn hàng qua các mốc thời gian
+                      </p>
+                    </div>
+                  </div>
+
+                  {timeline.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                      Chưa có giao dịch phát sinh trong kỳ này.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {timeline.map((item, idx) => {
+                        const maxRev = Math.max(...timeline.map(t => Number(t.revenue || 0)), 1);
+                        const pct = Math.round((Number(item.revenue || 0) / maxRev) * 100);
+
+                        return (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px' }}>
+                            <div style={{ width: '55px', fontWeight: '700', color: '#334155' }}>{item.date_label}</div>
+                            <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '24px', overflow: 'hidden', position: 'relative' }}>
+                              <div style={{
+                                width: `${Math.max(pct, 6)}%`,
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 100%)',
+                                borderRadius: '6px',
+                                transition: 'width 0.5s ease'
+                              }} />
+                              <span style={{
+                                position: 'absolute',
+                                left: '10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                color: pct > 35 ? '#ffffff' : '#0f172a'
+                              }}>
+                                {formatVND(item.revenue)} ({item.order_count} đơn • {item.passenger_count || 0} khách)
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* PHƯƠNG THỨC THANH TOÁN */}
+                  <div style={{ marginTop: '22px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#334155', marginBottom: '10px' }}>
+                      💳 Tỷ Trọng Kênh Thanh Toán:
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      {paymentMethods.map((pm, i) => (
+                        <div key={i} style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          padding: '12px 16px',
+                          flex: 1,
+                          minWidth: '160px'
+                        }}>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                            {pm.method === 'VNPAY_QR' ? '📱 Chuyển Khoản QR (SePay)' : '💵 Tiền Mặt Tại Quầy'}
+                          </div>
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '4px' }}>
+                            {formatVND(pm.total_amount)}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: '700', marginTop: '2px' }}>
+                            {pm.count} giao dịch thành công
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CHI TIẾT 2: TOP TOUR BÁN CHẠY NHẤT */}
+              {activeDetail === 'top_tours' && (
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  marginBottom: '22px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
+                    🌟 Bảng Xếp Hạng Chi Tiết Top Tour Bán Chạy Nhất
+                  </h3>
+                  <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b' }}>
+                    Xếp hạng các tuyến điểm thu hút đông đảo du khách nhất theo doanh thu thực thu
+                  </p>
+
+                  {topTours.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                      Chưa có dữ liệu đặt tour.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {topTours.map((t, idx) => (
+                        <div key={t.tour_id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 14px',
+                          borderRadius: '10px',
+                          background: idx === 0 ? '#f0f9ff' : '#f8fafc',
+                          border: idx === 0 ? '1px solid #bae6fd' : '1px solid #f1f5f9'
+                        }}>
+                          <span style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: idx === 0 ? '#0284c7' : '#e2e8f0',
+                            color: idx === 0 ? '#fff' : '#475569',
+                            fontSize: '12px',
+                            fontWeight: '900',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {idx + 1}
+                          </span>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
+                              {t.tour_name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '12px' }}>
+                              <span>📍 {t.destination}</span>
+                              <span>•</span>
+                              <span>👥 {t.passenger_count} khách</span>
+                              <span>•</span>
+                              <span>🛒 {t.order_count} đơn</span>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: '15px', fontWeight: '800', color: '#16a34a' }}>
+                              {formatVND(t.revenue)}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>
+                              Giá gốc: {formatVND(t.base_price)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CHI TIẾT 3: TIẾN ĐỘ LẤP ĐẦY GHẾ CÁC ĐỢT KHỞI HÀNH */}
+              {activeDetail === 'occupancy' && (
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  marginBottom: '22px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                        🚌 Chi Tiết Tình Hình Khởi Hành & Tỷ Lệ Lấp Đầy Ghế (Occupancy Rate)
+                      </h3>
+                      <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                        Theo dõi số lượng chỗ trống, tỷ lệ lấp đầy để đôn đốc nhận khách hoặc chốt khóa dịch vụ
+                      </p>
+                    </div>
+                  </div>
+
+                  {departures.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                      Không có đợt khởi hành nào trong kỳ.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                            <th style={{ padding: '10px 14px' }}>Mã Đợt</th>
+                            <th style={{ padding: '10px 14px' }}>Tour & Tuyến Điểm</th>
+                            <th style={{ padding: '10px 14px' }}>Ngày Khởi Hành</th>
+                            <th style={{ padding: '10px 14px' }}>Thời Gian Còn Lại</th>
+                            <th style={{ padding: '10px 14px' }}>Số Chỗ Đã Đặt</th>
+                            <th style={{ padding: '10px 14px', minWidth: '180px' }}>Tỷ Lệ Lấp Đầy (%)</th>
+                            <th style={{ padding: '10px 14px' }}>Trạng Thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {departures.map(d => {
+                            const occ = Number(d.occupancy_rate || 0);
+                            const isClosed = d.status === 'Closed' || d.days_left <= 30;
+
+                            return (
+                              <tr key={d.departure_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0284c7' }}>
+                                  #{d.departure_id}
+                                </td>
+                                <td style={{ padding: '12px 14px' }}>
+                                  <strong style={{ color: '#0f172a' }}>{d.tour_name}</strong>
+                                  <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {d.destination}</div>
+                                </td>
+                                <td style={{ padding: '12px 14px', color: '#334155' }}>
+                                  {new Date(d.departure_date).toLocaleDateString('vi-VN')}
+                                </td>
+                                <td style={{ padding: '12px 14px' }}>
+                                  {d.days_left > 0 ? (
+                                    <span style={{ color: d.days_left <= 30 ? '#ea580c' : '#16a34a', fontWeight: '700' }}>
+                                      Còn {d.days_left} ngày
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#64748b' }}>Đã khởi hành</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '12px 14px', fontWeight: '700' }}>
+                                  <span style={{ color: '#0f172a' }}>{d.booked_slots}</span>
+                                  <span style={{ color: '#94a3b8', fontWeight: '400' }}> / {d.max_slots} chỗ</span>
+                                </td>
+                                <td style={{ padding: '12px 14px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '10px', overflow: 'hidden' }}>
+                                      <div style={{
+                                        width: `${Math.min(occ, 100)}%`,
+                                        height: '100%',
+                                        background: occ >= 80 ? '#16a34a' : occ >= 50 ? '#0284c7' : '#f59e0b',
+                                        borderRadius: '6px'
+                                      }} />
+                                    </div>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', width: '38px', color: occ >= 80 ? '#16a34a' : '#0f172a' }}>
+                                      {occ}%
+                                    </span>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '12px 14px' }}>
+                                  {isClosed ? (
+                                    <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
+                                      🔒 Đã khóa sổ
+                                    </span>
+                                  ) : (
+                                    <span style={{ background: '#dcfce7', color: '#16a34a', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
+                                      🟢 Đang mở bán
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CHI TIẾT 4: DANH SÁCH ĐƠN HÀNG MỚI NHẤT TRONG KỲ */}
+              {activeDetail === 'orders' && (
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '22px',
+                  marginBottom: '30px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                        📋 Danh Sách Chi Tiết 15 Đơn Hàng Mới Nhất Cần Xử Lý & Theo Dõi
+                      </h3>
+                      <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                        Các đơn đặt tour phát sinh gần đây nhất từ khách hàng
+                      </p>
+                    </div>
+
+                    {onNavigateToOrders && (
+                      <button
+                        onClick={onNavigateToOrders}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: 'none',
+                          border: 'none',
+                          color: '#0284c7',
+                          fontWeight: '700',
+                          fontSize: '13px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>Xem toàn bộ đơn hàng</span>
+                        <ChevronRight size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {recentBookings.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                      Chưa có đơn hàng nào.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                            <th style={{ padding: '10px 14px' }}>Mã Đơn</th>
+                            <th style={{ padding: '10px 14px' }}>Khách Hàng</th>
+                            <th style={{ padding: '10px 14px' }}>Tour Đặt</th>
+                            <th style={{ padding: '10px 14px' }}>Ngày Khởi Hành</th>
+                            <th style={{ padding: '10px 14px' }}>Số Khách</th>
+                            <th style={{ padding: '10px 14px' }}>Tổng Tiền</th>
+                            <th style={{ padding: '10px 14px' }}>Thanh Toán</th>
+                            <th style={{ padding: '10px 14px' }}>Trạng Thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentBookings.map(b => (
+                            <tr key={b.booking_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '12px 14px', fontWeight: '800', color: '#0284c7' }}>
+                                #{b.booking_id}
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <strong style={{ color: '#0f172a' }}>{b.customer_name}</strong>
+                                <div style={{ fontSize: '11px', color: '#64748b' }}>{b.customer_phone || b.customer_email}</div>
+                              </td>
+                              <td style={{ padding: '12px 14px', maxWidth: '220px' }}>
+                                <span style={{ color: '#0f172a', fontWeight: '600', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {b.tour_name}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#475569' }}>
+                                {b.departure_date ? new Date(b.departure_date).toLocaleDateString('vi-VN') : '—'}
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                👥 {b.num_people}
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: '800', color: '#16a34a' }}>
+                                {formatVND(b.total_amount)}
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                {b.payment_status === 'Paid' ? (
+                                  <span style={{ background: '#dcfce7', color: '#16a34a', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
+                                    ✅ Đã trả
+                                  </span>
+                                ) : b.payment_status === 'Refunded' ? (
+                                  <span style={{ background: '#fee2e2', color: '#ef4444', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
+                                    ↩ Đã hoàn tiền
+                                  </span>
+                                ) : (
+                                  <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
+                                    ⏳ Chờ thu
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  color: b.booking_status === 'Confirmed' ? '#0284c7' : b.booking_status === 'Cancelled' ? '#94a3b8' : '#334155'
+                                }}>
+                                  {b.booking_status === 'Confirmed' ? 'Đã xác nhận' : b.booking_status === 'Cancelled' ? 'Đã hủy' : b.booking_status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-
-            {recentBookings.length === 0 ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-                Chưa có đơn hàng nào.
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
-                      <th style={{ padding: '10px 14px' }}>Mã Đơn</th>
-                      <th style={{ padding: '10px 14px' }}>Khách Hàng</th>
-                      <th style={{ padding: '10px 14px' }}>Tour Đặt</th>
-                      <th style={{ padding: '10px 14px' }}>Ngày Khởi Hành</th>
-                      <th style={{ padding: '10px 14px' }}>Số Khách</th>
-                      <th style={{ padding: '10px 14px' }}>Tổng Tiền</th>
-                      <th style={{ padding: '10px 14px' }}>Thanh Toán</th>
-                      <th style={{ padding: '10px 14px' }}>Trạng Thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentBookings.map(b => (
-                      <tr key={b.booking_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '12px 14px', fontWeight: '800', color: '#0284c7' }}>
-                          #{b.booking_id}
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <strong style={{ color: '#0f172a' }}>{b.customer_name}</strong>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>{b.customer_phone || b.customer_email}</div>
-                        </td>
-                        <td style={{ padding: '12px 14px', maxWidth: '220px' }}>
-                          <span style={{ color: '#0f172a', fontWeight: '600', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {b.tour_name}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px', color: '#475569' }}>
-                          {b.departure_date ? new Date(b.departure_date).toLocaleDateString('vi-VN') : '—'}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0f172a' }}>
-                          👥 {b.num_people}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontWeight: '800', color: '#16a34a' }}>
-                          {formatVND(b.total_amount)}
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          {b.payment_status === 'Paid' ? (
-                            <span style={{ background: '#dcfce7', color: '#16a34a', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
-                              ✅ Đã trả
-                            </span>
-                          ) : b.payment_status === 'Refunded' ? (
-                            <span style={{ background: '#fee2e2', color: '#ef4444', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
-                              ↩ Đã hoàn tiền
-                            </span>
-                          ) : (
-                            <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px' }}>
-                              ⏳ Chờ thu
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            color: b.booking_status === 'Confirmed' ? '#0284c7' : b.booking_status === 'Cancelled' ? '#94a3b8' : '#334155'
-                          }}>
-                            {b.booking_status === 'Confirmed' ? 'Đã xác nhận' : b.booking_status === 'Cancelled' ? 'Đã hủy' : b.booking_status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          )}
         </>
       )}
 

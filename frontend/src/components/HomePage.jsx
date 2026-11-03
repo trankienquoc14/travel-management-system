@@ -901,7 +901,7 @@ const HomePage = () => {
                                     <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                                             <span style={{ color: '#0284c7', fontWeight: '700' }}>📍 {tour.destination}</span>
-                                            <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ 4.9 (128)</span>
+                                            <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ {tour.average_rating ? Number(tour.average_rating).toFixed(1) : '5.0'} ({tour.review_count || 0})</span>
                                         </div>
 
                                         <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '64px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
@@ -1094,7 +1094,7 @@ const HomePage = () => {
                                         <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                                                 <span style={{ color: '#0284c7', fontWeight: '700' }}>📍 {tour.destination}</span>
-                                                <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ 4.9 (128)</span>
+                                                <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ {tour.average_rating ? Number(tour.average_rating).toFixed(1) : '5.0'} ({tour.review_count || 0})</span>
                                             </div>
 
                                             <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '64px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>

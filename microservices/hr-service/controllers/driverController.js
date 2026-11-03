@@ -41,7 +41,7 @@ exports.getAssignedTrips = async (req, res) => {
     const userRole = req.user?.role_id || req.user?.role;
     const requestedDriverId = req.query.driver_id;
 
-    const isAdminOrManager = [1, 2, 3, '1', '2', '3'].includes(userRole);
+    const isAdminOrManager = [1, 2, 3, 4, '1', '2', '3', '4'].includes(userRole);
 
     let whereClause = `WHERE (tva.driver_id = :driverId OR (tva.driver_id IS NULL AND d.driver_id = :driverId AND d.vehicle_number IS NOT NULL AND d.vehicle_number != ''))`;
     let targetDriverId = userId;

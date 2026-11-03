@@ -470,6 +470,18 @@ const ManagerApproveTours = () => {
                                 if (startLastDay === 'Điểm xuất phát' && endDay1 && endDay1 !== 'Điểm đến') startLastDay = endDay1;
                                 if (endLastDay === 'Điểm đến' && startDay1 && startDay1 !== 'Điểm xuất phát') endLastDay = startDay1;
 
+                                    const transLocsFixed = costConfig.transportLocations || {};
+                                    const dispStartDFixed = transLocsFixed.startD || startDay1;
+                                    const dispEndDFixed = transLocsFixed.endD || endDay1;
+                                    const dispStartRFixed = transLocsFixed.startR || ((startLastDay && startLastDay !== startDay1) ? startLastDay : endDay1);
+                                    const dispEndRFixed = transLocsFixed.endR || endLastDay;
+
+                                const transLocs = costConfig.transportLocations || {};
+                                const dispStartD = transLocs.startD || startDay1;
+                                const dispEndD = transLocs.endD || endDay1;
+                                const dispStartR = transLocs.startR || ((startLastDay && startLastDay !== startDay1) ? startLastDay : endDay1);
+                                const dispEndR = transLocs.endR || endLastDay;
+
                                 return (
                                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
                                         {/* CỘT TRÁI: YÊU CẦU & LỊCH TRÌNH */}
@@ -592,8 +604,8 @@ const ManagerApproveTours = () => {
                                                                 <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endD || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                             </div>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
-                                                                <span>{startDay1}</span>
-                                                                <span>{endDay1}</span>
+                                                                <span>{dispStartD}</span>
+                                                                <span>{dispEndD}</span>
                                                             </div>
                                                         </div>
                                                         
@@ -607,8 +619,8 @@ const ManagerApproveTours = () => {
                                                                 <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endR || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                             </div>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
-                                                                <span>{startLastDay}</span>
-                                                                <span>{endLastDay}</span>
+                                                                <span>{dispStartR}</span>
+                                                                <span>{dispEndR}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -980,8 +992,8 @@ const ManagerApproveTours = () => {
                                                                                     <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endD || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                                                 </div>
                                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
-                                                                                    <span>{startDay1}</span>
-                                                                                    <span>{endDay1}</span>
+                                                                                    <span>{dispStartDFixed}</span>
+                                                                                    <span>{dispEndDFixed}</span>
                                                                                 </div>
                                                                             </div>
                                                                             
@@ -995,8 +1007,8 @@ const ManagerApproveTours = () => {
                                                                                     <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>{costConfig.transportTimes.endR || '00:00'} <span style={{fontSize:'12px', color:'#94a3b8'}}>🕒</span></div>
                                                                                 </div>
                                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
-                                                                                    <span>{startLastDay}</span>
-                                                                                    <span>{endLastDay}</span>
+                                                                                    <span>{dispStartRFixed}</span>
+                                                                                    <span>{dispEndRFixed}</span>
                                                                                 </div>
                                                                             </div>
                                                                         </div>

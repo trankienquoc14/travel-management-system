@@ -1,5 +1,31 @@
 const sequelize = require('../config/database');
 
+let isCheckinColumnVerified = false;
+const ensurePassengerCheckinSchema = async () => {
+  if (isCheckinColumnVerified) return;
+  try {
+    const [cols] = await sequelize.query(`SHOW COLUMNS FROM booking_passengers LIKE 'checked_in_at'`);
+    if (!cols || cols.length === 0) {
+      await sequelize.query(`ALTER TABLE booking_passengers ADD COLUMN checked_in_at DATETIME NULL DEFAULT NULL`);
+    }
+    isCheckinColumnVerified = true;
+  } catch (e) {
+    console.error("Ensure checked_in_at column error:", e.message);
+  }
+};
+
+const formatTimeHMS = (dateInput) => {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  if (isNaN(d.getTime())) {
+    const now = new Date();
+    return now.toTimeString().split(' ')[0];
+  }
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+};
+
 const syncExpiredDeparturesStatus = async () => {
   try {
     await sequelize.query(`
@@ -24,7 +50,7 @@ exports.getAssignedWork = async (req, res) => {
     let whereClause = '';
     let replacements = [];
 
-    const isAdmin = [1, 2, 3].includes(Number(userRole));
+    const isAdmin = [1, 2, 3, 4].includes(Number(userRole));
 
     if (isAdmin) {
       if (guide_id && guide_id !== 'all') {
@@ -79,6 +105,7 @@ exports.getAssignedWork = async (req, res) => {
 // Hỗ trợ hiển thị cả các khách hàng từ booking chưa điền thông tin hành khách (lấy người đặt làm đại diện)
 exports.getDeparturePassengers = async (req, res) => {
   try {
+    await ensurePassengerCheckinSchema();
     const { departureId } = req.params;
 
     // Truy vấn kết hợp: 
@@ -93,6 +120,7 @@ exports.getDeparturePassengers = async (req, res) => {
         bp.birth_date, 
         bp.identity_number, 
         COALESCE(bp.is_checked_in, 0) as is_checked_in,
+        bp.checked_in_at,
         u.full_name as booker_name, 
         u.phone as booker_phone
       FROM bookings b
@@ -110,6 +138,7 @@ exports.getDeparturePassengers = async (req, res) => {
         u.date_of_birth as birth_date, 
         '—' as identity_number, 
         0 as is_checked_in,
+        NULL as checked_in_at,
         u.full_name as booker_name, 
         u.phone as booker_phone
       FROM bookings b
@@ -119,49 +148,85 @@ exports.getDeparturePassengers = async (req, res) => {
         AND NOT EXISTS (
           SELECT 1 FROM booking_passengers WHERE booking_id = b.booking_id
         )
-      ORDER BY booking_id DESC
+      ORDER BY booking_id DESC, passenger_id ASC
     `, { replacements: [departureId, departureId] });
+
+    // Gán mã vé điện tử QR (BKG-{booking_id}-PAX-{idx}) cho từng hành khách trong mỗi booking
+    const bookingPaxCounters = {};
+    const enrichedPassengers = passengers.map((p) => {
+      const bId = p.booking_id;
+      const idx = bookingPaxCounters[bId] || 0;
+      bookingPaxCounters[bId] = idx + 1;
+      return {
+        ...p,
+        pax_index: idx,
+        qr_ticket_code: `BKG-${bId}-PAX-${idx}`,
+        checked_in_time: p.checked_in_at ? formatTimeHMS(p.checked_in_at) : null
+      };
+    });
 
     res.status(200).json({
       success: true,
-      data: passengers
+      data: enrichedPassengers
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 3. Thực hiện check-in hành khách (Hỗ trợ tự động tạo bản ghi thật nếu điểm danh khách giả định)
+// 3. Thực hiện check-in hành khách thủ công (Luồng sự kiện thay thế 1.1 & 1.2)
 exports.checkinPassenger = async (req, res) => {
   try {
+    await ensurePassengerCheckinSchema();
     const { passengerId } = req.params;
     const { is_checked_in } = req.body; // 1 hoặc 0
+    const nextStatus = is_checked_in ? 1 : 0;
+    const now = new Date();
+    const timeStr = formatTimeHMS(now);
 
-    // Kiểm tra trạng thái đơn hàng: Nếu đã HỦY thì không cho phép điểm danh
+    // Kiểm tra trạng thái đơn hàng & chuyến đi (Tiền điều kiện: chuyến đi chuẩn bị xuất phát hoặc đang diễn ra)
     let bookingStatus = null;
+    let departureStatus = null;
     let bId = null;
 
     if (typeof passengerId === 'string' && passengerId.startsWith('b')) {
       bId = parseInt(passengerId.substring(1));
-      const [bRows] = await sequelize.query(`SELECT booking_status FROM bookings WHERE booking_id = ?`, { replacements: [bId] });
-      if (bRows.length > 0) bookingStatus = bRows[0].booking_status;
+      const [bRows] = await sequelize.query(`
+        SELECT b.booking_status, d.status as departure_status
+        FROM bookings b
+        LEFT JOIN departures d ON b.departure_id = d.departure_id
+        WHERE b.booking_id = ?
+      `, { replacements: [bId] });
+      if (bRows.length > 0) {
+        bookingStatus = bRows[0].booking_status;
+        departureStatus = bRows[0].departure_status;
+      }
     } else {
       const [pRows] = await sequelize.query(`
-        SELECT b.booking_status, b.booking_id 
+        SELECT b.booking_status, b.booking_id, d.status as departure_status
         FROM booking_passengers bp 
         JOIN bookings b ON bp.booking_id = b.booking_id 
+        LEFT JOIN departures d ON b.departure_id = d.departure_id
         WHERE bp.passenger_id = ?
       `, { replacements: [passengerId] });
       if (pRows.length > 0) {
         bookingStatus = pRows[0].booking_status;
         bId = pRows[0].booking_id;
+        departureStatus = pRows[0].departure_status;
       }
     }
 
     if (bookingStatus === 'Cancelled') {
       return res.status(400).json({
         success: false,
-        message: `🚫 VÉ ĐÃ BỊ HỦY! Đơn vé #${bId} đã được hủy/hoàn tiền. Vé này không còn hiệu lực để điểm danh.`
+        message: `Mã vé không hợp lệ hoặc không thuộc chuyến đi này (Đơn vé #${bId} đã bị hủy).`
+      });
+    }
+
+    if (departureStatus === 'Completed') {
+      return res.status(400).json({
+        success: false,
+        message: `Chuyến đi đã kết thúc (Completed). Chỉ cho phép điểm danh khi chuyến đi ở trạng thái chuẩn bị xuất phát hoặc đang diễn ra.`
       });
     }
 
@@ -174,12 +239,11 @@ exports.checkinPassenger = async (req, res) => {
       `, { replacements: [bookingId] });
 
       if (existing.length > 0) {
-        // Nếu đã có bản ghi thực tế, thực hiện UPDATE
         await sequelize.query(`
           UPDATE booking_passengers 
-          SET is_checked_in = ? 
+          SET is_checked_in = ?, checked_in_at = ?
           WHERE passenger_id = ?
-        `, { replacements: [is_checked_in ? 1 : 0, existing[0].passenger_id] });
+        `, { replacements: [nextStatus, nextStatus === 1 ? now : null, existing[0].passenger_id] });
       } else {
         // Nếu chưa có bản ghi, thực hiện INSERT lấy thông tin người đặt làm đại diện
         const [bookingData] = await sequelize.query(`
@@ -192,10 +256,10 @@ exports.checkinPassenger = async (req, res) => {
         if (bookingData.length > 0) {
           const bd = bookingData[0];
           await sequelize.query(`
-            INSERT INTO booking_passengers (booking_id, full_name, gender, birth_date, identity_number, is_checked_in)
-            VALUES (?, ?, ?, ?, '—', ?)
+            INSERT INTO booking_passengers (booking_id, full_name, gender, birth_date, identity_number, is_checked_in, checked_in_at)
+            VALUES (?, ?, ?, ?, '—', ?, ?)
           `, {
-            replacements: [bookingId, bd.full_name, bd.gender || 'Other', bd.date_of_birth || null, is_checked_in ? 1 : 0]
+            replacements: [bookingId, bd.full_name, bd.gender || 'Other', bd.date_of_birth || null, nextStatus, nextStatus === 1 ? now : null]
           });
         }
       }
@@ -203,26 +267,54 @@ exports.checkinPassenger = async (req, res) => {
       // Bản ghi thực tế đã tồn tại
       await sequelize.query(`
         UPDATE booking_passengers 
-        SET is_checked_in = ? 
+        SET is_checked_in = ?, checked_in_at = ?
         WHERE passenger_id = ?
-      `, { replacements: [is_checked_in ? 1 : 0, passengerId] });
+      `, { replacements: [nextStatus, nextStatus === 1 ? now : null, passengerId] });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Cập nhật trạng thái điểm danh thành công!'
+      message: nextStatus === 1
+        ? `Xác nhận điểm danh thủ công thành công vào lúc ${timeStr}!`
+        : 'Đã đặt lại trạng thái điểm danh của hành khách.',
+      data: {
+        passenger_id: String(passengerId),
+        is_checked_in: nextStatus,
+        checked_in_at: nextStatus === 1 ? now.toISOString() : null,
+        checked_in_time: nextStatus === 1 ? timeStr : null
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 3b. Điểm danh hành khách bằng mã QR Vé Tour (QR Code Scan Check-in)
+// 3b. Điểm danh hành khách bằng mã QR Vé điện tử (Luồng sự kiện chính 1 -> 6 & Luồng thay thế 5.1, 5.2)
 exports.qrCheckinPassenger = async (req, res) => {
   try {
+    await ensurePassengerCheckinSchema();
     const { qr_code, departure_id } = req.body;
-    if (!qr_code) {
-      return res.status(400).json({ success: false, message: 'Thiếu mã QR Code quét được!' });
+    if (!qr_code || !String(qr_code).trim()) {
+      return res.status(400).json({
+        success: false,
+        error_code: 'INVALID_TICKET',
+        message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
+      });
+    }
+
+    // Kiểm tra tiền điều kiện: chuyến đi phải ở trạng thái chuẩn bị xuất phát (Open) hoặc đang diễn ra (Closed)
+    if (departure_id) {
+      const [depRows] = await sequelize.query(
+        `SELECT status FROM departures WHERE departure_id = ?`,
+        { replacements: [departure_id] }
+      );
+      if (depRows.length > 0 && depRows[0].status === 'Completed') {
+        return res.status(400).json({
+          success: false,
+          error_code: 'TRIP_COMPLETED',
+          message: 'Chuyến đi này đã hoàn thành. Chỉ có thể điểm danh khi chuyến đi chuẩn bị xuất phát hoặc đang diễn ra.'
+        });
+      }
     }
 
     const cleanQr = String(qr_code).trim();
@@ -231,24 +323,32 @@ exports.qrCheckinPassenger = async (req, res) => {
     let passengerId = null;
 
     // Pattern 1: BKG-12-PAX-0 or BKG-0012-PAX-1
-    const matchBkgPax = cleanQr.match(/BKG-(\d+)-PAX-(\d+)/i);
+    const matchBkgPax = cleanQr.match(/^BKG-(\d+)-PAX-(\d+)$/i) || cleanQr.match(/BKG-(\d+)-PAX-(\d+)/i);
     if (matchBkgPax) {
       bookingId = parseInt(matchBkgPax[1]);
       paxIndex = parseInt(matchBkgPax[2]);
     } else {
       // Pattern 2: BKG-12
-      const matchBkg = cleanQr.match(/BKG-(\d+)/i);
+      const matchBkg = cleanQr.match(/^BKG-(\d+)$/i) || cleanQr.match(/BKG-(\d+)/i);
       if (matchBkg) {
         bookingId = parseInt(matchBkg[1]);
       } else {
         // Pattern 3: PAX-45
-        const matchPax = cleanQr.match(/PAX-(\d+)/i);
+        const matchPax = cleanQr.match(/^PAX-(\d+)$/i) || cleanQr.match(/PAX-(\d+)/i);
         if (matchPax) {
           passengerId = parseInt(matchPax[1]);
-        } else if (!isNaN(Number(cleanQr))) {
+        } else if (/^\d+$/.test(cleanQr)) {
           bookingId = parseInt(cleanQr);
         }
       }
+    }
+
+    if (bookingId === null && passengerId === null) {
+      return res.status(400).json({
+        success: false,
+        error_code: 'INVALID_TICKET',
+        message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
+      });
     }
 
     let targetPassenger = null;
@@ -257,84 +357,90 @@ exports.qrCheckinPassenger = async (req, res) => {
     if (bookingId !== null) {
       // Tìm danh sách hành khách của bookingId
       const [passList] = await sequelize.query(`
-        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, b.booking_id, b.departure_id, b.booking_status
+        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, bp.checked_in_at, b.booking_id, b.departure_id, b.booking_status
         FROM bookings b
         LEFT JOIN booking_passengers bp ON b.booking_id = bp.booking_id
         WHERE b.booking_id = ?
         ORDER BY bp.passenger_id ASC
       `, { replacements: [bookingId] });
 
-      if (passList.length === 0) {
-        return res.status(404).json({ success: false, message: `❌ Mã QR sai! Không tìm thấy mã đơn vé #${bookingId} trong hệ thống.` });
-      }
-
-      // 🔴 KIỂM TRA ĐƠN HÀNG ĐÃ BỊ HỦY -> VÔ HIỆU HÓA QR CHECK-IN HOÀN TOÀN
-      if (passList[0].booking_status === 'Cancelled') {
+      // Luồng thay thế 5.2: Mã vé không tồn tại, đã hủy, hoặc không thuộc đoàn này
+      if (passList.length === 0 || passList[0].booking_status === 'Cancelled') {
         return res.status(400).json({
           success: false,
-          message: `🚫 VÉ ĐÃ BỊ HỦY (VOID)! Mã đơn vé #${bookingId} đã được nhân viên chấp thuận hủy vé. Toàn bộ mã QR check-in của vé này đã hết hiệu lực và bị vô hiệu hóa hoàn toàn.`
+          error_code: 'INVALID_TICKET',
+          message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
         });
       }
 
-      // Kiểm tra xem vé này có thuộc đoàn tour đang điểm danh hay không
       const bookingDepId = passList[0].departure_id;
       if (departure_id && Number(bookingDepId) !== Number(departure_id)) {
         return res.status(400).json({
           success: false,
-          message: `❌ Mã QR sai! Vé này thuộc Đoàn tour #${bookingDepId}, không khớp với Đoàn tour #${departure_id} đang hướng dẫn.`
+          error_code: 'WRONG_DEPARTURE',
+          message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
         });
       }
 
-      if (paxIndex !== null && passList[paxIndex] && passList[paxIndex].passenger_id) {
-        targetPassenger = passList[paxIndex];
-      } else {
-        // Chọn hành khách đầu tiên chưa check in hoặc hành khách đầu tiên
-        const uncheck = passList.find(p => Number(p.is_checked_in) === 0 && p.passenger_id);
-        if (uncheck) {
-          targetPassenger = uncheck;
-        } else if (passList[0] && passList[0].passenger_id) {
-          targetPassenger = passList[0];
-        } else {
-          // Tự tạo bản ghi hành khách nếu booking chưa tạo booking_passengers
-          const [bkUser] = await sequelize.query(`
-            SELECT b.booking_id, u.full_name, u.gender, u.date_of_birth
-            FROM bookings b
-            JOIN users u ON b.customer_id = u.user_id
-            WHERE b.booking_id = ?
-          `, { replacements: [bookingId] });
+      const realPassengers = passList.filter(p => p.passenger_id !== null);
 
-          if (bkUser.length > 0) {
-            const bu = bkUser[0];
-            const [insRes] = await sequelize.query(`
-              INSERT INTO booking_passengers (booking_id, full_name, gender, birth_date, identity_number, is_checked_in)
-              VALUES (?, ?, ?, ?, '—', 0)
-            `, { replacements: [bookingId, bu.full_name, bu.gender || 'Other', bu.date_of_birth || null] });
-            const newPaxId = typeof insRes === 'number' ? insRes : (insRes?.insertId || insRes);
-            targetPassenger = {
-              passenger_id: newPaxId,
-              full_name: bu.full_name,
-              is_checked_in: 0
-            };
-          }
+      if (realPassengers.length === 0) {
+        // Booking chưa có bản ghi trong booking_passengers -> chỉ hợp lệ nếu paxIndex === null hoặc paxIndex === 0
+        if (paxIndex !== null && paxIndex > 0) {
+          return res.status(400).json({
+            success: false,
+            error_code: 'INVALID_TICKET',
+            message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
+          });
         }
+        const [bkUser] = await sequelize.query(`
+          SELECT b.booking_id, u.full_name, u.gender, u.date_of_birth
+          FROM bookings b
+          JOIN users u ON b.customer_id = u.user_id
+          WHERE b.booking_id = ?
+        `, { replacements: [bookingId] });
+
+        if (bkUser.length > 0) {
+          const bu = bkUser[0];
+          const [insRes] = await sequelize.query(`
+            INSERT INTO booking_passengers (booking_id, full_name, gender, birth_date, identity_number, is_checked_in, checked_in_at)
+            VALUES (?, ?, ?, ?, '—', 0, NULL)
+          `, { replacements: [bookingId, bu.full_name, bu.gender || 'Other', bu.date_of_birth || null] });
+          const newPaxId = typeof insRes === 'number' ? insRes : (insRes?.insertId || insRes);
+          targetPassenger = {
+            passenger_id: newPaxId,
+            full_name: bu.full_name,
+            is_checked_in: 0,
+            checked_in_at: null
+          };
+        }
+      } else if (paxIndex !== null) {
+        if (!realPassengers[paxIndex]) {
+          return res.status(400).json({
+            success: false,
+            error_code: 'INVALID_TICKET',
+            message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
+          });
+        }
+        targetPassenger = realPassengers[paxIndex];
+      } else {
+        // Nếu quét mã tổng BKG-{id}, ưu tiên khách chưa điểm danh, nếu tất cả đã điểm danh thì lấy khách đầu tiên để báo 5.1
+        const uncheck = realPassengers.find(p => Number(p.is_checked_in) === 0);
+        targetPassenger = uncheck || realPassengers[0];
       }
     } else if (passengerId !== null) {
       const [pRow] = await sequelize.query(`
-        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, bp.booking_id, b.departure_id, b.booking_status
+        SELECT bp.passenger_id, bp.full_name, bp.is_checked_in, bp.checked_in_at, bp.booking_id, b.departure_id, b.booking_status
         FROM booking_passengers bp
         JOIN bookings b ON bp.booking_id = b.booking_id
         WHERE bp.passenger_id = ?
       `, { replacements: [passengerId] });
 
-      if (pRow.length === 0) {
-        return res.status(404).json({ success: false, message: `❌ Mã QR sai! Không tìm thấy dữ liệu hành khách trong hệ thống.` });
-      }
-
-      // 🔴 KIỂM TRA ĐƠN HÀNG ĐÃ BỊ HỦY -> VÔ HIỆU HÓA QR CHECK-IN HOÀN TOÀN
-      if (pRow[0].booking_status === 'Cancelled') {
+      if (pRow.length === 0 || pRow[0].booking_status === 'Cancelled') {
         return res.status(400).json({
           success: false,
-          message: `🚫 VÉ ĐÃ BỊ HỦY (VOID)! Hành khách thuộc đơn vé #${pRow[0].booking_id} đã được hủy vé. Mã QR check-in này đã hết hiệu lực và bị vô hiệu hóa hoàn toàn.`
+          error_code: 'INVALID_TICKET',
+          message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
         });
       }
 
@@ -342,7 +448,8 @@ exports.qrCheckinPassenger = async (req, res) => {
       if (departure_id && Number(passengerDepId) !== Number(departure_id)) {
         return res.status(400).json({
           success: false,
-          message: `❌ Mã QR sai! Vé này thuộc Đoàn tour #${passengerDepId}, không khớp với Đoàn tour #${departure_id} đang hướng dẫn.`
+          error_code: 'WRONG_DEPARTURE',
+          message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
         });
       }
 
@@ -351,30 +458,45 @@ exports.qrCheckinPassenger = async (req, res) => {
     }
 
     if (!targetPassenger || !targetPassenger.passenger_id) {
-      return res.status(404).json({ success: false, message: `❌ Mã QR (${cleanQr}) không hợp lệ hoặc không tìm thấy hành khách!` });
-    }
-
-    // NẾU HÀNH KHÁCH ĐÃ ĐƯỢC ĐIỂM DANH CÓ MẶT RỒI
-    if (Number(targetPassenger.is_checked_in) === 1) {
       return res.status(400).json({
         success: false,
-        message: `⚠️ Hành khách "${targetPassenger.full_name}" (Vé #${targetBookingId || bookingId}) đã có mặt rồi! Vui lòng chọn/quét mã QR khác.`
+        error_code: 'INVALID_TICKET',
+        message: 'Mã vé không hợp lệ hoặc không thuộc chuyến đi này'
       });
     }
 
-    // Cập nhật trạng thái điểm danh có mặt is_checked_in = 1
+    // Luồng sự kiện thay thế 5.1: Mã vé đã được điểm danh trước đó
+    if (Number(targetPassenger.is_checked_in) === 1) {
+      const checkedTimeStr = formatTimeHMS(targetPassenger.checked_in_at || new Date());
+      return res.status(400).json({
+        success: false,
+        error_code: 'ALREADY_CHECKED_IN',
+        checked_in_time: checkedTimeStr,
+        passenger_name: targetPassenger.full_name,
+        message: `Hành khách này đã được điểm danh vào lúc ${checkedTimeStr}`
+      });
+    }
+
+    // Luồng sự kiện chính 6: Cập nhật trạng thái is_checked_in = 1, ghi nhận mốc thời gian điểm danh vào CSDL
+    const now = new Date();
+    const checkinTimeStr = formatTimeHMS(now);
+
     await sequelize.query(`
-      UPDATE booking_passengers SET is_checked_in = 1 WHERE passenger_id = ?
-    `, { replacements: [targetPassenger.passenger_id] });
+      UPDATE booking_passengers 
+      SET is_checked_in = 1, checked_in_at = ? 
+      WHERE passenger_id = ?
+    `, { replacements: [now, targetPassenger.passenger_id] });
 
     res.status(200).json({
       success: true,
-      message: `🎉 Điểm danh THÀNH CÔNG: ${targetPassenger.full_name} (Đơn vé #${targetBookingId || bookingId})`,
+      message: `Điểm danh thành công hành khách "${targetPassenger.full_name}" (Vé #${targetBookingId || bookingId}) vào lúc ${checkinTimeStr}`,
       data: {
         passenger_id: String(targetPassenger.passenger_id),
         booking_id: targetBookingId || bookingId,
         full_name: targetPassenger.full_name,
-        is_checked_in: 1
+        is_checked_in: 1,
+        checked_in_at: now.toISOString(),
+        checked_in_time: checkinTimeStr
       }
     });
   } catch (error) {
