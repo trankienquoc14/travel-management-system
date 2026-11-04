@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 03, 2026 lúc 01:52 PM
--- Phiên bản máy phục vụ: 10.4.32-MariaDB
--- Phiên bản PHP: 8.2.12
+-- Host: 127.0.0.1
+-- Generation Time: Nov 04, 2026 at 02:45 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Cơ sở dữ liệu: `travel_management`
+-- Database: `travel_management`
 --
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `bookings`
+-- Table structure for table `bookings`
 --
 
 CREATE TABLE `bookings` (
@@ -40,40 +40,44 @@ CREATE TABLE `bookings` (
   `notes` text DEFAULT NULL,
   `breakdown` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`breakdown`)),
   `required_rooms` int(11) DEFAULT 0,
-  `single_room_count` int(11) DEFAULT 0
+  `single_room_count` int(11) DEFAULT 0,
+  `contact_name` varchar(150) DEFAULT NULL,
+  `contact_email` varchar(150) DEFAULT NULL,
+  `contact_phone` varchar(50) DEFAULT NULL,
+  `contact_address` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `bookings`
+-- Dumping data for table `bookings`
 --
 
-INSERT INTO `bookings` (`booking_id`, `customer_id`, `departure_id`, `quote_id`, `num_people`, `booking_date`, `total_amount`, `booking_status`, `payment_status`, `notes`, `breakdown`, `required_rooms`, `single_room_count`) VALUES
-(1, 8, 8, NULL, 1, '2026-09-12 03:08:09', 9924000.00, 'Confirmed', 'Paid', NULL, NULL, 0, 0),
-(5, 8, 52, NULL, 3, '2026-09-18 02:31:39', 18997500.00, 'Pending', 'Unpaid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0),
-(6, 8, 52, NULL, 3, '2026-09-18 06:50:36', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0),
-(7, 8, 52, NULL, 3, '2026-09-19 04:11:41', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0),
-(8, 8, 57, NULL, 4, '2026-10-01 08:41:22', 22797000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":2,\"toddlers\":0,\"infants\":0}', 1, 0),
-(9, 8, 57, NULL, 5, '2026-10-01 08:47:35', 26596500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":3,\"toddlers\":0,\"infants\":0}', 2, 0),
-(10, 8, 57, NULL, 2, '2026-10-01 08:52:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1),
-(11, 8, 57, NULL, 1, '2026-10-01 08:55:26', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
-(12, 8, 59, NULL, 5, '2026-10-01 14:43:49', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":1}', 1, 0),
-(13, 8, 59, NULL, 2, '2026-10-01 14:47:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1),
-(14, 8, 59, NULL, 1, '2026-10-01 14:50:08', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
-(15, 8, 59, NULL, 3, '2026-10-02 01:41:11', 11398500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":1,\"toddlers\":0,\"infants\":1}', 1, 1),
-(16, 8, 59, NULL, 1, '2026-10-02 01:43:11', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
-(17, 8, 59, NULL, 1, '2026-10-03 16:23:00', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
-(18, 8, 59, NULL, 2, '2026-10-04 02:05:08', 15198000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1),
-(19, 3, 38, NULL, 1, '2026-10-14 14:46:03', 3708000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0),
-(20, 3, 34, NULL, 1, '2026-10-14 14:47:28', 3250000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0),
-(21, 20, 56, NULL, 1, '2026-10-15 14:03:37', 2000.00, 'Cancelled', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0),
-(22, 20, 56, NULL, 1, '2026-10-15 14:30:38', 2000.00, 'Cancelled', 'Unpaid', ' [Tự động hủy: Hết thời gian thanh toán 10 phút] [Tự động hủy: Hết thời gian thanh toán 10 phút]', '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0),
-(23, 20, 56, NULL, 1, '2026-10-15 14:49:46', 2000.00, 'Cancelled', 'Unpaid', ' [Tự động hủy: Hết thời gian thanh toán 10 phút] [Tự động hủy: Hết thời gian thanh toán 10 phút]', '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0),
-(24, 20, 56, NULL, 1, '2026-10-16 00:48:58', 2000.00, 'Cancelled', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0);
+INSERT INTO `bookings` (`booking_id`, `customer_id`, `departure_id`, `quote_id`, `num_people`, `booking_date`, `total_amount`, `booking_status`, `payment_status`, `notes`, `breakdown`, `required_rooms`, `single_room_count`, `contact_name`, `contact_email`, `contact_phone`, `contact_address`) VALUES
+(1, 8, 8, NULL, 1, '2026-09-12 03:08:09', 9924000.00, 'Confirmed', 'Paid', NULL, NULL, 0, 0, NULL, NULL, NULL, NULL),
+(5, 8, 52, NULL, 3, '2026-09-18 02:31:39', 18997500.00, 'Pending', 'Unpaid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(6, 8, 52, NULL, 3, '2026-09-18 06:50:36', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(7, 8, 52, NULL, 3, '2026-09-19 04:11:41', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(8, 8, 57, NULL, 4, '2026-10-01 08:41:22', 22797000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":2,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(9, 8, 57, NULL, 5, '2026-10-01 08:47:35', 26596500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":3,\"toddlers\":0,\"infants\":0}', 2, 0, NULL, NULL, NULL, NULL),
+(10, 8, 57, NULL, 2, '2026-10-01 08:52:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1, NULL, NULL, NULL, NULL),
+(11, 8, 57, NULL, 1, '2026-10-01 08:55:26', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(12, 8, 59, NULL, 5, '2026-10-01 14:43:49', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":1}', 1, 0, NULL, NULL, NULL, NULL),
+(13, 8, 59, NULL, 2, '2026-10-01 14:47:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1, NULL, NULL, NULL, NULL),
+(14, 8, 59, NULL, 1, '2026-10-01 14:50:08', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(15, 8, 59, NULL, 3, '2026-10-02 01:41:11', 11398500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":1,\"toddlers\":0,\"infants\":1}', 1, 1, NULL, NULL, NULL, NULL),
+(16, 8, 59, NULL, 1, '2026-10-02 01:43:11', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(17, 8, 59, NULL, 1, '2026-10-03 16:23:00', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(18, 8, 59, NULL, 2, '2026-10-04 02:05:08', 15198000.00, 'Cancelled', 'Unpaid', '[Tự động hủy: Hết thời gian thanh toán chuyển khoản 10 phút]', '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1, NULL, NULL, NULL, NULL),
+(19, 3, 38, NULL, 1, '2026-10-14 14:46:03', 3708000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(20, 3, 34, NULL, 1, '2026-10-14 14:47:28', 3250000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(21, 20, 56, NULL, 1, '2026-10-15 14:03:37', 2000.00, 'Cancelled', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(22, 20, 56, NULL, 1, '2026-10-15 14:30:38', 2000.00, 'Cancelled', 'Unpaid', ' [Tự động hủy: Hết thời gian thanh toán 10 phút] [Tự động hủy: Hết thời gian thanh toán 10 phút]', '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(23, 20, 56, NULL, 1, '2026-10-15 14:49:46', 2000.00, 'Cancelled', 'Unpaid', ' [Tự động hủy: Hết thời gian thanh toán 10 phút] [Tự động hủy: Hết thời gian thanh toán 10 phút]', '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(24, 20, 56, NULL, 1, '2026-10-16 00:48:58', 2000.00, 'Cancelled', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `booking_change_requests`
+-- Table structure for table `booking_change_requests`
 --
 
 CREATE TABLE `booking_change_requests` (
@@ -93,7 +97,7 @@ CREATE TABLE `booking_change_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `booking_change_requests`
+-- Dumping data for table `booking_change_requests`
 --
 
 INSERT INTO `booking_change_requests` (`change_id`, `booking_id`, `request_type`, `reason`, `status`, `processed_by`, `created_at`, `new_departure_id`, `staff_note`, `fee_percentage`, `fee_amount`, `refund_amount`, `days_before_departure`) VALUES
@@ -103,7 +107,7 @@ INSERT INTO `booking_change_requests` (`change_id`, `booking_id`, `request_type`
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `booking_passengers`
+-- Table structure for table `booking_passengers`
 --
 
 CREATE TABLE `booking_passengers` (
@@ -119,7 +123,7 @@ CREATE TABLE `booking_passengers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `booking_passengers`
+-- Dumping data for table `booking_passengers`
 --
 
 INSERT INTO `booking_passengers` (`passenger_id`, `booking_id`, `full_name`, `gender`, `birth_date`, `identity_number`, `is_checked_in`, `passenger_type`, `single_room`) VALUES
@@ -164,7 +168,7 @@ INSERT INTO `booking_passengers` (`passenger_id`, `booking_id`, `full_name`, `ge
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chat_conversations`
+-- Table structure for table `chat_conversations`
 --
 
 CREATE TABLE `chat_conversations` (
@@ -186,7 +190,7 @@ CREATE TABLE `chat_conversations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `chat_conversations`
+-- Dumping data for table `chat_conversations`
 --
 
 INSERT INTO `chat_conversations` (`conversation_id`, `customer_id`, `guest_id`, `customer_name`, `customer_email`, `customer_phone`, `staff_id`, `status`, `last_message`, `last_message_at`, `last_message_sender`, `unread_staff_count`, `unread_customer_count`, `created_at`, `updated_at`) VALUES
@@ -215,7 +219,7 @@ INSERT INTO `chat_conversations` (`conversation_id`, `customer_id`, `guest_id`, 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chat_messages`
+-- Table structure for table `chat_messages`
 --
 
 CREATE TABLE `chat_messages` (
@@ -237,7 +241,7 @@ CREATE TABLE `chat_messages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `chat_messages`
+-- Dumping data for table `chat_messages`
 --
 
 INSERT INTO `chat_messages` (`message_id`, `conversation_id`, `sender_type`, `sender_id`, `sender_name`, `message_type`, `content`, `file_url`, `file_name`, `file_size`, `latitude`, `longitude`, `duration`, `is_read`, `created_at`) VALUES
@@ -273,7 +277,7 @@ INSERT INTO `chat_messages` (`message_id`, `conversation_id`, `sender_type`, `se
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `consultation_requests`
+-- Table structure for table `consultation_requests`
 --
 
 CREATE TABLE `consultation_requests` (
@@ -287,7 +291,7 @@ CREATE TABLE `consultation_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `consultation_requests`
+-- Dumping data for table `consultation_requests`
 --
 
 INSERT INTO `consultation_requests` (`consultation_id`, `customer_name`, `phone`, `email`, `content`, `handled_by`, `status`) VALUES
@@ -296,7 +300,7 @@ INSERT INTO `consultation_requests` (`consultation_id`, `customer_name`, `phone`
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `customer_behavior_logs`
+-- Table structure for table `customer_behavior_logs`
 --
 
 CREATE TABLE `customer_behavior_logs` (
@@ -310,7 +314,7 @@ CREATE TABLE `customer_behavior_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `customer_behavior_logs`
+-- Dumping data for table `customer_behavior_logs`
 --
 
 INSERT INTO `customer_behavior_logs` (`log_id`, `user_id`, `session_id`, `event_type`, `tour_id`, `metadata`, `created_at`) VALUES
@@ -424,7 +428,7 @@ INSERT INTO `customer_behavior_logs` (`log_id`, `user_id`, `session_id`, `event_
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `customer_travel_preferences`
+-- Table structure for table `customer_travel_preferences`
 --
 
 CREATE TABLE `customer_travel_preferences` (
@@ -448,7 +452,7 @@ CREATE TABLE `customer_travel_preferences` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `custom_tour_quotes`
+-- Table structure for table `custom_tour_quotes`
 --
 
 CREATE TABLE `custom_tour_quotes` (
@@ -469,7 +473,7 @@ CREATE TABLE `custom_tour_quotes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `custom_tour_quotes`
+-- Dumping data for table `custom_tour_quotes`
 --
 
 INSERT INTO `custom_tour_quotes` (`quote_id`, `request_id`, `staff_id`, `manager_id`, `base_cost`, `markup_percent`, `quote_price`, `itinerary`, `staff_note`, `manager_note`, `approval_status`, `created_at`, `customer_note`, `price_breakdown`) VALUES
@@ -490,11 +494,15 @@ INSERT INTO `custom_tour_quotes` (`quote_id`, `request_id`, `staff_id`, `manager
 (15, 4, 4, NULL, 2200000.00, 20, 2640000.00, '{\"tourName\":\"\",\"tourDescription\":\"\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":{\"service_id\":\"custom\",\"name\":\"Khách tự túc\",\"price\":0,\"autoMatchPending\":false},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":1,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":\"custom\",\"service_name\":\"Công ty tự sắp xếp\",\"base_cost\":0,\"unit\":\"vé\",\"autoMatchPending\":false},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":0,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Pending_Approval', '2026-10-23 04:01:57', NULL, '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}'),
 (16, 4, 3, 3, 2200000.00, 20, 2640000.00, '{\"tourName\":\"\",\"tourDescription\":\"\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":{\"service_id\":\"custom\",\"name\":\"Khách tự túc\",\"price\":0,\"autoMatchPending\":false},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":1,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":\"custom\",\"service_name\":\"Công ty tự sắp xếp\",\"base_cost\":0,\"unit\":\"vé\",\"autoMatchPending\":false},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":0,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Approved', '2026-10-23 04:02:24', NULL, '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}'),
 (17, 4, 4, 3, 2200000.00, 20, 2640000.00, '{\"tourName\":\"\",\"tourDescription\":\"\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"24\",\"route_title\":\"\",\"activities\":[],\"accommodation\":{\"service_id\":\"custom\",\"name\":\"Khách tự túc\",\"price\":0,\"autoMatchPending\":false},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"24\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":1,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":\"custom\",\"service_name\":\"Công ty tự sắp xếp\",\"base_cost\":0,\"unit\":\"vé\",\"autoMatchPending\":false},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":0,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Approved', '2026-10-23 04:03:47', NULL, '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}');
+INSERT INTO `custom_tour_quotes` (`quote_id`, `request_id`, `staff_id`, `manager_id`, `base_cost`, `markup_percent`, `quote_price`, `itinerary`, `staff_note`, `manager_note`, `approval_status`, `created_at`, `customer_note`, `price_breakdown`) VALUES
+(18, 5, 4, NULL, 7793333.33, 15, 22405833.00, '{\"proposedServices\":{\"pickup\":{\"location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"time\":\"05:30\",\"isCustomized\":false,\"reason\":\"\"},\"transport\":{\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"requestedSegment\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"assignedVehicle\":{\"service_id\":466,\"id\":\"srv_466\",\"type\":\"🚗 Di chuyển\",\"service_name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"service_type\":\"Xe vận chuyển\",\"price\":\"800000.00\",\"base_cost\":\"800000.00\",\"selling_price\":\"850000.00\",\"capacity\":4,\"vehicle_model\":\"Toyota Camry / Mercedes E200 / Honda Accord\",\"description\":\"Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.\",\"image_url\":\"/uploads/1791430601915-990841517.jpg\"},\"isAssigned\":true,\"pricePerDay\":800000,\"capacity\":4,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"hotel\":{\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"pricePerNight\":1600000,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"meal\":{\"enabled\":true,\"name\":\"Công ty tự sắp xếp\",\"isCustomized\":false,\"prices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"reason\":\"\"},\"guide\":{\"enabled\":true,\"name\":\"Cần Hướng dẫn viên\",\"pricePerDay\":500000,\"isCustomized\":false,\"reason\":\"\"},\"selectedPlaces\":[{\"place_id\":1,\"name\":\"VinWonders Nha Trang\",\"price\":880000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":2,\"name\":\"Tháp Bà Ponagar\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":3,\"name\":\"Lặn biển Hòn Mun\",\"price\":500000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":4,\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":5,\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":6,\"name\":\"Chợ Đêm Nha Trang\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":8,\"name\":\"Viện Hải dương học\",\"price\":40000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":9,\"name\":\"Chùa Long Sơn\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":10,\"name\":\"Nhà thờ Núi\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":13,\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":14,\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":16,\"name\":\"Skylight Nha Trang\",\"price\":200000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":17,\"name\":\"Bãi Dài\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"}],\"removedPlaces\":[{\"place_id\":15,\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":12,\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":7,\"name\":\"Hải sản Thanh Sương\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":11,\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}]},\"changes\":[{\"id\":\"place_rem_15\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Bún cá sứa Năm Beo (45.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_12\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Danh thắng Hòn Chồng (30.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_7\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Hải sản Thanh Sương (250.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_11\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Khu du lịch Hòn Tằm (800.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}],\"adjHotelCost\":1600000,\"adjTransportCost\":800000,\"mealPrices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"guidePricePerDay\":500000,\"childPolicy\":{\"child\":{\"percent\":50,\"surcharge\":0},\"toddler\":{\"percent\":0,\"surcharge\":0},\"infant\":{\"percent\":0,\"surcharge\":0}},\"timestamp\":\"2026-11-03T14:19:06.177Z\"}', 'Công ty xin gửi báo giá ạ', NULL, 'Customer_Revision', '2026-11-03 14:19:06', 'Bỏ địa điểm nem nướng', '{\"adult\":8962333,\"child\":4481167,\"toddler\":0,\"infant\":0}'),
+(19, 5, 4, NULL, 7733333.33, 15, 24456666.00, '{\"proposedServices\":{\"pickup\":{\"location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"time\":\"05:30\",\"isCustomized\":false,\"reason\":\"\"},\"transport\":{\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"requestedSegment\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"assignedVehicle\":{\"service_id\":466,\"id\":\"srv_466\",\"type\":\"🚗 Di chuyển\",\"service_name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"service_type\":\"Xe vận chuyển\",\"price\":\"800000.00\",\"base_cost\":\"800000.00\",\"selling_price\":\"850000.00\",\"capacity\":4,\"vehicle_model\":\"Toyota Camry / Mercedes E200 / Honda Accord\",\"description\":\"Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.\",\"image_url\":\"/uploads/1791430601915-990841517.jpg\"},\"isAssigned\":true,\"pricePerDay\":800000,\"capacity\":4,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"hotel\":{\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"pricePerNight\":1600000,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"meal\":{\"enabled\":true,\"name\":\"Công ty tự sắp xếp\",\"isCustomized\":false,\"prices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"reason\":\"\"},\"guide\":{\"enabled\":true,\"name\":\"Cần Hướng dẫn viên\",\"pricePerDay\":500000,\"isCustomized\":false,\"reason\":\"\"},\"selectedPlaces\":[{\"place_id\":1,\"name\":\"VinWonders Nha Trang\",\"price\":880000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":2,\"name\":\"Tháp Bà Ponagar\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":3,\"name\":\"Lặn biển Hòn Mun\",\"price\":500000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":4,\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":6,\"name\":\"Chợ Đêm Nha Trang\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":8,\"name\":\"Viện Hải dương học\",\"price\":40000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":9,\"name\":\"Chùa Long Sơn\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":10,\"name\":\"Nhà thờ Núi\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":13,\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":14,\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":16,\"name\":\"Skylight Nha Trang\",\"price\":200000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":17,\"name\":\"Bãi Dài\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"}],\"removedPlaces\":[{\"place_id\":15,\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":12,\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":7,\"name\":\"Hải sản Thanh Sương\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":11,\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":5,\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}]},\"changes\":[{\"id\":\"place_rem_15\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Bún cá sứa Năm Beo (45.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_12\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Danh thắng Hòn Chồng (30.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_7\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Hải sản Thanh Sương (250.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_11\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Khu du lịch Hòn Tằm (800.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_5\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Nem nướng Đặng Văn Quyên (60.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}],\"adjHotelCost\":1600000,\"adjTransportCost\":800000,\"mealPrices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"guidePricePerDay\":500000,\"childPolicy\":{\"child\":{\"percent\":75,\"surcharge\":0},\"toddler\":{\"percent\":50,\"surcharge\":0},\"infant\":{\"percent\":0,\"surcharge\":0}},\"timestamp\":\"2026-11-03T14:50:09.462Z\"}', 'Công ty xin gửi báo giá ạ', NULL, 'Customer_Revision', '2026-11-03 14:50:09', 'Bỏ bớt hoạt động', '{\"adult\":8893333,\"child\":6670000,\"toddler\":4446667,\"infant\":0}'),
+(20, 5, 4, NULL, 7733333.33, 15, 22233333.00, '{\"proposedServices\":{\"pickup\":{\"location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"time\":\"05:30\",\"isCustomized\":false,\"reason\":\"\"},\"transport\":{\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"requestedSegment\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"assignedVehicle\":{\"service_id\":466,\"id\":\"srv_466\",\"type\":\"🚗 Di chuyển\",\"service_name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"service_type\":\"Xe vận chuyển\",\"price\":\"800000.00\",\"base_cost\":\"800000.00\",\"selling_price\":\"850000.00\",\"capacity\":4,\"vehicle_model\":\"Toyota Camry / Mercedes E200 / Honda Accord\",\"description\":\"Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.\",\"image_url\":\"/uploads/1791430601915-990841517.jpg\"},\"isAssigned\":true,\"pricePerDay\":800000,\"capacity\":4,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"hotel\":{\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"pricePerNight\":1600000,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"meal\":{\"enabled\":true,\"name\":\"Công ty tự sắp xếp\",\"isCustomized\":false,\"prices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"reason\":\"\"},\"guide\":{\"enabled\":true,\"name\":\"Cần Hướng dẫn viên\",\"pricePerDay\":500000,\"isCustomized\":false,\"reason\":\"\"},\"selectedPlaces\":[{\"place_id\":1,\"name\":\"VinWonders Nha Trang\",\"price\":880000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":2,\"name\":\"Tháp Bà Ponagar\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":3,\"name\":\"Lặn biển Hòn Mun\",\"price\":500000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":4,\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":6,\"name\":\"Chợ Đêm Nha Trang\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":8,\"name\":\"Viện Hải dương học\",\"price\":40000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":9,\"name\":\"Chùa Long Sơn\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":10,\"name\":\"Nhà thờ Núi\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":13,\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":14,\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":16,\"name\":\"Skylight Nha Trang\",\"price\":200000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":17,\"name\":\"Bãi Dài\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"}],\"removedPlaces\":[{\"place_id\":15,\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":12,\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":7,\"name\":\"Hải sản Thanh Sương\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":11,\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":5,\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}]},\"changes\":[{\"id\":\"place_rem_15\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Bún cá sứa Năm Beo (45.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_12\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Danh thắng Hòn Chồng (30.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_7\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Hải sản Thanh Sương (250.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_11\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Khu du lịch Hòn Tằm (800.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_5\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Nem nướng Đặng Văn Quyên (60.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}],\"adjHotelCost\":1600000,\"adjTransportCost\":800000,\"mealPrices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"guidePricePerDay\":500000,\"childPolicy\":{\"child\":{\"percent\":50,\"surcharge\":0},\"toddler\":{\"percent\":0,\"surcharge\":0},\"infant\":{\"percent\":0,\"surcharge\":0}},\"timestamp\":\"2026-11-03T15:06:52.361Z\"}', 'Công ty xin gửi báo giá ạ', NULL, 'Customer_Revision', '2026-11-03 15:06:52', 'Bỏ bớt hoạt động', '{\"adult\":8893333,\"child\":4446667,\"toddler\":0,\"infant\":0}');
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `custom_tour_requests`
+-- Table structure for table `custom_tour_requests`
 --
 
 CREATE TABLE `custom_tour_requests` (
@@ -515,19 +523,20 @@ CREATE TABLE `custom_tour_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `custom_tour_requests`
+-- Dumping data for table `custom_tour_requests`
 --
 
 INSERT INTO `custom_tour_requests` (`request_id`, `customer_id`, `destination`, `departure_date`, `return_date`, `people_count`, `budget`, `requirements`, `markup_percent`, `base_cost`, `quoted_price`, `staff_note`, `status`, `created_at`) VALUES
 (1, 8, 'Đà Lạt', '2026-09-04', '2026-09-06', 4, 5000000.00, '{\"hotel\":\"8\",\"transport\":\"22\",\"activities\":[8,9,10,13,12,11,14,69,70,73,72,71,76,74,75,78,77],\"note\":\"\",\"pickup_location\":\"Hồ Chí Minh\",\"departure_time\":\"05:00\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":650000,\"transportName\":\"Công ty Xe Lữ Hành Toàn Quốc - Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"transportPrice\":675000,\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000},{\"name\":\"Thiền Viện Trúc Lâm\",\"price\":0},{\"name\":\"Hồ Tuyền Lâm\",\"price\":0},{\"name\":\"Đồi Chè Cầu Đất\",\"price\":0},{\"name\":\"Quảng trường Lâm Viên\",\"price\":0},{\"name\":\"Thung Lũng Tình Yêu\",\"price\":250000},{\"name\":\"Đường Hầm Điêu Khắc\",\"price\":120000},{\"name\":\"Nông trại Cún Puppy Farm\",\"price\":100000},{\"name\":\"Thác Pongour\",\"price\":20000},{\"name\":\"Bánh tráng nướng Dì Đinh\",\"price\":30000},{\"name\":\"Quán cafe Túi Mơ To\",\"price\":60000}]}', 20, 0.00, 18000000.00, NULL, 'Completed', '2026-08-28 12:28:42'),
 (2, 8, 'Đà Lạt', '2026-09-25', '2026-09-27', 4, 5000000.00, '{\"hotel\":\"8\",\"transport\":\"22\",\"activities\":[8,9,10,13,14,69,70,73,72,71,74,75,76,78],\"note\":\"\",\"pickup_location\":\"Hồ Chí Minh\",\"departure_time\":\"05:00\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":650000,\"transportName\":\"Công ty Xe Lữ Hành Toàn Quốc - Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"transportPrice\":675000,\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000},{\"name\":\"Thiền Viện Trúc Lâm\",\"price\":0},{\"name\":\"Hồ Tuyền Lâm\",\"price\":0},{\"name\":\"Đồi Chè Cầu Đất\",\"price\":0},{\"name\":\"Quảng trường Lâm Viên\",\"price\":0},{\"name\":\"Thung Lũng Tình Yêu\",\"price\":250000},{\"name\":\"Đường Hầm Điêu Khắc\",\"price\":120000},{\"name\":\"Nông trại Cún Puppy Farm\",\"price\":100000},{\"name\":\"Thác Pongour\",\"price\":20000},{\"name\":\"Quán cafe Túi Mơ To\",\"price\":60000}]}', 20, 0.00, 16926000.00, NULL, 'Designing', '2026-09-11 16:14:36'),
 (3, 8, 'Nha Trang', '2026-09-29', '2026-10-01', 4, 5000000.00, '{\"hotel\":\"7\",\"transport\":\"22\",\"activities\":[1,2,3,4,6,79,7,80,81,82,83,86,85,87,88],\"note\":\"\",\"pickup_location\":\"Hồ Chí Minh\",\"departure_time\":\"\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":0},\"hotelName\":\"Khách sạn Mường Thanh Luxury - Phòng Standard Hướng Phố\",\"hotelPrice\":450000,\"transportName\":\"Công ty Xe Lữ Hành Toàn Quốc - Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"transportPrice\":675000,\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000},{\"name\":\"Viện Hải dương học\",\"price\":40000},{\"name\":\"Chùa Long Sơn\",\"price\":0},{\"name\":\"Nhà thờ Núi\",\"price\":0},{\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000},{\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000},{\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000},{\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000},{\"name\":\"Skylight Nha Trang\",\"price\":200000},{\"name\":\"Bãi Dài\",\"price\":0}]}', 20, 0.00, 24472500.00, NULL, 'Designing', '2026-09-11 16:42:15'),
-(4, 20, 'Bạc Liêu', '2026-10-08', '2026-10-09', 1, 112233.00, '{\"hotel\":\"\",\"transport\":\"\",\"activities\":[],\"note\":\"\",\"pickup_location\":\"dsd\",\"departure_time\":\"22:43\",\"participantBreakdown\":{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0},\"hotelName\":\"Khách tự túc\",\"hotelPrice\":0,\"transportName\":\"Công ty tự sắp xếp\",\"transportPrice\":0,\"guide\":\"Khách tự túc\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[]}', 20, 0.00, 2160000.00, NULL, 'Designing', '2026-10-23 02:46:42');
+(4, 20, 'Bạc Liêu', '2026-10-08', '2026-10-09', 1, 112233.00, '{\"hotel\":\"\",\"transport\":\"\",\"activities\":[],\"note\":\"\",\"pickup_location\":\"dsd\",\"departure_time\":\"22:43\",\"participantBreakdown\":{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0},\"hotelName\":\"Khách tự túc\",\"hotelPrice\":0,\"transportName\":\"Công ty tự sắp xếp\",\"transportPrice\":0,\"guide\":\"Khách tự túc\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[]}', 20, 0.00, 2160000.00, NULL, 'Designing', '2026-10-23 02:46:42'),
+(5, 8, 'Nha Trang', '2027-01-13', '2027-01-16', 3, 7000000.00, '{\"hotel\":\"465\",\"transport\":\"\",\"activities\":[1,2,3,4,5,6,7,79,80,81,83,86,85,84,87,88,82],\"note\":\"\",\"pickup_location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"departure_time\":\"05:30\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0},\"hotelName\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"hotelPrice\":1600000,\"hotelEstimatedCost\":{\"nights\":3,\"rooms\":2,\"pricePerNight\":800000,\"totalEstimated\":4800000,\"perPax\":1600000},\"totalEstimatedCost\":{\"perPaxMin\":6251667,\"perPaxMax\":6451667,\"groupMin\":18755000,\"groupMax\":19355000},\"transportName\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"transportPrice\":0,\"transportOption\":\"select\",\"transportCategory\":\"standard\",\"transportEstimatedCost\":{\"category\":\"standard\",\"totalMin\":3200000,\"totalMax\":3800000,\"perPaxMin\":1066667,\"perPaxMax\":1266667,\"displayRange\":\"3.200.000 – 3.800.000đ\",\"durationDays\":4},\"customTransportNote\":\"\",\"recommendedVehicle\":\"Xe 4–7 chỗ\",\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000},{\"name\":\"Viện Hải dương học\",\"price\":40000},{\"name\":\"Chùa Long Sơn\",\"price\":0},{\"name\":\"Nhà thờ Núi\",\"price\":0},{\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000},{\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000},{\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000},{\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000},{\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000},{\"name\":\"Skylight Nha Trang\",\"price\":200000},{\"name\":\"Bãi Dài\",\"price\":0}]}', 20, 0.00, 22233333.00, NULL, 'Customer_Revision', '2026-11-03 14:00:38');
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `departures`
+-- Table structure for table `departures`
 --
 
 CREATE TABLE `departures` (
@@ -546,7 +555,7 @@ CREATE TABLE `departures` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `departures`
+-- Dumping data for table `departures`
 --
 
 INSERT INTO `departures` (`departure_id`, `tour_id`, `departure_date`, `return_date`, `max_slots`, `available_slots`, `status`, `guide_id`, `driver_id`, `vehicle_number`, `operational_status`, `decision_history`) VALUES
@@ -600,13 +609,13 @@ INSERT INTO `departures` (`departure_id`, `tour_id`, `departure_date`, `return_d
 (56, 51, '2026-12-19', '2026-12-19', 10, 12, 'Open', 6, 17, '43B-888.11', 'Pending', NULL),
 (57, 29, '2026-11-17', '2026-11-20', 16, 4, 'Closed', 6, 16, NULL, 'Pending', NULL),
 (58, 31, '2026-11-11', '2026-11-13', 15, 15, 'Closed', 6, 17, NULL, 'Pending', NULL),
-(59, 29, '2026-11-03', '2026-11-06', 17, 2, 'Closed', 6, 16, NULL, 'Pending', NULL),
+(59, 29, '2026-11-03', '2026-11-06', 17, 4, 'Closed', 6, 16, NULL, 'Pending', NULL),
 (60, 29, '2026-12-28', '2026-12-31', 30, 30, 'Open', 6, 17, '79B-333.29', 'Pending', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `departure_updates`
+-- Table structure for table `departure_updates`
 --
 
 CREATE TABLE `departure_updates` (
@@ -625,7 +634,7 @@ CREATE TABLE `departure_updates` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `departure_updates`
+-- Dumping data for table `departure_updates`
 --
 
 INSERT INTO `departure_updates` (`update_id`, `departure_id`, `guide_id`, `location`, `activity`, `description`, `image_url`, `created_at`, `itinerary_id`, `delay_minutes`, `delay_reason`, `milestone_index`) VALUES
@@ -636,7 +645,7 @@ INSERT INTO `departure_updates` (`update_id`, `departure_id`, `guide_id`, `locat
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `destinations`
+-- Table structure for table `destinations`
 --
 
 CREATE TABLE `destinations` (
@@ -649,7 +658,7 @@ CREATE TABLE `destinations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `destinations`
+-- Dumping data for table `destinations`
 --
 
 INSERT INTO `destinations` (`destination_id`, `destination_name`, `description`, `image_url`, `status`, `slogan`) VALUES
@@ -681,7 +690,7 @@ INSERT INTO `destinations` (`destination_id`, `destination_name`, `description`,
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `driver_expenses`
+-- Table structure for table `driver_expenses`
 --
 
 CREATE TABLE `driver_expenses` (
@@ -699,7 +708,7 @@ CREATE TABLE `driver_expenses` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `driver_incidents`
+-- Table structure for table `driver_incidents`
 --
 
 CREATE TABLE `driver_incidents` (
@@ -716,7 +725,7 @@ CREATE TABLE `driver_incidents` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `driver_incidents`
+-- Dumping data for table `driver_incidents`
 --
 
 INSERT INTO `driver_incidents` (`incident_id`, `departure_id`, `driver_id`, `vehicle_number`, `title`, `description`, `location`, `image_url`, `status`, `created_at`) VALUES
@@ -726,7 +735,7 @@ INSERT INTO `driver_incidents` (`incident_id`, `departure_id`, `driver_id`, `veh
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `guides`
+-- Table structure for table `guides`
 --
 
 CREATE TABLE `guides` (
@@ -737,7 +746,7 @@ CREATE TABLE `guides` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `guides`
+-- Dumping data for table `guides`
 --
 
 INSERT INTO `guides` (`guide_id`, `user_id`, `license_number`, `experience_years`) VALUES
@@ -747,7 +756,7 @@ INSERT INTO `guides` (`guide_id`, `user_id`, `license_number`, `experience_years
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `guide_assignments`
+-- Table structure for table `guide_assignments`
 --
 
 CREATE TABLE `guide_assignments` (
@@ -758,7 +767,7 @@ CREATE TABLE `guide_assignments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `guide_assignments`
+-- Dumping data for table `guide_assignments`
 --
 
 INSERT INTO `guide_assignments` (`assignment_id`, `departure_id`, `guide_id`, `assigned_at`) VALUES
@@ -778,7 +787,7 @@ INSERT INTO `guide_assignments` (`assignment_id`, `departure_id`, `guide_id`, `a
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `holidays`
+-- Table structure for table `holidays`
 --
 
 CREATE TABLE `holidays` (
@@ -789,7 +798,7 @@ CREATE TABLE `holidays` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `holidays`
+-- Dumping data for table `holidays`
 --
 
 INSERT INTO `holidays` (`holiday_id`, `holiday_date`, `holiday_name`, `created_at`) VALUES
@@ -798,7 +807,7 @@ INSERT INTO `holidays` (`holiday_id`, `holiday_date`, `holiday_name`, `created_a
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `hotel_service_details`
+-- Table structure for table `hotel_service_details`
 --
 
 CREATE TABLE `hotel_service_details` (
@@ -818,7 +827,7 @@ CREATE TABLE `hotel_service_details` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `hotel_service_details`
+-- Dumping data for table `hotel_service_details`
 --
 
 INSERT INTO `hotel_service_details` (`hotel_service_id`, `service_id`, `room_type`, `bed_type`, `star_rating`, `max_adults`, `max_children`, `max_infants`, `min_adults`, `single_room_allowed`, `single_room_supplement`, `extra_bed_allowed`, `max_extra_beds`) VALUES
@@ -1062,7 +1071,7 @@ INSERT INTO `hotel_service_details` (`hotel_service_id`, `service_id`, `room_typ
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `incident_reports`
+-- Table structure for table `incident_reports`
 --
 
 CREATE TABLE `incident_reports` (
@@ -1081,7 +1090,7 @@ CREATE TABLE `incident_reports` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `itineraries`
+-- Table structure for table `itineraries`
 --
 
 CREATE TABLE `itineraries` (
@@ -1093,7 +1102,7 @@ CREATE TABLE `itineraries` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `itineraries`
+-- Dumping data for table `itineraries`
 --
 
 INSERT INTO `itineraries` (`itinerary_id`, `tour_id`, `day_number`, `title`, `description`) VALUES
@@ -1145,7 +1154,7 @@ INSERT INTO `itineraries` (`itinerary_id`, `tour_id`, `day_number`, `title`, `de
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `itinerary_activities`
+-- Table structure for table `itinerary_activities`
 --
 
 CREATE TABLE `itinerary_activities` (
@@ -1160,7 +1169,7 @@ CREATE TABLE `itinerary_activities` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `itinerary_activities`
+-- Dumping data for table `itinerary_activities`
 --
 
 INSERT INTO `itinerary_activities` (`activity_id`, `itinerary_id`, `activity_type`, `reference_id`, `start_time`, `end_time`, `order_index`, `note`) VALUES
@@ -1229,7 +1238,7 @@ INSERT INTO `itinerary_activities` (`activity_id`, `itinerary_id`, `activity_typ
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `itinerary_places`
+-- Table structure for table `itinerary_places`
 --
 
 CREATE TABLE `itinerary_places` (
@@ -1243,7 +1252,7 @@ CREATE TABLE `itinerary_places` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `leave_requests`
+-- Table structure for table `leave_requests`
 --
 
 CREATE TABLE `leave_requests` (
@@ -1267,7 +1276,7 @@ CREATE TABLE `leave_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `leave_requests`
+-- Dumping data for table `leave_requests`
 --
 
 INSERT INTO `leave_requests` (`request_id`, `employee_id`, `request_type`, `leave_type`, `explanation_type`, `start_date`, `end_date`, `target_date`, `proposed_check_in`, `proposed_check_out`, `reason`, `attachment_url`, `status`, `manager_id`, `manager_note`, `created_at`, `updated_at`) VALUES
@@ -1277,7 +1286,7 @@ INSERT INTO `leave_requests` (`request_id`, `employee_id`, `request_type`, `leav
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `notifications`
+-- Table structure for table `notifications`
 --
 
 CREATE TABLE `notifications` (
@@ -1297,7 +1306,7 @@ CREATE TABLE `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `notifications`
+-- Dumping data for table `notifications`
 --
 
 INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `content`, `is_read`, `created_at`, `type`, `target_role`, `departure_id`, `tour_id`, `departure_date`, `num_booked`, `action_url`) VALUES
@@ -1368,7 +1377,7 @@ INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `content`, `
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `partners`
+-- Table structure for table `partners`
 --
 
 CREATE TABLE `partners` (
@@ -1384,7 +1393,7 @@ CREATE TABLE `partners` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `partners`
+-- Dumping data for table `partners`
 --
 
 INSERT INTO `partners` (`partner_id`, `destination_id`, `partner_name`, `partner_type`, `contact_name`, `phone`, `email`, `address`, `status`) VALUES
@@ -1611,7 +1620,7 @@ INSERT INTO `partners` (`partner_id`, `destination_id`, `partner_name`, `partner
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `payments`
+-- Table structure for table `payments`
 --
 
 CREATE TABLE `payments` (
@@ -1625,7 +1634,7 @@ CREATE TABLE `payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `payments`
+-- Dumping data for table `payments`
 --
 
 INSERT INTO `payments` (`payment_id`, `booking_id`, `payment_method`, `amount`, `transaction_code`, `payment_status`, `paid_at`) VALUES
@@ -1643,7 +1652,7 @@ INSERT INTO `payments` (`payment_id`, `booking_id`, `payment_method`, `amount`, 
 (15, 15, 'Cash', 11398500.00, 'TXN_1790905271149', 'Success', '2026-10-02 01:41:30'),
 (16, 16, 'Cash', 7599000.00, 'TXN_1790905391782', 'Pending', NULL),
 (17, 17, 'Cash', 7599000.00, 'TXN_1791044580839', 'Pending', NULL),
-(18, 18, 'VNPAY_QR', 15198000.00, 'THANHTOAN18', 'Pending', NULL),
+(18, 18, 'VNPAY_QR', 15198000.00, 'THANHTOAN18', 'Failed', NULL),
 (19, 19, 'VNPAY_QR', 3708000.00, 'THANHTOAN19', 'Pending', NULL),
 (20, 20, 'VNPAY_QR', 3250000.00, 'THANHTOAN20', 'Pending', NULL),
 (21, 21, 'VNPAY_QR', 2000.00, 'THANHTOAN21 (SePay #665V602262886415)', 'Success', '2026-10-15 14:04:37'),
@@ -1654,7 +1663,7 @@ INSERT INTO `payments` (`payment_id`, `booking_id`, `payment_method`, `amount`, 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `payroll`
+-- Table structure for table `payroll`
 --
 
 CREATE TABLE `payroll` (
@@ -1675,7 +1684,7 @@ CREATE TABLE `payroll` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `performance_reviews`
+-- Table structure for table `performance_reviews`
 --
 
 CREATE TABLE `performance_reviews` (
@@ -1688,7 +1697,7 @@ CREATE TABLE `performance_reviews` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `performance_reviews`
+-- Dumping data for table `performance_reviews`
 --
 
 INSERT INTO `performance_reviews` (`performance_id`, `employee_id`, `reviewer_id`, `score`, `comment`, `review_date`) VALUES
@@ -1698,7 +1707,7 @@ INSERT INTO `performance_reviews` (`performance_id`, `employee_id`, `reviewer_id
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `personal_work_tasks`
+-- Table structure for table `personal_work_tasks`
 --
 
 CREATE TABLE `personal_work_tasks` (
@@ -1719,7 +1728,7 @@ CREATE TABLE `personal_work_tasks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `personal_work_tasks`
+-- Dumping data for table `personal_work_tasks`
 --
 
 INSERT INTO `personal_work_tasks` (`task_id`, `user_id`, `title`, `description`, `work_date`, `start_time`, `end_time`, `priority`, `status`, `related_type`, `related_id`, `created_at`, `updated_at`, `completed_at`) VALUES
@@ -1731,7 +1740,7 @@ INSERT INTO `personal_work_tasks` (`task_id`, `user_id`, `title`, `description`,
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `places`
+-- Table structure for table `places`
 --
 
 CREATE TABLE `places` (
@@ -1749,7 +1758,7 @@ CREATE TABLE `places` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `places`
+-- Dumping data for table `places`
 --
 
 INSERT INTO `places` (`place_id`, `destination_id`, `partner_id`, `place_name`, `category`, `description`, `estimated_price`, `image_url`, `status`, `action_verb`, `short_display_name`) VALUES
@@ -1875,7 +1884,7 @@ INSERT INTO `places` (`place_id`, `destination_id`, `partner_id`, `place_name`, 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `reviews`
+-- Table structure for table `reviews`
 --
 
 CREATE TABLE `reviews` (
@@ -1896,7 +1905,7 @@ CREATE TABLE `reviews` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `roles`
+-- Table structure for table `roles`
 --
 
 CREATE TABLE `roles` (
@@ -1905,7 +1914,7 @@ CREATE TABLE `roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `roles`
+-- Dumping data for table `roles`
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`) VALUES
@@ -1921,7 +1930,7 @@ INSERT INTO `roles` (`role_id`, `role_name`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `services`
+-- Table structure for table `services`
 --
 
 CREATE TABLE `services` (
@@ -1942,7 +1951,7 @@ CREATE TABLE `services` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `services`
+-- Dumping data for table `services`
 --
 
 INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `attributes`, `action_verb`, `short_display_name`) VALUES
@@ -2349,7 +2358,7 @@ INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `descripti
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `service_bookings`
+-- Table structure for table `service_bookings`
 --
 
 CREATE TABLE `service_bookings` (
@@ -2367,7 +2376,7 @@ CREATE TABLE `service_bookings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `service_bookings`
+-- Dumping data for table `service_bookings`
 --
 
 INSERT INTO `service_bookings` (`booking_id`, `customer_id`, `service_id`, `quantity`, `usage_date`, `total_amount`, `payment_method`, `status`, `voucher_code`, `notes`, `created_at`) VALUES
@@ -2378,7 +2387,7 @@ INSERT INTO `service_bookings` (`booking_id`, `customer_id`, `service_id`, `quan
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `service_migration_backup`
+-- Table structure for table `service_migration_backup`
 --
 
 CREATE TABLE `service_migration_backup` (
@@ -2399,7 +2408,7 @@ CREATE TABLE `service_migration_backup` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `service_migration_backup`
+-- Dumping data for table `service_migration_backup`
 --
 
 INSERT INTO `service_migration_backup` (`backup_id`, `old_service_id`, `old_service_name`, `old_partner_id`, `old_service_type`, `old_capacity`, `old_max_adults`, `old_max_children`, `old_max_infants`, `old_min_adults`, `old_single_room_allowed`, `old_single_room_supplement`, `migration_status`, `migration_note`) VALUES
@@ -2475,7 +2484,7 @@ INSERT INTO `service_migration_backup` (`backup_id`, `old_service_id`, `old_serv
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `service_requests`
+-- Table structure for table `service_requests`
 --
 
 CREATE TABLE `service_requests` (
@@ -2497,7 +2506,7 @@ CREATE TABLE `service_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `service_requests`
+-- Dumping data for table `service_requests`
 --
 
 INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_id`, `partner_id`, `requested_by`, `request_content`, `status`, `created_at`, `agreed_price`, `group_id`, `service_type`, `quantity`, `responded_by`, `responded_at`, `response_note`) VALUES
@@ -2532,7 +2541,7 @@ INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_i
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `service_request_groups`
+-- Table structure for table `service_request_groups`
 --
 
 CREATE TABLE `service_request_groups` (
@@ -2548,7 +2557,7 @@ CREATE TABLE `service_request_groups` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `service_request_groups`
+-- Dumping data for table `service_request_groups`
 --
 
 INSERT INTO `service_request_groups` (`id`, `code`, `departure_id`, `request_type`, `passenger_count`, `created_by`, `created_at`, `status`, `parent_id`) VALUES
@@ -2560,7 +2569,7 @@ INSERT INTO `service_request_groups` (`id`, `code`, `departure_id`, `request_typ
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `timekeeping`
+-- Table structure for table `timekeeping`
 --
 
 CREATE TABLE `timekeeping` (
@@ -2581,7 +2590,7 @@ CREATE TABLE `timekeeping` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `timekeeping`
+-- Dumping data for table `timekeeping`
 --
 
 INSERT INTO `timekeeping` (`timekeeping_id`, `employee_id`, `work_date`, `status`, `check_in`, `check_out`, `latitude`, `longitude`, `location_address`, `device_info`, `face_image_url`, `face_verified`, `match_confidence`, `notes`) VALUES
@@ -2602,7 +2611,7 @@ INSERT INTO `timekeeping` (`timekeeping_id`, `employee_id`, `work_date`, `status
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `tours`
+-- Table structure for table `tours`
 --
 
 CREATE TABLE `tours` (
@@ -2625,7 +2634,7 @@ CREATE TABLE `tours` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `tours`
+-- Dumping data for table `tours`
 --
 
 INSERT INTO `tours` (`tour_id`, `tour_name`, `description`, `destination`, `duration_days`, `base_price`, `image_url`, `status`, `created_by`, `base_cost`, `markup_percent`, `design_data`, `rejection_reason`, `is_custom`, `average_rating`, `review_count`) VALUES
@@ -2663,7 +2672,7 @@ INSERT INTO `tours` (`tour_id`, `tour_name`, `description`, `destination`, `dura
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `tour_categories`
+-- Table structure for table `tour_categories`
 --
 
 CREATE TABLE `tour_categories` (
@@ -2672,7 +2681,7 @@ CREATE TABLE `tour_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `tour_categories`
+-- Dumping data for table `tour_categories`
 --
 
 INSERT INTO `tour_categories` (`category_id`, `category_name`) VALUES
@@ -2682,7 +2691,7 @@ INSERT INTO `tour_categories` (`category_id`, `category_name`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `tour_category_map`
+-- Table structure for table `tour_category_map`
 --
 
 CREATE TABLE `tour_category_map` (
@@ -2692,7 +2701,7 @@ CREATE TABLE `tour_category_map` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `tour_category_map`
+-- Dumping data for table `tour_category_map`
 --
 
 INSERT INTO `tour_category_map` (`id`, `tour_id`, `category_id`) VALUES
@@ -2721,7 +2730,7 @@ INSERT INTO `tour_category_map` (`id`, `tour_id`, `category_id`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `tour_vehicle_assignments`
+-- Table structure for table `tour_vehicle_assignments`
 --
 
 CREATE TABLE `tour_vehicle_assignments` (
@@ -2736,7 +2745,7 @@ CREATE TABLE `tour_vehicle_assignments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `tour_vehicle_assignments`
+-- Dumping data for table `tour_vehicle_assignments`
 --
 
 INSERT INTO `tour_vehicle_assignments` (`assignment_id`, `departure_id`, `vehicle_id`, `driver_id`, `start_date`, `end_date`, `status`, `assigned_at`) VALUES
@@ -2745,7 +2754,7 @@ INSERT INTO `tour_vehicle_assignments` (`assignment_id`, `departure_id`, `vehicl
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `trip_reports`
+-- Table structure for table `trip_reports`
 --
 
 CREATE TABLE `trip_reports` (
@@ -2767,7 +2776,7 @@ CREATE TABLE `trip_reports` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `trip_reports`
+-- Dumping data for table `trip_reports`
 --
 
 INSERT INTO `trip_reports` (`report_id`, `departure_id`, `guide_id`, `total_passengers`, `checked_in_passengers`, `incident_count`, `vehicle_feedback`, `hotel_feedback`, `restaurant_feedback`, `guide_notes`, `overall_rating`, `status`, `admin_note`, `created_at`, `updated_at`) VALUES
@@ -2776,7 +2785,7 @@ INSERT INTO `trip_reports` (`report_id`, `departure_id`, `guide_id`, `total_pass
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `users`
+-- Table structure for table `users`
 --
 
 CREATE TABLE `users` (
@@ -2797,7 +2806,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `users`
+-- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`, `phone`, `avatar`, `gender`, `date_of_birth`, `address`, `status`, `created_at`, `updated_at`, `partner_group`) VALUES
@@ -2825,7 +2834,7 @@ INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `vehicles`
+-- Table structure for table `vehicles`
 --
 
 CREATE TABLE `vehicles` (
@@ -2848,7 +2857,7 @@ CREATE TABLE `vehicles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `vehicles`
+-- Dumping data for table `vehicles`
 --
 
 INSERT INTO `vehicles` (`vehicle_id`, `service_id`, `vehicle_code`, `vehicle_name`, `license_plate`, `seat_capacity`, `base_cost`, `selling_price`, `price`, `vehicle_type`, `brand_model`, `image_url`, `color`, `status`, `notes`, `created_at`) VALUES
@@ -2892,7 +2901,7 @@ INSERT INTO `vehicles` (`vehicle_id`, `service_id`, `vehicle_code`, `vehicle_nam
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `vehicle_maintenances`
+-- Table structure for table `vehicle_maintenances`
 --
 
 CREATE TABLE `vehicle_maintenances` (
@@ -2906,7 +2915,7 @@ CREATE TABLE `vehicle_maintenances` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `vehicle_maintenances`
+-- Dumping data for table `vehicle_maintenances`
 --
 
 INSERT INTO `vehicle_maintenances` (`maintenance_id`, `vehicle_id`, `start_date`, `end_date`, `reason`, `status`, `created_at`) VALUES
@@ -2915,7 +2924,7 @@ INSERT INTO `vehicle_maintenances` (`maintenance_id`, `vehicle_id`, `start_date`
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `vehicle_service_details`
+-- Table structure for table `vehicle_service_details`
 --
 
 CREATE TABLE `vehicle_service_details` (
@@ -2932,7 +2941,7 @@ CREATE TABLE `vehicle_service_details` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `vehicle_service_details`
+-- Dumping data for table `vehicle_service_details`
 --
 
 INSERT INTO `vehicle_service_details` (`vehicle_service_id`, `service_id`, `vehicle_type`, `vehicle_model`, `seat_capacity`, `total_quantity`, `license_plate`, `driver_required`, `vehicle_status`, `driver_id`) VALUES
@@ -2949,7 +2958,7 @@ INSERT INTO `vehicle_service_details` (`vehicle_service_id`, `service_id`, `vehi
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `vehicle_status_history`
+-- Table structure for table `vehicle_status_history`
 --
 
 CREATE TABLE `vehicle_status_history` (
@@ -2963,7 +2972,7 @@ CREATE TABLE `vehicle_status_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `vehicle_status_history`
+-- Dumping data for table `vehicle_status_history`
 --
 
 INSERT INTO `vehicle_status_history` (`history_id`, `vehicle_id`, `old_status`, `new_status`, `reason`, `updated_by`, `created_at`) VALUES
@@ -2971,11 +2980,11 @@ INSERT INTO `vehicle_status_history` (`history_id`, `vehicle_id`, `old_status`, 
 (2, 37, 'AVAILABLE', 'REPAIR', 'kk', 4, '2026-10-16 05:57:36');
 
 --
--- Chỉ mục cho các bảng đã đổ
+-- Indexes for dumped tables
 --
 
 --
--- Chỉ mục cho bảng `bookings`
+-- Indexes for table `bookings`
 --
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`booking_id`),
@@ -2984,7 +2993,7 @@ ALTER TABLE `bookings`
   ADD KEY `fk_bookings_custom_quotes` (`quote_id`);
 
 --
--- Chỉ mục cho bảng `booking_change_requests`
+-- Indexes for table `booking_change_requests`
 --
 ALTER TABLE `booking_change_requests`
   ADD PRIMARY KEY (`change_id`),
@@ -2992,14 +3001,14 @@ ALTER TABLE `booking_change_requests`
   ADD KEY `processed_by` (`processed_by`);
 
 --
--- Chỉ mục cho bảng `booking_passengers`
+-- Indexes for table `booking_passengers`
 --
 ALTER TABLE `booking_passengers`
   ADD PRIMARY KEY (`passenger_id`),
   ADD KEY `booking_id` (`booking_id`);
 
 --
--- Chỉ mục cho bảng `chat_conversations`
+-- Indexes for table `chat_conversations`
 --
 ALTER TABLE `chat_conversations`
   ADD PRIMARY KEY (`conversation_id`),
@@ -3010,7 +3019,7 @@ ALTER TABLE `chat_conversations`
   ADD KEY `idx_last_message_at` (`last_message_at`);
 
 --
--- Chỉ mục cho bảng `chat_messages`
+-- Indexes for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
   ADD PRIMARY KEY (`message_id`),
@@ -3018,14 +3027,14 @@ ALTER TABLE `chat_messages`
   ADD KEY `idx_created` (`created_at`);
 
 --
--- Chỉ mục cho bảng `consultation_requests`
+-- Indexes for table `consultation_requests`
 --
 ALTER TABLE `consultation_requests`
   ADD PRIMARY KEY (`consultation_id`),
   ADD KEY `handled_by` (`handled_by`);
 
 --
--- Chỉ mục cho bảng `customer_behavior_logs`
+-- Indexes for table `customer_behavior_logs`
 --
 ALTER TABLE `customer_behavior_logs`
   ADD PRIMARY KEY (`log_id`),
@@ -3034,7 +3043,7 @@ ALTER TABLE `customer_behavior_logs`
   ADD KEY `tour_id` (`tour_id`);
 
 --
--- Chỉ mục cho bảng `customer_travel_preferences`
+-- Indexes for table `customer_travel_preferences`
 --
 ALTER TABLE `customer_travel_preferences`
   ADD PRIMARY KEY (`preference_id`),
@@ -3042,7 +3051,7 @@ ALTER TABLE `customer_travel_preferences`
   ADD KEY `session_id` (`session_id`);
 
 --
--- Chỉ mục cho bảng `custom_tour_quotes`
+-- Indexes for table `custom_tour_quotes`
 --
 ALTER TABLE `custom_tour_quotes`
   ADD PRIMARY KEY (`quote_id`),
@@ -3051,34 +3060,34 @@ ALTER TABLE `custom_tour_quotes`
   ADD KEY `manager_id` (`manager_id`);
 
 --
--- Chỉ mục cho bảng `custom_tour_requests`
+-- Indexes for table `custom_tour_requests`
 --
 ALTER TABLE `custom_tour_requests`
   ADD PRIMARY KEY (`request_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Chỉ mục cho bảng `departures`
+-- Indexes for table `departures`
 --
 ALTER TABLE `departures`
   ADD PRIMARY KEY (`departure_id`),
   ADD KEY `tour_id` (`tour_id`);
 
 --
--- Chỉ mục cho bảng `departure_updates`
+-- Indexes for table `departure_updates`
 --
 ALTER TABLE `departure_updates`
   ADD PRIMARY KEY (`update_id`),
   ADD KEY `departure_id` (`departure_id`);
 
 --
--- Chỉ mục cho bảng `destinations`
+-- Indexes for table `destinations`
 --
 ALTER TABLE `destinations`
   ADD PRIMARY KEY (`destination_id`);
 
 --
--- Chỉ mục cho bảng `driver_expenses`
+-- Indexes for table `driver_expenses`
 --
 ALTER TABLE `driver_expenses`
   ADD PRIMARY KEY (`expense_id`),
@@ -3086,21 +3095,21 @@ ALTER TABLE `driver_expenses`
   ADD KEY `driver_id` (`driver_id`);
 
 --
--- Chỉ mục cho bảng `driver_incidents`
+-- Indexes for table `driver_incidents`
 --
 ALTER TABLE `driver_incidents`
   ADD PRIMARY KEY (`incident_id`),
   ADD KEY `driver_id` (`driver_id`);
 
 --
--- Chỉ mục cho bảng `guides`
+-- Indexes for table `guides`
 --
 ALTER TABLE `guides`
   ADD PRIMARY KEY (`guide_id`),
   ADD KEY `user_id` (`user_id`);
 
 --
--- Chỉ mục cho bảng `guide_assignments`
+-- Indexes for table `guide_assignments`
 --
 ALTER TABLE `guide_assignments`
   ADD PRIMARY KEY (`assignment_id`),
@@ -3108,20 +3117,20 @@ ALTER TABLE `guide_assignments`
   ADD KEY `guide_id` (`guide_id`);
 
 --
--- Chỉ mục cho bảng `holidays`
+-- Indexes for table `holidays`
 --
 ALTER TABLE `holidays`
   ADD PRIMARY KEY (`holiday_id`);
 
 --
--- Chỉ mục cho bảng `hotel_service_details`
+-- Indexes for table `hotel_service_details`
 --
 ALTER TABLE `hotel_service_details`
   ADD PRIMARY KEY (`hotel_service_id`),
   ADD UNIQUE KEY `service_id` (`service_id`);
 
 --
--- Chỉ mục cho bảng `incident_reports`
+-- Indexes for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
   ADD PRIMARY KEY (`incident_id`),
@@ -3129,21 +3138,21 @@ ALTER TABLE `incident_reports`
   ADD KEY `departure_id` (`departure_id`);
 
 --
--- Chỉ mục cho bảng `itineraries`
+-- Indexes for table `itineraries`
 --
 ALTER TABLE `itineraries`
   ADD PRIMARY KEY (`itinerary_id`),
   ADD KEY `tour_id` (`tour_id`);
 
 --
--- Chỉ mục cho bảng `itinerary_activities`
+-- Indexes for table `itinerary_activities`
 --
 ALTER TABLE `itinerary_activities`
   ADD PRIMARY KEY (`activity_id`),
   ADD KEY `itinerary_id` (`itinerary_id`);
 
 --
--- Chỉ mục cho bảng `itinerary_places`
+-- Indexes for table `itinerary_places`
 --
 ALTER TABLE `itinerary_places`
   ADD PRIMARY KEY (`id`),
@@ -3151,42 +3160,42 @@ ALTER TABLE `itinerary_places`
   ADD KEY `place_id` (`place_id`);
 
 --
--- Chỉ mục cho bảng `leave_requests`
+-- Indexes for table `leave_requests`
 --
 ALTER TABLE `leave_requests`
   ADD PRIMARY KEY (`request_id`),
   ADD KEY `employee_id` (`employee_id`);
 
 --
--- Chỉ mục cho bảng `notifications`
+-- Indexes for table `notifications`
 --
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`notification_id`),
   ADD KEY `user_id` (`user_id`);
 
 --
--- Chỉ mục cho bảng `partners`
+-- Indexes for table `partners`
 --
 ALTER TABLE `partners`
   ADD PRIMARY KEY (`partner_id`),
   ADD KEY `fk_partners_destinations` (`destination_id`);
 
 --
--- Chỉ mục cho bảng `payments`
+-- Indexes for table `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
   ADD KEY `booking_id` (`booking_id`);
 
 --
--- Chỉ mục cho bảng `payroll`
+-- Indexes for table `payroll`
 --
 ALTER TABLE `payroll`
   ADD PRIMARY KEY (`payroll_id`),
   ADD UNIQUE KEY `unique_emp_month` (`employee_id`,`salary_month`);
 
 --
--- Chỉ mục cho bảng `performance_reviews`
+-- Indexes for table `performance_reviews`
 --
 ALTER TABLE `performance_reviews`
   ADD PRIMARY KEY (`performance_id`),
@@ -3194,21 +3203,21 @@ ALTER TABLE `performance_reviews`
   ADD KEY `reviewer_id` (`reviewer_id`);
 
 --
--- Chỉ mục cho bảng `personal_work_tasks`
+-- Indexes for table `personal_work_tasks`
 --
 ALTER TABLE `personal_work_tasks`
   ADD PRIMARY KEY (`task_id`),
   ADD KEY `user_id` (`user_id`);
 
 --
--- Chỉ mục cho bảng `places`
+-- Indexes for table `places`
 --
 ALTER TABLE `places`
   ADD PRIMARY KEY (`place_id`),
   ADD KEY `fk_places_partner` (`partner_id`);
 
 --
--- Chỉ mục cho bảng `reviews`
+-- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`review_id`),
@@ -3216,33 +3225,33 @@ ALTER TABLE `reviews`
   ADD KEY `tour_id` (`tour_id`);
 
 --
--- Chỉ mục cho bảng `roles`
+-- Indexes for table `roles`
 --
 ALTER TABLE `roles`
   ADD PRIMARY KEY (`role_id`),
   ADD UNIQUE KEY `role_name` (`role_name`);
 
 --
--- Chỉ mục cho bảng `services`
+-- Indexes for table `services`
 --
 ALTER TABLE `services`
   ADD PRIMARY KEY (`service_id`),
   ADD KEY `fk_services_partner` (`partner_id`);
 
 --
--- Chỉ mục cho bảng `service_bookings`
+-- Indexes for table `service_bookings`
 --
 ALTER TABLE `service_bookings`
   ADD PRIMARY KEY (`booking_id`);
 
 --
--- Chỉ mục cho bảng `service_migration_backup`
+-- Indexes for table `service_migration_backup`
 --
 ALTER TABLE `service_migration_backup`
   ADD PRIMARY KEY (`backup_id`);
 
 --
--- Chỉ mục cho bảng `service_requests`
+-- Indexes for table `service_requests`
 --
 ALTER TABLE `service_requests`
   ADD PRIMARY KEY (`request_id`),
@@ -3251,32 +3260,32 @@ ALTER TABLE `service_requests`
   ADD KEY `requested_by` (`requested_by`);
 
 --
--- Chỉ mục cho bảng `service_request_groups`
+-- Indexes for table `service_request_groups`
 --
 ALTER TABLE `service_request_groups`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `timekeeping`
+-- Indexes for table `timekeeping`
 --
 ALTER TABLE `timekeeping`
   ADD PRIMARY KEY (`timekeeping_id`),
   ADD UNIQUE KEY `unique_emp_date` (`employee_id`,`work_date`);
 
 --
--- Chỉ mục cho bảng `tours`
+-- Indexes for table `tours`
 --
 ALTER TABLE `tours`
   ADD PRIMARY KEY (`tour_id`);
 
 --
--- Chỉ mục cho bảng `tour_categories`
+-- Indexes for table `tour_categories`
 --
 ALTER TABLE `tour_categories`
   ADD PRIMARY KEY (`category_id`);
 
 --
--- Chỉ mục cho bảng `tour_category_map`
+-- Indexes for table `tour_category_map`
 --
 ALTER TABLE `tour_category_map`
   ADD PRIMARY KEY (`id`),
@@ -3284,14 +3293,14 @@ ALTER TABLE `tour_category_map`
   ADD KEY `category_id` (`category_id`);
 
 --
--- Chỉ mục cho bảng `tour_vehicle_assignments`
+-- Indexes for table `tour_vehicle_assignments`
 --
 ALTER TABLE `tour_vehicle_assignments`
   ADD PRIMARY KEY (`assignment_id`),
   ADD KEY `vehicle_id` (`vehicle_id`);
 
 --
--- Chỉ mục cho bảng `trip_reports`
+-- Indexes for table `trip_reports`
 --
 ALTER TABLE `trip_reports`
   ADD PRIMARY KEY (`report_id`),
@@ -3299,7 +3308,7 @@ ALTER TABLE `trip_reports`
   ADD KEY `guide_id` (`guide_id`);
 
 --
--- Chỉ mục cho bảng `users`
+-- Indexes for table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
@@ -3307,7 +3316,7 @@ ALTER TABLE `users`
   ADD KEY `role_id` (`role_id`);
 
 --
--- Chỉ mục cho bảng `vehicles`
+-- Indexes for table `vehicles`
 --
 ALTER TABLE `vehicles`
   ADD PRIMARY KEY (`vehicle_id`),
@@ -3315,14 +3324,14 @@ ALTER TABLE `vehicles`
   ADD KEY `idx_vehicles_service_id` (`service_id`);
 
 --
--- Chỉ mục cho bảng `vehicle_maintenances`
+-- Indexes for table `vehicle_maintenances`
 --
 ALTER TABLE `vehicle_maintenances`
   ADD PRIMARY KEY (`maintenance_id`),
   ADD KEY `vehicle_id` (`vehicle_id`);
 
 --
--- Chỉ mục cho bảng `vehicle_service_details`
+-- Indexes for table `vehicle_service_details`
 --
 ALTER TABLE `vehicle_service_details`
   ADD PRIMARY KEY (`vehicle_service_id`),
@@ -3330,315 +3339,315 @@ ALTER TABLE `vehicle_service_details`
   ADD KEY `driver_id` (`driver_id`);
 
 --
--- Chỉ mục cho bảng `vehicle_status_history`
+-- Indexes for table `vehicle_status_history`
 --
 ALTER TABLE `vehicle_status_history`
   ADD PRIMARY KEY (`history_id`);
 
 --
--- AUTO_INCREMENT cho các bảng đã đổ
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT cho bảng `bookings`
+-- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
   MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
--- AUTO_INCREMENT cho bảng `booking_change_requests`
+-- AUTO_INCREMENT for table `booking_change_requests`
 --
 ALTER TABLE `booking_change_requests`
   MODIFY `change_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT cho bảng `booking_passengers`
+-- AUTO_INCREMENT for table `booking_passengers`
 --
 ALTER TABLE `booking_passengers`
   MODIFY `passenger_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
--- AUTO_INCREMENT cho bảng `chat_conversations`
+-- AUTO_INCREMENT for table `chat_conversations`
 --
 ALTER TABLE `chat_conversations`
   MODIFY `conversation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
--- AUTO_INCREMENT cho bảng `chat_messages`
+-- AUTO_INCREMENT for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
   MODIFY `message_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
--- AUTO_INCREMENT cho bảng `consultation_requests`
+-- AUTO_INCREMENT for table `consultation_requests`
 --
 ALTER TABLE `consultation_requests`
   MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT cho bảng `customer_behavior_logs`
+-- AUTO_INCREMENT for table `customer_behavior_logs`
 --
 ALTER TABLE `customer_behavior_logs`
   MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 --
--- AUTO_INCREMENT cho bảng `customer_travel_preferences`
+-- AUTO_INCREMENT for table `customer_travel_preferences`
 --
 ALTER TABLE `customer_travel_preferences`
   MODIFY `preference_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT cho bảng `custom_tour_quotes`
+-- AUTO_INCREMENT for table `custom_tour_quotes`
 --
 ALTER TABLE `custom_tour_quotes`
-  MODIFY `quote_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `quote_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
--- AUTO_INCREMENT cho bảng `custom_tour_requests`
+-- AUTO_INCREMENT for table `custom_tour_requests`
 --
 ALTER TABLE `custom_tour_requests`
-  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT cho bảng `departures`
+-- AUTO_INCREMENT for table `departures`
 --
 ALTER TABLE `departures`
   MODIFY `departure_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
--- AUTO_INCREMENT cho bảng `departure_updates`
+-- AUTO_INCREMENT for table `departure_updates`
 --
 ALTER TABLE `departure_updates`
   MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
--- AUTO_INCREMENT cho bảng `destinations`
+-- AUTO_INCREMENT for table `destinations`
 --
 ALTER TABLE `destinations`
   MODIFY `destination_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
--- AUTO_INCREMENT cho bảng `driver_expenses`
+-- AUTO_INCREMENT for table `driver_expenses`
 --
 ALTER TABLE `driver_expenses`
   MODIFY `expense_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT cho bảng `driver_incidents`
+-- AUTO_INCREMENT for table `driver_incidents`
 --
 ALTER TABLE `driver_incidents`
   MODIFY `incident_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT cho bảng `guides`
+-- AUTO_INCREMENT for table `guides`
 --
 ALTER TABLE `guides`
   MODIFY `guide_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT cho bảng `guide_assignments`
+-- AUTO_INCREMENT for table `guide_assignments`
 --
 ALTER TABLE `guide_assignments`
   MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
--- AUTO_INCREMENT cho bảng `holidays`
+-- AUTO_INCREMENT for table `holidays`
 --
 ALTER TABLE `holidays`
   MODIFY `holiday_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT cho bảng `hotel_service_details`
+-- AUTO_INCREMENT for table `hotel_service_details`
 --
 ALTER TABLE `hotel_service_details`
   MODIFY `hotel_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=245;
 
 --
--- AUTO_INCREMENT cho bảng `incident_reports`
+-- AUTO_INCREMENT for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
   MODIFY `incident_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT cho bảng `itineraries`
+-- AUTO_INCREMENT for table `itineraries`
 --
 ALTER TABLE `itineraries`
   MODIFY `itinerary_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=252;
 
 --
--- AUTO_INCREMENT cho bảng `itinerary_activities`
+-- AUTO_INCREMENT for table `itinerary_activities`
 --
 ALTER TABLE `itinerary_activities`
   MODIFY `activity_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=272;
 
 --
--- AUTO_INCREMENT cho bảng `itinerary_places`
+-- AUTO_INCREMENT for table `itinerary_places`
 --
 ALTER TABLE `itinerary_places`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
--- AUTO_INCREMENT cho bảng `leave_requests`
+-- AUTO_INCREMENT for table `leave_requests`
 --
 ALTER TABLE `leave_requests`
   MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT cho bảng `notifications`
+-- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
   MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
--- AUTO_INCREMENT cho bảng `partners`
+-- AUTO_INCREMENT for table `partners`
 --
 ALTER TABLE `partners`
   MODIFY `partner_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=361;
 
 --
--- AUTO_INCREMENT cho bảng `payments`
+-- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
   MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
--- AUTO_INCREMENT cho bảng `payroll`
+-- AUTO_INCREMENT for table `payroll`
 --
 ALTER TABLE `payroll`
   MODIFY `payroll_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT cho bảng `performance_reviews`
+-- AUTO_INCREMENT for table `performance_reviews`
 --
 ALTER TABLE `performance_reviews`
   MODIFY `performance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT cho bảng `personal_work_tasks`
+-- AUTO_INCREMENT for table `personal_work_tasks`
 --
 ALTER TABLE `personal_work_tasks`
   MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT cho bảng `places`
+-- AUTO_INCREMENT for table `places`
 --
 ALTER TABLE `places`
   MODIFY `place_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=119;
 
 --
--- AUTO_INCREMENT cho bảng `reviews`
+-- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
   MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT cho bảng `roles`
+-- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
   MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT cho bảng `services`
+-- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
   MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=467;
 
 --
--- AUTO_INCREMENT cho bảng `service_bookings`
+-- AUTO_INCREMENT for table `service_bookings`
 --
 ALTER TABLE `service_bookings`
   MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT cho bảng `service_migration_backup`
+-- AUTO_INCREMENT for table `service_migration_backup`
 --
 ALTER TABLE `service_migration_backup`
   MODIFY `backup_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
--- AUTO_INCREMENT cho bảng `service_requests`
+-- AUTO_INCREMENT for table `service_requests`
 --
 ALTER TABLE `service_requests`
   MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
--- AUTO_INCREMENT cho bảng `service_request_groups`
+-- AUTO_INCREMENT for table `service_request_groups`
 --
 ALTER TABLE `service_request_groups`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT cho bảng `timekeeping`
+-- AUTO_INCREMENT for table `timekeeping`
 --
 ALTER TABLE `timekeeping`
   MODIFY `timekeeping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
--- AUTO_INCREMENT cho bảng `tours`
+-- AUTO_INCREMENT for table `tours`
 --
 ALTER TABLE `tours`
   MODIFY `tour_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
--- AUTO_INCREMENT cho bảng `tour_categories`
+-- AUTO_INCREMENT for table `tour_categories`
 --
 ALTER TABLE `tour_categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT cho bảng `tour_category_map`
+-- AUTO_INCREMENT for table `tour_category_map`
 --
 ALTER TABLE `tour_category_map`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
--- AUTO_INCREMENT cho bảng `tour_vehicle_assignments`
+-- AUTO_INCREMENT for table `tour_vehicle_assignments`
 --
 ALTER TABLE `tour_vehicle_assignments`
   MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT cho bảng `trip_reports`
+-- AUTO_INCREMENT for table `trip_reports`
 --
 ALTER TABLE `trip_reports`
   MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT cho bảng `users`
+-- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
--- AUTO_INCREMENT cho bảng `vehicles`
+-- AUTO_INCREMENT for table `vehicles`
 --
 ALTER TABLE `vehicles`
   MODIFY `vehicle_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
--- AUTO_INCREMENT cho bảng `vehicle_maintenances`
+-- AUTO_INCREMENT for table `vehicle_maintenances`
 --
 ALTER TABLE `vehicle_maintenances`
   MODIFY `maintenance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT cho bảng `vehicle_service_details`
+-- AUTO_INCREMENT for table `vehicle_service_details`
 --
 ALTER TABLE `vehicle_service_details`
   MODIFY `vehicle_service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
--- AUTO_INCREMENT cho bảng `vehicle_status_history`
+-- AUTO_INCREMENT for table `vehicle_status_history`
 --
 ALTER TABLE `vehicle_status_history`
   MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- Các ràng buộc cho các bảng đã đổ
+-- Constraints for dumped tables
 --
 
 --
--- Các ràng buộc cho bảng `bookings`
+-- Constraints for table `bookings`
 --
 ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`user_id`),
@@ -3646,32 +3655,32 @@ ALTER TABLE `bookings`
   ADD CONSTRAINT `fk_bookings_custom_quotes` FOREIGN KEY (`quote_id`) REFERENCES `custom_tour_quotes` (`quote_id`) ON DELETE SET NULL;
 
 --
--- Các ràng buộc cho bảng `booking_change_requests`
+-- Constraints for table `booking_change_requests`
 --
 ALTER TABLE `booking_change_requests`
   ADD CONSTRAINT `booking_change_requests_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`),
   ADD CONSTRAINT `booking_change_requests_ibfk_2` FOREIGN KEY (`processed_by`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `booking_passengers`
+-- Constraints for table `booking_passengers`
 --
 ALTER TABLE `booking_passengers`
   ADD CONSTRAINT `booking_passengers_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`);
 
 --
--- Các ràng buộc cho bảng `chat_messages`
+-- Constraints for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
   ADD CONSTRAINT `fk_chat_conv` FOREIGN KEY (`conversation_id`) REFERENCES `chat_conversations` (`conversation_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `consultation_requests`
+-- Constraints for table `consultation_requests`
 --
 ALTER TABLE `consultation_requests`
   ADD CONSTRAINT `consultation_requests_ibfk_1` FOREIGN KEY (`handled_by`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `custom_tour_quotes`
+-- Constraints for table `custom_tour_quotes`
 --
 ALTER TABLE `custom_tour_quotes`
   ADD CONSTRAINT `custom_tour_quotes_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `custom_tour_requests` (`request_id`),
@@ -3679,132 +3688,132 @@ ALTER TABLE `custom_tour_quotes`
   ADD CONSTRAINT `custom_tour_quotes_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `custom_tour_requests`
+-- Constraints for table `custom_tour_requests`
 --
 ALTER TABLE `custom_tour_requests`
   ADD CONSTRAINT `custom_tour_requests_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `departures`
+-- Constraints for table `departures`
 --
 ALTER TABLE `departures`
   ADD CONSTRAINT `departures_ibfk_1` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
 
 --
--- Các ràng buộc cho bảng `departure_updates`
+-- Constraints for table `departure_updates`
 --
 ALTER TABLE `departure_updates`
   ADD CONSTRAINT `departure_updates_ibfk_1` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `guides`
+-- Constraints for table `guides`
 --
 ALTER TABLE `guides`
   ADD CONSTRAINT `guides_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `guide_assignments`
+-- Constraints for table `guide_assignments`
 --
 ALTER TABLE `guide_assignments`
   ADD CONSTRAINT `guide_assignments_ibfk_1` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`),
   ADD CONSTRAINT `guide_assignments_ibfk_2` FOREIGN KEY (`guide_id`) REFERENCES `guides` (`guide_id`);
 
 --
--- Các ràng buộc cho bảng `hotel_service_details`
+-- Constraints for table `hotel_service_details`
 --
 ALTER TABLE `hotel_service_details`
   ADD CONSTRAINT `hotel_service_details_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `incident_reports`
+-- Constraints for table `incident_reports`
 --
 ALTER TABLE `incident_reports`
   ADD CONSTRAINT `incident_reports_ibfk_1` FOREIGN KEY (`guide_id`) REFERENCES `guides` (`guide_id`),
   ADD CONSTRAINT `incident_reports_ibfk_2` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`);
 
 --
--- Các ràng buộc cho bảng `itineraries`
+-- Constraints for table `itineraries`
 --
 ALTER TABLE `itineraries`
   ADD CONSTRAINT `itineraries_ibfk_1` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
 
 --
--- Các ràng buộc cho bảng `itinerary_activities`
+-- Constraints for table `itinerary_activities`
 --
 ALTER TABLE `itinerary_activities`
   ADD CONSTRAINT `itinerary_activities_ibfk_1` FOREIGN KEY (`itinerary_id`) REFERENCES `itineraries` (`itinerary_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `itinerary_places`
+-- Constraints for table `itinerary_places`
 --
 ALTER TABLE `itinerary_places`
   ADD CONSTRAINT `fk_itinerary_places_itinerary` FOREIGN KEY (`itinerary_id`) REFERENCES `itineraries` (`itinerary_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_itinerary_places_place` FOREIGN KEY (`place_id`) REFERENCES `places` (`place_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `leave_requests`
+-- Constraints for table `leave_requests`
 --
 ALTER TABLE `leave_requests`
   ADD CONSTRAINT `leave_requests_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `notifications`
+-- Constraints for table `notifications`
 --
 ALTER TABLE `notifications`
   ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `partners`
+-- Constraints for table `partners`
 --
 ALTER TABLE `partners`
   ADD CONSTRAINT `fk_partners_destinations` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`destination_id`) ON DELETE SET NULL;
 
 --
--- Các ràng buộc cho bảng `payments`
+-- Constraints for table `payments`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`);
 
 --
--- Các ràng buộc cho bảng `payroll`
+-- Constraints for table `payroll`
 --
 ALTER TABLE `payroll`
   ADD CONSTRAINT `payroll_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `performance_reviews`
+-- Constraints for table `performance_reviews`
 --
 ALTER TABLE `performance_reviews`
   ADD CONSTRAINT `performance_reviews_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`),
   ADD CONSTRAINT `performance_reviews_ibfk_2` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `personal_work_tasks`
+-- Constraints for table `personal_work_tasks`
 --
 ALTER TABLE `personal_work_tasks`
   ADD CONSTRAINT `personal_work_tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `places`
+-- Constraints for table `places`
 --
 ALTER TABLE `places`
   ADD CONSTRAINT `fk_places_partner` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`) ON DELETE SET NULL;
 
 --
--- Các ràng buộc cho bảng `reviews`
+-- Constraints for table `reviews`
 --
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`user_id`),
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
 
 --
--- Các ràng buộc cho bảng `services`
+-- Constraints for table `services`
 --
 ALTER TABLE `services`
   ADD CONSTRAINT `fk_services_partner` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`) ON DELETE SET NULL;
 
 --
--- Các ràng buộc cho bảng `service_requests`
+-- Constraints for table `service_requests`
 --
 ALTER TABLE `service_requests`
   ADD CONSTRAINT `service_requests_ibfk_1` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`),
@@ -3812,44 +3821,44 @@ ALTER TABLE `service_requests`
   ADD CONSTRAINT `service_requests_ibfk_3` FOREIGN KEY (`requested_by`) REFERENCES `users` (`user_id`);
 
 --
--- Các ràng buộc cho bảng `timekeeping`
+-- Constraints for table `timekeeping`
 --
 ALTER TABLE `timekeeping`
   ADD CONSTRAINT `timekeeping_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `tour_category_map`
+-- Constraints for table `tour_category_map`
 --
 ALTER TABLE `tour_category_map`
   ADD CONSTRAINT `tour_category_map_ibfk_1` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`),
   ADD CONSTRAINT `tour_category_map_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `tour_categories` (`category_id`);
 
 --
--- Các ràng buộc cho bảng `tour_vehicle_assignments`
+-- Constraints for table `tour_vehicle_assignments`
 --
 ALTER TABLE `tour_vehicle_assignments`
   ADD CONSTRAINT `tour_vehicle_assignments_ibfk_1` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `users`
+-- Constraints for table `users`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`);
 
 --
--- Các ràng buộc cho bảng `vehicles`
+-- Constraints for table `vehicles`
 --
 ALTER TABLE `vehicles`
   ADD CONSTRAINT `fk_vehicles_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
--- Các ràng buộc cho bảng `vehicle_maintenances`
+-- Constraints for table `vehicle_maintenances`
 --
 ALTER TABLE `vehicle_maintenances`
   ADD CONSTRAINT `vehicle_maintenances_ibfk_1` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `vehicle_service_details`
+-- Constraints for table `vehicle_service_details`
 --
 ALTER TABLE `vehicle_service_details`
   ADD CONSTRAINT `vehicle_service_details_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE,

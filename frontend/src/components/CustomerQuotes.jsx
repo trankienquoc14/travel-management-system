@@ -6,6 +6,17 @@ import CustomerFooter from './CustomerFooter';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 import '../index.css';
 
+const cleanHotelDisplayName = (name) => {
+    if (!name || typeof name !== 'string') return '';
+    let str = name.trim();
+    const parts = str.split(' - ').map(p => p.trim());
+    if (parts.length >= 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+        parts.shift();
+        str = parts.join(' - ');
+    }
+    return str;
+};
+
 
 const DayItem = ({ day, isOldFormat, index, parsedDesign, destinations }) => {
     const [isExpanded, ReactSetIsExpanded] = React.useState(index === 0);
@@ -696,95 +707,518 @@ const CustomerQuotes = () => {
 
                                     </div>
                                 ) : selectedQuote.approval_status === 'Initial_Quoted' || selectedQuote.status === 'Initial_Quoted' ? (
-                                    <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', padding: '30px', borderRadius: '12px', color: '#0369a1', display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
-                                        <div style={{ fontSize: '40px' }}>💰</div>
-                                        <div style={{ flex: 1 }}>
-                                            <strong style={{ display: 'block', marginBottom: '10px', fontSize: '20px' }}>Báo giá sơ bộ đã được gửi</strong>
-                                            
-                                            {(() => {
-                                                const rawBreakdown = selectedQuote.price_breakdown;
-                                                const breakdown = typeof rawBreakdown === 'string' ? JSON.parse(rawBreakdown) : rawBreakdown;
-                                                if (breakdown) {
-                                                    const breakdownData = [];
-                                                    if (selectedQuote.requirements) {
-                                                        try {
-                                                            const reqs = typeof selectedQuote.requirements === 'string' ? JSON.parse(selectedQuote.requirements) : selectedQuote.requirements;
-                                                            if (reqs.participantBreakdown) {
-                                                                const pb = reqs.participantBreakdown;
-                                                                if (pb.adults > 0) breakdownData.push({ type: 'Người lớn', count: pb.adults, price: breakdown.adult || 0, total: pb.adults * (breakdown.adult || 0) });
-                                                                if (pb.children > 0) breakdownData.push({ type: 'Trẻ em', count: pb.children, price: breakdown.child || 0, total: pb.children * (breakdown.child || 0) });
-                                                                if (pb.toddlers > 0) breakdownData.push({ type: 'Trẻ nhỏ', count: pb.toddlers, price: breakdown.toddler || 0, total: pb.toddlers * (breakdown.toddler || 0) });
-                                                                if (pb.infants > 0) breakdownData.push({ type: 'Em bé', count: pb.infants, price: breakdown.infant || 0, total: pb.infants * (breakdown.infant || 0) });
-                                                            }
-                                                        } catch(e) {}
-                                                    }
-                                                    if (breakdownData.length > 0) {
-                                                        const totalPassengers = breakdownData.reduce((sum, item) => sum + item.count, 0);
-                                                        
-                                                        return (
-                                                            <div style={{ backgroundColor: '#fff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '16px', marginBottom: '15px', overflow: 'hidden',
-                                                flexShrink: 0 }}>
-                                                                <div style={{ fontSize: '15px', color: '#0369a1', marginBottom: '12px', fontWeight: '600' }}>Chi tiết ước tính chi phí cho đoàn:</div>
-                                                                <div style={{ overflowX: 'auto' }}>
-                                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                                                                        <thead>
-                                                                            <tr style={{ backgroundColor: '#f0f9ff', borderBottom: '2px solid #bae6fd' }}>
-                                                                                <th style={{ padding: '10px', textAlign: 'left', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>Độ tuổi</th>
-                                                                                <th style={{ padding: '10px', textAlign: 'center', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>SL</th>
-                                                                                <th style={{ padding: '10px', textAlign: 'right', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                                                                                <th style={{ padding: '10px', textAlign: 'right', color: '#0369a1', fontWeight: '700', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {breakdownData.map((item, idx) => (
-                                                                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                                                    <td style={{ padding: '10px', fontWeight: '600', color: '#334155' }}>{item.type}</td>
-                                                                                    <td style={{ padding: '10px', textAlign: 'center', color: '#475569' }}>{item.count}</td>
-                                                                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>{formatMoney(item.price)} đ</td>
-                                                                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '600', color: '#0f172a' }}>{formatMoney(item.total)} đ</td>
-                                                                                </tr>
-                                                                            ))}
-                                                                        </tbody>
-                                                                        <tfoot>
-                                                                            <tr style={{ backgroundColor: '#f8fafc', borderTop: '2px solid #bae6fd' }}>
-                                                                                <td style={{ padding: '12px 10px', fontWeight: '800', color: '#0369a1' }}>TỔNG TẠM TÍNH</td>
-                                                                                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#0369a1' }}>{totalPassengers}</td>
-                                                                                <td colSpan="2" style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0284c7', fontSize: '18px' }}>
-                                                                                    {formatMoney(selectedQuote.quoted_price || selectedQuote.quote_price)} đ
-                                                                                </td>
-                                                                            </tr>
-                                                                        </tfoot>
-                                                                    </table>
+                                    (() => {
+                                        // 1. Phân tích requirements & proposed_itinerary
+                                        let reqs = {};
+                                        try {
+                                            reqs = typeof selectedQuote.requirements === 'string' ? JSON.parse(selectedQuote.requirements) : (selectedQuote.requirements || {});
+                                        } catch (e) {
+                                            reqs = {};
+                                        }
+
+                                        let planData = null;
+                                        try {
+                                            const rawIt = selectedQuote.proposed_itinerary || selectedQuote.itinerary;
+                                            planData = typeof rawIt === 'string' ? JSON.parse(rawIt) : rawIt;
+                                        } catch (e) {
+                                            planData = null;
+                                        }
+
+                                        const proposedServices = planData?.proposedServices;
+                                        const changesList = planData?.changes || [];
+
+                                        // Breakdown giá theo đối tượng
+                                        let breakdown = null;
+                                        try {
+                                            const rawBreakdown = selectedQuote.price_breakdown;
+                                            breakdown = typeof rawBreakdown === 'string' ? JSON.parse(rawBreakdown) : rawBreakdown;
+                                        } catch (e) {
+                                            breakdown = null;
+                                        }
+
+                                        const breakdownData = [];
+                                        if (reqs.participantBreakdown && breakdown) {
+                                            const pb = reqs.participantBreakdown;
+                                            if (pb.adults > 0) breakdownData.push({ type: 'Người lớn', count: pb.adults, price: breakdown.adult || 0, total: pb.adults * (breakdown.adult || 0) });
+                                            if (pb.children > 0) breakdownData.push({ type: 'Trẻ em', count: pb.children, price: breakdown.child || 0, total: pb.children * (breakdown.child || 0) });
+                                            if (pb.toddlers > 0) breakdownData.push({ type: 'Trẻ nhỏ', count: pb.toddlers, price: breakdown.toddler || 0, total: pb.toddlers * (breakdown.toddler || 0) });
+                                            if (pb.infants > 0) breakdownData.push({ type: 'Em bé', count: pb.infants, price: breakdown.infant || 0, total: pb.infants * (breakdown.infant || 0) });
+                                        }
+                                        const totalPassengers = breakdownData.reduce((sum, item) => sum + item.count, 0) || selectedQuote.people_count || 1;
+                                        const grandTotal = Number(selectedQuote.quoted_price || selectedQuote.quote_price || 0);
+                                        const adultPrice = breakdown?.adult || (totalPassengers > 0 ? Math.round(grandTotal / totalPassengers) : grandTotal);
+                                        const customerBudgetPerPax = Number(selectedQuote.budget || reqs.budget || 0);
+                                        const totalGroupBudget = customerBudgetPerPax * totalPassengers;
+                                        const isWithinGroupBudget = totalGroupBudget > 0 ? (grandTotal <= totalGroupBudget) : true;
+                                        const groupBudgetRemaining = Math.max(0, totalGroupBudget - grandTotal);
+                                        const groupBudgetOver = Math.max(0, grandTotal - totalGroupBudget);
+
+                                        // Nhóm thay đổi theo 4 danh mục
+                                        const getChangeGroup = (c) => {
+                                            if (c.group) return c.group;
+                                            if (['added', 'replaced', 'removed', 'adjusted'].includes(c.category)) return c.category;
+                                            if (['added', 'replaced', 'removed', 'adjusted'].includes(c.type)) return c.type;
+                                            return 'adjusted';
+                                        };
+                                        const groupedChanges = {
+                                            added: changesList.filter(c => getChangeGroup(c) === 'added'),
+                                            replaced: changesList.filter(c => getChangeGroup(c) === 'replaced'),
+                                            removed: changesList.filter(c => getChangeGroup(c) === 'removed'),
+                                            adjusted: changesList.filter(c => getChangeGroup(c) === 'adjusted')
+                                        };
+                                        const hasAnyChange = changesList.length > 0;
+
+                                        return (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                                {/* 1. HERO BANNER BÁO GIÁ SƠ BỘ */}
+                                                <div style={{
+                                                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                                    borderRadius: '16px',
+                                                    padding: '24px 28px',
+                                                    color: '#fff',
+                                                    boxShadow: '0 10px 25px -5px rgba(2, 132, 199, 0.25)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    flexWrap: 'wrap',
+                                                    gap: '16px'
+                                                }}>
+                                                    <div>
+                                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                                                            ✨ BÁO GIÁ TOUR THIẾT KẾ RIÊNG
+                                                        </div>
+                                                        <h3 style={{ margin: '0 0 6px 0', fontSize: '22px', fontWeight: '800', color: '#fff' }}>
+                                                            Phương án báo giá sơ bộ cho chuyến đi {selectedQuote.destination}
+                                                        </h3>
+                                                        <p style={{ margin: 0, fontSize: '14px', color: '#e0f2fe', lineHeight: '1.5' }}>
+                                                            Chuyên viên của TravelVN đã cân đối các dịch vụ tốt nhất theo số lượng {totalPassengers} khách của bạn.
+                                                        </p>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.15)', padding: '12px 20px', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
+                                                        <div style={{ fontSize: '12px', color: '#e0f2fe', textTransform: 'uppercase', fontWeight: '600' }}>Tổng chi phí ước tính</div>
+                                                        <div style={{ fontSize: '26px', fontWeight: '900', color: '#fff', letterSpacing: '-0.5px' }}>
+                                                            {formatMoney(grandTotal)} <span style={{ fontSize: '16px', fontWeight: '600' }}>đ</span>
+                                                        </div>
+                                                        <div style={{ fontSize: '12.5px', color: '#f0f9ff' }}>
+                                                            Đoàn {totalPassengers} hành khách
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* 2. KHU VỰC CHUYÊN BIỆT: NHỮNG THAY ĐỔI SO VỚI YÊU CẦU BAN ĐẦU (GIAI ĐOẠN 5) */}
+                                                <div style={{
+                                                    background: '#fff',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '16px',
+                                                    padding: '24px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                        <div>
+                                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                📋 Những thay đổi so với yêu cầu ban đầu
+                                                            </h4>
+                                                            <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b' }}>
+                                                                TravelVN luôn minh bạch mọi tinh chỉnh dịch vụ và cung cấp lý do chi tiết từ chuyên viên tư vấn.
+                                                            </p>
+                                                        </div>
+                                                        <span style={{
+                                                            fontSize: '12px',
+                                                            fontWeight: '700',
+                                                            padding: '4px 10px',
+                                                            borderRadius: '20px',
+                                                            background: hasAnyChange ? '#fef3c7' : '#dcfce7',
+                                                            color: hasAnyChange ? '#92400e' : '#15803d',
+                                                            border: hasAnyChange ? '1px solid #fde68a' : '1px solid #bbf7d0'
+                                                        }}>
+                                                            {hasAnyChange ? `${changesList.length} điều chỉnh` : 'Giữ nguyên 100% sở thích'}
+                                                        </span>
+                                                    </div>
+
+                                                    {!hasAnyChange ? (
+                                                        <div style={{
+                                                            padding: '16px 20px',
+                                                            background: '#f0fdf4',
+                                                            border: '1px solid #bbf7d0',
+                                                            borderRadius: '12px',
+                                                            color: '#166534',
+                                                            fontSize: '14px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '12px'
+                                                        }}>
+                                                            <span style={{ fontSize: '24px' }}>✅</span>
+                                                            <div>
+                                                                <strong>Phương án báo giá được giữ nguyên trọn vẹn theo đúng tất cả các sở thích bạn đã chọn ban đầu.</strong>
+                                                                <div style={{ fontSize: '13px', color: '#15803d', marginTop: '2px' }}>
+                                                                    Không có dịch vụ nào bị thay đổi, lược bỏ hay phát sinh ngoài ý muốn.
                                                                 </div>
                                                             </div>
-                                                        );
-                                                    }
-                                                }
-                                                return (
-                                                    <span style={{ fontSize: '15px', lineHeight: '1.6', display: 'block', marginBottom: '15px' }}>
-                                                        Nhân viên đã xem xét yêu cầu của bạn và ước tính chi phí báo giá sơ bộ: <strong style={{ color: '#0284c7', fontSize: '18px' }}>{formatMoney(selectedQuote.quoted_price || selectedQuote.quote_price)} đ</strong>.
-                                                    </span>
-                                                );
-                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                            {/* NHÓM 1: BỔ SUNG */}
+                                                            {groupedChanges.added.length > 0 && (
+                                                                <div style={{ border: '1px solid #bbf7d0', borderRadius: '12px', overflow: 'hidden' }}>
+                                                                    <div style={{ background: '#f0fdf4', padding: '10px 16px', fontWeight: '700', fontSize: '13.5px', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <span>🟢 Dịch vụ được bổ sung ({groupedChanges.added.length})</span>
+                                                                    </div>
+                                                                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#fff' }}>
+                                                                        {groupedChanges.added.map((c, i) => (
+                                                                            <div key={i} style={{ borderBottom: i < groupedChanges.added.length - 1 ? '1px solid #f1f5f9' : 'none', paddingBottom: i < groupedChanges.added.length - 1 ? '10px' : '0' }}>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                                                    <div style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>
+                                                                                        {c.category || c.itemType || 'Dịch vụ'}: <span style={{ color: '#15803d' }}>{c.proposed}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px', fontStyle: 'italic', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #10b981' }}>
+                                                                                    💬 Lời giải thích từ chuyên viên: {c.reason || 'Bổ sung dịch vụ nâng cao trải nghiệm tour.'}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
 
-                                            {selectedQuote.staff_note && (
-                                                <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #0ea5e9', color: '#334155' }}>
-                                                    <strong>Nhân viên nhắn nhủ:</strong><br/>
-                                                    <span style={{ whiteSpace: 'pre-wrap' }}>{selectedQuote.staff_note}</span>
+                                                            {/* NHÓM 2: THAY THẾ */}
+                                                            {groupedChanges.replaced.length > 0 && (
+                                                                <div style={{ border: '1px solid #bfdbfe', borderRadius: '12px', overflow: 'hidden' }}>
+                                                                    <div style={{ background: '#eff6ff', padding: '10px 16px', fontWeight: '700', fontSize: '13.5px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <span>🔄 Dịch vụ được thay thế ({groupedChanges.replaced.length})</span>
+                                                                    </div>
+                                                                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#fff' }}>
+                                                                        {groupedChanges.replaced.map((c, i) => (
+                                                                            <div key={i} style={{ borderBottom: i < groupedChanges.replaced.length - 1 ? '1px solid #f1f5f9' : 'none', paddingBottom: i < groupedChanges.replaced.length - 1 ? '10px' : '0' }}>
+                                                                                <div style={{ fontSize: '13.5px', color: '#0f172a' }}>
+                                                                                    <span style={{ fontWeight: '700' }}>{c.category || c.itemType || 'Dịch vụ'}:</span> Thay vì <strong>{cleanHotelDisplayName(c.original)}</strong> ➔ Chuyển sang: <strong style={{ color: '#2563eb' }}>{cleanHotelDisplayName(c.proposed)}</strong>
+                                                                                </div>
+                                                                                <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px', fontStyle: 'italic', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>
+                                                                                    💬 Lời giải thích từ chuyên viên: {c.reason || 'Thay thế để phù hợp với quy mô đoàn hoặc ngân sách.'}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* NHÓM 3: LƯỢC BỎ */}
+                                                            {groupedChanges.removed.length > 0 && (
+                                                                <div style={{ border: '1px solid #fecaca', borderRadius: '12px', overflow: 'hidden' }}>
+                                                                    <div style={{ background: '#fef2f2', padding: '10px 16px', fontWeight: '700', fontSize: '13.5px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <span>🔴 Dịch vụ được lược bỏ ({groupedChanges.removed.length})</span>
+                                                                    </div>
+                                                                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#fff' }}>
+                                                                        {groupedChanges.removed.map((c, i) => (
+                                                                            <div key={i} style={{ borderBottom: i < groupedChanges.removed.length - 1 ? '1px solid #f1f5f9' : 'none', paddingBottom: i < groupedChanges.removed.length - 1 ? '10px' : '0' }}>
+                                                                                <div style={{ fontSize: '13.5px', color: '#0f172a' }}>
+                                                                                    <span style={{ fontWeight: '700' }}>{c.category || c.itemType || 'Dịch vụ'}:</span> Đã lược bỏ <span style={{ textDecoration: 'line-through', color: '#dc2626' }}>{c.original}</span>
+                                                                                </div>
+                                                                                <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px', fontStyle: 'italic', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #ef4444' }}>
+                                                                                    💬 Lời giải thích từ chuyên viên: {c.reason || 'Lược bỏ theo yêu cầu tour tự do hoặc cắt giảm chi phí.'}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* NHÓM 4: ĐIỀU CHỈNH THÔNG TIN */}
+                                                            {groupedChanges.adjusted.length > 0 && (
+                                                                <div style={{ border: '1px solid #fed7aa', borderRadius: '12px', overflow: 'hidden' }}>
+                                                                    <div style={{ background: '#fff7ed', padding: '10px 16px', fontWeight: '700', fontSize: '13.5px', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <span>⚙️ Thông tin dịch vụ được điều chỉnh ({groupedChanges.adjusted.length})</span>
+                                                                    </div>
+                                                                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#fff' }}>
+                                                                        {groupedChanges.adjusted.map((c, i) => (
+                                                                            <div key={i} style={{ borderBottom: i < groupedChanges.adjusted.length - 1 ? '1px solid #f1f5f9' : 'none', paddingBottom: i < groupedChanges.adjusted.length - 1 ? '10px' : '0' }}>
+                                                                                <div style={{ fontSize: '13.5px', color: '#0f172a' }}>
+                                                                                    <span style={{ fontWeight: '700' }}>{c.category || c.itemType || 'Dịch vụ'}:</span> Ban đầu: {c.original} ➔ Điều chỉnh thành: <strong style={{ color: '#ea580c' }}>{c.proposed}</strong>
+                                                                                </div>
+                                                                                <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px', fontStyle: 'italic', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #f97316' }}>
+                                                                                    💬 Lời giải thích từ chuyên viên: {c.reason || 'Tinh chỉnh cho thuận tiện cung đường di chuyển.'}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            
-                                            <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
-                                                <button onClick={() => setShowRevisionInput(!showRevisionInput)} style={{ padding: '10px 20px', backgroundColor: '#fff', color: '#f97316', border: '2px solid #f97316', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-                                                    {showRevisionInput ? 'ĐÓNG FORM' : 'YÊU CẦU ĐIỀU CHỈNH'}
-                                                </button>
-                                                <button onClick={() => handleCustomerAction('Initial_Accepted')} style={{ padding: '10px 25px', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(14, 165, 233, 0.2)' }}>
-                                                    ĐỒNG Ý MỨC GIÁ NÀY
-                                                </button>
+
+                                                {/* 3. PHƯƠNG ÁN DỊCH VỤ TOÀN DIỆN ĐƯỢC ĐỀ XUẤT */}
+                                                <div style={{
+                                                    background: '#fff',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '16px',
+                                                    padding: '24px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                                                }}>
+                                                    <h4 style={{ margin: '0 0 16px 0', fontSize: '17px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        🏨 Phương án dịch vụ chi tiết được xây dựng cho đoàn
+                                                    </h4>
+
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                                                        gap: '16px'
+                                                    }}>
+                                                        {/* 1. Đón khách */}
+                                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>📍 Điểm đón & Khởi hành</div>
+                                                            <div style={{ fontSize: '14.5px', fontWeight: '700', color: '#0f172a' }}>
+                                                                {proposedServices?.pickup?.location || reqs.pickup_location || 'Khách tự túc tại điểm đến'}
+                                                            </div>
+                                                            <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>
+                                                                ⏰ Giờ xuất phát: <strong>{proposedServices?.pickup?.time || reqs.departure_time || 'Thỏa thuận sau'}</strong>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 2. Phương tiện */}
+                                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>🚐 Phương tiện di chuyển</div>
+                                                            <div style={{ fontSize: '14.5px', fontWeight: '700', color: '#0f172a' }}>
+                                                                {proposedServices?.transport?.isSelfArranged
+                                                                    ? 'Khách tự túc phương tiện di chuyển'
+                                                                    : (proposedServices?.transport?.name || reqs.transportName || 'Xe du lịch đời mới theo đoàn')}
+                                                            </div>
+                                                            {proposedServices?.transport?.capacity && !proposedServices?.transport?.isSelfArranged && (
+                                                                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>
+                                                                    Quy chuẩn: <strong>{proposedServices.transport.capacity} chỗ ngồi thoải mái</strong>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* 3. Lưu trú */}
+                                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>🏨 Cơ sở lưu trú</div>
+                                                            <div style={{ fontSize: '14.5px', fontWeight: '700', color: '#0f172a' }}>
+                                                                {proposedServices?.hotel?.isSelfArranged
+                                                                    ? 'Khách tự túc nơi lưu trú'
+                                                                    : cleanHotelDisplayName(proposedServices?.hotel?.name || reqs.hotelName || 'Khách sạn tiêu chuẩn')}
+                                                            </div>
+                                                            {proposedServices?.hotel?.star && !proposedServices?.hotel?.isSelfArranged && (
+                                                                <div style={{ fontSize: '12.5px', color: '#eab308', marginTop: '4px', fontWeight: '600' }}>
+                                                                    {'⭐'.repeat(proposedServices.hotel.star)} Tiêu chuẩn {proposedServices.hotel.star} sao
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* 4. Ăn uống */}
+                                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>🍽️ Chế độ ăn uống</div>
+                                                            <div style={{ fontSize: '14.5px', fontWeight: '700', color: '#0f172a' }}>
+                                                                {proposedServices?.meal
+                                                                    ? ((proposedServices.meal.enabled ?? proposedServices.meal.isEnabled ?? true) ? (proposedServices.meal.name || 'Trọn gói theo chương trình') : 'Khách tự do thưởng thức ẩm thực')
+                                                                    : (reqs.meal || 'Trọn gói các bữa theo đoàn')}
+                                                            </div>
+                                                            <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>
+                                                                {(proposedServices?.meal?.enabled ?? proposedServices?.meal?.isEnabled ?? true) ? 'Bao gồm bữa sáng, trưa và tối' : 'Tự do trải nghiệm món ngon địa phương'}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 5. Hướng dẫn viên */}
+                                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>🗣️ Hướng dẫn viên</div>
+                                                            <div style={{ fontSize: '14.5px', fontWeight: '700', color: '#0f172a' }}>
+                                                                {proposedServices?.guide
+                                                                    ? ((proposedServices.guide.enabled ?? proposedServices.guide.isEnabled ?? true) ? (proposedServices.guide.name || 'Có HDV suốt tuyến theo đoàn') : 'Tour tự do khám phá (Không có HDV)')
+                                                                    : (reqs.guide || 'Có HDV suốt tuyến')}
+                                                            </div>
+                                                            <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px' }}>
+                                                                {(proposedServices?.guide?.enabled ?? proposedServices?.guide?.isEnabled ?? true) ? 'Thuyết minh, điều phối & chăm sóc đoàn' : 'Chủ động thời gian và lịch trình riêng'}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 6. Điểm tham quan */}
+                                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', gridColumn: 'span 2' }}>
+                                                            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>🎫 Danh sách điểm tham quan bao gồm</div>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                                {(() => {
+                                                                    const placesList = (proposedServices?.selectedPlaces || proposedServices?.places || []).filter(p => !p.isRemoved);
+                                                                    const placesToShow = placesList.length > 0 ? placesList : (reqs.selectedPlaces || []);
+                                                                    if (placesToShow.length === 0) {
+                                                                        return <div style={{ fontSize: '13px', color: '#94a3b8' }}>Chưa chọn điểm tham quan cố định (Tour tự do tham quan)</div>;
+                                                                    }
+                                                                    return placesToShow.map((p, pIdx) => (
+                                                                        <span key={pIdx} style={{
+                                                                            background: '#fff',
+                                                                            border: '1px solid #cbd5e1',
+                                                                            borderRadius: '8px',
+                                                                            padding: '6px 12px',
+                                                                            fontSize: '13px',
+                                                                            fontWeight: '600',
+                                                                            color: '#334155',
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '6px'
+                                                                        }}>
+                                                                            📍 {p.name || p.place_name}
+                                                                        </span>
+                                                                    ));
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* 4. CHI TIẾT ƯỚC TÍNH CHI PHÍ THEO ĐỘ TUỔI & SO SÁNH NGÂN SÁCH */}
+                                                <div style={{
+                                                    background: '#fff',
+                                                    border: '1px solid #bae6fd',
+                                                    borderRadius: '16px',
+                                                    padding: '24px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                                                        <div>
+                                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: '800', color: '#0369a1' }}>
+                                                                💰 Chi tiết phân bổ giá cho đoàn ({totalPassengers} khách)
+                                                            </h4>
+                                                            <div style={{ fontSize: '13.5px', color: '#64748b' }}>
+                                                                Bảng giá được xây dựng dựa trên chính sách độ tuổi và các dịch vụ đoàn đã chọn.
+                                                            </div>
+                                                        </div>
+                                                        {totalGroupBudget > 0 && (
+                                                            <div style={{
+                                                                padding: '6px 14px',
+                                                                borderRadius: '20px',
+                                                                fontSize: '13px',
+                                                                fontWeight: '700',
+                                                                background: isWithinGroupBudget ? '#dcfce7' : '#fee2e2',
+                                                                color: isWithinGroupBudget ? '#15803d' : '#b91c1c',
+                                                                border: isWithinGroupBudget ? '1px solid #bbf7d0' : '1px solid #fecaca'
+                                                            }}>
+                                                                {isWithinGroupBudget
+                                                                    ? `🎉 Tiết kiệm ${formatMoney(groupBudgetRemaining)} đ cho đoàn so với ngân sách dự kiến!`
+                                                                    : `Chênh lệch ~${formatMoney(groupBudgetOver)} đ so với ngân sách dự kiến của đoàn`}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {breakdownData.length > 0 ? (
+                                                        <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #e0f2fe' }}>
+                                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                                                <thead>
+                                                                    <tr style={{ backgroundColor: '#f0f9ff', borderBottom: '2px solid #bae6fd' }}>
+                                                                        <th style={{ padding: '12px 14px', textAlign: 'left', color: '#0369a1', fontWeight: '700' }}>Nhóm hành khách</th>
+                                                                        <th style={{ padding: '12px 14px', textAlign: 'center', color: '#0369a1', fontWeight: '700' }}>Số lượng</th>
+                                                                        <th style={{ padding: '12px 14px', textAlign: 'right', color: '#0369a1', fontWeight: '700' }}>Đơn giá / Khách</th>
+                                                                        <th style={{ padding: '12px 14px', textAlign: 'right', color: '#0369a1', fontWeight: '700' }}>Thành tiền</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {breakdownData.map((item, idx) => (
+                                                                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#fcfdfe' }}>
+                                                                            <td style={{ padding: '12px 14px', fontWeight: '600', color: '#334155' }}>{item.type}</td>
+                                                                            <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{item.count}</td>
+                                                                            <td style={{ padding: '12px 14px', textAlign: 'right', color: '#475569' }}>{formatMoney(item.price)} đ</td>
+                                                                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{formatMoney(item.total)} đ</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                                <tfoot>
+                                                                    <tr style={{ backgroundColor: '#f0f9ff', borderTop: '2px solid #bae6fd' }}>
+                                                                        <td style={{ padding: '14px', fontWeight: '800', color: '#0369a1', fontSize: '15px' }}>TỔNG BÁO GIÁ CHO ĐOÀN</td>
+                                                                        <td style={{ padding: '14px', textAlign: 'center', fontWeight: '800', color: '#0369a1', fontSize: '15px' }}>{totalPassengers} khách</td>
+                                                                        <td colSpan="2" style={{ padding: '14px', textAlign: 'right', fontWeight: '900', color: '#0284c7', fontSize: '20px' }}>
+                                                                            {formatMoney(grandTotal)} đ
+                                                                        </td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '10px', textAlign: 'center' }}>
+                                                            <span style={{ fontSize: '18px', fontWeight: '800', color: '#0284c7' }}>
+                                                                Tổng báo giá tạm tính: {formatMoney(grandTotal)} đ
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* 5. LỜI NHẮN TỪ CHUYÊN VIÊN */}
+                                                {selectedQuote.staff_note && (
+                                                    <div style={{
+                                                        backgroundColor: '#fff',
+                                                        padding: '18px 22px',
+                                                        borderRadius: '14px',
+                                                        borderLeft: '5px solid #0ea5e9',
+                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                                                        borderTop: '1px solid #f1f5f9',
+                                                        borderRight: '1px solid #f1f5f9',
+                                                        borderBottom: '1px solid #f1f5f9'
+                                                    }}>
+                                                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0369a1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            💌 Lời nhắn gửi từ chuyên viên tư vấn TravelVN:
+                                                        </div>
+                                                        <div style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                                                            {selectedQuote.staff_note}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* 6. KHUNG HÀNH ĐỘNG CỦA KHÁCH */}
+                                                <div style={{
+                                                    backgroundColor: '#f8fafc',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '16px',
+                                                    padding: '20px 24px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    gap: '20px',
+                                                    flexWrap: 'wrap'
+                                                }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '14.5px', fontWeight: '700', color: '#0f172a' }}>
+                                                            Bạn thấy phương án báo giá sơ bộ này như thế nào?
+                                                        </div>
+                                                        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                                                            Đồng ý để chuyên viên lên lịch trình chi tiết theo từng ngày, hoặc gửi yêu cầu điều chỉnh lại các dịch vụ.
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+                                                        <button
+                                                            onClick={() => setShowRevisionInput(!showRevisionInput)}
+                                                            style={{
+                                                                padding: '12px 20px',
+                                                                backgroundColor: '#fff',
+                                                                color: '#f97316',
+                                                                border: '2px solid #f97316',
+                                                                borderRadius: '10px',
+                                                                fontSize: '14px',
+                                                                fontWeight: '700',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s',
+                                                                whiteSpace: 'nowrap'
+                                                            }}
+                                                        >
+                                                            {showRevisionInput ? 'ĐÓNG FORM' : 'YÊU CẦU ĐIỀU CHỈNH'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCustomerAction('Initial_Accepted')}
+                                                            style={{
+                                                                padding: '12px 26px',
+                                                                backgroundColor: '#0284c7',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '10px',
+                                                                fontSize: '14px',
+                                                                fontWeight: '800',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s',
+                                                                whiteSpace: 'nowrap',
+                                                                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+                                                            }}
+                                                        >
+                                                            ĐỒNG Ý MỨC GIÁ NÀY
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <span style={{ fontSize: '13px', display: 'block', marginTop: '15px', fontStyle: 'italic', color: '#64748b' }}>*Nhân viên sẽ lên lịch trình chi tiết sau khi bạn đồng ý mức giá sơ bộ này.</span>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()
                                 ) : selectedQuote.approval_status === 'Customer_Revision' ? (
                                     <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', padding: '30px', borderRadius: '12px', color: '#c2410c', display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
                                         <div style={{ fontSize: '40px' }}>✍️</div>

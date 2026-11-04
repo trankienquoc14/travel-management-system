@@ -4,7 +4,7 @@ const sequelize = require('../config/database');
 exports.getAllFixedTours = async (req, res) => {
     try {
         const [tours] = await sequelize.query(`
-            SELECT tour_id, tour_name, destination, duration_days, status, base_price 
+            SELECT tour_id, tour_name, destination, duration_days, status, base_price, image_url, rejection_reason 
             FROM tours 
             ORDER BY tour_id DESC
         `);

@@ -38,7 +38,6 @@ const CustomerFooter = () => {
                             { name: 'Giới thiệu', path: '/article/about' },
                             { name: 'Trang chủ', path: '/home' },
                             { name: 'Danh sách Tour Trọn Gói', path: '/tours' },
-                            { name: 'Dịch vụ Xe Di Chuyển', path: '/services' },
                             { name: 'Tự Thiết Kế Tour Cá Nhân', path: '/build-tour' },
                             { name: 'Cẩm nang & Bài viết du lịch', path: '/articles' }
                         ].map((link, idx) => (

@@ -222,6 +222,24 @@ exports.updateVehicle = async (req, res) => {
 exports.deleteVehicle = async (req, res) => {
   try {
     const { id } = req.params;
+    const [vehRows] = await sequelize.query(`SELECT status, license_plate FROM vehicles WHERE vehicle_id = ?`, {
+      replacements: [id]
+    });
+    if (!vehRows || vehRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy xe trong hệ thống!' });
+    }
+    if (vehRows[0].status === 'IN_TOUR') {
+      return res.status(400).json({ success: false, message: 'Không thể xóa xe đang trong trạng thái đi tour!' });
+    }
+    const [activeTours] = await sequelize.query(`
+      SELECT assignment_id FROM tour_vehicle_assignments
+      WHERE vehicle_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS')
+      LIMIT 1
+    `, { replacements: [id] });
+    if (activeTours && activeTours.length > 0) {
+      return res.status(400).json({ success: false, message: 'Không thể xóa xe đang có lịch điều phối tour hiệu lực!' });
+    }
+
     await sequelize.query(`DELETE FROM vehicles WHERE vehicle_id = ?`, { replacements: [id] });
     res.json({ success: true, message: 'Đã xóa xe khỏi hệ thống!' });
   } catch (error) {
@@ -380,20 +398,47 @@ exports.getDriverAssignedTours = async (req, res) => {
 exports.createMaintenance = async (req, res) => {
   try {
     const { vehicle_id, start_date, end_date, reason } = req.body;
+    const userId = req.user ? (req.user.user_id || req.user.id || null) : null;
 
     if (!vehicle_id || !start_date || !end_date) {
       return res.status(400).json({ success: false, message: 'Vui lòng nhập xe, ngày bắt đầu và kết thúc bảo dưỡng!' });
     }
 
+    const [vehRows] = await sequelize.query(`SELECT status FROM vehicles WHERE vehicle_id = ?`, {
+      replacements: [vehicle_id]
+    });
+    if (!vehRows || vehRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy phương tiện!' });
+    }
+    const oldStatus = vehRows[0].status;
+
+    const [activeTours] = await sequelize.query(`
+      SELECT assignment_id FROM tour_vehicle_assignments
+      WHERE vehicle_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS')
+        AND CURRENT_DATE() BETWEEN start_date AND end_date
+      LIMIT 1
+    `, { replacements: [vehicle_id] });
+
+    if (oldStatus === 'IN_TOUR' || (activeTours && activeTours.length > 0)) {
+      return res.status(400).json({ success: false, message: 'Không thể chuyển xe đang chạy tour sang trạng thái bảo dưỡng!' });
+    }
+
+    const finalReason = (reason && String(reason).trim()) || 'Bảo dưỡng định kỳ';
+
     await sequelize.query(`
       INSERT INTO vehicle_maintenances (vehicle_id, start_date, end_date, reason, status)
       VALUES (?, ?, ?, ?, 'IN_PROGRESS')
-    `, { replacements: [vehicle_id, start_date, end_date, reason || 'Bảo dưỡng định kỳ'] });
+    `, { replacements: [vehicle_id, start_date, end_date, finalReason] });
 
     // Cập nhật status của xe thành MAINTENANCE
     await sequelize.query(`UPDATE vehicles SET status = 'MAINTENANCE' WHERE vehicle_id = ?`, {
       replacements: [vehicle_id]
     });
+
+    await sequelize.query(`
+      INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
+      VALUES (?, ?, 'MAINTENANCE', ?, ?)
+    `, { replacements: [vehicle_id, oldStatus, finalReason, userId] });
 
     res.json({ success: true, message: 'Đã lên lịch bảo dưỡng xe thành công!' });
   } catch (error) {
@@ -408,35 +453,116 @@ exports.createMaintenance = async (req, res) => {
 // ==========================================
 
 exports.updateVehicleStatusStaff = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const { new_status, reason, start_date, end_date } = req.body;
+    const { new_status, reason, start_date, end_date, current_status } = req.body;
     const userId = req.user.user_id || req.user.id || null;
 
-    // Check current status
+    // Check current status with pessimistic lock or fresh read in transaction
     const [vehicles] = await sequelize.query('SELECT status, license_plate FROM vehicles WHERE vehicle_id = ?', {
-      replacements: [id]
+      replacements: [id],
+      transaction: t
     });
 
     if (vehicles.length === 0) {
+      await t.rollback();
       return res.status(404).json({ success: false, message: 'Không tìm thấy xe' });
     }
 
     const currentStatus = vehicles[0].status;
+    const licensePlate = vehicles[0].license_plate;
 
-    if (new_status === 'IN_TOUR' || currentStatus === 'IN_TOUR') {
-      return res.status(403).json({ success: false, message: 'Không thể chuyển thủ công trạng thái Đang đi tour' });
+    // Kiểm tra tính đồng thời (concurrency check): nếu client gửi current_status mà không khớp với DB hiện tại
+    if (current_status && current_status !== currentStatus) {
+      await t.rollback();
+      return res.status(409).json({
+        success: false,
+        message: `Tình trạng xe ${licensePlate} đã bị thay đổi bởi người khác (hiện là ${currentStatus}). Vui lòng tải lại dữ liệu trước khi thao tác!`
+      });
+    }
+
+    // Kiểm tra xe có đang chạy tour theo lịch điều phối hiện tại không
+    const [activeTours] = await sequelize.query(`
+      SELECT assignment_id FROM tour_vehicle_assignments
+      WHERE vehicle_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS')
+        AND CURRENT_DATE() BETWEEN start_date AND end_date
+      LIMIT 1
+    `, { replacements: [id], transaction: t });
+
+    if (new_status === 'IN_TOUR' || currentStatus === 'IN_TOUR' || (activeTours && activeTours.length > 0)) {
+      await t.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Không thể chuyển thủ công trạng thái khi xe đang đi tour. Quản lý tour chịu trách nhiệm điều phối chuyến đi.'
+      });
+    }
+
+    const allowedStatuses = ['AVAILABLE', 'MAINTENANCE', 'REPAIR'];
+    if (!allowedStatuses.includes(new_status)) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Trạng thái cập nhật không hợp lệ! Chỉ cho phép Sẵn sàng (AVAILABLE), Bảo dưỡng (MAINTENANCE) hoặc Đang sửa chữa (REPAIR).'
+      });
+    }
+
+    if (currentStatus === new_status) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Xe đã ở trạng thái này, không cần chuyển đổi.'
+      });
+    }
+
+    // Chỉ cho phép các chiều chuyển hợp lệ:
+    // AVAILABLE -> MAINTENANCE / REPAIR
+    // MAINTENANCE -> AVAILABLE / REPAIR
+    // REPAIR -> AVAILABLE
+    if (currentStatus === 'REPAIR' && new_status === 'MAINTENANCE') {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Xe đang sửa chữa không thể chuyển trực tiếp sang bảo dưỡng định kỳ. Vui lòng hoàn tất sửa chữa trước.'
+      });
+    }
+
+    const trimmedReason = reason ? String(reason).trim() : '';
+    if (!trimmedReason) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng nhập lý do cập nhật hoặc kết quả kiểm tra phương tiện!'
+      });
+    }
+
+    // Nếu đưa từ REPAIR về AVAILABLE, kiểm tra xem còn sự cố nào đang ở trạng thái Processing chưa giải quyết không
+    if (currentStatus === 'REPAIR' && new_status === 'AVAILABLE') {
+      const [processingIncs] = await sequelize.query(`
+        SELECT incident_id, title FROM driver_incidents
+        WHERE vehicle_number = ? AND status = 'Processing'
+      `, { replacements: [licensePlate], transaction: t });
+
+      if (processingIncs && processingIncs.length > 0) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Xe ${licensePlate} vẫn còn ${processingIncs.length} sự cố đang xử lý (#${processingIncs[0].incident_id}: ${processingIncs[0].title}). Vui lòng hoàn tất sự cố tại màn hình Xử lý sự cố xe trước khi đưa xe về Sẵn sàng!`
+        });
+      }
     }
 
     await sequelize.query('UPDATE vehicles SET status = ? WHERE vehicle_id = ?', {
-      replacements: [new_status, id]
+      replacements: [new_status, id],
+      transaction: t
     });
 
     await sequelize.query(`
       INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
       VALUES (?, ?, ?, ?, ?)
     `, {
-      replacements: [id, currentStatus, new_status, reason || '', userId]
+      replacements: [id, currentStatus, new_status, trimmedReason, userId],
+      transaction: t
     });
 
     if (new_status === 'MAINTENANCE' || new_status === 'REPAIR') {
@@ -444,20 +570,24 @@ exports.updateVehicleStatusStaff = async (req, res) => {
         INSERT INTO vehicle_maintenances (vehicle_id, start_date, end_date, reason, status)
         VALUES (?, ?, ?, ?, 'IN_PROGRESS')
       `, {
-        replacements: [id, start_date || new Date(), end_date || new Date(), reason || '']
+        replacements: [id, start_date || new Date(), end_date || new Date(), trimmedReason],
+        transaction: t
       });
     } else if (new_status === 'AVAILABLE') {
       await sequelize.query(`
         UPDATE vehicle_maintenances 
-        SET status = 'COMPLETED'
+        SET status = 'COMPLETED', end_date = CURDATE()
         WHERE vehicle_id = ? AND status = 'IN_PROGRESS'
       `, {
-        replacements: [id]
+        replacements: [id],
+        transaction: t
       });
     }
 
-    res.json({ success: true, message: 'Cập nhật trạng thái thành công' });
+    await t.commit();
+    res.json({ success: true, message: 'Cập nhật tình trạng xe thành công' });
   } catch (error) {
+    await t.rollback();
     console.error('Lỗi updateVehicleStatusStaff:', error);
     res.status(500).json({ success: false, message: error.message });
   }
@@ -466,12 +596,44 @@ exports.updateVehicleStatusStaff = async (req, res) => {
 exports.getDriverIncidentsStaff = async (req, res) => {
   try {
     const [incidents] = await sequelize.query(`
-      SELECT d.*, v.license_plate, v.brand_model, v.status as vehicle_status
+      SELECT 
+        d.*,
+        v.vehicle_id,
+        v.license_plate,
+        v.brand_model,
+        v.vehicle_name,
+        v.vehicle_code,
+        v.vehicle_type,
+        v.status AS vehicle_status,
+        u.full_name AS driver_name,
+        u.phone AS driver_phone,
+        (
+          SELECT JSON_OBJECT('assignment_id', tva.assignment_id, 'departure_id', tva.departure_id, 'tour_name', t.tour_name, 'start_date', tva.start_date, 'end_date', tva.end_date)
+          FROM tour_vehicle_assignments tva
+          JOIN departures dep ON tva.departure_id = dep.departure_id
+          JOIN tours t ON dep.tour_id = t.tour_id
+          WHERE tva.vehicle_id = v.vehicle_id AND tva.status IN ('ASSIGNED', 'IN_PROGRESS') AND CURRENT_DATE() BETWEEN tva.start_date AND tva.end_date
+          LIMIT 1
+        ) AS current_tour,
+        (
+          SELECT h.reason
+          FROM vehicle_status_history h
+          WHERE h.vehicle_id = v.vehicle_id AND h.reason LIKE CONCAT('[Sự cố #', d.incident_id, '%')
+          ORDER BY h.created_at DESC, h.history_id DESC
+          LIMIT 1
+        ) AS latest_staff_note
       FROM driver_incidents d
-      LEFT JOIN vehicles v ON d.vehicle_number = v.license_plate
+      LEFT JOIN vehicles v ON TRIM(d.vehicle_number) = TRIM(v.license_plate)
+      LEFT JOIN users u ON d.driver_id = u.user_id
       ORDER BY d.created_at DESC
     `);
-    res.json({ success: true, data: incidents });
+
+    const formatted = incidents.map(inc => ({
+      ...inc,
+      current_tour: typeof inc.current_tour === 'string' ? JSON.parse(inc.current_tour) : inc.current_tour
+    }));
+
+    res.json({ success: true, data: formatted });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -483,87 +645,179 @@ exports.updateDriverIncidentStaff = async (req, res) => {
     const { status, action, reason } = req.body;
     const userId = req.user.user_id || req.user.id || null;
 
-    await sequelize.query('UPDATE driver_incidents SET status = ? WHERE incident_id = ?', {
-      replacements: [status, id]
-    });
+    const trimmedReason = reason ? String(reason).trim() : '';
+    if (!trimmedReason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng nhập nội dung ghi chú xử lý sự cố!'
+      });
+    }
 
-    // Lấy thông tin sự cố và biển số xe
-    const [incs] = await sequelize.query('SELECT incident_id, vehicle_number, title, driver_id FROM driver_incidents WHERE incident_id = ?', { replacements: [id] });
-    if (incs.length > 0) {
-      const lp = incs[0].vehicle_number;
-      const incTitle = incs[0].title || 'Sự cố xe';
-      const [vehs] = await sequelize.query('SELECT vehicle_id, status FROM vehicles WHERE license_plate = ?', { replacements: [lp] });
+    // Chuẩn hóa action & status
+    const finalAction = action || (status === 'Resolved' ? 'RESOLVED' : 'PROCESSING');
+    const finalIncidentStatus = (finalAction === 'RESOLVED' || status === 'Resolved') ? 'Resolved' : 'Processing';
 
-      if (vehs.length > 0) {
-        const v = vehs[0];
-
-        // 1. Chuyển sang sửa chữa
-        if (action === 'REPAIR') {
-          if (v.status !== 'REPAIR') {
-            await sequelize.query('UPDATE vehicles SET status = ? WHERE vehicle_id = ?', { replacements: ['REPAIR', v.vehicle_id] });
-            await sequelize.query(`
-              INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
-              VALUES (?, ?, ?, ?, ?)
-            `, {
-              replacements: [v.vehicle_id, v.status, 'REPAIR', reason || `Chuyển vào sửa chữa từ sự cố: ${incTitle}`, userId]
-            });
-            await sequelize.query(`
-              INSERT INTO vehicle_maintenances (vehicle_id, start_date, end_date, reason, status)
-              VALUES (?, ?, ?, ?, 'IN_PROGRESS')
-            `, {
-              replacements: [v.vehicle_id, new Date(), new Date(), reason || `Sửa chữa sự cố: ${incTitle}`]
-            });
-          }
-        } 
-        // 2. Đánh dấu đã giải quyết xong sự cố -> Đưa xe về Sẵn sàng
-        else if (action === 'RESOLVED' || status === 'Resolved') {
-          const oldStatus = v.status;
-          const targetStatus = (oldStatus === 'REPAIR' || oldStatus === 'MAINTENANCE') ? 'AVAILABLE' : oldStatus;
-
-          if (oldStatus !== targetStatus) {
-            await sequelize.query('UPDATE vehicles SET status = ? WHERE vehicle_id = ?', { replacements: [targetStatus, v.vehicle_id] });
-            await sequelize.query(`
-              INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
-              VALUES (?, ?, ?, ?, ?)
-            `, {
-              replacements: [v.vehicle_id, oldStatus, targetStatus, reason || `Sự cố đã được giải quyết: ${incTitle} - Đưa xe về Sẵn sàng hoạt động`, userId]
-            });
-          }
-
-          // Hoàn thành các phiếu sửa chữa / bảo dưỡng đang tiến hành
-          await sequelize.query(`
-            UPDATE vehicle_maintenances 
-            SET status = 'COMPLETED', end_date = ?
-            WHERE vehicle_id = ? AND status = 'IN_PROGRESS'
-          `, {
-            replacements: [new Date(), v.vehicle_id]
-          });
-        }
-      }
-
-      // Bắn thông báo Realtime cho Tài xế đã báo cáo sự cố này
-      if (incs[0].driver_id) {
-        try {
-          const isResolved = status === 'Resolved' || action === 'RESOLVED';
-          const notifTitle = isResolved ? `✅ Sự cố xe ${lp} đã được xử lý xong` : `🔧 Sự cố xe ${lp} đang được sửa chữa`;
-          const notifContent = isResolved
-            ? `Sự cố "${incTitle}" đã được Ban điều hành giải quyết xong. Xe ${lp} đã sẵn sàng vận hành trở lại!`
-            : `Sự cố "${incTitle}" đã được Ban điều hành tiếp nhận và chuyển xe vào xưởng sửa chữa. Vui lòng theo dõi tiến độ!`;
-
-          await sequelize.query(`
-            INSERT INTO notifications (user_id, type, target_role, title, content, is_read, action_url, created_at)
-            VALUES (?, 'DRIVER_INCIDENT_UPDATE', 'DRIVER', ?, ?, 0, 'driver_assigned', NOW())
-          `, {
-            replacements: [incs[0].driver_id, notifTitle, notifContent]
-          });
-        } catch (dNotifErr) {
-          console.error('Lỗi gửi thông báo cho tài xế:', dNotifErr);
-        }
+    // Kiểm tra nội dung khi Hoàn tất xử lý sự cố: Không chấp nhận nội dung quá ngắn hoặc chung chung
+    if (finalAction === 'RESOLVED') {
+      const genericPhrases = ['đã xử lý', 'da xu ly', 'xong', 'ok', 'đã xong', 'da xong', 'hoàn tất', 'hoan tat', 'đã sửa', 'da sua', 'sửa xong', 'sua xong'];
+      const normalizedReason = trimmedReason.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+      if (trimmedReason.length < 8 || genericPhrases.includes(normalizedReason)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vui lòng cung cấp kết quả khắc phục cụ thể (hạng mục đã sửa, linh kiện thay thế hoặc kết quả nghiệm thu), không nhập chung chung như "Đã xử lý" hay "Xong"!'
+        });
       }
     }
 
-    res.json({ success: true, message: 'Đã cập nhật sự cố' });
+    // Lấy thông tin sự cố và biển số xe trước khi cập nhật
+    const [incs] = await sequelize.query(
+      'SELECT incident_id, vehicle_number, title, description, driver_id, status FROM driver_incidents WHERE incident_id = ?',
+      { replacements: [id] }
+    );
+    if (!incs || incs.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy báo cáo sự cố!' });
+    }
+
+    const inc = incs[0];
+    const lp = inc.vehicle_number;
+    const incTitle = inc.title || 'Sự cố xe';
+    const [vehs] = await sequelize.query('SELECT vehicle_id, status FROM vehicles WHERE license_plate = ?', {
+      replacements: [lp]
+    });
+
+    const v = vehs.length > 0 ? vehs[0] : null;
+    let isVehicleInTour = false;
+
+    if (v) {
+      const [activeTours] = await sequelize.query(`
+        SELECT assignment_id FROM tour_vehicle_assignments
+        WHERE vehicle_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS')
+          AND CURRENT_DATE() BETWEEN start_date AND end_date
+        LIMIT 1
+      `, { replacements: [v.vehicle_id] });
+      isVehicleInTour = v.status === 'IN_TOUR' || (activeTours && activeTours.length > 0);
+    }
+
+    // Quy tắc Phương án A: Khi xe đang IN_TOUR / gắn với chuyến đi đang diễn ra,
+    // Nhân viên văn phòng KHÔNG được trực tiếp chuyển trạng thái xe sang REPAIR.
+    if (finalAction === 'REPAIR' && isVehicleInTour) {
+      return res.status(403).json({
+        success: false,
+        message: `Xe ${lp} đang trong hành trình tour (IN_TOUR). Nhân viên văn phòng không được chuyển trực tiếp xe sang Đang sửa chữa (REPAIR). Vui lòng chọn "Tiếp nhận & Đang xử lý (Giữ trạng thái xe)" và báo Quản lý tour điều phối xe thay thế trước!`
+      });
+    }
+
+    // Cập nhật trạng thái sự cố này (không ghi đè driver_incidents.description)
+    await sequelize.query('UPDATE driver_incidents SET status = ? WHERE incident_id = ?', {
+      replacements: [finalIncidentStatus, id]
+    });
+
+    if (v) {
+      const oldStatus = v.status;
+
+      // 1. Chuyển xe sang trạng thái Đang sửa chữa (REPAIR)
+      if (finalAction === 'REPAIR') {
+        const historyNote = `[Sự cố #${id} - ${incTitle}] (Chuyển sửa chữa): ${trimmedReason}`;
+        const maintenanceNote = `[Sự cố #${id}] ${incTitle}: ${trimmedReason}`;
+
+        if (oldStatus !== 'REPAIR') {
+          await sequelize.query('UPDATE vehicles SET status = ? WHERE vehicle_id = ?', {
+            replacements: ['REPAIR', v.vehicle_id]
+          });
+
+          // Chỉ ghi nhận thay đổi trạng thái phương tiện vào vehicle_status_history khi trạng thái thực tế thay đổi
+          await sequelize.query(`
+            INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
+            VALUES (?, ?, 'REPAIR', ?, ?)
+          `, {
+            replacements: [v.vehicle_id, oldStatus, historyNote, userId]
+          });
+        }
+
+        // Tạo phiếu sửa chữa gắn với mã sự cố nếu chưa có phiếu đang mở cho sự cố này
+        const [existingMaint] = await sequelize.query(`
+          SELECT maintenance_id FROM vehicle_maintenances
+          WHERE vehicle_id = ? AND status = 'IN_PROGRESS' AND reason LIKE ?
+          LIMIT 1
+        `, { replacements: [v.vehicle_id, `[Sự cố #${id}]%`] });
+
+        if (!existingMaint || existingMaint.length === 0) {
+          await sequelize.query(`
+            INSERT INTO vehicle_maintenances (vehicle_id, start_date, end_date, reason, status)
+            VALUES (?, CURDATE(), CURDATE(), ?, 'IN_PROGRESS')
+          `, {
+            replacements: [v.vehicle_id, maintenanceNote]
+          });
+        }
+      }
+      // 2. Tiếp nhận / Ghi nhận bước xử lý nhưng giữ nguyên trạng thái xe hiện tại (PROCESSING)
+      else if (finalAction === 'PROCESSING') {
+        const effectiveStatus = isVehicleInTour ? 'IN_TOUR' : oldStatus;
+        const historyNote = `[Sự cố #${id} - ${incTitle}] (Đang xử lý - Giữ trạng thái): ${trimmedReason}`;
+
+        await sequelize.query(`
+          INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
+          VALUES (?, ?, ?, ?, ?)
+        `, {
+          replacements: [v.vehicle_id, effectiveStatus, effectiveStatus, historyNote, userId]
+        });
+      }
+      // 3. Đánh dấu hoàn tất sự cố (RESOLVED)
+      else if (finalAction === 'RESOLVED') {
+        // Chỉ đóng phiếu sửa chữa của riêng sự cố #id này (không tự động đóng bảo dưỡng định kỳ hoặc sự cố khác)
+        await sequelize.query(`
+          UPDATE vehicle_maintenances
+          SET status = 'COMPLETED', end_date = CURDATE()
+          WHERE vehicle_id = ? AND status = 'IN_PROGRESS' AND reason LIKE ?
+        `, {
+          replacements: [v.vehicle_id, `[Sự cố #${id}]%`]
+        });
+
+        // Quy tắc chuẩn hóa: Hoàn tất sự cố KHÔNG tự động chuyển trạng thái phương tiện sang Sẵn sàng (AVAILABLE).
+        // Nếu phương tiện đang ở trạng thái REPAIR, xe vẫn giữ nguyên REPAIR cho đến khi có xác nhận kiểm tra
+        // đủ điều kiện hoạt động tại chức năng Quản lý xe theo quy trình vận hành.
+        const effectiveStatus = isVehicleInTour ? 'IN_TOUR' : oldStatus;
+        const historyNote = `[Sự cố #${id} - ${incTitle}] (Đã khắc phục sự cố - Giữ trạng thái ${effectiveStatus}): ${trimmedReason}`;
+
+        await sequelize.query(`
+          INSERT INTO vehicle_status_history (vehicle_id, old_status, new_status, reason, updated_by)
+          VALUES (?, ?, ?, ?, ?)
+        `, {
+          replacements: [v.vehicle_id, effectiveStatus, effectiveStatus, historyNote, userId]
+        });
+      }
+    }
+
+    // Bắn thông báo Realtime cho Tài xế đã báo cáo sự cố này
+    if (inc.driver_id) {
+      try {
+        let notifTitle = '';
+        let notifContent = '';
+        if (finalAction === 'RESOLVED') {
+          notifTitle = `✅ Sự cố xe ${lp} đã được xử lý xong`;
+          notifContent = `Sự cố "${incTitle}" đã được Ban điều hành giải quyết hoàn tất. Ghi chú xử lý: ${trimmedReason}`;
+        } else if (finalAction === 'REPAIR') {
+          notifTitle = `🔧 Sự cố xe ${lp} đã chuyển vào xưởng sửa chữa`;
+          notifContent = `Sự cố "${incTitle}" đã được tiếp nhận và chuyển xe ${lp} sang trạng thái Đang sửa chữa. Ghi chú: ${trimmedReason}`;
+        } else {
+          notifTitle = `📋 Sự cố xe ${lp} đã được tiếp nhận xử lý`;
+          notifContent = `Ban điều hành đã tiếp nhận sự cố "${incTitle}" của xe ${lp} và đang phối hợp xử lý. Ghi chú: ${trimmedReason}`;
+        }
+
+        await sequelize.query(`
+          INSERT INTO notifications (user_id, type, target_role, title, content, is_read, action_url, created_at)
+          VALUES (?, 'DRIVER_INCIDENT_UPDATE', 'DRIVER', ?, ?, 0, 'driver_assigned', NOW())
+        `, {
+          replacements: [inc.driver_id, notifTitle, notifContent]
+        });
+      } catch (dNotifErr) {
+        console.error('Lỗi gửi thông báo cho tài xế:', dNotifErr);
+      }
+    }
+
+    res.json({ success: true, message: 'Đã cập nhật xử lý sự cố thành công' });
   } catch (error) {
+    console.error('Lỗi updateDriverIncidentStaff:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -574,7 +828,7 @@ exports.getVehicleHistoryStaff = async (req, res) => {
 
     // 1. Thông tin phương tiện
     const [vehicles] = await sequelize.query(`
-      SELECT vehicle_id, license_plate, brand_model, vehicle_type, seat_capacity, status, color
+      SELECT vehicle_id, vehicle_code, vehicle_name, license_plate, brand_model, vehicle_type, seat_capacity, status, color
       FROM vehicles
       WHERE vehicle_id = ?
     `, { replacements: [id] });
@@ -623,4 +877,3 @@ exports.getVehicleHistoryStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-

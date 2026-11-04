@@ -60,7 +60,7 @@ exports.getAllRequests = async (req, res) => {
         const formattedRequests = requests.map(req => ({
             ...req,
             // Äáº£m báº£o parse Ä‘Ăºng requirements (tĂ¹y theo cá»™t báº¡n lÆ°u JSON lĂ  preferences hay requirements)
-            preferences: typeof req.requirements === 'string' ? JSON.parse(req.requirements) : req.requirements
+            preferences: (() => { try { return typeof req.requirements === 'string' ? JSON.parse(req.requirements) : (req.requirements || {}); } catch(e) { return {}; } })()
         }));
 
         res.status(200).json({ success: true, data: formattedRequests });
@@ -177,7 +177,8 @@ exports.getAllRequests = async (req, res) => {
                 r.status, r.created_at,
                 u.full_name as customer_name, u.phone as customer_phone,
                 q.quote_id, q.base_cost, q.markup_percent, q.quote_price as quoted_price, 
-                q.itinerary as proposed_itinerary, q.staff_note, q.manager_note, q.customer_note, q.approval_status
+                q.itinerary as proposed_itinerary, q.staff_note, q.manager_note, q.customer_note, q.approval_status,
+                q.price_breakdown
             FROM custom_tour_requests r
             LEFT JOIN users u ON r.customer_id = u.user_id
             LEFT JOIN (
@@ -343,23 +344,107 @@ exports.getDestinationExtraServices = async (req, res) => {
     try {
         const { destination } = req.params;
 
+        // 1. Tìm destination_id từ tên điểm đến
+        let destId = null;
+        if (destination && destination !== 'undefined' && destination !== 'null') {
+            const [destRows] = await sequelize.query(`
+                SELECT destination_id FROM destinations WHERE destination_name LIKE ? LIMIT 1
+            `, { replacements: [`%${destination.trim()}%`] });
+            if (destRows.length > 0) {
+                destId = destRows[0].destination_id;
+            }
+        }
+
+        // 2. Điểm tham quan (Places)
         const [places] = await sequelize.query(`
-            SELECT CONCAT('place_', place_id) AS id,
-                CASE WHEN category = 'Tham quan' THEN 'đŸŸï¸ Tham quan' WHEN category = 'Vui chÆ¡i' THEN 'đŸ¡ Vui chÆ¡i' ELSE 'đŸ½ï¸ Ä‚n uá»‘ng' END AS type,
-                place_name AS name, estimated_price AS price
-            FROM places WHERE status = 'Active' AND (destination = ? OR ? = '' OR destination IS NULL)
-        `, { replacements: [destination, destination] });
+            SELECT 
+                place_id,
+                CONCAT('place_', place_id) AS id,
+                CASE 
+                    WHEN category = 'Tham quan' THEN '🎟️ Tham quan' 
+                    WHEN category = 'Vui chơi' THEN '🎡 Vui chơi' 
+                    ELSE '🍽️ Ăn uống' 
+                END AS type,
+                place_name AS name,
+                category,
+                COALESCE(estimated_price, 0) AS price,
+                description,
+                image_url
+            FROM places 
+            WHERE status = 'Active' ${destId ? 'AND (destination_id = ? OR destination_id IS NULL)' : ''}
+            ORDER BY category, place_name
+        `, { replacements: destId ? [destId] : [] });
 
+        // 3. Khách sạn / Lưu trú (Accommodations)
         const [accommodations] = await sequelize.query(`
-            SELECT CONCAT('srv_', service_id) AS id, '🏨 Lưu trú' AS type, service_name AS name, COALESCE(selling_price, base_cost, 0) AS price FROM services WHERE status = 'Active' AND service_type IN ('Khách sạn', 'Hotel', 'Accommodation')
-        `);
+            SELECT 
+                s.service_id,
+                CONCAT('srv_', s.service_id) AS id,
+                '🏨 Lưu trú' AS type,
+                CASE 
+                    WHEN p.partner_name IS NOT NULL AND p.partner_name != '' 
+                    THEN CONCAT(p.partner_name, ' - ', s.service_name)
+                    ELSE s.service_name 
+                END AS service_name,
+                CASE 
+                    WHEN p.partner_name IS NOT NULL AND p.partner_name != '' 
+                    THEN CONCAT(p.partner_name, ' - ', s.service_name)
+                    ELSE s.service_name 
+                END AS name,
+                s.service_type,
+                COALESCE(s.base_cost, s.selling_price, 0) AS price,
+                s.base_cost,
+                s.selling_price,
+                p.partner_name,
+                s.description,
+                s.image_url
+            FROM services s
+            LEFT JOIN partners p ON s.partner_id = p.partner_id
+            WHERE s.status = 'Active' AND s.service_type IN ('Khách sạn', 'Hotel', 'Accommodation')
+            ${destId ? 'AND (s.destination_id = ? OR s.destination_id IS NULL)' : ''}
+            ORDER BY s.base_cost ASC, s.selling_price ASC
+        `, { replacements: destId ? [destId] : [] });
 
+        // 4. Phương tiện di chuyển (Transports)
         const [transports] = await sequelize.query(`
-            SELECT CONCAT('srv_', service_id) AS id, '🚗 Di chuyển' AS type, service_name AS name, COALESCE(selling_price, base_cost, 0) AS price FROM services WHERE status = 'Active' AND service_type IN ('Xe vận chuyển', 'Transport', 'Vehicle', 'Vé máy bay', 'Flight')
+            SELECT 
+                s.service_id,
+                CONCAT('srv_', s.service_id) AS id,
+                '🚗 Di chuyển' AS type,
+                CASE 
+                    WHEN vsd.vehicle_model IS NOT NULL AND vsd.vehicle_model != '' 
+                    THEN CONCAT(vsd.vehicle_model, ' (', COALESCE(vsd.seat_capacity, 4), ' chỗ)')
+                    ELSE s.service_name 
+                END AS service_name,
+                CASE 
+                    WHEN vsd.vehicle_model IS NOT NULL AND vsd.vehicle_model != '' 
+                    THEN CONCAT(vsd.vehicle_model, ' (', COALESCE(vsd.seat_capacity, 4), ' chỗ)')
+                    ELSE s.service_name 
+                END AS name,
+                s.service_type,
+                COALESCE(s.base_cost, s.selling_price, 0) AS price,
+                s.base_cost,
+                s.selling_price,
+                vsd.seat_capacity AS capacity,
+                vsd.vehicle_model,
+                s.description,
+                s.image_url
+            FROM services s
+            LEFT JOIN vehicle_service_details vsd ON s.service_id = vsd.service_id
+            WHERE s.status = 'Active' AND s.service_type IN ('Xe vận chuyển', 'Transport', 'Vehicle', 'Vé máy bay', 'Flight')
+            ORDER BY s.base_cost ASC, s.selling_price ASC
         `);
 
-        res.status(200).json({ success: true, data: { sightseeing: places, accommodation: accommodations, transport: transports } });
+        res.status(200).json({ 
+            success: true, 
+            data: { 
+                sightseeing: places, 
+                accommodation: accommodations, 
+                transport: transports 
+            } 
+        });
     } catch (error) {
+        console.error("Lỗi getDestinationExtraServices:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -525,7 +610,16 @@ exports.bookCustomTourQuote = async (req, res) => {
 exports.sendInitialQuote = async (req, res) => {
     try {
         const { id } = req.params;
-        const { quote_price, note, price_breakdown } = req.body;
+        const { 
+            quote_price, 
+            note, 
+            price_breakdown, 
+            proposed_plan, 
+            base_cost, 
+            markup_percent, 
+            is_draft, 
+            send_to_manager 
+        } = req.body;
         const staffId = req.user?.id || req.user?.userId || req.user?.user_id;
 
         // Retrieve previous notes
@@ -538,25 +632,65 @@ exports.sendInitialQuote = async (req, res) => {
         
         let oldQuote = oldQuotes.length > 0 ? oldQuotes[0] : {};
 
-        // Create a new quote entry for initial quote
-        await sequelize.query(`
-            INSERT INTO custom_tour_quotes (request_id, staff_id, quote_price, staff_note, customer_note, manager_note, itinerary, base_cost, markup_percent, approval_status, price_breakdown)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Initial_Quoted', ?)
-        `, { replacements: [
-            id, staffId, quote_price, note, 
-            oldQuote.customer_note || null, oldQuote.manager_note || null, oldQuote.itinerary || null,
-            oldQuote.base_cost || 0, oldQuote.markup_percent || 20,
-            price_breakdown || null
-        ] });
+        let approvalStatus = 'Initial_Quoted';
+        let reqStatus = 'Initial_Quoted';
+
+        if (is_draft) {
+            approvalStatus = 'Pending';
+            reqStatus = 'Processing';
+        } else if (send_to_manager) {
+            approvalStatus = 'Pending_Approval';
+            reqStatus = 'Pending_Manager_Approval';
+        }
+
+        const planJson = proposed_plan 
+            ? (typeof proposed_plan === 'string' ? proposed_plan : JSON.stringify(proposed_plan)) 
+            : (oldQuote.itinerary || null);
+
+        // Check if there is an existing quote in Pending for this request that we can update
+        const [draftQuote] = await sequelize.query(`
+            SELECT quote_id FROM custom_tour_quotes 
+            WHERE request_id = ? AND approval_status IN ('Pending')
+            ORDER BY quote_id DESC LIMIT 1
+        `, { replacements: [id] });
+
+        if (draftQuote.length > 0 && is_draft) {
+            await sequelize.query(`
+                UPDATE custom_tour_quotes 
+                SET staff_id = ?, quote_price = ?, staff_note = ?, itinerary = ?, base_cost = ?, markup_percent = ?, price_breakdown = ?
+                WHERE quote_id = ?
+            `, { replacements: [
+                staffId, quote_price || 0, note || null, planJson,
+                base_cost || oldQuote.base_cost || 0, markup_percent || 20,
+                price_breakdown ? (typeof price_breakdown === 'string' ? price_breakdown : JSON.stringify(price_breakdown)) : null,
+                draftQuote[0].quote_id
+            ] });
+        } else {
+            // Create a new quote entry
+            await sequelize.query(`
+                INSERT INTO custom_tour_quotes (request_id, staff_id, quote_price, staff_note, customer_note, manager_note, itinerary, base_cost, markup_percent, approval_status, price_breakdown)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, { replacements: [
+                id, staffId, quote_price || 0, note || null, 
+                oldQuote.customer_note || null, oldQuote.manager_note || null, planJson,
+                base_cost || oldQuote.base_cost || 0, markup_percent || 20,
+                approvalStatus,
+                price_breakdown ? (typeof price_breakdown === 'string' ? price_breakdown : JSON.stringify(price_breakdown)) : null
+            ] });
+        }
 
         // Update request status
         await sequelize.query(`
-            UPDATE custom_tour_requests SET status = 'Initial_Quoted', quoted_price = ? WHERE request_id = ?
-        `, { replacements: [quote_price, id] });
+            UPDATE custom_tour_requests SET status = ?, quoted_price = ? WHERE request_id = ?
+        `, { replacements: [reqStatus, quote_price || 0, id] });
 
-        res.json({ success: true, message: 'Đã gửi báo giá sơ bộ' });
+        let message = 'Đã gửi báo giá sơ bộ cho khách hàng';
+        if (is_draft) message = 'Đã lưu bản nháp phương án báo giá thành công';
+        if (send_to_manager) message = 'Đã gửi phương án báo giá lên Quản lý duyệt';
+
+        res.json({ success: true, message });
     } catch (err) {
-        console.error(err);
+        console.error("Lỗi sendInitialQuote:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -622,7 +756,7 @@ exports.submitToManager = async (req, res) => {
         `, { replacements: [
             id, staffId, base_cost, quote_price, 
             typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary), 
-            oldQuote.staff_note || null, oldQuote.customer_note || null, oldQuote.manager_note || null,
+            note || oldQuote.staff_note || null, null, null,
             oldQuote.price_breakdown || null, oldQuote.markup_percent || 20
         ] });
 
@@ -649,8 +783,13 @@ exports.managerReview = async (req, res) => {
         const managerNoteValue = manager_note || null;
 
         await sequelize.query(`
-            UPDATE custom_tour_quotes SET approval_status = ?, manager_note = ?, manager_id = ? WHERE quote_id = ?
-        `, { replacements: [newQuoteStatus, managerNoteValue, managerId, quoteId] });
+            UPDATE custom_tour_quotes 
+            SET approval_status = ?, 
+                manager_note = ?, 
+                manager_id = ?,
+                customer_note = CASE WHEN ? = 'Approved' THEN NULL ELSE customer_note END
+            WHERE quote_id = ?
+        `, { replacements: [newQuoteStatus, managerNoteValue, managerId, newQuoteStatus, quoteId] });
 
         // Update request status based on the quote's request_id
         await sequelize.query(`

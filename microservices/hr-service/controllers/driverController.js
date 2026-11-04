@@ -402,7 +402,7 @@ exports.reportVehicleIncident = async (req, res) => {
 
       await sequelize.query(`
         INSERT INTO notifications (type, target_role, title, content, departure_id, is_read, action_url, created_at)
-        VALUES ('TOUR_INCIDENT', 'STAFF', :notifTitle, :notifContent, :departure_id, 0, 'vehicle_incidents', NOW())
+        VALUES ('TOUR_INCIDENT', 'STAFF', :notifTitle, :notifContent, :departure_id, 0, 'staff_vehicle_incidents', NOW())
       `, {
         replacements: {
           notifTitle,

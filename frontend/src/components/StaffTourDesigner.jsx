@@ -3,6 +3,17 @@ import axios from 'axios';
 import TimelineBuilder from './TourBuilder/TimelineBuilder';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
+const cleanHotelDisplayName = (name) => {
+    if (!name || typeof name !== 'string') return '';
+    let cleaned = name.trim();
+    const parts = cleaned.split(' - ').map(p => p.trim());
+    if (parts.length >= 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+        parts.splice(1, 1);
+        cleaned = parts.join(' - ');
+    }
+    return cleaned;
+};
+
 const formatMoneyLocal = (amount) => {
     if (isNaN(amount) || amount === null || amount === undefined) return '0';
     return Number(amount).toLocaleString('vi-VN');
@@ -90,21 +101,36 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         const fetchResources = async () => {
             try {
                 const token = localStorage.getItem("token");
-                const [resDest, resServ] = await Promise.all([
+                const [resDest, resServ, resFleet] = await Promise.all([
                     axios.get("http://localhost:5000/api/destinations", { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get("http://localhost:5000/api/services", { headers: { Authorization: `Bearer ${token}` } })
+                    axios.get("http://localhost:5000/api/services", { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get("http://localhost:5000/api/tours/fleet/public-vehicles", { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: { success: false } }))
                 ]);
                 
                 if (resDest.data.success) setDestinations(resDest.data.data);
                 if (resServ.data.success) {
                     setAllServices(resServ.data.data);
-                    const transports = resServ.data.data.filter(s => 
+                    let transports = resServ.data.data.filter(s => 
                         (s.vehicle_service_id !== null && s.vehicle_service_id !== undefined) ||
                         s.service_type === 'Xe vận chuyển' ||
                         s.service_type === 'Vé máy bay' ||
                         s.service_type === 'Phương tiện' ||
                         s.service_type === 'Transport'
-                    ).sort((a, b) => Number(a.capacity || a.seat_capacity || 0) - Number(b.capacity || b.seat_capacity || 0));
+                    );
+
+                    if (resFleet?.data?.success && Array.isArray(resFleet.data.data)) {
+                        const fleetVehicles = resFleet.data.data.map(v => ({
+                            service_id: `fleet_${v.vehicle_id}`,
+                            service_name: `${v.vehicle_name} (${v.license_plate || v.capacity + ' chỗ'})`,
+                            base_cost: Number(v.base_cost ?? v.price ?? v.selling_price ?? v.price_per_day ?? 0),
+                            capacity: v.capacity,
+                            service_type: 'Xe vận chuyển',
+                            unit: 'ngày'
+                        }));
+                        transports = [...transports, ...fleetVehicles];
+                    }
+
+                    transports.sort((a, b) => Number(a.capacity || a.seat_capacity || 0) - Number(b.capacity || b.seat_capacity || 0));
                     setTransportServices(transports);
                 }
             } catch (error) { console.error('Lỗi tải dữ liệu', error); }
@@ -115,30 +141,54 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
     useEffect(() => {
         if (!requestData) return;
         
-        if (requestData.proposed_itinerary) {
+        let parsedProposal = null;
+        const rawProposal = requestData.proposed_itinerary || requestData.itinerary || requestData.proposed_plan;
+        if (rawProposal) {
             try {
-                const parsed = typeof requestData.proposed_itinerary === 'string' 
-                    ? JSON.parse(requestData.proposed_itinerary) 
-                    : requestData.proposed_itinerary;
-                
-                if (parsed.days) {
-                    setDays(parsed.days);
-                    if (parsed.costConfig) {
-                        setCostConfig(prev => ({...prev, ...parsed.costConfig}));
-                    }
-                    if (parsed.dayImages) {
-                        setDayImagePreviews(parsed.dayImages);
-                    }
-                    if (parsed.staffNote && parsed.staffNote !== requestData.staff_note) {
-                        setStaffNote(parsed.staffNote);
-                    }
-                    if (parsed.tourName) setTourName(parsed.tourName);
-                    if (parsed.tourDescription) setTourDescription(parsed.tourDescription);
-                    return; // if loaded, stop here
-                }
+                parsedProposal = typeof rawProposal === 'string' 
+                    ? JSON.parse(rawProposal) 
+                    : rawProposal;
             } catch (e) {
                 console.error("Lỗi parse proposed_itinerary", e);
             }
+        }
+
+        const proposedServices = parsedProposal?.proposedServices || parsedProposal || {};
+        const quotedTransport = proposedServices.transport || null;
+        const quotedHotel = proposedServices.hotel || null;
+        const quotedAdjTransportCost = parsedProposal?.adjTransportCost ?? requestData.adjTransportCost ?? quotedTransport?.pricePerDay;
+        const quotedAdjHotelCost = parsedProposal?.adjHotelCost ?? requestData.adjHotelCost ?? quotedHotel?.pricePerNight;
+        const quotedGuidePrice = parsedProposal?.guidePricePerDay ?? requestData.guidePricePerDay ?? 500000;
+        const quotedMealPrices = parsedProposal?.mealPrices || {};
+
+        if (parsedProposal && parsedProposal.days) {
+            setDays(parsedProposal.days);
+            if (parsedProposal.costConfig) {
+                setCostConfig(prev => {
+                    const merged = { ...prev, ...parsedProposal.costConfig };
+                    const currentName = merged.selectedTransport?.service_name || '';
+                    if (quotedTransport && (currentName.includes('[Dự kiến') || currentName.includes('Xe tiêu chuẩn'))) {
+                        const rawTName = quotedTransport.name || quotedTransport.assignedVehicle?.vehicle_name || quotedTransport.assignedVehicle?.service_name;
+                        if (rawTName) {
+                            merged.selectedTransport = {
+                                ...merged.selectedTransport,
+                                service_name: rawTName,
+                                base_cost: Number(quotedAdjTransportCost ?? quotedTransport.pricePerDay ?? merged.selectedTransport.base_cost ?? 0)
+                            };
+                        }
+                    }
+                    return merged;
+                });
+            }
+            if (parsedProposal.dayImages) {
+                setDayImagePreviews(parsedProposal.dayImages);
+            }
+            if (parsedProposal.staffNote && parsedProposal.staffNote !== requestData.staff_note) {
+                setStaffNote(parsedProposal.staffNote);
+            }
+            if (parsedProposal.tourName) setTourName(parsedProposal.tourName);
+            if (parsedProposal.tourDescription) setTourDescription(parsedProposal.tourDescription);
+            return; // if loaded, stop here
         }
 
         let prefs = {};
@@ -153,14 +203,21 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         const d2 = new Date(requestData.return_date);
         const totalDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
 
+        // Khách sạn từ báo giá của nhân viên
+        const isHotelSelf = quotedHotel
+            ? (quotedHotel.isSelfArranged || (quotedHotel.name || '').toLowerCase().includes('tự túc'))
+            : (prefs.hotelName || '').toLowerCase().includes('tự túc');
+        const rawHotelName = cleanHotelDisplayName(quotedHotel?.name || prefs.hotelName || '');
+        const hotelDailyRate = Number(quotedAdjHotelCost ?? quotedHotel?.pricePerNight ?? (prefs.hotelPrice ? Math.round(Number(prefs.hotelPrice)/Math.max(1, totalDays-1)) : 0));
+
         const initialDays = [];
         for (let i = 1; i <= totalDays; i++) {
             let accommodation = null;
-            if (prefs.hotelName && (i < totalDays || totalDays === 1)) {
+            if (!isHotelSelf && rawHotelName && (i < totalDays || totalDays === 1)) {
                 accommodation = {
-                    service_id: 'custom',
-                    name: prefs.hotelName,
-                    price: prefs.hotelPrice ? Math.round(Number(prefs.hotelPrice)/Math.max(1, totalDays-1)) : 0,
+                    service_id: quotedHotel?.service_id || 'custom',
+                    name: rawHotelName,
+                    price: hotelDailyRate,
                     autoMatchPending: true
                 };
             }
@@ -177,27 +234,78 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         }
         setDays(initialDays);
         
+        // Phương tiện từ báo giá của nhân viên văn phòng
         let transportTicketsCost = 0;
+        let transportFixedCost = 0;
         let initialTransport = null;
 
-        if (prefs.transportName) {
+        const isTransportSelf = quotedTransport
+            ? (quotedTransport.isSelfArranged || (quotedTransport.name || '').toLowerCase().includes('tự túc'))
+            : (prefs.transportName || '').toLowerCase().includes('tự túc');
+
+        const rawTransportName = quotedTransport?.name 
+            || quotedTransport?.assignedVehicle?.vehicle_name 
+            || quotedTransport?.assignedVehicle?.service_name 
+            || prefs.transportName 
+            || '';
+
+        if (!isTransportSelf && rawTransportName) {
+            const dailyRate = Number(
+                quotedAdjTransportCost ||
+                quotedTransport?.pricePerDay ||
+                quotedTransport?.price ||
+                quotedTransport?.base_cost ||
+                quotedTransport?.assignedVehicle?.base_cost ||
+                quotedTransport?.assignedVehicle?.price ||
+                quotedTransport?.assignedVehicle?.selling_price ||
+                quotedTransport?.assignedVehicle?.price_per_day ||
+                prefs.transportPrice ||
+                0
+            );
+            
+            const isFlight = (quotedTransport?.unit && (quotedTransport.unit.toLowerCase().includes('vé') || quotedTransport.unit.toLowerCase().includes('người')))
+                || rawTransportName.toLowerCase().includes('máy bay') 
+                || rawTransportName.toLowerCase().includes('vé');
+
+            if (isFlight) {
+                transportTicketsCost = dailyRate;
+                transportFixedCost = 0;
+            } else {
+                transportTicketsCost = 0;
+                transportFixedCost = dailyRate * totalDays;
+            }
+
+            const vehicleId = quotedTransport?.assignedVehicle?.service_id 
+                || (quotedTransport?.assignedVehicle?.vehicle_id ? `fleet_${quotedTransport.assignedVehicle.vehicle_id}` : (quotedTransport?.service_id || 'custom'));
+
             initialTransport = {
-                service_id: 'custom',
-                service_name: prefs.transportName,
-                base_cost: prefs.transportPrice || 0,
-                unit: 'vé',
+                service_id: vehicleId,
+                service_name: rawTransportName,
+                base_cost: dailyRate,
+                unit: isFlight ? 'vé' : 'ngày',
+                capacity: quotedTransport?.capacity || quotedTransport?.assignedVehicle?.capacity,
                 autoMatchPending: true
             };
-            transportTicketsCost = Number(prefs.transportPrice || 0);
         } else if (prefs.transportPrice) {
             transportTicketsCost = Number(prefs.transportPrice);
         }
 
         setCostConfig(prev => ({
             ...prev,
-            margin: requestData.markup_percent || 20,
+            margin: Number(requestData.markup_percent || parsedProposal?.markup_percent || 20),
             selectedTransport: initialTransport,
-            variable: { ...prev.variable, tickets: transportTicketsCost }
+            fixed: {
+                ...prev.fixed,
+                transport: transportFixedCost,
+                guidePerDay: Number(quotedGuidePrice)
+            },
+            variable: {
+                ...prev.variable,
+                tickets: transportTicketsCost,
+                breakfast: Number(quotedMealPrices.breakfast ?? prev.variable?.breakfast ?? 50000),
+                lunch: Number(quotedMealPrices.lunch ?? prev.variable?.lunch ?? 150000),
+                dinner: Number(quotedMealPrices.dinner ?? prev.variable?.dinner ?? 150000)
+            }
         }));
 
     }, [requestData]);
@@ -206,25 +314,27 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
 
     useEffect(() => {
         if (transportServices.length > 0 && costConfig.selectedTransport?.autoMatchPending) {
-            const searchName = costConfig.selectedTransport.service_name.toLowerCase().replace('hệ thống - ', '').trim();
+            const currentSelected = costConfig.selectedTransport;
+            const searchName = (currentSelected.service_name || '').toLowerCase().replace('hệ thống - ', '').trim();
             const match = transportServices.find(t => 
-                t.service_name.toLowerCase().includes(searchName) || 
-                searchName.includes(t.service_name.toLowerCase())
+                (currentSelected.service_id && currentSelected.service_id !== 'custom' && String(t.service_id) === String(currentSelected.service_id)) ||
+                (searchName && (t.service_name.toLowerCase().includes(searchName) || searchName.includes(t.service_name.toLowerCase())))
             );
 
             if (match) {
                 const isTicket = match.unit && (match.unit.toLowerCase().includes('vé') || match.unit.toLowerCase().includes('người'));
+                const matchedDailyRate = Number(match.base_cost || match.price || match.selling_price || 0);
                 
                 setCostConfig(prev => ({
                     ...prev,
                     selectedTransport: match, // Found match in DB
                     fixed: {
                         ...prev.fixed,
-                        transport: isTicket ? 0 : Number(match.base_cost || 0) * days.length
+                        transport: isTicket ? 0 : (prev.fixed.transport || (matchedDailyRate * (days.length || 1)))
                     },
                     variable: {
                         ...prev.variable,
-                        tickets: isTicket ? Number(match.base_cost || 0) : 0
+                        tickets: isTicket ? matchedDailyRate : 0
                     }
                 }));
             } else {
@@ -322,6 +432,8 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
             let selected = null;
             if (sId === 'custom' && prev.selectedTransport?.service_id === 'custom') {
                 selected = prev.selectedTransport;
+            } else if (prev.selectedTransport && String(prev.selectedTransport.service_id) === String(sId)) {
+                selected = prev.selectedTransport;
             } else {
                 selected = transportServices.find(t => String(t.service_id) === String(sId));
             }
@@ -354,7 +466,8 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
     const countDinner = costConfig.variable.countDinner !== undefined ? Number(costConfig.variable.countDinner) : includedDinner;
 
     const totalVariable = (autoAccommodationCost / 2) 
-        + Number(costConfig.variable.tickets || autoTicketsCost)
+        + autoTicketsCost
+        + Number(costConfig.variable.tickets || 0)
         + (Number(costConfig.variable.breakfast) * countBreakfast)
         + (Number(costConfig.variable.lunch) * countLunch)
         + (Number(costConfig.variable.dinner) * countDinner)
@@ -365,12 +478,76 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
     const sellingPrice = manualSellingPrice !== null && manualSellingPrice !== '' ? manualSellingPrice : (manualSellingPrice === '' ? '' : calculatedSellingPrice);
 
     const handleSubmitToManager = async () => {
+        const durationDays = days.length || 1;
+        const assignedVehicle = costConfig.selectedTransport;
+        const vehicleName = assignedVehicle ? formatVehicleDisplayName(assignedVehicle) : '';
+        const isTransportSelf = !assignedVehicle || vehicleName.toLowerCase().includes('tự túc');
+        const vehicleDailyRate = isTransportSelf ? 0 : (
+            assignedVehicle?.base_cost 
+                ? Number(assignedVehicle.base_cost) 
+                : (durationDays > 0 && costConfig.fixed?.transport ? Math.round(Number(costConfig.fixed.transport) / durationDays) : 0)
+        );
+
+        const firstAcc = days.find(d => d.accommodation)?.accommodation;
+        const isHotelSelf = !firstAcc || (firstAcc.name || '').toLowerCase().includes('tự túc');
+
+        let clientPrefs = {};
+        if (typeof requestData.preferences === 'string') {
+            try { clientPrefs = JSON.parse(requestData.preferences); } catch(e){}
+        } else if (typeof requestData.preferences === 'object') {
+            clientPrefs = requestData.preferences || {};
+        }
+
+        const proposedServicesData = {
+            transport: {
+                name: isTransportSelf ? 'Khách tự túc phương tiện di chuyển' : (vehicleName || clientPrefs.transportName || 'Chưa chọn xe cụ thể'),
+                requestedSegment: clientPrefs.transportName || 'Theo đề xuất của công ty',
+                assignedVehicle: assignedVehicle || null,
+                isAssigned: Boolean(assignedVehicle && !isTransportSelf),
+                pricePerDay: vehicleDailyRate,
+                capacity: assignedVehicle?.capacity || null,
+                isCustomized: Boolean(assignedVehicle),
+                isSelfArranged: isTransportSelf,
+                unit: assignedVehicle?.unit || 'ngày',
+                reason: ''
+            },
+            hotel: {
+                name: isHotelSelf ? 'Khách tự túc chỗ ở' : cleanHotelDisplayName(firstAcc?.name || clientPrefs.hotelName || ''),
+                pricePerNight: Number(firstAcc?.price || 0),
+                isAssigned: Boolean(firstAcc && !isHotelSelf),
+                isCustomized: Boolean(firstAcc),
+                isSelfArranged: isHotelSelf,
+                reason: ''
+            },
+            guide: {
+                enabled: Number(costConfig.fixed?.guidePerDay || 0) > 0,
+                pricePerDay: Number(costConfig.fixed?.guidePerDay || 500000)
+            },
+            meal: {
+                enabled: true,
+                prices: {
+                    breakfast: Number(costConfig.variable?.breakfast || 50000),
+                    lunch: Number(costConfig.variable?.lunch || 150000),
+                    dinner: Number(costConfig.variable?.dinner || 150000)
+                }
+            }
+        };
+
         const designPayload = JSON.stringify({
             tourName,
             tourDescription,
             days,
             costConfig,
-            staffNote
+            staffNote,
+            proposedServices: proposedServicesData,
+            adjTransportCost: vehicleDailyRate,
+            adjHotelCost: Number(firstAcc?.price || 0),
+            guidePricePerDay: Number(costConfig.fixed?.guidePerDay || 500000),
+            mealPrices: {
+                breakfast: Number(costConfig.variable?.breakfast || 50000),
+                lunch: Number(costConfig.variable?.lunch || 150000),
+                dinner: Number(costConfig.variable?.dinner || 150000)
+            }
         });
 
         try {
@@ -474,12 +651,30 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                     <div>
                                         <strong style={{ color: '#0f172a' }}>Ngân sách khách:</strong> <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatMoneyLocal(requestData.budget)} đ/người</span>
                                     </div>
-                                    <div>
-                                        <strong style={{ color: '#0f172a' }}>Phương tiện:</strong> {formatVehicleDisplayName(prefs.transportName) || 'Không rõ'}
-                                    </div>
-                                    <div>
-                                        <strong style={{ color: '#0f172a' }}>Lưu trú:</strong> {prefs.hotelName || 'Không rõ'}
-                                    </div>
+                                    {(() => {
+                                        let parsedProp = null;
+                                        const rawProp = requestData.proposed_itinerary || requestData.itinerary || requestData.proposed_plan;
+                                        if (rawProp) {
+                                            try { parsedProp = typeof rawProp === 'string' ? JSON.parse(rawProp) : rawProp; } catch(e){}
+                                        }
+                                        const propServ = parsedProp?.proposedServices || parsedProp || {};
+                                        const displayTransport = propServ.transport?.name 
+                                            || propServ.transport?.assignedVehicle?.vehicle_name 
+                                            || propServ.transport?.assignedVehicle?.service_name 
+                                            || prefs.transportName;
+                                        const displayHotel = cleanHotelDisplayName(propServ.hotel?.name || prefs.hotelName);
+
+                                        return (
+                                            <>
+                                                <div>
+                                                    <strong style={{ color: '#0f172a' }}>Phương tiện:</strong> {formatVehicleDisplayName(displayTransport) || 'Không rõ'}
+                                                </div>
+                                                <div>
+                                                    <strong style={{ color: '#0f172a' }}>Lưu trú:</strong> {displayHotel || 'Không rõ'}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                     {prefs.note && (
                                         <div style={{ background: '#fff', padding: '10px', borderRadius: '6px', border: '1px dashed #7dd3fc', color: '#0c4a6e', marginTop: '5px' }}>
                                             <strong>Ghi chú:</strong> {prefs.note}
@@ -496,13 +691,13 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chọn phương tiện di chuyển chính</label>
                                 <select 
-                                    value={costConfig.selectedTransport?.service_id || ''} 
+                                    value={costConfig.selectedTransport?.service_id || (costConfig.selectedTransport?.service_name ? 'custom' : '')} 
                                     onChange={handleTransportChange}
                                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                 >
                                     <option value="">-- Tự túc / Không chọn --</option>
-                                    {costConfig.selectedTransport?.service_id === 'custom' && (
-                                        <option value="custom">{formatVehicleDisplayName(costConfig.selectedTransport)}</option>
+                                    {costConfig.selectedTransport?.service_name && !transportServices.some(t => String(t.service_id) === String(costConfig.selectedTransport.service_id)) && (
+                                        <option value={costConfig.selectedTransport.service_id || 'custom'}>{formatVehicleDisplayName(costConfig.selectedTransport)}</option>
                                     )}
                                     {transportServices.map(t => (
                                         <option key={t.service_id} value={t.service_id}>{formatVehicleDisplayName(t)}</option>

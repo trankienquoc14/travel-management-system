@@ -278,20 +278,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                         )}
                     </li>
 
-                    {/* 2. Dịch vụ */}
-                    <li 
-                        className={activeTab === 'services' ? 'active' : ''} 
-                        onClick={() => navigate('/services')} 
-                        style={{ 
-                            cursor: 'pointer', 
-                            fontWeight: activeTab === 'services' ? '800' : '600',
-                            color: activeTab === 'services' ? '#0194f3' : '#475569',
-                            fontSize: '15px',
-                            transition: 'color 0.2s ease'
-                        }}
-                    >
-                        Dịch vụ
-                    </li>
+                    {/* 2. Dịch vụ (Đã ẩn theo yêu cầu) */}
 
                     {/* 3. Khám phá */}
                     <li 

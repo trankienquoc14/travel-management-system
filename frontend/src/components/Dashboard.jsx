@@ -14,6 +14,7 @@ import ServiceRequestSupplement from './ServiceRequestSupplement';
 import PartnerServiceRequests from './PartnerServiceRequests';
 import PartnerServiceSummary from './PartnerServiceSummary';
 import StaffTourRequestManager from './StaffTourRequestManager';
+import ErrorBoundary from './ErrorBoundary';
 import StaffTourDesigner from './StaffTourDesigner';
 import PlaceManagement from './PlaceManagement';
 import StaffPendingTours from './StaffPendingTours'; // Thêm dòng này
@@ -95,17 +96,17 @@ const Dashboard = () => {
       fetchUserProfile(token, parsedUser);
 
       // 🚀 ĐẶT TAB MẶC ĐỊNH THEO TỪNG ROLE (Dựa vào Use Case)
-      if (parsedUser.role === 7 || parsedUser.role === 'Partner') {
+      if (parsedUser.role === 7 || parsedUser.role === 'Partner' || parsedUser.role_id === 7) {
         setActiveTab('partner_inventory'); // Đối tác vào thẳng Kho của họ
-      } else if (parsedUser.role === 6 || parsedUser.role === 'Customer') {
+      } else if (parsedUser.role === 6 || parsedUser.role === 'Customer' || parsedUser.role_id === 6) {
         setActiveTab('my_bookings'); // Khách hàng vào thẳng Đơn đặt tour của tôi
-      } else if (parsedUser.role === 4) {
-        setActiveTab('tour_requests'); // Nhân viên văn phòng vào thẳng Yêu cầu/Tư vấn
-      } else if (parsedUser.role === 2 || parsedUser.role === 'HR Manager') {
+      } else if (parsedUser.role === 4 || parsedUser.role === 'Office Staff' || parsedUser.role_id === 4) {
+        setActiveTab('tour_requests_pending'); // Nhân viên văn phòng vào thẳng Yêu cầu/Tư vấn
+      } else if (parsedUser.role === 2 || parsedUser.role === 'HR Manager' || parsedUser.role_id === 2) {
         setActiveTab('hr_employees'); // Quản lý nhân sự vào thẳng Quản lý nhân sự
-      } else if (parsedUser.role === 5 || parsedUser.role === 'Tour Guide') {
+      } else if (parsedUser.role === 5 || parsedUser.role === 'Tour Guide' || parsedUser.role_id === 5) {
         setActiveTab('guide_assigned'); // Hướng dẫn viên vào thẳng Danh sách tour được phân công
-      } else if (parsedUser.role === 8 || parsedUser.role === 'Driver' || parsedUser.role === 'Tài xế') {
+      } else if (parsedUser.role === 8 || parsedUser.role === 'Driver' || parsedUser.role === 'Tài xế' || parsedUser.role_id === 8) {
         setActiveTab('driver_assigned'); // Tài xế vào thẳng Danh sách chuyến xe được phân công
       } else {
         setActiveTab('overview'); // Admin và Quản lý Tour vào Tổng quan
@@ -162,14 +163,14 @@ const Dashboard = () => {
   if (!user) return null;
 
   // 🚀 ĐỊNH NGHĨA QUYỀN TRUY CẬP TỪ SƠ ĐỒ USE CASE
-  const isPartner = user.role === 7 || user.role === 'Partner';
-  const isCustomer = user.role === 6 || user.role === 'Customer';
-  const isOfficeStaff = user.role === 4;
-  const isTourManager = user.role === 3;
-  const isHRManager = user.role === 2 || user.role === 'HR Manager';
-  const isTourGuide = user.role === 5 || user.role === 'Tour Guide';
-  const isDriver = user.role === 8 || user.role === 'Driver' || user.role === 'Tài xế';
-  const isAdmin = user.role === 1; // Admin hệ thống
+  const isPartner = user.role === 7 || user.role === 'Partner' || user.role_id === 7;
+  const isCustomer = user.role === 6 || user.role === 'Customer' || user.role_id === 6;
+  const isOfficeStaff = user.role === 4 || user.role === 'Office Staff' || user.role_id === 4;
+  const isTourManager = user.role === 3 || user.role === 'Tour Manager' || user.role_id === 3;
+  const isHRManager = user.role === 2 || user.role === 'HR Manager' || user.role_id === 2;
+  const isTourGuide = user.role === 5 || user.role === 'Tour Guide' || user.role_id === 5;
+  const isDriver = user.role === 8 || user.role === 'Driver' || user.role === 'Tài xế' || user.role_id === 8;
+  const isAdmin = user.role === 1 || user.role_id === 1; // Admin hệ thống
   const isInternalStaff = !isCustomer && !isPartner; // Tất cả nhân viên nội bộ công ty
 
   // Hàm render trang Overview (Chỉ dành cho Quản lý Tour và Admin theo Use Case: Xem báo cáo thống kê)
@@ -314,7 +315,7 @@ const Dashboard = () => {
               {/* ========================================================= */}
               {/* 2. QUẢN LÝ YÊU CẦU & QUẢN LÝ TOUR & ĐẶT TOUR (Nhân viên VP & Admin) */}
               {/* ========================================================= */}
-              {(isOfficeStaff || isAdmin || isTourManager) && (
+              {(isOfficeStaff || isAdmin) && (
                 <>
                   {/* CHĂM SÓC KHÁCH HÀNG & CHAT TRỰC TUYẾN */}
                   <li 
@@ -366,10 +367,10 @@ const Dashboard = () => {
                   {isRequestGroupOpen && (
                     <>
                       <li className={activeTab === 'tour_requests_pending' ? 'active' : ''} onClick={() => setActiveTab('tour_requests_pending')}>
-                        ⏳ Nhận yêu cầu báo giá
+                        ⏳ Báo giá tour theo yêu cầu
                       </li>
                       <li className={activeTab === 'tour_requests_revision' ? 'active' : ''} onClick={() => setActiveTab('tour_requests_revision')}>
-                        ✏️ Chỉnh sửa yêu cầu
+                        ✏️ Chỉnh sửa thiết kế
                       </li>
                       <li className={activeTab === 'tour_requests' ? 'active' : ''} onClick={() => setActiveTab('tour_requests')}>
                         🛎️ Thiết kế tour đã báo giá
@@ -437,14 +438,11 @@ const Dashboard = () => {
                   </li>
                   {isOfficeStaffVehicleGroupOpen && (
                     <>
-                      <li className={activeTab === 'staff_fleet_vehicles' ? 'active' : ''} onClick={() => setActiveTab('staff_fleet_vehicles')}>
+                      <li className={activeTab === 'staff_fleet_vehicles' || activeTab === 'staff_vehicle_history' ? 'active' : ''} onClick={() => setActiveTab('staff_fleet_vehicles')}>
                         🚌 Quản lý xe
                       </li>
                       <li className={activeTab === 'staff_vehicle_incidents' ? 'active' : ''} onClick={() => setActiveTab('staff_vehicle_incidents')}>
-                        ⚠️ Báo cáo sự cố xe
-                      </li>
-                      <li className={activeTab === 'staff_vehicle_history' ? 'active' : ''} onClick={() => setActiveTab('staff_vehicle_history')}>
-                        📜 Lịch sử xe
+                        ⚠️ Xử lý sự cố xe
                       </li>
                     </>
                   )}
@@ -549,7 +547,7 @@ const Dashboard = () => {
               {/* ========================================================= */}
               {/* QUẢN LÝ YÊU CẦU DỊCH VỤ                                   */}
               {/* ========================================================= */}
-              {(isTourManager || isAdmin || isOfficeStaff) && (
+              {(isTourManager || isAdmin) && (
                 <>
                   <li 
                     onClick={() => setIsServiceRequestGroupOpen(!isServiceRequestGroupOpen)}
@@ -882,27 +880,29 @@ const Dashboard = () => {
             )
           )}
 
-          {/* Vùng Tư vấn & Chat Trực Tuyến với Khách Hàng (Nhân viên VP, Quản lý Tour, Admin) */}
-          {activeTab === 'staff_live_chat' && (isOfficeStaff || isAdmin || isTourManager) && (
+          {/* Vùng Tư vấn & Chat Trực Tuyến với Khách Hàng (Nhân viên VP, Admin) */}
+          {activeTab === 'staff_live_chat' && (isOfficeStaff || isAdmin) && (
             <StaffLiveChat />
           )}
 
-          {/* Vùng Nghiệp vụ Tour & Quản lý Yêu cầu (Nhân viên VP, Quản lý Tour, Admin) */}
-          {['tour_requests', 'tour_requests_pending', 'tour_requests_revision'].includes(activeTab) && (isOfficeStaff || isAdmin || isTourManager) && (
-            <StaffTourRequestManager
-              mode={activeTab}
-              defaultFilter={
-                activeTab === 'tour_requests_pending' ? 'Mới' :
-                activeTab === 'tour_requests_revision' ? 'Tất cả cần sửa' : 'Tất cả'
-              }
-              onStartDesign={(req) => {
-                setDesigningRequest(req);      // Lưu data khách đang tư vấn dở
-                setActiveTab('tour_designer'); // Chuyển thẳng sang trang Thiết kế
-              }}
-            />
+          {/* Vùng Nghiệp vụ Tour & Quản lý Yêu cầu (Nhân viên VP, Admin) */}
+          {['tour_requests', 'tour_requests_pending', 'tour_requests_revision'].includes(activeTab) && (isOfficeStaff || isAdmin) && (
+            <ErrorBoundary key={activeTab}>
+              <StaffTourRequestManager
+                mode={activeTab}
+                defaultFilter={
+                  activeTab === 'tour_requests_pending' ? 'Tất cả' :
+                  activeTab === 'tour_requests_revision' ? 'Tất cả cần sửa' : 'Tất cả'
+                }
+                onStartDesign={(req) => {
+                  setDesigningRequest(req);      // Lưu data khách đang tư vấn dở
+                  setActiveTab('tour_designer'); // Chuyển thẳng sang trang Thiết kế
+                }}
+              />
+            </ErrorBoundary>
           )}
           {/* Vùng Tour đã thiết kế */}
-          {activeTab === 'approved_tours' && (isOfficeStaff || isAdmin || isTourManager) && (
+          {activeTab === 'approved_tours' && (isOfficeStaff || isAdmin) && (
             <StaffPendingTours
               onEditDesign={(req) => {
                 // Đưa toàn bộ data của tour này vào state của phòng thiết kế
@@ -919,7 +919,7 @@ const Dashboard = () => {
           )}
 
           {/* Vùng Thiết kế Tour */}
-          {activeTab === 'tour_designer' && (isOfficeStaff || isAdmin || isTourManager) && (
+          {activeTab === 'tour_designer' && (isOfficeStaff || isAdmin) && (
             <StaffTourDesigner
               requestData={designingRequest}
               onBack={() => setActiveTab('tour_requests')}
@@ -935,9 +935,9 @@ const Dashboard = () => {
           {activeTab === 'tours' && (isTourManager || isAdmin) && <TourManagement onAddNew={() => { setEditTourId(null); setActiveTab('tour_form'); }} onEdit={(id) => { setEditTourId(id); setActiveTab('tour_form'); }} />}
           {activeTab === 'tour_form' && (isTourManager || isAdmin) && <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />}
           {activeTab === 'approve_quotes' && (isTourManager || isAdmin) && <ManagerTourApproval />} {/* THÊM DÒNG NÀY */}
-          {activeTab === 'orders' && (isOfficeStaff || isAdmin || isTourManager) && <StaffBookingManagement />}
-          {activeTab === 'payments' && (isOfficeStaff || isAdmin || isTourManager) && <StaffPaymentManagement />}
-          {activeTab === 'change_request' && (isOfficeStaff || isAdmin || isTourManager) && <StaffChangeRequestManager />}
+          {activeTab === 'orders' && (isOfficeStaff || isAdmin) && <StaffBookingManagement />}
+          {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
+          {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
           {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
           {activeTab === 'tour_operations' && (isTourManager || isAdmin) && <TourOperations />}
           {activeTab === 'fleet_vehicles' && (isTourManager || isAdmin) && <VehicleFleetManagement />}
@@ -950,16 +950,16 @@ const Dashboard = () => {
           )}
           
           {/* QUẢN LÝ YÊU CẦU DỊCH VỤ */}
-          {activeTab === 'service_requests' && (isTourManager || isAdmin || isOfficeStaff) && <ServiceRequestList />}
-          {activeTab === 'create_request' && (isTourManager || isAdmin || isOfficeStaff) && (
+          {activeTab === 'service_requests' && (isTourManager || isAdmin) && <ServiceRequestList />}
+          {activeTab === 'create_request' && (isTourManager || isAdmin) && (
             <ServiceRequestCreate 
               setActiveTab={setActiveTab} 
               initialDepartureId={notificationDepartureId} 
             />
           )}
-          {activeTab === 'create_supplement_request' && (isTourManager || isAdmin || isOfficeStaff) && <ServiceRequestSupplement />}
+          {activeTab === 'create_supplement_request' && (isTourManager || isAdmin) && <ServiceRequestSupplement />}
           
-          {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin || isTourManager) && <StaffFixedTourDesigner editTourData={fixedTourToEdit} />}
+          {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner editTourData={fixedTourToEdit} />}
           {/* Vùng đối tác */}
           {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
           {activeTab === 'partner_requests' && isPartner && <PartnerServiceRequests />}
@@ -971,11 +971,11 @@ const Dashboard = () => {
 
           {/* Vùng Quản lý nhân sự */}
           {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}
-          {activeTab === 'hr_customers' && (isOfficeStaff || isAdmin || isTourManager) && <HRCustomerManagement />}
+          {activeTab === 'hr_customers' && (isOfficeStaff || isAdmin) && <HRCustomerManagement />}
 
-          {activeTab === 'staff_fleet_vehicles' && (isOfficeStaff || isAdmin || isTourManager) && <StaffVehicleManagement />}
-          {activeTab === 'staff_vehicle_incidents' && (isOfficeStaff || isAdmin || isTourManager) && <StaffVehicleIncidents />}
-          {activeTab === 'staff_vehicle_history' && (isOfficeStaff || isAdmin || isTourManager) && <StaffVehicleHistory />}
+          {activeTab === 'staff_fleet_vehicles' && (isOfficeStaff || isAdmin) && <StaffVehicleManagement onViewHistory={(vid) => { if (vid) sessionStorage.setItem('staff_selected_history_vehicle_id', String(vid)); setActiveTab('staff_vehicle_history'); }} />}
+          {activeTab === 'staff_vehicle_incidents' && (isOfficeStaff || isAdmin) && <StaffVehicleIncidents onViewHistory={(vid) => { if (vid) sessionStorage.setItem('staff_selected_history_vehicle_id', String(vid)); setActiveTab('staff_vehicle_history'); }} />}
+          {activeTab === 'staff_vehicle_history' && (isOfficeStaff || isAdmin) && <StaffVehicleHistory onBack={() => setActiveTab('staff_fleet_vehicles')} />}
 
           {activeTab === 'hr_attendance' && (isHRManager || isAdmin) && <HRAttendance />}
           {activeTab === 'hr_payroll' && (isHRManager || isAdmin) && <HRPayroll />}

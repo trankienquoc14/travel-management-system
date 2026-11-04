@@ -13,15 +13,11 @@ import '../index.css';
 const HomePage = () => {
     const [user, setUser] = useState(null);
     const [tours, setTours] = useState([]);
-    const [services, setServices] = useState([]);
     const [loadingTours, setLoadingTours] = useState(true);
-    const [loadingServices, setLoadingServices] = useState(true);
 
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
     const [trendingTab, setTrendingTab] = useState('Tất cả');
 
-    const [selectedSeat, setSelectedSeat] = useState('Tất cả');
-    const [selectedQuality, setSelectedQuality] = useState('Tất cả');
 
     const [selectedRegion, setSelectedRegion] = useState('Tất cả');
     const [showSidebar, setShowSidebar] = useState(true);
@@ -55,7 +51,6 @@ const HomePage = () => {
 
     const tourSliderRef = useRef(null);
     const discountSliderRef = useRef(null);
-    const serviceSliderRef = useRef(null);
     const showcaseRef = useRef(null);
     const navigate = useNavigate();
 
@@ -63,7 +58,6 @@ const HomePage = () => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
         fetchTours();
-        fetchServices();
     }, []);
 
     const fetchTours = async () => {
@@ -80,20 +74,6 @@ const HomePage = () => {
         }
     };
 
-    const fetchServices = async () => {
-        setLoadingServices(true);
-        try {
-            const res = await axios.get('http://localhost:5000/api/services');
-            if (res.data.success) {
-                const activeServices = res.data.data.filter(s => s.status === 'Active');
-                setServices(activeServices);
-            }
-        } catch (error) {
-            console.error('Lỗi khi tải dịch vụ:', error);
-        } finally {
-            setLoadingServices(false);
-        }
-    };
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -333,34 +313,6 @@ const HomePage = () => {
     // Promos
     const promoTours = tours.filter(t => Number(t.base_price || 0) <= 4500000).slice(0, 4);
 
-    // Filtered Transport Services
-    const filteredServices = services.filter(s => {
-        return s.service_type === 'Transport' || s.service_type === 'Xe vận chuyển' || s.service_type === 'Xe du lịch';
-    });
-
-    
-    const finalTransportServices = filteredServices.filter(s => {
-        let matchSeat = true;
-        let matchQuality = true;
-
-        if (selectedSeat !== 'Tất cả') {
-            const cap = Number(s.capacity) || 0;
-            if (selectedSeat === '4-7 chỗ') matchSeat = cap >= 4 && cap <= 7;
-            else if (selectedSeat === '16-29 chỗ') matchSeat = cap >= 16 && cap <= 29;
-            else if (selectedSeat === '35-45 chỗ') matchSeat = cap >= 35 && cap <= 45;
-        }
-
-        if (selectedQuality !== 'Tất cả') {
-            const nameLower = (s.service_name || '').toLowerCase();
-            const descLower = (s.description || '').toLowerCase();
-            const attrLower = (s.attributes || '').toLowerCase();
-            const isVip = nameLower.includes('vip') || nameLower.includes('limousine') || nameLower.includes('cao cấp') || descLower.includes('vip') || attrLower.includes('vip');
-            if (selectedQuality === 'Cao cấp (VIP/Limousine)') matchQuality = isVip;
-            else if (selectedQuality === 'Tiêu chuẩn') matchQuality = !isVip;
-        }
-
-        return matchSeat && matchQuality;
-    });
 
     const scrollSlider = (ref, direction) => {
         if (ref.current) {
@@ -1120,172 +1072,7 @@ const HomePage = () => {
             </section>
 
 
-            {/* 8. DỊCH VỤ DO CÔNG TY CUNG CẤP */}
-            <section style={{ background: 'linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%)', border: '1px solid #dcfce7', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(22, 163, 74, 0.05)', position: 'relative' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
-                        <div>
-                            <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                                🚗 Dịch Vụ Xe Di Chuyển
-                            </h2>
-                            <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px', margin: 0 }}>
-                                Các dịch vụ thuê xe du lịch và vận chuyển chất lượng cao
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => navigate('/services')}
-                            style={{
-                                background: '#ffffff', color: '#1d4ed8', border: '1.5px solid #e2e8f0', padding: '5px 5px 5px 18px', borderRadius: '30px',
-                                fontSize: '13.5px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                                transition: 'all 0.2s ease', whiteSpace: 'nowrap', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(29, 78, 216, 0.1)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
-                        >
-                            Xem thêm
-                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#1d4ed8', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <ChevronRight size={16} strokeWidth={3} />
-                            </div>
-                        </button>
-                    </div>
-
-                    {/* FILTER TABS CHO DỊCH VỤ XE */}
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {/* SEAT FILTER */}
-                        <div style={{ display: 'flex', gap: '6px', background: '#dcfce7', padding: '4px', borderRadius: '14px' }}>
-                            {['Tất cả', '4-7 chỗ', '16-29 chỗ', '35-45 chỗ'].map(seat => (
-                                <button 
-                                    key={seat}
-                                    onClick={() => setSelectedSeat(seat)}
-                                    style={{
-                                        padding: '6px 14px', borderRadius: '10px', border: 'none',
-                                        background: selectedSeat === seat ? '#16a34a' : 'transparent',
-                                        color: selectedSeat === seat ? '#ffffff' : '#15803d',
-                                        fontWeight: selectedSeat === seat ? '800' : '600', fontSize: '13px',
-                                        cursor: 'pointer', boxShadow: selectedSeat === seat ? '0 2px 6px rgba(22, 163, 74, 0.3)' : 'none',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {seat}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* QUALITY FILTER */}
-                        <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '14px' }}>
-                            {['Tất cả', 'Tiêu chuẩn', 'Cao cấp (VIP/Limousine)'].map(quality => (
-                                <button 
-                                    key={quality}
-                                    onClick={() => setSelectedQuality(quality)}
-                                    style={{
-                                        padding: '6px 14px', borderRadius: '10px', border: 'none',
-                                        background: selectedQuality === quality ? '#ffffff' : 'transparent',
-                                        color: selectedQuality === quality ? '#16a34a' : '#64748b',
-                                        fontWeight: selectedQuality === quality ? '800' : '600', fontSize: '13px',
-                                        cursor: 'pointer', boxShadow: selectedQuality === quality ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {quality}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div style={{ position: 'relative' }}>
-                    <button 
-                        onClick={() => scrollSlider(serviceSliderRef, 'left')}
-                        style={{
-                            position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
-                            width: '40px', height: '40px', borderRadius: '50%',
-                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
-                            color: '#fff', border: 'none', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                        }}
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
-
-                    <button 
-                        onClick={() => scrollSlider(serviceSliderRef, 'right')}
-                        style={{
-                            position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
-                            width: '40px', height: '40px', borderRadius: '50%',
-                            backgroundColor: 'rgba(51, 65, 85, 0.7)', backdropFilter: 'blur(4px)',
-                            color: '#fff', border: 'none', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                        }}
-                    >
-                        <ChevronRight size={24} />
-                    </button>
-
-                    <div 
-                        ref={serviceSliderRef}
-                        style={{
-                            display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory',
-                            gap: '20px', paddingBottom: '20px'
-                        }}
-                        className="hide-scrollbar"
-                    >
-                        {loadingServices ? (
-                            Array(4).fill(0).map((_, i) => (
-                                <div key={i} style={{ minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', background: '#ffffff', borderRadius: '20px', height: '380px', border: '1px solid #e2e8f0', padding: '16px', flex: '0 0 auto', scrollSnapAlign: 'start' }}>
-                                    <div style={{ background: '#e2e8f0', height: '170px', borderRadius: '14px', marginBottom: '14px' }} />
-                                </div>
-                            ))
-                        ) : finalTransportServices.length === 0 ? (
-                            <div style={{ minWidth: '100%', background: '#ffffff', borderRadius: '24px', padding: '50px 20px', textAlign: 'center', border: '1.5px solid #e2e8f0', flex: '0 0 auto', scrollSnapAlign: 'start' }}>
-                                <div style={{ fontSize: '50px', marginBottom: '12px' }}>🛠️</div>
-                                <h3 style={{ fontSize: '18px', color: '#0f172a', fontWeight: '800' }}>Không tìm thấy dịch vụ</h3>
-                            </div>
-                        ) : (
-                            finalTransportServices.slice(0, 10).map((service, idx) => (
-                                <div 
-                                    key={idx}
-                                    onClick={() => navigate('/services')}
-                                    style={{
-                                        minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', flex: '0 0 auto', scrollSnapAlign: 'start', height: '380px',
-                                        background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0',
-                                        overflow: 'hidden', cursor: 'pointer', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.04)',
-                                        transition: 'all 0.25s ease', display: 'flex', flexDirection: 'column'
-                                    }}
-                                    className="tour-card-modern"
-                                >
-                                    <div style={{ position: 'relative', height: '170px' }}>
-                                        <div style={{ backgroundImage: `url(${getImageUrl(service.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
-                                        <span style={{ position: 'absolute', top: '12px', right: '12px', background: '#38bdf8', color: '#fff', fontSize: '11px', fontWeight: '800', padding: '4px 8px', borderRadius: '8px' }}>
-                                            {service.service_type || 'Dịch vụ'}
-                                        </span>
-                                    </div>
-
-                                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
-                                            <span style={{ color: '#0284c7', fontWeight: '700' }}>⭐ Dịch Vụ Nổi Bật</span>
-                                        </div>
-
-                                        <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '64px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                                            {service.service_name}
-                                        </h3>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: 'auto' }}>
-                                            <div>
-                                                <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Giá từ</span>
-                                                <strong style={{ fontSize: '16px', color: '#ef4444' }}>{formatCurrency(service.selling_price || service.base_cost || 0)}</strong>
-                                            </div>
-                                            <button style={{ padding: '8px 16px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>
-                                                Chi tiết ➔
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </section>
+            {/* 8. DỊCH VỤ DO CÔNG TY CUNG CẤP (Đã ẩn theo yêu cầu tập trung đặt tour) */}
 
 
             {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (BALANCED 2-COLUMN DESIGN) */}

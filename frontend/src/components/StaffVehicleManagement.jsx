@@ -3,17 +3,14 @@ import axios from 'axios';
 
 const GATEWAY_URL = 'http://localhost:5000';
 
-const StaffVehicleManagement = () => {
+const StaffVehicleManagement = ({ onViewHistory }) => {
   const [vehicles, setVehicles] = useState([]);
-  const [vehicleServices, setVehicleServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Modals
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editVehicle, setEditVehicle] = useState(null);
+
+  // Modal Cập nhật tình trạng vận hành (Bảo dưỡng / Sửa chữa / Hoàn tất)
   const [showMaintModal, setShowMaintModal] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  
+
   // Alert banner
   const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
 
@@ -22,28 +19,11 @@ const StaffVehicleManagement = () => {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Form Data for Edit / Add
-  const [formData, setFormData] = useState({
-    vehicle_name: '',
-    base_cost: 0,
-    selling_price: 0,
-    price: 0,
-    service_id: '',
-    vehicle_code: '',
-    license_plate: '',
-    seat_capacity: 7,
-    vehicle_type: 'Xe 7 chỗ',
-    brand_model: '',
-    imagePreview: '',
-    image_url: '',
-    imageFile: null,
-    color: 'Trắng',
-    status: 'AVAILABLE',
-    notes: ''
-  });
-
-  // Maintenance Data
+  // Status Update Data & Form Validation
+  const [submittingStatus, setSubmittingStatus] = useState(false);
+  const [formError, setFormError] = useState('');
   const [maintData, setMaintData] = useState({
+    target_status: 'AVAILABLE',
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
     reason: ''
@@ -67,19 +47,10 @@ const StaffVehicleManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [resVehicles, resServices] = await Promise.all([
-        axios.get(`${GATEWAY_URL}/api/tours/fleet/vehicles`, { headers }),
-        axios.get(`${GATEWAY_URL}/api/services`, { headers }).catch(() => ({ data: { data: [] } }))
-      ]);
+      const resVehicles = await axios.get(`${GATEWAY_URL}/api/tours/fleet/vehicles`, { headers });
 
       if (resVehicles.data && resVehicles.data.success) {
         setVehicles(resVehicles.data.data || []);
-      }
-      if (resServices.data && resServices.data.data) {
-        const internalRoadServices = resServices.data.data
-          .filter(s => s.vehicle_service_id != null && s.service_type === 'Xe vận chuyển' && !s.partner_id)
-          .sort((a, b) => Number(a.capacity || 0) - Number(b.capacity || 0));
-        setVehicleServices(internalRoadServices);
       }
     } catch (err) {
       console.error("Lỗi khi tải danh sách đội xe:", err);
@@ -89,103 +60,77 @@ const StaffVehicleManagement = () => {
     }
   };
 
-  // 1. MỞ MODAL SỬA
-  const openEditModal = (veh) => {
-    setEditVehicle(veh);
-    setFormData({
-      vehicle_name: veh.vehicle_name || veh.brand_model || '',
-      base_cost: veh.base_cost !== undefined && veh.base_cost !== null ? veh.base_cost : 0,
-      selling_price: veh.selling_price !== undefined && veh.selling_price !== null ? veh.selling_price : (veh.price || 0),
-      price: veh.selling_price !== undefined && veh.selling_price !== null ? veh.selling_price : (veh.price || 0),
-      service_id: veh.service_id || '',
-      vehicle_code: veh.vehicle_code || '',
-      license_plate: veh.license_plate || '',
-      seat_capacity: veh.seat_capacity || 7,
-      vehicle_type: veh.vehicle_type || 'Xe 7 chỗ',
-      brand_model: veh.brand_model || '',
-      imagePreview: veh.image_url || '',
-      image_url: veh.image_url || '',
-      imageFile: null,
-      color: veh.color || 'Trắng',
-      status: veh.status || 'AVAILABLE',
-      notes: veh.notes || ''
-    });
-    setShowEditModal(true);
+  const isVehicleRunningTour = (veh) => {
+    return veh.status === 'IN_TOUR' || Boolean(veh.current_tour);
   };
 
-  // 1.1 MỞ MODAL THÊM XE MỚI
-  const openAddModal = () => {
-    const defaultSvc = vehicleServices.find(s => Number(s.capacity) === 7) || vehicleServices[0];
-    setEditVehicle(null);
-    setFormData({
-      vehicle_name: '',
-      base_cost: defaultSvc ? Number(defaultSvc.base_cost || 0) : 0,
-      selling_price: defaultSvc ? Number(defaultSvc.selling_price || 0) : 0,
-      price: defaultSvc ? Number(defaultSvc.selling_price || defaultSvc.base_cost || 0) : 0,
-      service_id: defaultSvc ? defaultSvc.service_id : '',
-      vehicle_code: '',
-      license_plate: '',
-      seat_capacity: defaultSvc ? Number(defaultSvc.capacity) : 7,
-      vehicle_type: defaultSvc ? (defaultSvc.vehicle_detail_type || `Xe ${defaultSvc.capacity} chỗ`) : 'Xe 7 chỗ',
-      brand_model: '',
-      imagePreview: '',
-      image_url: '',
-      imageFile: null,
-      color: 'Trắng',
-      status: 'AVAILABLE',
-      notes: ''
-    });
-    setShowEditModal(true);
-  };
-
-  // LƯU FORM SỬA / THÊM
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const config = { 
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        } 
-      };
-
-      const fd = new FormData();
-      Object.keys(formData).forEach(key => {
-        if (key !== 'imageFile' && key !== 'imagePreview') {
-          if (formData[key] !== null && formData[key] !== undefined) {
-             fd.append(key, formData[key]);
-          }
-        }
-      });
-
-      if (formData.imageFile) {
-        fd.append('image', formData.imageFile);
-      }
-
-      if (editVehicle) {
-        await axios.put(`${GATEWAY_URL}/api/tours/fleet/vehicles/${editVehicle.vehicle_id}`, fd, config);
-        setAlertMsg({ type: 'success', text: `Đã cập nhật thông tin xe ${formData.license_plate} thành công!` });
-      } else {
-        await axios.post(`${GATEWAY_URL}/api/tours/fleet/vehicles`, fd, config);
-        setAlertMsg({ type: 'success', text: `Đã thêm phương tiện ${formData.license_plate} vào đội xe thành công!` });
-      }
-
-      setShowEditModal(false);
-      fetchVehicles();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi khi lưu thông tin xe');
+  // Ánh xạ nhãn tình trạng xe chuẩn tiếng Việt và màu sắc Enterprise ERP
+  const getStatusMeta = (status) => {
+    switch (status) {
+      case 'AVAILABLE':
+        return {
+          label: 'Sẵn sàng',
+          bg: '#dcfce7',
+          color: '#15803d',
+          border: '#bbf7d0',
+          dot: '#22c55e'
+        };
+      case 'IN_TOUR':
+        return {
+          label: 'Đang vận hành',
+          bg: '#e0f2fe',
+          color: '#0369a1',
+          border: '#bae6fd',
+          dot: '#0284c7'
+        };
+      case 'MAINTENANCE':
+        return {
+          label: 'Bảo dưỡng',
+          bg: '#ffedd5',
+          color: '#c2410c',
+          border: '#fed7aa',
+          dot: '#f97316'
+        };
+      case 'REPAIR':
+        return {
+          label: 'Đang sửa chữa',
+          bg: '#fee2e2',
+          color: '#b91c1c',
+          border: '#fecaca',
+          dot: '#ef4444'
+        };
+      case 'INACTIVE':
+        return {
+          label: 'Tạm ngưng',
+          bg: '#f1f5f9',
+          color: '#475569',
+          border: '#cbd5e1',
+          dot: '#64748b'
+        };
+      default:
+        return {
+          label: status || 'Chưa xác định',
+          bg: '#f1f5f9',
+          color: '#475569',
+          border: '#e2e8f0',
+          dot: '#94a3b8'
+        };
     }
   };
 
-  // 2. MỞ MODAL BẢO DƯỠNG
+  // MỞ MODAL CẬP NHẬT TÌNH TRẠNG VẬN HÀNH
   const openMaintenanceModal = (veh) => {
-    if (veh.status === 'IN_TOUR') {
-      alert("Xe hiện đang đi tour, không thể đưa vào bảo dưỡng!");
+    if (isVehicleRunningTour(veh)) {
+      alert("Xe hiện đang vận hành tour, không thể cập nhật tình trạng thủ công!");
       return;
     }
     setSelectedVehicle(veh);
+    setFormError('');
+    const defaultTarget = veh.status === 'AVAILABLE'
+      ? 'MAINTENANCE'
+      : 'AVAILABLE';
     setMaintData({
+      target_status: defaultTarget,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
       reason: ''
@@ -193,587 +138,453 @@ const StaffVehicleManagement = () => {
     setShowMaintModal(true);
   };
 
-  // XÁC NHẬN ĐƯA VÀO BẢO DƯỠNG
-  const handleMaintenanceSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedVehicle) return;
+  // XÁC NHẬN CẬP NHẬT TÌNH TRẠNG XE
+  const handleStatusSubmit = async (e, explicitStatus) => {
+    if (e) e.preventDefault();
+    if (!selectedVehicle || submittingStatus) return;
+
+    setFormError('');
+    const newStatus = explicitStatus || maintData.target_status;
+    const trimmedReason = maintData.reason ? maintData.reason.trim() : '';
+    if (!trimmedReason) {
+      setFormError("Vui lòng nhập lý do cập nhật hoặc kết quả kiểm tra phương tiện!");
+      return;
+    }
+
+    if (trimmedReason.length > 500) {
+      setFormError("Nội dung ghi chú không được vượt quá 500 ký tự!");
+      return;
+    }
+
+    setSubmittingStatus(true);
     try {
       const token = localStorage.getItem('token');
       await axios.put(`${GATEWAY_URL}/api/tours/fleet/staff/vehicles/${selectedVehicle.vehicle_id}/status`, {
-        new_status: 'MAINTENANCE',
+        new_status: newStatus,
+        current_status: selectedVehicle.status,
         start_date: maintData.start_date,
         end_date: maintData.end_date,
-        reason: maintData.reason || 'Bảo dưỡng định kỳ'
+        reason: trimmedReason
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      setAlertMsg({ type: 'success', text: `Đã đưa xe ${selectedVehicle.license_plate} vào chế độ bảo dưỡng!` });
+      const statusLabel = newStatus === 'AVAILABLE'
+        ? 'Sẵn sàng hoạt động (AVAILABLE)'
+        : newStatus === 'MAINTENANCE'
+          ? 'Bảo dưỡng (MAINTENANCE)'
+          : 'Đang sửa chữa (REPAIR)';
+
+      setAlertMsg({
+        type: 'success',
+        text: `Đã cập nhật tình trạng xe ${selectedVehicle.license_plate} sang ${statusLabel}!`
+      });
       setShowMaintModal(false);
+      setFormError('');
       fetchVehicles();
     } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi khi cập nhật bảo dưỡng xe');
+      const msg = err.response?.data?.message || 'Có lỗi khi cập nhật tình trạng xe';
+      setFormError(msg);
+      // Nếu là lỗi conflict (409) do người khác cập nhật trước, tải lại dữ liệu ngầm
+      if (err.response?.status === 409) {
+        fetchVehicles();
+      }
+    } finally {
+      setSubmittingStatus(false);
     }
   };
 
-  // HOÀN TẤT BẢO DƯỠNG (Chuyển về Sẵn sàng)
-  const handleCompleteMaintenance = async () => {
-    if (!selectedVehicle) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${GATEWAY_URL}/api/tours/fleet/staff/vehicles/${selectedVehicle.vehicle_id}/status`, {
-        new_status: 'AVAILABLE',
-        reason: maintData.reason || 'Đã hoàn tất bảo dưỡng, xe sẵn sàng hoạt động'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setAlertMsg({ type: 'success', text: `Xe ${selectedVehicle.license_plate} đã hoàn tất bảo dưỡng và sẵn sàng hoạt động!` });
-      setShowMaintModal(false);
-      fetchVehicles();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi khi hoàn tất bảo dưỡng');
+  const handleOpenHistory = (veh) => {
+    if (veh?.vehicle_id) {
+      sessionStorage.setItem('staff_selected_history_vehicle_id', String(veh.vehicle_id));
+    }
+    if (typeof onViewHistory === 'function') {
+      onViewHistory(veh.vehicle_id);
     }
   };
 
-  // 3. XÓA XE
-  const handleDeleteVehicle = async (vehicleId, plate, status) => {
-    if (status === 'IN_TOUR') {
-      alert(`Xe ${plate} hiện đang đi tour, không thể xóa khỏi hệ thống!`);
-      return;
-    }
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa xe biển số "${plate}" khỏi Đội xe?`)) {
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${GATEWAY_URL}/api/tours/fleet/vehicles/${vehicleId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAlertMsg({ type: 'success', text: `Đã xóa xe ${plate} khỏi hệ thống thành công.` });
-      fetchVehicles();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Không thể xóa xe này.');
-    }
+  // Sắp xếp danh mục xe theo số chỗ tăng dần (4 chỗ -> 7 chỗ -> 16 chỗ -> 29 chỗ -> 45 chỗ)
+  const extractSeatNumber = (categoryLabel) => {
+    const match = String(categoryLabel || '').match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 999;
   };
 
   // Filter logic
   const filteredVehicles = vehicles.filter(v => {
-    if (selectedCategory !== 'ALL' && v.vehicle_type !== selectedCategory) return false;
-    if (selectedStatus !== 'ALL' && v.status !== selectedStatus) return false;
+    const catName = v.vehicle_type || `Xe ${v.seat_capacity} chỗ`;
+    if (selectedCategory !== 'ALL' && catName !== selectedCategory) return false;
+    const effectiveStatus = isVehicleRunningTour(v) ? 'IN_TOUR' : v.status;
+    if (selectedStatus !== 'ALL' && effectiveStatus !== selectedStatus && v.status !== selectedStatus) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       if (!v.vehicle_code?.toLowerCase().includes(term) && 
           !v.license_plate?.toLowerCase().includes(term) &&
-          !v.brand_model?.toLowerCase().includes(term)) {
+          !v.brand_model?.toLowerCase().includes(term) &&
+          !v.vehicle_name?.toLowerCase().includes(term)) {
         return false;
       }
     }
     return true;
   });
 
-  const categories = [...new Set(filteredVehicles.map(v => v.vehicle_type || `Xe ${v.seat_capacity} chỗ`))].sort();
+  const allCategoryOptions = [...new Set(vehicles.map(v => v.vehicle_type || `Xe ${v.seat_capacity} chỗ`))]
+    .sort((a, b) => extractSeatNumber(a) - extractSeatNumber(b) || a.localeCompare(b));
+
+  const categories = [...new Set(filteredVehicles.map(v => v.vehicle_type || `Xe ${v.seat_capacity} chỗ`))]
+    .sort((a, b) => extractSeatNumber(a) - extractSeatNumber(b) || a.localeCompare(b));
 
   return (
     <div style={styles.container}>
       <div style={styles.headerArea}>
         <div>
-          <h1 style={styles.pageTitle}>Quản lý Phương tiện (Office Staff)</h1>
-          <p style={styles.pageSubtitle}>Theo dõi tình trạng, điều chỉnh và quản lý bảo dưỡng xe nội bộ</p>
+          <h1 style={styles.pageTitle}>Quản lý Đội xe & Tình trạng Phương tiện</h1>
+          <p style={styles.pageSubtitle}>
+            Giám sát tình trạng vận hành, ghi nhận lịch bảo dưỡng/sửa chữa và tra cứu lịch sử phương tiện
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            style={{ ...styles.btnPrimary, display: 'flex', alignItems: 'center', gap: '6px' }} 
-            onClick={openAddModal}
-          >
-            <span>+</span> Thêm xe mới
-          </button>
           <button style={styles.btnSecondary} onClick={fetchVehicles}>
-            Tải lại dữ liệu
+            🔄 Tải lại dữ liệu
           </button>
         </div>
       </div>
 
       {alertMsg.text && (
-        <div style={{...styles.alert, backgroundColor: alertMsg.type === 'error' ? '#fee2e2' : '#dcfce7', color: alertMsg.type === 'error' ? '#991b1b' : '#166534'}}>
-          {alertMsg.text}
+        <div style={{
+          ...styles.alert,
+          backgroundColor: alertMsg.type === 'error' ? '#fee2e2' : '#dcfce7',
+          color: alertMsg.type === 'error' ? '#991b1b' : '#166534',
+          borderColor: alertMsg.type === 'error' ? '#fecaca' : '#bbf7d0'
+        }}>
+          <span>{alertMsg.text}</span>
           <span style={styles.closeAlert} onClick={() => setAlertMsg({type: '', text: ''})}>&times;</span>
         </div>
       )}
 
-      {/* Tóm tắt */}
+      {/* Thống kê tổng quan đội xe */}
       <div style={styles.statsRow}>
         <div style={styles.statBox}>
-          <div style={styles.statLabel}>Tổng xe</div>
+          <div style={styles.statLabel}>Tổng phương tiện</div>
           <div style={styles.statValue}>{vehicles.length}</div>
         </div>
         <div style={styles.statBox}>
           <div style={styles.statLabel}>Sẵn sàng</div>
-          <div style={{...styles.statValue, color: '#166534'}}>{vehicles.filter(v => v.status === 'AVAILABLE').length}</div>
+          <div style={{...styles.statValue, color: '#15803d'}}>{vehicles.filter(v => v.status === 'AVAILABLE' && !isVehicleRunningTour(v)).length}</div>
         </div>
         <div style={styles.statBox}>
-          <div style={styles.statLabel}>Đang đi tour</div>
-          <div style={{...styles.statValue, color: '#ca8a04'}}>{vehicles.filter(v => v.status === 'IN_TOUR').length}</div>
+          <div style={styles.statLabel}>Đang vận hành</div>
+          <div style={{...styles.statValue, color: '#0369a1'}}>{vehicles.filter(v => isVehicleRunningTour(v)).length}</div>
         </div>
         <div style={styles.statBox}>
-          <div style={styles.statLabel}>Đang bảo dưỡng</div>
-          <div style={{...styles.statValue, color: '#ea580c'}}>{vehicles.filter(v => v.status === 'MAINTENANCE').length}</div>
+          <div style={styles.statLabel}>Bảo dưỡng</div>
+          <div style={{...styles.statValue, color: '#c2410c'}}>{vehicles.filter(v => v.status === 'MAINTENANCE').length}</div>
         </div>
         <div style={styles.statBox}>
           <div style={styles.statLabel}>Đang sửa chữa</div>
-          <div style={{...styles.statValue, color: '#dc2626'}}>{vehicles.filter(v => v.status === 'REPAIR').length}</div>
-        </div>
-        <div style={styles.statBox}>
-          <div style={styles.statLabel}>Tạm ngưng</div>
-          <div style={{...styles.statValue, color: '#475569'}}>{vehicles.filter(v => v.status === 'INACTIVE').length}</div>
+          <div style={{...styles.statValue, color: '#b91c1c'}}>{vehicles.filter(v => v.status === 'REPAIR').length}</div>
         </div>
       </div>
 
+      {/* Bộ lọc tìm kiếm */}
       <div style={styles.filterBar}>
         <input 
           type="text" 
           placeholder="Tìm kiếm Mã xe / Biển số / Dòng xe..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ ...styles.input, width: '300px' }}
+          style={{ ...styles.input, flex: '1 1 260px', maxWidth: '340px' }}
         />
         <select style={styles.select} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-          <option value="ALL">Tất cả loại xe</option>
-          {[...new Set(vehicles.map(v => v.vehicle_type || `Xe ${v.seat_capacity} chỗ`))].map(t => (
+          <option value="ALL">Tất cả loại xe ({vehicles.length})</option>
+          {allCategoryOptions.map(t => (
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
         <select style={styles.select} value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-          <option value="ALL">Tất cả trạng thái</option>
+          <option value="ALL">Tất cả tình trạng</option>
           <option value="AVAILABLE">Sẵn sàng</option>
-          <option value="IN_TOUR">Đang đi Tour</option>
-          <option value="MAINTENANCE">Đang bảo dưỡng</option>
+          <option value="IN_TOUR">Đang vận hành</option>
+          <option value="MAINTENANCE">Bảo dưỡng</option>
           <option value="REPAIR">Đang sửa chữa</option>
-          <option value="INACTIVE">Tạm ngưng</option>
         </select>
       </div>
 
       {loading ? (
-        <div style={styles.loading}>Đang tải dữ liệu...</div>
-      ) : (
-        categories.map(cat => (
-          <div key={cat} style={{ marginBottom: '32px' }}>
-            <h2 style={styles.categoryTitle}>{cat.toUpperCase()}</h2>
-            <div style={styles.grid}>
-              {filteredVehicles.filter(v => (v.vehicle_type || `Xe ${v.seat_capacity} chỗ`) === cat).map(v => (
-                <div key={v.vehicle_id} style={styles.card}>
-                  <div style={{ height: '180px', overflow: 'hidden' }}>
-                    <img 
-                      src={getImageUrl(v.image_url) || fallbackImg} 
-                      alt={v.license_plate}
-                      onError={(e) => { e.target.src = fallbackImg; }}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-                    />
-                  </div>
-                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '12px', backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
-                        Mã: {v.vehicle_code || 'N/A'}
-                      </span>
-                      <span style={styles.badge(v.status)}>
-                        {v.status === 'AVAILABLE' ? 'Sẵn sàng' : v.status === 'IN_TOUR' ? 'Đang đi Tour' : v.status === 'MAINTENANCE' ? 'Bảo dưỡng' : v.status === 'REPAIR' ? 'Sửa chữa' : 'Tạm ngưng'}
-                      </span>
-                    </div>
-                    
-                    <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', color: '#0f172a', fontWeight: '700' }}>
-                      Biển số: <span style={{ color: '#0194f3' }}>{v.license_plate}</span>
-                    </h3>
-
-                    <div style={{ marginBottom: '8px', fontSize: '13px', color: '#334155' }}>
-                      <div style={{ color: '#64748b', marginBottom: '2px', fontSize: '12px' }}>Dòng/Đời xe:</div>
-                      <div style={{ fontWeight: '600' }}>{v.brand_model || 'N/A'}</div>
-                    </div>
-
-                    <div style={{ marginBottom: '12px', fontSize: '13px', color: '#334155' }}>
-                      <div style={{ color: '#64748b', marginBottom: '2px', fontSize: '12px' }}>Màu xe & Số chỗ:</div>
-                      <div style={{ fontWeight: '600' }}>{v.color || 'N/A'} - {v.seat_capacity} chỗ</div>
-                    </div>
-
-                    {v.service_name && (
-                      <div style={{ marginBottom: '12px', fontSize: '12px', color: '#059669', backgroundColor: '#ecfdf5', padding: '6px 10px', borderRadius: '6px', fontWeight: '600' }}>
-                        🔗 {v.service_name} ({Number(v.base_cost || 0).toLocaleString('vi-VN')}đ/ngày)
-                      </div>
-                    )}
-
-                    {v.notes && (
-                      <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', marginBottom: '16px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '6px', borderLeft: '3px solid #cbd5e1' }}>
-                        {v.notes}
-                      </div>
-                    )}
-
-                    {/* Footer 3 Nút hành động: Sửa, Bảo dưỡng, Xóa */}
-                    <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: '1fr 1.3fr 1fr', gap: '8px' }}>
-                      <button 
-                        onClick={() => openEditModal(v)} 
-                        style={{
-                          backgroundColor: '#3b82f6',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '9px 8px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)',
-                          transition: 'all 0.2s'
-                        }}
-                        title="Chỉnh sửa thông tin xe"
-                      >
-                        ✏️ Sửa
-                      </button>
-
-                      <button 
-                        onClick={() => openMaintenanceModal(v)} 
-                        disabled={v.status === 'IN_TOUR'}
-                        style={{
-                          backgroundColor: v.status === 'IN_TOUR' ? '#f1f5f9' : (v.status === 'MAINTENANCE' ? '#ea580c' : '#f59e0b'),
-                          color: v.status === 'IN_TOUR' ? '#94a3b8' : '#fff',
-                          border: 'none',
-                          padding: '9px 6px',
-                          borderRadius: '8px',
-                          cursor: v.status === 'IN_TOUR' ? 'not-allowed' : 'pointer',
-                          fontWeight: '600',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          boxShadow: v.status === 'IN_TOUR' ? 'none' : '0 2px 4px rgba(245, 158, 11, 0.2)',
-                          transition: 'all 0.2s'
-                        }}
-                        title={v.status === 'IN_TOUR' ? "Xe đang đi tour, không thể bảo dưỡng" : (v.status === 'MAINTENANCE' ? "Đang bảo dưỡng (Bấm để cập nhật / hoàn tất)" : "Đưa vào bảo dưỡng")}
-                      >
-                        🔧 {v.status === 'MAINTENANCE' ? 'Đang bảo dưỡng' : 'Bảo dưỡng'}
-                      </button>
-
-                      <button 
-                        onClick={() => handleDeleteVehicle(v.vehicle_id, v.license_plate, v.status)} 
-                        disabled={v.status === 'IN_TOUR'}
-                        style={{
-                          backgroundColor: v.status === 'IN_TOUR' ? '#f1f5f9' : '#ef4444',
-                          color: v.status === 'IN_TOUR' ? '#94a3b8' : '#fff',
-                          border: 'none',
-                          padding: '9px 8px',
-                          borderRadius: '8px',
-                          cursor: v.status === 'IN_TOUR' ? 'not-allowed' : 'pointer',
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          boxShadow: v.status === 'IN_TOUR' ? 'none' : '0 2px 4px rgba(239, 68, 68, 0.2)',
-                          transition: 'all 0.2s'
-                        }}
-                        title={v.status === 'IN_TOUR' ? "Xe đang đi tour, không thể xóa" : "Xóa xe khỏi hệ thống"}
-                      >
-                        🗑️ Xóa
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
-      )}
-
-      {/* MODAL 1: SỬA / THÊM XE */}
-      {showEditModal && (
-        <div style={styles.modalBackdrop}>
-          <div style={{ ...styles.modalCard, width: '800px', maxWidth: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', color: '#1e293b', fontWeight: '700' }}>
-                {editVehicle ? `✏️ Chỉnh sửa thông tin xe (${editVehicle.license_plate})` : '➕ Thêm xe mới vào Đội xe'}
-              </h2>
-              <button type="button" onClick={() => setShowEditModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
-            </div>
-
-            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '6px' }}>
-              <form id="vehicleEditForm" onSubmit={handleFormSubmit}>
-                
-                {/* Tên xe */}
-                <div style={{ marginBottom: '18px' }}>
-                  <label style={styles.label}>Tên xe *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="VD: VinFast Lux A2.0 Turbo, Toyota Fortuner Legender..."
-                    value={formData.vehicle_name}
-                    onChange={(e) => setFormData({ ...formData, vehicle_name: e.target.value })}
-                    style={{ ...styles.input, height: '42px', fontWeight: '600', borderColor: '#3b82f6' }}
-                  />
-                </div>
-
-                {/* Giá vốn & Giá bán */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
-                  <div>
-                    <label style={styles.label}>💰 Giá vốn (VNĐ/ngày) *</label>
-                    <div style={{ position: 'relative' }}>
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="VD: 800.000"
-                        value={formData.base_cost !== undefined && formData.base_cost !== null ? Number(formData.base_cost).toLocaleString('vi-VN') : '0'}
-                        onChange={(e) => {
-                          const rawVal = Number(e.target.value.replace(/\D/g, '')) || 0;
-                          setFormData({ ...formData, base_cost: rawVal });
-                        }}
-                        style={{ ...styles.input, height: '42px', paddingRight: '60px', fontWeight: '700', color: '#059669', borderColor: '#10b981' }}
-                      />
-                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#059669', fontSize: '13px', fontWeight: '700' }}>
-                        đ/ngày
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={styles.label}>🏷️ Giá bán (VNĐ/ngày) *</label>
-                    <div style={{ position: 'relative' }}>
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="VD: 950.000"
-                        value={formData.selling_price !== undefined && formData.selling_price !== null ? Number(formData.selling_price).toLocaleString('vi-VN') : '0'}
-                        onChange={(e) => {
-                          const rawVal = Number(e.target.value.replace(/\D/g, '')) || 0;
-                          setFormData({ ...formData, selling_price: rawVal, price: rawVal });
-                        }}
-                        style={{ ...styles.input, height: '42px', paddingRight: '60px', fontWeight: '700', color: '#d97706', borderColor: '#f59e0b' }}
-                      />
-                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#d97706', fontSize: '13px', fontWeight: '700' }}>
-                        đ/ngày
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mã xe & Biển số xe */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
-                  <div>
-                    <label style={styles.label}>Mã quản lý xe</label>
-                    <input 
-                      type="text" 
-                      placeholder="VD: XE-16C-06"
-                      value={formData.vehicle_code}
-                      onChange={(e) => setFormData({ ...formData, vehicle_code: e.target.value })}
-                      style={{ ...styles.input, height: '42px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={styles.label}>Biển số xe *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="VD: 72B-222.16"
-                      value={formData.license_plate}
-                      onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
-                      style={{ ...styles.input, height: '42px', fontWeight: '700', color: '#0284c7' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Số chỗ & Loại xe */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
-                  <div>
-                    <label style={styles.label}>Số chỗ ngồi *</label>
-                    <input 
-                      type="number" 
-                      required 
-                      value={formData.seat_capacity}
-                      onChange={(e) => {
-                        const seats = parseInt(e.target.value, 10) || 0;
-                        const matchedSvc = vehicleServices.find(s => Number(s.capacity) === seats);
-                        setFormData({ 
-                          ...formData, 
-                          seat_capacity: seats,
-                          service_id: matchedSvc ? matchedSvc.service_id : formData.service_id,
-                          vehicle_type: matchedSvc ? (matchedSvc.vehicle_detail_type || `Xe ${seats} chỗ`) : `Xe ${seats} chỗ`,
-                          base_cost: matchedSvc && (!formData.base_cost || !editVehicle) ? Number(matchedSvc.base_cost || 0) : formData.base_cost,
-                          selling_price: matchedSvc && (!formData.selling_price || !editVehicle) ? Number(matchedSvc.selling_price || 0) : formData.selling_price,
-                          price: matchedSvc && (!formData.price || !editVehicle) ? Number(matchedSvc.selling_price || matchedSvc.base_cost || 0) : formData.price
-                        });
-                      }}
-                      style={{ ...styles.input, height: '42px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={styles.label}>Phân loại xe</label>
-                    <input 
-                      type="text" 
-                      placeholder="VD: Xe 16 chỗ / Xe SUV"
-                      value={formData.vehicle_type}
-                      onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
-                      style={{ ...styles.input, height: '42px' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Dòng xe & Màu xe */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
-                  <div>
-                    <label style={styles.label}>Dòng xe / Đời xe</label>
-                    <input 
-                      type="text" 
-                      placeholder="VD: Mercedes-Benz Sprinter Executive"
-                      value={formData.brand_model}
-                      onChange={(e) => setFormData({ ...formData, brand_model: e.target.value })}
-                      style={{ ...styles.input, height: '42px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={styles.label}>Màu xe</label>
-                    <input 
-                      type="text" 
-                      placeholder="VD: Xám, Trắng, Đen, Bạc..."
-                      value={formData.color}
-                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                      style={{ ...styles.input, height: '42px' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Ảnh xe */}
-                <div style={{ marginBottom: '18px' }}>
-                  <label style={styles.label}>Hình ảnh xe</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '14px', border: '1px dashed #cbd5e1', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
-                    <div style={{ width: '150px', height: '95px', backgroundColor: '#e2e8f0', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {formData.imagePreview ? (
-                        <img src={getImageUrl(formData.imagePreview)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontSize: '13px' }}>Chưa có ảnh</span>
-                      )}
-                    </div>
-                    <div>
-                      <label style={{ display: 'inline-block', padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: '#334155' }}>
-                        📷 Tải ảnh mới
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              setFormData({ 
-                                ...formData, 
-                                imageFile: file,
-                                imagePreview: URL.createObjectURL(file)
-                              });
-                            }
-                          }}
-                        />
-                      </label>
-                      <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748b' }}>Định dạng JPG, PNG. Ảnh rõ nét góc trước xe.</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Ghi chú */}
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={styles.label}>Ghi chú tình trạng xe</label>
-                  <textarea 
-                    rows="3"
-                    placeholder="Bảo dưỡng định kỳ ga máy lạnh tại gara Vũng Tàu..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    style={{ ...styles.input, resize: 'vertical' }}
-                  ></textarea>
-                </div>
-              </form>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #e2e8f0', marginTop: '10px' }}>
-              <button type="button" onClick={() => setShowEditModal(false)} style={{ ...styles.btnSecondary, padding: '10px 24px' }}>Hủy</button>
-              <button type="submit" form="vehicleEditForm" style={{ ...styles.btnPrimary, padding: '10px 24px' }}>Lưu thay đổi</button>
-            </div>
-          </div>
+        <div style={styles.loading}>Đang tải dữ liệu đội xe...</div>
+      ) : filteredVehicles.length === 0 ? (
+        <div style={styles.emptyBox}>
+          Không tìm thấy phương tiện nào phù hợp với bộ lọc hiện tại.
         </div>
+      ) : (
+        categories.map(cat => {
+          const groupList = filteredVehicles.filter(v => (v.vehicle_type || `Xe ${v.seat_capacity} chỗ`) === cat);
+          return (
+            <div key={cat} style={styles.categorySection}>
+              <div style={styles.categoryHeader}>
+                <h2 style={styles.categoryTitle}>{cat.toUpperCase()}</h2>
+                <span style={styles.categoryCount}>{groupList.length} phương tiện</span>
+              </div>
+
+              <div style={styles.grid}>
+                {groupList.map(v => {
+                  const inTour = isVehicleRunningTour(v);
+                  const displayStatus = inTour ? 'IN_TOUR' : v.status;
+                  const statusMeta = getStatusMeta(displayStatus);
+                  const modelDisplay = v.brand_model || v.vehicle_name || 'Chưa cập nhật';
+
+                  return (
+                    <div key={v.vehicle_id} style={styles.card}>
+                      {/* 1. HÌNH ẢNH NHẬN DIỆN XE (Tỷ lệ đồng nhất, chiều cao gọn 148px) */}
+                      <div style={styles.imageContainer}>
+                        <img 
+                          src={getImageUrl(v.image_url) || fallbackImg} 
+                          alt={v.license_plate}
+                          onError={(e) => { e.target.src = fallbackImg; }}
+                          style={styles.vehicleImage}
+                        />
+                      </div>
+
+                      {/* 2. NỘI DUNG THẺ XE */}
+                      <div style={styles.cardBody}>
+                        {/* 2.1. Khu vực nhận diện xe: Mã xe + Nhãn tình trạng + Biển số nổi bật */}
+                        <div style={styles.identitySection}>
+                          <div style={styles.identityTopRow}>
+                            <span style={styles.codeBadge}>
+                              Mã: {v.vehicle_code || `XE-${v.vehicle_id}`}
+                            </span>
+                            <span style={styles.statusBadge(statusMeta)}>
+                              <span style={styles.statusDot(statusMeta.dot)} />
+                              {statusMeta.label}
+                            </span>
+                          </div>
+
+                          <div style={styles.plateRow}>
+                            <span style={styles.plateLabel}>Biển số:</span>
+                            <span style={styles.plateNumber}>{v.license_plate}</span>
+                          </div>
+                        </div>
+
+                        {/* 2.2. Khu vực thông tin chi tiết (Lưới 2 cột chuẩn ERP) */}
+                        <div style={styles.specGrid}>
+                          <div style={styles.specItemFull}>
+                            <div style={styles.specLabel}>Dòng / Đời xe</div>
+                            <div style={styles.specValue} title={modelDisplay}>
+                              {modelDisplay}
+                            </div>
+                          </div>
+
+                          <div style={styles.specItem}>
+                            <div style={styles.specLabel}>Màu xe</div>
+                            <div style={styles.specValue} title={v.color || 'Chưa cập nhật'}>
+                              {v.color || 'Chưa cập nhật'}
+                            </div>
+                          </div>
+
+                          <div style={styles.specItem}>
+                            <div style={styles.specLabel}>Số chỗ</div>
+                            <div style={styles.specValue}>
+                              {v.seat_capacity ? `${v.seat_capacity} chỗ` : 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2.3. Gói dịch vụ vận chuyển liên kết */}
+                        {v.service_name && (
+                          <div style={styles.serviceRow}>
+                            <div style={styles.specLabel}>Gói dịch vụ liên kết</div>
+                            <div style={styles.serviceValue} title={v.service_name}>
+                              <span style={{ color: '#0284c7', flexShrink: 0 }}>🔗</span>
+                              <span style={styles.serviceText}>{v.service_name}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 2.4. Thông tin vận hành thực tế (Tour đang chạy / Đợt bảo dưỡng) & Ghi chú */}
+                        {(v.current_tour || (v.current_maintenance && (v.status === 'MAINTENANCE' || v.status === 'REPAIR')) || v.notes) && (
+                          <div style={styles.notesArea}>
+                            {v.current_tour && (
+                              <div style={styles.tourInfoBox}>
+                                <div style={{ fontWeight: '600', color: '#0369a1' }}>
+                                  🚌 Tour: {v.current_tour.tour_name}
+                                </div>
+                                {v.current_tour.driver_name && (
+                                  <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '2px' }}>
+                                    Tài xế: {v.current_tour.driver_name}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {v.current_maintenance && (v.status === 'MAINTENANCE' || v.status === 'REPAIR') && (
+                              <div style={styles.maintInfoBox} title={v.current_maintenance.reason}>
+                                <span style={{ fontWeight: '600' }}>🛠️ Tình trạng kỹ thuật: </span>
+                                <span>{v.current_maintenance.reason}</span>
+                              </div>
+                            )}
+
+                            {v.notes && (
+                              <div style={styles.noteBox} title={v.notes}>
+                                <span style={styles.noteLabel}>📝 Ghi chú: </span>
+                                <span style={styles.noteContent}>{v.notes}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 2.5. Khu vực thao tác (Căn cố định xuống đáy thẻ) */}
+                        <div style={styles.actionFooter}>
+                          <button 
+                            type="button"
+                            onClick={() => openMaintenanceModal(v)} 
+                            disabled={inTour}
+                            style={styles.btnUpdateStatus(inTour)}
+                            title={inTour ? "Xe đang vận hành tour, không thể cập nhật tình trạng thủ công" : "Cập nhật tình trạng vận hành của xe"}
+                          >
+                            <span>⚙️</span>
+                            <span>Cập nhật tình trạng</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenHistory(v)}
+                            style={styles.btnHistory}
+                            title="Xem lịch sử tình trạng, bảo dưỡng và sự cố của xe"
+                          >
+                            <span>📜</span>
+                            <span>Lịch sử</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
       )}
 
-      {/* MODAL 2: BẢO DƯỠNG XE */}
+      {/* MODAL CẬP NHẬT TÌNH TRẠNG XE */}
       {showMaintModal && selectedVehicle && (
-        <div style={styles.modalBackdrop}>
-          <div style={{ ...styles.modalCard, width: '550px', maxWidth: '90%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#1e293b', fontWeight: '700' }}>
-                🔧 Bảo dưỡng xe: <span style={{ color: '#0194f3' }}>{selectedVehicle.license_plate}</span>
-              </h2>
-              <button type="button" onClick={() => setShowMaintModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}>&times;</button>
-            </div>
-            
-            {selectedVehicle.status === 'MAINTENANCE' ? (
+        <div style={styles.modalBackdrop} onClick={() => !submittingStatus && setShowMaintModal(false)}>
+          <div style={{ ...styles.modalCard, width: '560px', maxWidth: '94%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px', marginBottom: '16px' }}>
               <div>
-                <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#fff7ed', border: '1px solid #fed7aa', marginBottom: '20px', color: '#9a3412', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '20px' }}>⚠️</span>
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Phương tiện đang trong trạng thái Bảo dưỡng</strong>
-                    <div style={{ fontSize: '13px', color: '#7c2d12' }}>
-                      {selectedVehicle.notes ? `Ghi chú hiện tại: ${selectedVehicle.notes}` : 'Xe tạm thời không thể phân công vào các tour cho đến khi hoàn tất bảo dưỡng.'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={styles.label}>Ghi chú hoàn tất bảo dưỡng (Nếu có)</label>
-                  <textarea 
-                    rows="3"
-                    placeholder="VD: Đã thay dầu máy, kiểm định an toàn kỹ thuật hoàn tất..."
-                    value={maintData.reason}
-                    onChange={(e) => setMaintData({ ...maintData, reason: e.target.value })}
-                    style={{...styles.input, outline: 'none', resize: 'vertical', minHeight: '70px', padding: '10px'}}
-                  ></textarea>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
-                  <button type="button" onClick={() => setShowMaintModal(false)} style={{ ...styles.btnSecondary, padding: '10px 20px' }}>Đóng</button>
-                  <button 
-                    type="button" 
-                    onClick={handleCompleteMaintenance}
-                    style={{ 
-                      backgroundColor: '#16a34a', 
-                      color: '#fff', 
-                      border: 'none', 
-                      padding: '10px 20px', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer', 
-                      fontWeight: '600', 
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    ✅ Hoàn tất bảo dưỡng (Về Sẵn sàng)
-                  </button>
+                <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '700' }}>
+                  Cập nhật tình trạng xe
+                </h2>
+                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                  Biển số xe: <strong style={{ color: '#0284c7' }}>{selectedVehicle.license_plate}</strong>
                 </div>
               </div>
-            ) : (
-              <form onSubmit={handleMaintenanceSubmit}>
-                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={styles.label}>Trạng thái hiện tại:</span>
-                  <span style={styles.badge(selectedVehicle.status)}>
-                    {selectedVehicle.status === 'AVAILABLE' ? 'Sẵn sàng' : selectedVehicle.status === 'REPAIR' ? 'Đang sửa chữa' : 'Tạm ngưng'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <button 
+                type="button" 
+                onClick={() => setShowMaintModal(false)} 
+                disabled={submittingStatus}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8', lineHeight: 1 }}
+              >&times;</button>
+            </div>
+            
+            <form onSubmit={(e) => handleStatusSubmit(e)}>
+              {/* 3.2. Khu vực thông tin tình trạng hiện tại ngắn gọn */}
+              <div style={styles.modalVehicleInfoStrip}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
-                    <label style={styles.label}>Ngày bắt đầu bảo dưỡng *</label>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
+                      {selectedVehicle.license_plate}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '1px' }}>
+                      {selectedVehicle.brand_model || selectedVehicle.vehicle_name || 'Chưa xác định dòng xe'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>Tình trạng hiện tại:</span>
+                    <span style={styles.statusBadge(getStatusMeta(selectedVehicle.status))}>
+                      <span style={styles.statusDot(getStatusMeta(selectedVehicle.status).dot)} />
+                      {getStatusMeta(selectedVehicle.status).label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thông báo lỗi validation ngay trong form */}
+              {formError && (
+                <div style={styles.formErrorBanner}>
+                  <span>⚠️ {formError}</span>
+                </div>
+              )}
+
+              {/* 3.3. Lựa chọn tình trạng tiếp theo */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={styles.label}>Chuyển sang tình trạng *</label>
+                <select
+                  style={{ ...styles.select, width: '100%', height: '40px', fontSize: '13.5px' }}
+                  value={maintData.target_status}
+                  onChange={(e) => {
+                    setMaintData({ ...maintData, target_status: e.target.value });
+                    setFormError('');
+                  }}
+                  disabled={submittingStatus}
+                >
+                  {selectedVehicle.status === 'MAINTENANCE' && (
+                    <>
+                      <option value="AVAILABLE">Sẵn sàng hoạt động</option>
+                      <option value="REPAIR">Đang sửa chữa</option>
+                    </>
+                  )}
+                  {selectedVehicle.status === 'AVAILABLE' && (
+                    <>
+                      <option value="MAINTENANCE">Bảo dưỡng</option>
+                      <option value="REPAIR">Đang sửa chữa</option>
+                    </>
+                  )}
+                  {selectedVehicle.status === 'REPAIR' && (
+                    <option value="AVAILABLE">Sẵn sàng hoạt động</option>
+                  )}
+                </select>
+
+                {/* Mô tả nghiệp vụ tương ứng với lựa chọn */}
+                <div style={styles.targetStatusDescBox}>
+                  {selectedVehicle.status === 'MAINTENANCE' && maintData.target_status === 'AVAILABLE' && (
+                    <span>
+                      ✅ <strong>Mô tả:</strong> Hoàn tất bảo dưỡng, kiểm tra kỹ thuật và xác nhận xe đủ điều kiện đưa vào khai thác.
+                    </span>
+                  )}
+                  {selectedVehicle.status === 'MAINTENANCE' && maintData.target_status === 'REPAIR' && (
+                    <span>
+                      🛠️ <strong>Mô tả:</strong> Phát hiện hư hỏng trong quá trình bảo dưỡng và cần chuyển xe sang quy trình sửa chữa.
+                    </span>
+                  )}
+                  {selectedVehicle.status === 'AVAILABLE' && maintData.target_status === 'MAINTENANCE' && (
+                    <span>
+                      🔧 <strong>Mô tả:</strong> Đưa xe vào đợt bảo dưỡng định kỳ theo kế hoạch kỹ thuật.
+                    </span>
+                  )}
+                  {selectedVehicle.status === 'AVAILABLE' && maintData.target_status === 'REPAIR' && (
+                    <span>
+                      🛠️ <strong>Mô tả:</strong> Đưa xe vào xưởng sửa chữa khắc phục sự cố kỹ thuật.
+                    </span>
+                  )}
+                  {selectedVehicle.status === 'REPAIR' && maintData.target_status === 'AVAILABLE' && (
+                    <span>
+                      ✅ <strong>Mô tả:</strong> Nghiệm thu sửa chữa kỹ thuật và đưa xe trở lại trạng thái sẵn sàng phục vụ.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Ngày bắt đầu & dự kiến hoàn thành khi đưa vào Bảo dưỡng hoặc Sửa chữa */}
+              {(maintData.target_status === 'MAINTENANCE' || (selectedVehicle.status !== 'MAINTENANCE' && maintData.target_status === 'REPAIR')) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={styles.label}>Ngày bắt đầu *</label>
                     <input 
                       type="date" 
                       required
                       value={maintData.start_date}
                       onChange={(e) => setMaintData({ ...maintData, start_date: e.target.value })}
-                      style={{...styles.input, outline: 'none', height: '42px'}}
+                      disabled={submittingStatus}
+                      style={{ ...styles.input, outline: 'none', height: '38px', fontSize: '13px' }}
                     />
                   </div>
                   <div>
@@ -783,46 +594,91 @@ const StaffVehicleManagement = () => {
                       required
                       value={maintData.end_date}
                       onChange={(e) => setMaintData({ ...maintData, end_date: e.target.value })}
-                      style={{...styles.input, outline: 'none', height: '42px'}}
+                      disabled={submittingStatus}
+                      style={{ ...styles.input, outline: 'none', height: '38px', fontSize: '13px' }}
                     />
                   </div>
                 </div>
+              )}
 
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={styles.label}>Nội dung / Lý do bảo dưỡng *</label>
-                  <textarea 
-                    rows="3"
-                    required
-                    placeholder="VD: Bảo dưỡng định kỳ ga máy lạnh tại gara Vũng Tàu, thay nhớt..."
-                    value={maintData.reason}
-                    onChange={(e) => setMaintData({ ...maintData, reason: e.target.value })}
-                    style={{...styles.input, outline: 'none', resize: 'vertical', minHeight: '80px', padding: '10px'}}
-                  ></textarea>
+              {/* 3.4. Lý do cập nhật và kết quả kiểm tra */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={styles.label}>Lý do cập nhật / Kết quả kiểm tra *</label>
+                <textarea 
+                  rows="3"
+                  required
+                  placeholder={
+                    selectedVehicle.status === 'MAINTENANCE' && maintData.target_status === 'AVAILABLE'
+                      ? 'Ví dụ: Đã hoàn tất bảo dưỡng định kỳ, kiểm tra hệ thống phanh, lốp xe và các hạng mục an toàn. Xe đủ điều kiện hoạt động.'
+                      : selectedVehicle.status === 'MAINTENANCE' && maintData.target_status === 'REPAIR'
+                      ? 'Ví dụ: Phát hiện hệ thống phanh bất thường trong quá trình bảo dưỡng, cần chuyển xe sang sửa chữa.'
+                      : maintData.target_status === 'AVAILABLE'
+                      ? 'Ví dụ: Đã hoàn tất kiểm tra nghiệm thu kỹ thuật, xe đủ điều kiện an toàn hoạt động.'
+                      : 'Ví dụ: Đưa xe vào bảo dưỡng định kỳ, kiểm tra dầu máy và các hệ thống phụ trợ...'
+                  }
+                  value={maintData.reason}
+                  onChange={(e) => {
+                    setMaintData({ ...maintData, reason: e.target.value });
+                    setFormError('');
+                  }}
+                  disabled={submittingStatus}
+                  maxLength={500}
+                  style={{
+                    ...styles.input,
+                    outline: 'none',
+                    resize: 'vertical',
+                    minHeight: '80px',
+                    padding: '10px 12px',
+                    fontSize: '13px',
+                    lineHeight: 1.45,
+                    borderColor: formError ? '#ef4444' : '#cbd5e1'
+                  }}
+                ></textarea>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>
+                  <span>* Bắt buộc nhập đầy đủ kết quả kiểm tra hoặc lý do cập nhật</span>
+                  <span>{maintData.reason.length}/500 ký tự</span>
                 </div>
+              </div>
 
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
-                  <button type="button" onClick={() => setShowMaintModal(false)} style={{ ...styles.btnSecondary, padding: '10px 20px' }}>Hủy</button>
-                  <button 
-                    type="submit" 
-                    style={{ 
-                      backgroundColor: '#ea580c', 
-                      color: '#fff', 
-                      border: 'none', 
-                      padding: '10px 20px', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer', 
-                      fontWeight: '600', 
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    🔧 Xác nhận đưa vào bảo dưỡng
-                  </button>
-                </div>
-              </form>
-            )}
+              {/* 3.5. Nút thao tác */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '14px', borderTop: '1px solid #f1f5f9' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowMaintModal(false)} 
+                  disabled={submittingStatus}
+                  style={{ ...styles.btnSecondary, padding: '9px 18px', fontSize: '13px' }}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingStatus}
+                  style={{ 
+                    backgroundColor: maintData.target_status === 'AVAILABLE' ? '#15803d' : '#0284c7', 
+                    color: '#fff', 
+                    border: 'none', 
+                    padding: '9px 20px', 
+                    borderRadius: '8px', 
+                    cursor: submittingStatus ? 'not-allowed' : 'pointer', 
+                    fontWeight: '600', 
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: submittingStatus ? 0.7 : 1,
+                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.08)'
+                  }}
+                >
+                  {submittingStatus
+                    ? 'Đang xử lý...'
+                    : maintData.target_status === 'AVAILABLE'
+                    ? 'Xác nhận đưa xe về Sẵn sàng'
+                    : maintData.target_status === 'REPAIR'
+                    ? 'Xác nhận chuyển sang Sửa chữa'
+                    : 'Xác nhận cập nhật tình trạng'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -831,36 +687,440 @@ const StaffVehicleManagement = () => {
 };
 
 const styles = {
-  container: { padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'Arial, sans-serif' },
-  headerArea: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  pageTitle: { fontSize: '24px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' },
-  pageSubtitle: { fontSize: '14px', color: '#64748b', margin: 0 },
-  btnPrimary: { backgroundColor: '#0194f3', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' },
-  btnSecondary: { backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#334155' },
-  statsRow: { display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' },
-  statBox: { flex: '1', minWidth: '120px', backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' },
-  statLabel: { fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px' },
-  statValue: { fontSize: '24px', fontWeight: 'bold', color: '#0f172a' },
-  filterBar: { display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' },
-  input: { padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', color: '#1e293b' },
-  select: { padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', backgroundColor: '#fff', minWidth: '150px', fontFamily: 'inherit', color: '#1e293b' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' },
-  categoryTitle: { fontSize: '16px', color: '#334155', fontWeight: '700', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', marginBottom: '16px' },
-  card: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' },
-  badge: (status) => {
-    let bg = '#e2e8f0'; let c = '#475569';
-    if (status === 'AVAILABLE') { bg = '#dcfce7'; c = '#166534'; }
-    if (status === 'IN_TOUR') { bg = '#fef9c3'; c = '#854d0e'; }
-    if (status === 'MAINTENANCE') { bg = '#ffedd5'; c = '#9a3412'; }
-    if (status === 'REPAIR') { bg = '#fee2e2'; c = '#991b1b'; }
-    return { backgroundColor: bg, color: c, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600' };
+  container: {
+    padding: '20px 24px',
+    backgroundColor: '#f8fafc',
+    minHeight: '100vh',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif"
   },
-  modalBackdrop: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modalCard: { backgroundColor: '#fff', width: '500px', maxWidth: '90%', borderRadius: '12px', padding: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' },
-  label: { display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' },
-  alert: { padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '500' },
-  closeAlert: { cursor: 'pointer', fontWeight: 'bold', fontSize: '18px' },
-  loading: { textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '15px' }
+  headerArea: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px'
+  },
+  pageTitle: {
+    fontSize: '22px',
+    fontWeight: '700',
+    color: '#0f172a',
+    margin: '0 0 4px 0'
+  },
+  pageSubtitle: {
+    fontSize: '13.5px',
+    color: '#64748b',
+    margin: 0
+  },
+  btnSecondary: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    padding: '9px 16px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '13px',
+    color: '#334155'
+  },
+  statsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: '12px',
+    marginBottom: '20px'
+  },
+  statBox: {
+    backgroundColor: '#ffffff',
+    padding: '14px 16px',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0'
+  },
+  statLabel: {
+    fontSize: '11.5px',
+    color: '#64748b',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+    marginBottom: '6px'
+  },
+  statValue: {
+    fontSize: '22px',
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  filterBar: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    backgroundColor: '#ffffff',
+    padding: '14px 16px',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0'
+  },
+  input: {
+    padding: '9px 12px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    fontSize: '13.5px',
+    width: '100%',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit',
+    color: '#0f172a'
+  },
+  select: {
+    padding: '9px 12px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    fontSize: '13.5px',
+    backgroundColor: '#ffffff',
+    minWidth: '170px',
+    fontFamily: 'inherit',
+    color: '#0f172a'
+  },
+  categorySection: {
+    marginBottom: '28px'
+  },
+  categoryHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #e2e8f0',
+    paddingBottom: '8px',
+    marginBottom: '14px'
+  },
+  categoryTitle: {
+    fontSize: '14px',
+    color: '#1e293b',
+    fontWeight: '700',
+    letterSpacing: '0.4px',
+    margin: 0
+  },
+  categoryCount: {
+    fontSize: '12px',
+    color: '#64748b',
+    fontWeight: '600',
+    backgroundColor: '#f1f5f9',
+    padding: '3px 10px',
+    borderRadius: '12px'
+  },
+  // Lưới responsive: Desktop rộng 3 cột, Desktop vừa 2 cột, Mobile 1 cột
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+    gap: '18px',
+    alignItems: 'stretch'
+  },
+  // Thẻ xe phong cách Modern ERP Fleet Management
+  card: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
+    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    height: '100%'
+  },
+  imageContainer: {
+    width: '100%',
+    height: '148px',
+    backgroundColor: '#f1f5f9',
+    borderBottom: '1px solid #f1f5f9',
+    overflow: 'hidden',
+    flexShrink: 0
+  },
+  vehicleImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block'
+  },
+  cardBody: {
+    padding: '14px 16px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1
+  },
+  identitySection: {
+    paddingBottom: '12px',
+    marginBottom: '12px',
+    borderBottom: '1px solid #f1f5f9'
+  },
+  identityTopRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px'
+  },
+  codeBadge: {
+    fontSize: '11.5px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    padding: '3px 8px',
+    borderRadius: '5px',
+    fontWeight: '600',
+    letterSpacing: '0.2px'
+  },
+  statusBadge: (meta) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    backgroundColor: meta.bg,
+    color: meta.color,
+    border: `1px solid ${meta.border}`,
+    padding: '3px 9px',
+    borderRadius: '999px',
+    fontSize: '11.5px',
+    fontWeight: '600',
+    whiteSpace: 'nowrap'
+  }),
+  statusDot: (dotColor) => ({
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: dotColor,
+    display: 'inline-block'
+  }),
+  plateRow: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '6px'
+  },
+  plateLabel: {
+    fontSize: '12.5px',
+    color: '#64748b',
+    fontWeight: '500'
+  },
+  plateNumber: {
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: '0.3px'
+  },
+  specGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    columnGap: '12px',
+    rowGap: '10px',
+    marginBottom: '12px'
+  },
+  specItemFull: {
+    gridColumn: '1 / -1',
+    minWidth: 0
+  },
+  specItem: {
+    minWidth: 0
+  },
+  specLabel: {
+    fontSize: '11.5px',
+    color: '#64748b',
+    fontWeight: '500',
+    marginBottom: '2px'
+  },
+  specValue: {
+    fontSize: '13px',
+    color: '#1e293b',
+    fontWeight: '600',
+    lineHeight: '1.4',
+    wordBreak: 'break-word'
+  },
+  serviceRow: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '7px',
+    padding: '8px 10px',
+    marginBottom: '10px'
+  },
+  serviceValue: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '6px',
+    fontSize: '12.5px',
+    color: '#334155',
+    fontWeight: '600',
+    lineHeight: '1.4'
+  },
+  serviceText: {
+    wordBreak: 'break-word'
+  },
+  notesArea: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    marginBottom: '12px'
+  },
+  tourInfoBox: {
+    fontSize: '12px',
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bae6fd',
+    borderRadius: '6px',
+    padding: '7px 10px',
+    lineHeight: '1.4'
+  },
+  maintInfoBox: {
+    fontSize: '12px',
+    color: '#9a3412',
+    backgroundColor: '#fff7ed',
+    border: '1px solid #fed7aa',
+    borderRadius: '6px',
+    padding: '7px 10px',
+    lineHeight: '1.4',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden'
+  },
+  noteBox: {
+    fontSize: '12px',
+    color: '#475569',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #f1f5f9',
+    borderRadius: '6px',
+    padding: '7px 10px',
+    lineHeight: '1.4',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    wordBreak: 'break-word'
+  },
+  noteLabel: {
+    fontWeight: '600',
+    color: '#334155'
+  },
+  noteContent: {
+    color: '#475569'
+  },
+  actionFooter: {
+    marginTop: 'auto',
+    paddingTop: '12px',
+    borderTop: '1px solid #f1f5f9',
+    display: 'grid',
+    gridTemplateColumns: '1.35fr 1fr',
+    gap: '8px'
+  },
+  btnUpdateStatus: (disabled) => ({
+    height: '40px',
+    backgroundColor: disabled ? '#f1f5f9' : '#0284c7',
+    color: disabled ? '#94a3b8' : '#ffffff',
+    border: disabled ? '1px solid #e2e8f0' : '1px solid #0284c7',
+    padding: '0 10px',
+    borderRadius: '7px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontWeight: '600',
+    fontSize: '12.5px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '5px',
+    whiteSpace: 'nowrap',
+    transition: 'background-color 0.15s ease'
+  }),
+  btnHistory: {
+    height: '40px',
+    backgroundColor: '#f8fafc',
+    color: '#0284c7',
+    border: '1px solid #cbd5e1',
+    padding: '0 10px',
+    borderRadius: '7px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '12.5px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '5px',
+    whiteSpace: 'nowrap',
+    transition: 'background-color 0.15s ease'
+  },
+  modalVehicleInfoStrip: {
+    padding: '10px 14px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    marginBottom: '16px'
+  },
+  formErrorBanner: {
+    padding: '9px 12px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fca5a5',
+    borderRadius: '6px',
+    color: '#b91c1c',
+    fontSize: '12.5px',
+    fontWeight: '500',
+    marginBottom: '14px',
+    lineHeight: 1.4
+  },
+  targetStatusDescBox: {
+    marginTop: '6px',
+    padding: '8px 10px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    fontSize: '12px',
+    color: '#334155',
+    lineHeight: 1.45
+  },
+  modalBackdrop: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  },
+  modalCard: {
+    backgroundColor: '#ffffff',
+    width: '500px',
+    maxWidth: '90%',
+    borderRadius: '12px',
+    padding: '24px',
+    boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.15)'
+  },
+  label: {
+    display: 'block',
+    marginBottom: '6px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#334155'
+  },
+  alert: {
+    padding: '12px 16px',
+    borderRadius: '8px',
+    marginBottom: '20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    border: '1px solid transparent'
+  },
+  closeAlert: {
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '18px'
+  },
+  loading: {
+    textAlign: 'center',
+    padding: '48px',
+    color: '#64748b',
+    fontSize: '14px'
+  },
+  emptyBox: {
+    textAlign: 'center',
+    padding: '48px',
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    color: '#64748b',
+    fontSize: '14px'
+  }
 };
 
 export default StaffVehicleManagement;

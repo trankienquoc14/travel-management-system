@@ -2046,7 +2046,7 @@ const autoScanAndNotifyTourClosed = async () => {
           INSERT INTO notifications (
             type, target_role, title, content, departure_id, tour_id, departure_date, num_booked, is_read, action_url, created_at
           ) VALUES (
-            'TOUR_CLOSED', 'STAFF', ?, ?, ?, ?, ?, ?, 0, 'create_request', NOW()
+            'TOUR_CLOSED', 'MANAGER', ?, ?, ?, ?, ?, ?, 0, 'create_request', NOW()
           )
         `, {
           replacements: [
@@ -2091,10 +2091,7 @@ const autoSyncStaffRoleNotifications = async (currentUser) => {
     // ROLE 4: NHÂN VIÊN VĂN PHÒNG (STAFF)
     // -------------------------------------------------------------
     if (roleId === 4) {
-      // 1. Quét các tour chạm mốc <= 30 ngày (Khóa tour để gửi yêu cầu dịch vụ nhà cung cấp)
-      await autoScanAndNotifyTourClosed();
-
-      // 2. Quét các yêu cầu đổi/hủy tour mới của khách hàng (Pending)
+      // 1. Quét các yêu cầu đổi/hủy tour mới của khách hàng (Pending)
       const [pendingChanges] = await sequelize.query(`
         SELECT cr.change_id, cr.booking_id, cr.request_type, cr.reason, cr.created_at,
                u.full_name AS customer_name,
@@ -2413,6 +2410,9 @@ const autoSyncStaffRoleNotifications = async (currentUser) => {
     // ROLE 3: QUẢN LÝ TOUR (TOUR MANAGER)
     // -------------------------------------------------------------
     else if (roleId === 3) {
+      // 0. Quét các tour chạm mốc <= 30 ngày (Khóa tour để gửi yêu cầu dịch vụ nhà cung cấp)
+      await autoScanAndNotifyTourClosed();
+
       // 1. Quét các tour đang chờ phê duyệt (Pending_Approval)
       const [pendingTours] = await sequelize.query(`
         SELECT tour_id, tour_name 

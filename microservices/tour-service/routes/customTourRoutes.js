@@ -53,6 +53,14 @@ router.get('/requests/customer/:customerId', protect, customTourController.getCu
 
 // --- NEW WORKFLOW ROUTES ---
 router.post('/requests/:id/initial-quote', protect, customTourController.sendInitialQuote);
+router.post('/requests/:id/quote-draft', protect, (req, res, next) => {
+  req.body.is_draft = true;
+  return customTourController.sendInitialQuote(req, res, next);
+});
+router.post('/requests/:id/submit-manager-quote', protect, (req, res, next) => {
+  req.body.send_to_manager = true;
+  return customTourController.sendInitialQuote(req, res, next);
+});
 router.put('/requests/:id/start-design', protect, customTourController.startDesigning);
 router.post('/requests/:id/submit-manager', protect, upload.any(), customTourController.submitToManager);
 router.post('/quotes/:quoteId/manager-review', protect, customTourController.managerReview);

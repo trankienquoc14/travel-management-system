@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 
+const cleanHotelDisplayName = (name) => {
+    if (!name || typeof name !== 'string') return '';
+    let cleaned = name.trim();
+    const parts = cleaned.split(' - ').map(p => p.trim());
+    if (parts.length >= 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+        parts.splice(1, 1);
+        cleaned = parts.join(' - ');
+    }
+    return cleaned;
+};
+
 const ManagerApproveTours = () => {
     // 1. Quản lý Tab
     const [activeTab, setActiveTab] = useState('custom'); // 'custom' hoặc 'fixed'
@@ -393,7 +404,7 @@ const ManagerApproveTours = () => {
                                     prefs = selectedTour.preferences || {};
                                 }
                                 
-                                const hotelReq = prefs.hotelName || prefs.accommodation || '';
+                                const hotelReq = cleanHotelDisplayName(prefs.hotelName || prefs.accommodation || '');
                                 const transportReq = prefs.transportName || prefs.transport || '';
                                 const noteReq = prefs.notes || prefs.note || '';
                                 const budget = selectedTour.budget || 0;
@@ -449,11 +460,31 @@ const ManagerApproveTours = () => {
                                     if (day.meals?.breakfast === true || day.meals?.breakfast === 'external') includedBreakfast++;
                                     if (day.meals?.lunch === true || day.meals?.lunch === 'external') includedLunch++;
                                     if (day.meals?.dinner === true || day.meals?.dinner === 'external') includedDinner++;
+                                    if (Array.isArray(day.activities)) {
+                                        day.activities.forEach(act => {
+                                            if (act && act.price) autoTicketsCost += Number(act.price || 0);
+                                        });
+                                    }
                                 });
 
                                 const accommodationPerPax = autoAccommodationCost / 2;
-                                const fixedTransport = Number(costConfig.fixed?.transport || 0);
-                                const variableTickets = Number(costConfig.variable?.tickets || 0);
+                                const selectedTransport = costConfig.selectedTransport || parsedItinerary?.proposedServices?.transport;
+                                let fixedTransport = Number(costConfig.fixed?.transport || 0);
+                                if (!fixedTransport && selectedTransport) {
+                                    const dailyRate = Number(
+                                        selectedTransport.base_cost || 
+                                        selectedTransport.price || 
+                                        selectedTransport.pricePerDay || 
+                                        selectedTransport.assignedVehicle?.base_cost || 
+                                        selectedTransport.assignedVehicle?.price || 
+                                        parsedItinerary?.adjTransportCost || 
+                                        0
+                                    );
+                                    if (dailyRate > 0) {
+                                        fixedTransport = dailyRate * totalDays;
+                                    }
+                                }
+                                const variableTickets = autoTicketsCost + Number(costConfig.variable?.tickets || 0);
                                 
                                 const countBreakfast = costConfig.variable?.countBreakfast !== undefined ? Number(costConfig.variable.countBreakfast) : includedBreakfast;
                                 const countLunch = costConfig.variable?.countLunch !== undefined ? Number(costConfig.variable.countLunch) : includedLunch;
@@ -511,7 +542,7 @@ const ManagerApproveTours = () => {
                                                 <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '12px' }}>
                                                     <p style={{ margin: '0 0 8px 0', color: '#64748b', fontSize: '13px', fontWeight: '600' }}>Yêu cầu từ khách hàng:</p>
                                                     <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#334155' }}>
-                                                        {hotelReq && <li><strong>Khách sạn:</strong> {hotelReq}</li>}
+                                                        {hotelReq && <li><strong>Khách sạn:</strong> {cleanHotelDisplayName(hotelReq)}</li>}
                                                         {transportReq && <li><strong>Di chuyển:</strong> {formatVehicleDisplayName(transportReq)}</li>}
                                                         {noteReq && <li><strong>Ghi chú thêm:</strong> {noteReq}</li>}
                                                         {!hotelReq && !transportReq && !noteReq && <li style={{ color: '#94a3b8' }}>Không có yêu cầu đặc biệt</li>}
@@ -558,7 +589,7 @@ const ManagerApproveTours = () => {
                                                             {day.accommodation && day.accommodation.name && (
                                                                 <div>
                                                                     <strong style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px', display: 'block' }}>🏨 Lưu trú:</strong>
-                                                                    <div style={{ fontSize: '14px', color: '#334155' }}>{day.accommodation.name}</div>
+                                                                    <div style={{ fontSize: '14px', color: '#334155' }}>{cleanHotelDisplayName(day.accommodation.name)}</div>
                                                                 </div>
                                                             )}
                                                             {day.meals && (
@@ -680,9 +711,13 @@ const ManagerApproveTours = () => {
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#475569' }}>
                                                     <span>Biên lợi nhuận</span> <strong style={{ color: '#8b5cf6' }}>{costConfig.margin}%</strong>
                                                 </div>
-                                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '14px', color: '#1e293b', fontWeight: 'bold' }}>Giá Đề Xuất Bán</span>
-                                                    <strong style={{ fontSize: '18px', color: '#16a34a' }}>{formatMoney(prA)} đ</strong>
+                                                <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                    <span style={{ fontSize: '13.5px', color: '#1e293b', fontWeight: '600' }}>Giá Bán / 1 khách:</span>
+                                                    <strong style={{ fontSize: '16px', color: '#16a34a' }}>{formatMoney(prA)} đ/khách</strong>
+                                                </div>
+                                                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '14.5px', color: '#14532d', fontWeight: '800' }}>TỔNG GIÁ TOUR ({pA + pC + pT + pI} khách):</span>
+                                                    <strong style={{ fontSize: '20px', color: '#15803d' }}>{formatMoney(grandTotalRevenue)} đ</strong>
                                                 </div>
                                             </div>
 
@@ -962,7 +997,7 @@ const ManagerApproveTours = () => {
                                                                 {day.accommodation && day.accommodation.name && (
                                                                     <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 100px', gap: '12px', background: '#eff6ff', padding: '10px 12px', borderRadius: '8px', border: '1px solid #bfdbfe', alignItems: 'center', marginTop: '4px' }}>
                                                                         <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 'bold' }}>Lưu trú</span>
-                                                                        <strong style={{ fontSize: '13px', color: '#1e3a8a' }}>{day.accommodation.name}</strong>
+                                                                        <strong style={{ fontSize: '13px', color: '#1e3a8a' }}>{cleanHotelDisplayName(day.accommodation.name)}</strong>
                                                                         <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600', textAlign: 'right' }}>{day.accommodation.price ? formatMoney(day.accommodation.price) + ' đ' : '-'}</span>
                                                                     </div>
                                                                 )}

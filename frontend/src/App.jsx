@@ -112,7 +112,7 @@ function App() {
             ========================================= */}
         <Route path="/home" element={<HomePage />} />
         <Route path="/tours" element={<TourListPage />} />
-        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/services" element={<Navigate to="/tours" replace />} />
         <Route path="/contact" element={<ContactPage />} />
         
         <Route path="/articles" element={<ArticlesPage />} />
