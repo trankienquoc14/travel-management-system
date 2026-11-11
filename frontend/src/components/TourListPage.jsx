@@ -548,61 +548,61 @@ const TourListPage = () => {
             </section>
 
 
-            {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (HÀI HÒA & ĐỒNG BỘ 100% VỚI GIAO DIỆN WEB) */}
-            <section style={{ padding: '0 5%', marginBottom: '60px' }}>
+            {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (CÂN ĐỐI, HÀI HÒA & ĐỒNG BỘ 100% GIAO DIỆN) */}
+            <section style={{ padding: '0 5%', margin: '20px 0 60px 0' }}>
                 <div className="custom-tour-banner" style={{
                     position: 'relative',
                     borderRadius: '24px',
                     overflow: 'hidden',
-                    padding: '40px 44px',
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%)',
+                    padding: '36px 44px',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 55%, #e0f2fe 100%)',
                     border: '1.5px solid #bae6fd',
-                    boxShadow: '0 15px 40px rgba(1, 148, 243, 0.08)',
+                    boxShadow: '0 12px 35px rgba(1, 148, 243, 0.08)',
                     display: 'grid',
-                    gridTemplateColumns: '1.25fr 0.95fr',
-                    gap: '40px',
+                    gridTemplateColumns: '1.4fr 1fr',
+                    gap: '36px',
                     alignItems: 'center'
                 }}>
                     {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
-                    <div>
+                    <div style={{ textAlign: 'left' }}>
                         <span style={{
                             background: '#e0f2fe',
                             border: '1px solid #bae6fd',
                             color: '#0284c7',
                             fontSize: '12px',
                             fontWeight: '800',
-                            padding: '6px 14px',
+                            padding: '5px 14px',
                             borderRadius: '20px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            marginBottom: '16px',
+                            marginBottom: '14px',
                             letterSpacing: '0.3px'
                         }}>
                             ✨ DỊCH VỤ TOUR THEO YÊU CẦU
                         </span>
                         
-                        <h2 style={{ fontSize: '30px', fontWeight: '900', lineHeight: '1.3', marginBottom: '12px', letterSpacing: '-0.5px', color: '#0f172a' }}>
-                            Tự Thiết Kế Chuyến Đi Theo Cách Của Bạn
+                        <h2 style={{ fontSize: '28px', fontWeight: '900', lineHeight: '1.35', marginBottom: '12px', letterSpacing: '-0.4px', color: '#0f172a' }}>
+                            Tự Thiết Kế Chuyến Đi Của Riêng Bạn
                         </h2>
 
-                        <p style={{ fontSize: '15px', color: '#475569', lineHeight: '1.65', marginBottom: '24px', maxWidth: '520px' }}>
-                            Chủ động lựa chọn điểm đến yêu thích, ngày khởi hành, tiêu chuẩn khách sạn 3★ - 5★ và xe đưa đón riêng. Đội ngũ TravelVN sẽ tối ưu lộ trình và gửi báo giá chi tiết trong 2 phút.
+                        <p style={{ fontSize: '14.5px', color: '#475569', lineHeight: '1.65', marginBottom: '22px', maxWidth: '540px' }}>
+                            Chủ động lựa chọn điểm đến, ngày khởi hành, tiêu chuẩn khách sạn 3★ - 5★ và xe đưa đón riêng. Đội ngũ TravelVN sẽ tối ưu lộ trình và gửi báo giá chi tiết trong 2 phút.
                         </p>
 
-                        {/* KEY PERKS - DẠNG THẺ NHẸ NHÀNG */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '28px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
-                                <span style={{ fontSize: '16px' }}>🏨</span>
-                                <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>Khách sạn 3★ - 5★</span>
+                        {/* KEY PERKS */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#ffffff', padding: '7px 13px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
+                                <span style={{ fontSize: '15px' }}>🏨</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Khách sạn 3★ - 5★</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
-                                <span style={{ fontSize: '16px' }}>🚗</span>
-                                <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>Xe riêng đưa đón VIP</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#ffffff', padding: '7px 13px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
+                                <span style={{ fontSize: '15px' }}>🚗</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Xe riêng đưa đón VIP</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
-                                <span style={{ fontSize: '16px' }}>⚡</span>
-                                <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>Báo giá tự động 2 phút</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#ffffff', padding: '7px 13px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
+                                <span style={{ fontSize: '15px' }}>⚡</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Báo giá tự động 2 phút</span>
                             </div>
                         </div>
 
@@ -616,15 +616,15 @@ const TourListPage = () => {
                                 }
                             }}
                             style={{
-                                padding: '14px 30px',
-                                borderRadius: '25px',
+                                padding: '12px 28px',
+                                borderRadius: '24px',
                                 border: 'none',
                                 background: 'linear-gradient(135deg, #0194f3 0%, #0066cc 100%)',
                                 color: '#ffffff',
                                 fontWeight: '800',
-                                fontSize: '15px',
+                                fontSize: '14.5px',
                                 cursor: 'pointer',
-                                boxShadow: '0 8px 20px rgba(1, 148, 243, 0.35)',
+                                boxShadow: '0 6px 18px rgba(1, 148, 243, 0.35)',
                                 transition: 'all 0.25s ease',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -635,15 +635,15 @@ const TourListPage = () => {
                         </button>
                     </div>
 
-                    {/* RIGHT COLUMN: TRAVEL REAL SHOWCASE (ẢNH DU LỊCH BIỂN RỰC RỠ) */}
+                    {/* RIGHT COLUMN: TRAVEL REAL SHOWCASE (ẢNH BIỂN ĐẢO NGHỈ DƯỠNG CÂN ĐỐI) */}
                     <div className="custom-tour-visual-card" style={{
                         position: 'relative',
                         borderRadius: '20px',
                         overflow: 'hidden',
-                        boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)',
+                        boxShadow: '0 10px 25px rgba(15, 23, 42, 0.1)',
                         border: '4px solid #ffffff',
-                        height: '270px',
-                        backgroundImage: 'url("https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1200")',
+                        height: '230px',
+                        backgroundImage: 'url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200")',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         display: 'flex',
@@ -653,17 +653,17 @@ const TourListPage = () => {
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                             <span style={{
-                                background: 'rgba(15, 23, 42, 0.7)',
+                                background: 'rgba(15, 23, 42, 0.65)',
                                 backdropFilter: 'blur(8px)',
                                 WebkitBackdropFilter: 'blur(8px)',
                                 color: '#ffffff',
-                                fontSize: '12px',
+                                fontSize: '11.5px',
                                 fontWeight: '700',
-                                padding: '6px 14px',
-                                borderRadius: '20px',
+                                padding: '5px 12px',
+                                borderRadius: '16px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '6px'
+                                gap: '5px'
                             }}>
                                 🌴 Nghỉ dưỡng đẳng cấp theo ý bạn
                             </span>
@@ -671,28 +671,28 @@ const TourListPage = () => {
 
                         <div style={{
                             background: '#ffffff',
-                            borderRadius: '16px',
-                            padding: '12px 18px',
-                            boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+                            borderRadius: '14px',
+                            padding: '10px 16px',
+                            boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between'
                         }}>
                             <div>
-                                <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
                                     Hơn 1.500+ Khách Hài Lòng
                                 </div>
-                                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
                                     ⭐ 4.9/5 Đánh giá hành trình tùy chỉnh
                                 </div>
                             </div>
                             <span style={{
                                 background: '#e0f2fe',
                                 color: '#0284c7',
-                                fontSize: '11px',
+                                fontSize: '10.5px',
                                 fontWeight: '800',
-                                padding: '4px 10px',
-                                borderRadius: '10px'
+                                padding: '3px 8px',
+                                borderRadius: '8px'
                             }}>
                                 Độc Bản
                             </span>
