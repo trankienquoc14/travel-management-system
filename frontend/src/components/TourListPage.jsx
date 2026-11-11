@@ -549,7 +549,7 @@ const TourListPage = () => {
 
 
             {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (CÂN ĐỐI, HÀI HÒA & ĐỒNG BỘ 100% GIAO DIỆN) */}
-            <section style={{ padding: '0 5%', margin: '20px 0 60px 0' }}>
+            <section style={{ padding: '0 5%', marginBottom: '60px' }}>
                 <div className="custom-tour-banner" style={{
                     position: 'relative',
                     borderRadius: '24px',
@@ -561,7 +561,9 @@ const TourListPage = () => {
                     display: 'grid',
                     gridTemplateColumns: '1.4fr 1fr',
                     gap: '36px',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    margin: '0',
+                    width: '100%'
                 }}>
                     {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
                     <div style={{ textAlign: 'left' }}>

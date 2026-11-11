@@ -1205,13 +1205,13 @@ body {
   cursor: pointer;
 }
 
-/* Custom Tour Banner Dark Gradient */
+/* Custom Tour Banner Modern Harmonized */
 .custom-tour-banner {
-  margin: 60px 8%;
+  margin: 0;
+  width: 100%;
   border-radius: 24px;
   overflow: hidden;
-  background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000') center/cover no-repeat;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
 }
 
 .banner-overlay-dark {
@@ -1660,15 +1660,7 @@ body {
   cursor: pointer;
 }
 
-/* Banner Custom Tour */
-.custom-tour-banner {
-  background: var(--primary-color);
-  color: white;
-  text-align: center;
-  padding: 60px 20px;
-  margin: 40px 8%;
-  border-radius: 20px;
-}
+/* Legacy Banner Custom Tour Override */
 
 .banner-content h2 {
   font-size: 32px;
