@@ -741,20 +741,22 @@ const HomePage = () => {
                                     </div>
 
                                     {/* Bottom Info Box */}
-                                    <div style={{ position: 'absolute', bottom: '18px', left: '20px', right: '20px', color: '#ffffff' }}>
-                                        <h3 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.3px', color: '#ffffff' }}>
+                                    <div className="dest-bottom-info" style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px', color: '#ffffff' }}>
+                                        <h3 style={{ fontSize: '19px', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.3px', color: '#ffffff' }}>
                                             {dest.name}
                                         </h3>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div className="dest-info-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                                             <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
                                                 Giá từ <strong style={{ color: '#38bdf8', fontSize: '15px', fontWeight: '800' }}>{formatCurrency(dest.minPrice)}</strong>
                                             </span>
-                                            <span style={{
-                                                fontSize: '12px', fontWeight: '800', color: '#0194f3', background: '#ffffff',
-                                                padding: '5px 12px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-                                                transition: 'all 0.2s'
+                                            <span className="dest-explore-badge" style={{
+                                                fontSize: '11.5px', fontWeight: '800', color: '#ffffff', background: 'rgba(255, 255, 255, 0.25)',
+                                                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                                                padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.4)',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                                transition: 'all 0.2s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px'
                                             }}>
-                                                Khám phá ➡️
+                                                Khám phá →
                                             </span>
                                         </div>
                                     </div>
@@ -1084,7 +1086,7 @@ const HomePage = () => {
 
             {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (BALANCED 2-COLUMN DESIGN) */}
             <section style={{ padding: '0 5%', marginBottom: '60px' }}>
-                <div style={{
+                <div className="custom-tour-banner" style={{
                     position: 'relative', borderRadius: '28px', overflow: 'hidden', padding: '48px 44px',
                     backgroundImage: 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.85) 50%, rgba(3, 105, 161, 0.8) 100%), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000")',
                     backgroundSize: 'cover', backgroundPosition: 'center', color: '#ffffff',
@@ -1146,7 +1148,7 @@ const HomePage = () => {
                     </div>
 
                     {/* RIGHT COLUMN: VISUAL GLASSMORPHIC PREVIEW WIDGET */}
-                    <div style={{
+                    <div className="custom-tour-preview-widget" style={{
                         background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(16px)',
                         borderRadius: '24px', padding: '24px 28px', border: '1px solid rgba(255, 255, 255, 0.22)',
                         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column', gap: '16px'

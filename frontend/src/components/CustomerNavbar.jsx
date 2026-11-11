@@ -10,6 +10,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDropdownHome, setShowDropdownHome] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Modals
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -634,13 +635,199 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                             </div>
                         </>
                     ) : (
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => navigate('/login')} className="btn-login-outline" style={{ padding: '8px 20px', borderRadius: '20px', border: '1px solid #0194f3', color: '#0194f3', background: '#fff', fontWeight: '700', cursor: 'pointer' }}>Đăng nhập</button>
-                            <button onClick={() => navigate('/login')} className="btn-primary" style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', background: '#0194f3', color: '#fff', fontWeight: '700', cursor: 'pointer' }}>Đăng ký</button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button onClick={() => navigate('/login')} className="btn-login-outline" style={{ padding: '8px 18px', borderRadius: '20px', border: '1px solid #0194f3', color: '#0194f3', background: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>Đăng nhập</button>
+                            <button onClick={() => navigate('/login')} className="btn-primary" style={{ padding: '8px 18px', borderRadius: '20px', border: 'none', background: '#0194f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>Đăng ký</button>
                         </div>
                     )}
+
+                    {/* MOBILE HAMBURGER BUTTON */}
+                    <button 
+                        className="mobile-hamburger-btn"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        aria-label="Menu"
+                        style={{
+                            background: mobileMenuOpen ? '#eff6ff' : '#f8fafc',
+                            border: '1.5px solid #e2e8f0',
+                            borderRadius: '12px',
+                            width: '40px',
+                            height: '40px',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#0f172a',
+                            fontSize: '20px',
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        {mobileMenuOpen ? '✕' : '☰'}
+                    </button>
                 </div>
             </nav>
+
+            {/* MOBILE NAVIGATION DRAWER OVERLAY */}
+            {mobileMenuOpen && (
+                <div 
+                    className="mobile-nav-backdrop"
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        top: '60px',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 9998
+                    }}
+                >
+                    <div 
+                        className="mobile-nav-drawer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            backgroundColor: '#ffffff',
+                            padding: '20px 20px 30px 20px',
+                            borderBottomLeftRadius: '24px',
+                            borderBottomRightRadius: '24px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            animation: 'dropdownFadeIn 0.25s ease-out'
+                        }}
+                    >
+                        <div 
+                            onClick={() => { setMobileMenuOpen(false); navigate('/home'); }}
+                            style={{
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                fontWeight: activeTab === 'home' ? '800' : '600',
+                                color: activeTab === 'home' ? '#0194f3' : '#1e293b',
+                                background: activeTab === 'home' ? '#eff6ff' : '#f8fafc',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                fontSize: '15px'
+                            }}
+                        >
+                            <span>🏠</span> Trang chủ
+                        </div>
+
+                        <div 
+                            onClick={() => { setMobileMenuOpen(false); navigate('/tours'); }}
+                            style={{
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                fontWeight: activeTab === 'explore' ? '800' : '600',
+                                color: activeTab === 'explore' ? '#0194f3' : '#1e293b',
+                                background: activeTab === 'explore' ? '#eff6ff' : '#f8fafc',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                fontSize: '15px'
+                            }}
+                        >
+                            <span>🧭</span> Khám phá các Tour
+                        </div>
+
+                        <div 
+                            onClick={() => {
+                                setMobileMenuOpen(false);
+                                if (!user) {
+                                    alert('Vui lòng đăng nhập để tự thiết kế tour!');
+                                    navigate('/login');
+                                } else {
+                                    navigate('/build-tour');
+                                }
+                            }}
+                            style={{
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                fontWeight: activeTab === 'build-tour' ? '800' : '700',
+                                color: '#0284c7',
+                                background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                fontSize: '15px'
+                            }}
+                        >
+                            <span>✨</span> Tự thiết kế Tour
+                        </div>
+
+                        <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+
+                        <div 
+                            onClick={() => { setMobileMenuOpen(false); navigate('/articles'); }}
+                            style={{ padding: '10px 16px', color: '#475569', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                        >
+                            <span>📚</span> Cẩm nang & Bài viết
+                        </div>
+
+                        <div 
+                            onClick={() => { setMobileMenuOpen(false); navigate('/article/about'); }}
+                            style={{ padding: '10px 16px', color: '#475569', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                        >
+                            <span>ℹ️</span> Về chúng tôi
+                        </div>
+
+                        <div 
+                            onClick={() => { setMobileMenuOpen(false); navigate('/contact'); }}
+                            style={{ padding: '10px 16px', color: '#475569', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                        >
+                            <span>📞</span> Liên hệ hỗ trợ
+                        </div>
+
+                        {user ? (
+                            <>
+                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                <div 
+                                    onClick={() => { setMobileMenuOpen(false); setShowProfileModal(true); }}
+                                    style={{ padding: '10px 16px', color: '#334155', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                >
+                                    <span>👤</span> Hồ sơ ({user.name || user.email})
+                                </div>
+                                <div 
+                                    onClick={() => { setMobileMenuOpen(false); navigate('/my-bookings'); }}
+                                    style={{ padding: '10px 16px', color: '#334155', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                >
+                                    <span>📦</span> Đơn đặt tour của tôi
+                                </div>
+                                <div 
+                                    onClick={() => { setMobileMenuOpen(false); navigate('/my-quotes'); }}
+                                    style={{ padding: '10px 16px', color: '#334155', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                >
+                                    <span>📋</span> Tour đã thiết kế
+                                </div>
+                                <div 
+                                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                                    style={{ padding: '12px 16px', color: '#ef4444', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: '#fef2f2', borderRadius: '12px', marginTop: '6px' }}
+                                >
+                                    <span>🚪</span> Đăng xuất
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                <button 
+                                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                                    style={{ padding: '12px', borderRadius: '14px', border: '1.5px solid #0194f3', background: '#ffffff', color: '#0194f3', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    Đăng nhập
+                                </button>
+                                <button 
+                                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                                    style={{ padding: '12px', borderRadius: '14px', border: 'none', background: '#0194f3', color: '#ffffff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    Đăng ký
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* MODAL 1: HỒ SƠ CÁ NHÂN */}
             {showProfileModal && (

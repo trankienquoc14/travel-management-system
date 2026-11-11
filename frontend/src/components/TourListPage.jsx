@@ -414,7 +414,7 @@ const TourListPage = () => {
             </div>
 
             <section ref={showcaseRef} style={{ padding: '0 5%', marginBottom: '60px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: showSidebar ? 'minmax(260px, 290px) 1fr' : '1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="tour-list-layout-grid" style={{ display: 'grid', gridTemplateColumns: showSidebar ? 'minmax(260px, 290px) 1fr' : '1fr', gap: '28px', alignItems: 'start' }}>
                     
                     {/* LEFT STICKY SIDEBAR FILTER */}
                     {showSidebar && (
@@ -550,7 +550,7 @@ const TourListPage = () => {
 
             {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (BALANCED 2-COLUMN DESIGN) */}
             <section style={{ padding: '0 5%', marginBottom: '60px' }}>
-                <div style={{
+                <div className="custom-tour-banner" style={{
                     position: 'relative', borderRadius: '28px', overflow: 'hidden', padding: '48px 44px',
                     backgroundImage: 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.85) 50%, rgba(3, 105, 161, 0.8) 100%), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000")',
                     backgroundSize: 'cover', backgroundPosition: 'center', color: '#ffffff',
@@ -612,7 +612,7 @@ const TourListPage = () => {
                     </div>
 
                     {/* RIGHT COLUMN: VISUAL GLASSMORPHIC PREVIEW WIDGET */}
-                    <div style={{
+                    <div className="custom-tour-preview-widget" style={{
                         background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(16px)',
                         borderRadius: '24px', padding: '24px 28px', border: '1px solid rgba(255, 255, 255, 0.22)',
                         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column', gap: '16px'
