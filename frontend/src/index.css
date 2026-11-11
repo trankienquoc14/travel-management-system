@@ -3119,19 +3119,20 @@ body {
   /* 8. Banner Tự Thiết Kế Tour (Section 9) */
   .custom-tour-banner {
     grid-template-columns: 1fr !important;
-    padding: 24px 16px !important;
-    gap: 24px !important;
-    border-radius: 20px !important;
+    padding: 24px 18px !important;
+    gap: 16px !important;
+    border-radius: 22px !important;
+    background-image: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
   }
   .custom-tour-banner h2 {
-    font-size: 20px !important;
-    line-height: 1.35 !important;
-    margin-bottom: 10px !important;
+    font-size: 21px !important;
+    line-height: 1.32 !important;
+    margin-bottom: 8px !important;
   }
   .custom-tour-banner p {
     font-size: 13.5px !important;
     line-height: 1.5 !important;
-    margin-bottom: 18px !important;
+    margin-bottom: 16px !important;
   }
   .custom-tour-banner button {
     width: 100% !important;
@@ -3139,13 +3140,12 @@ body {
     font-size: 14.5px !important;
     padding: 13px 20px !important;
   }
-  .custom-tour-preview-widget {
-    padding: 14px 16px !important;
-    border-radius: 18px !important;
-    gap: 12px !important;
+  /* Ẩn hoàn toàn card ảnh phụ trên mobile để banner gọn gàng, súc tích, không choáng màn hình */
+  .custom-tour-visual-card {
+    display: none !important;
   }
-  .custom-tour-preview-widget strong {
-    font-size: 13.5px !important;
+  .custom-tour-preview-widget {
+    display: none !important;
   }
 
   /* 9. Nút Chat Realtime & AI Bot nổi góc dưới (Gọn gàng, không che màn hình) */

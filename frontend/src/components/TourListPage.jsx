@@ -548,46 +548,67 @@ const TourListPage = () => {
             </section>
 
 
-            {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (BALANCED 2-COLUMN DESIGN) */}
+            {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER */}
             <section style={{ padding: '0 5%', marginBottom: '60px' }}>
                 <div className="custom-tour-banner" style={{
-                    position: 'relative', borderRadius: '28px', overflow: 'hidden', padding: '48px 44px',
-                    backgroundImage: 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.85) 50%, rgba(3, 105, 161, 0.8) 100%), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000")',
-                    backgroundSize: 'cover', backgroundPosition: 'center', color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    boxShadow: '0 25px 50px rgba(15, 23, 42, 0.18)',
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '36px', alignItems: 'center'
+                    position: 'relative',
+                    borderRadius: '28px',
+                    overflow: 'hidden',
+                    padding: '44px 48px',
+                    backgroundImage: 'linear-gradient(135deg, rgba(2, 132, 199, 0.94) 0%, rgba(3, 105, 161, 0.90) 50%, rgba(12, 74, 110, 0.96) 100%), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000")',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 20px 45px rgba(2, 132, 199, 0.22)',
+                    display: 'grid',
+                    gridTemplateColumns: '1.25fr 0.95fr',
+                    gap: '40px',
+                    alignItems: 'center'
                 }}>
-                    {/* LEFT COLUMN: TITLE & CTA */}
+                    {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
                     <div>
                         <span style={{
-                            background: 'rgba(2, 132, 199, 0.3)', backdropFilter: 'blur(8px)',
-                            border: '1px solid rgba(56, 189, 248, 0.4)', color: '#38bdf8',
-                            fontSize: '12px', fontWeight: '800', padding: '6px 14px', borderRadius: '20px',
-                            display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '16px'
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.35)',
+                            color: '#ffffff',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '16px',
+                            letterSpacing: '0.4px'
                         }}>
-                            ✨ DỊCH VỤ ĐỘC BẢN VIETTRAVEL
+                            ✨ DỊCH VỤ TOUR THEO YÊU CẦU
                         </span>
                         
-                        <h2 style={{ fontSize: '32px', fontWeight: '900', lineHeight: '1.25', marginBottom: '14px', letterSpacing: '-0.5px' }}>
-                            Tự Thiết Kế Hành Trình Theo Phong Cách Của Bạn
+                        <h2 style={{ fontSize: '32px', fontWeight: '900', lineHeight: '1.28', marginBottom: '14px', letterSpacing: '-0.5px', color: '#ffffff' }}>
+                            Tự Thiết Kế Chuyến Đi Của Riêng Bạn
                         </h2>
 
-                        <p style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '22px', maxWidth: '520px' }}>
-                            Tùy chọn từng khách sạn 3★ - 5★, phương tiện xe riêng/máy bay, các điểm tham quan yêu thích và thực đơn đặc sản phù hợp ngân sách cá nhân.
+                        <p style={{ fontSize: '15px', color: '#e0f2fe', lineHeight: '1.65', marginBottom: '24px', maxWidth: '520px' }}>
+                            Chủ động lựa chọn điểm đến, ngày khởi hành, tiêu chuẩn khách sạn và xe đưa đón riêng. Đội ngũ TravelVN sẽ tối ưu lộ trình và gửi bảng báo giá tốt nhất cho chuyến đi của bạn.
                         </p>
 
-                        {/* FEATURE PILLS */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '28px' }}>
-                            <span style={{ background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255, 255, 255, 0.2)', padding: '6px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', color: '#f1f5f9' }}>
-                                🏨 Khách sạn 3★ - 5★
-                            </span>
-                            <span style={{ background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255, 255, 255, 0.2)', padding: '6px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', color: '#f1f5f9' }}>
-                                🚗 Xe riêng & Máy bay
-                            </span>
-                            <span style={{ background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255, 255, 255, 0.2)', padding: '6px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', color: '#f1f5f9' }}>
-                                ⚡ Báo giá tự động
-                            </span>
+                        {/* KEY PERKS */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px', marginBottom: '30px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '18px' }}>🏨</span>
+                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>Khách sạn 3★ - 5★</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '18px' }}>🚗</span>
+                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>Xe riêng đưa đón VIP</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '18px' }}>⚡</span>
+                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>Báo giá tự động 2 phút</span>
+                            </div>
                         </div>
 
                         <button
@@ -600,50 +621,89 @@ const TourListPage = () => {
                                 }
                             }}
                             style={{
-                                padding: '14px 32px', borderRadius: '16px', border: 'none',
-                                background: 'linear-gradient(135deg, #0194f3 0%, #0066cc 100%)',
-                                color: '#ffffff', fontWeight: '800', fontSize: '15px', cursor: 'pointer',
-                                boxShadow: '0 8px 25px rgba(1, 148, 243, 0.45)', transition: 'all 0.25s ease',
-                                display: 'inline-flex', alignItems: 'center', gap: '8px'
+                                padding: '14px 32px',
+                                borderRadius: '30px',
+                                border: 'none',
+                                background: '#ffffff',
+                                color: '#0369a1',
+                                fontWeight: '800',
+                                fontSize: '15px',
+                                cursor: 'pointer',
+                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                                transition: 'all 0.25s ease',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px'
                             }}
                         >
-                            🎨 Bắt đầu thiết kế Tour ngay ➔
+                            Tự Thiết Kế Tour Ngay ➔
                         </button>
                     </div>
 
-                    {/* RIGHT COLUMN: VISUAL GLASSMORPHIC PREVIEW WIDGET */}
-                    <div className="custom-tour-preview-widget" style={{
-                        background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(16px)',
-                        borderRadius: '24px', padding: '24px 28px', border: '1px solid rgba(255, 255, 255, 0.22)',
-                        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column', gap: '16px'
+                    {/* RIGHT COLUMN: TRAVEL REAL SHOWCASE */}
+                    <div className="custom-tour-visual-card" style={{
+                        position: 'relative',
+                        borderRadius: '22px',
+                        overflow: 'hidden',
+                        boxShadow: '0 15px 35px rgba(0,0,0,0.25)',
+                        border: '3px solid rgba(255,255,255,0.4)',
+                        height: '270px',
+                        backgroundImage: 'url("https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1200")',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        padding: '18px'
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span style={{ fontSize: '20px' }}>⚙️</span>
-                                <strong style={{ fontSize: '15px', fontWeight: '800', color: '#ffffff' }}>Lịch Trình Tự Chọn Của Bạn</strong>
-                            </div>
-                            <span style={{ background: '#22c55e', color: '#ffffff', fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '10px' }}>
-                                Trực Tuyến
+                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                            <span style={{
+                                background: 'rgba(15, 23, 42, 0.65)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                                color: '#ffffff',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}>
+                                🌴 Nghỉ dưỡng đẳng cấp theo ý bạn
                             </span>
                         </div>
 
-                        <div style={{ background: 'rgba(15, 23, 42, 0.4)', borderRadius: '14px', padding: '14px 16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <span style={{ fontSize: '11.5px', color: '#94a3b8', display: 'block', fontWeight: '700' }}>BƯỚC 1: ĐIỂM ĐẾN & NGÀY ĐI</span>
-                            <strong style={{ fontSize: '14.5px', color: '#38bdf8', marginTop: '2px', display: 'block' }}>📍 Phú Quốc • 3 Ngày 2 Đêm</strong>
-                        </div>
-
-                        <div style={{ background: 'rgba(15, 23, 42, 0.4)', borderRadius: '14px', padding: '14px 16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <span style={{ fontSize: '11.5px', color: '#94a3b8', display: 'block', fontWeight: '700' }}>BƯỚC 2: KHÁCH SẠN & DỊCH VỤ</span>
-                            <strong style={{ fontSize: '14.5px', color: '#38bdf8', marginTop: '2px', display: 'block' }}>🏨 Resort 5★ Sun World • 🚗 Xe Riêng VIP</strong>
-                        </div>
-
-                        <div style={{ background: 'rgba(15, 23, 42, 0.4)', borderRadius: '14px', padding: '14px 16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <span style={{ fontSize: '11.5px', color: '#94a3b8', display: 'block', fontWeight: '700' }}>BƯỚC 3: DỰ TOÁN NGUYÊN NGÂN SÁCH</span>
-                            <strong style={{ fontSize: '15px', color: '#4ade80', marginTop: '2px', display: 'block' }}>💰 Tính toán tự động theo yêu cầu</strong>
-                        </div>
-
-                        <div style={{ fontSize: '12px', color: '#cbd5e1', textAlign: 'center', fontStyle: 'italic', marginTop: '4px' }}>
-                            ✨ Nhận ngay bảng báo giá chi tiết trong 2 phút!
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            borderRadius: '16px',
+                            padding: '14px 18px',
+                            color: '#0f172a',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}>
+                            <div>
+                                <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
+                                    Hơn 1.500+ Khách Hài Lòng
+                                </div>
+                                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                                    ⭐ 4.9/5 Đánh giá hành trình tùy chỉnh
+                                </div>
+                            </div>
+                            <span style={{
+                                background: '#e0f2fe',
+                                color: '#0284c7',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                padding: '4px 10px',
+                                borderRadius: '10px'
+                            }}>
+                                Độc Bản
+                            </span>
                         </div>
                     </div>
                 </div>
