@@ -1089,7 +1089,7 @@ const HomePage = () => {
                 position: 'relative',
                 borderRadius: '24px',
                 overflow: 'hidden',
-                padding: '36px 44px',
+                padding: '36px 40px',
                 background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 55%, #e0f2fe 100%)',
                 border: '1.5px solid #bae6fd',
                 boxShadow: '0 12px 35px rgba(1, 148, 243, 0.08)',
@@ -1097,7 +1097,8 @@ const HomePage = () => {
                 gridTemplateColumns: '1.4fr 1fr',
                 gap: '36px',
                 alignItems: 'center',
-                margin: '0 5% 60px 5%'
+                margin: '0 5% 60px 5%',
+                boxSizing: 'border-box'
             }}>
                 {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
                     <div style={{ textAlign: 'left' }}>

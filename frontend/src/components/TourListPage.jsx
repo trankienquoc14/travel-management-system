@@ -549,23 +549,22 @@ const TourListPage = () => {
 
 
             {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (CÂN ĐỐI, HÀI HÒA & ĐỒNG BỘ 100% GIAO DIỆN) */}
-            <section style={{ padding: '0 5%', marginBottom: '60px' }}>
-                <div className="custom-tour-banner" style={{
-                    position: 'relative',
-                    borderRadius: '24px',
-                    overflow: 'hidden',
-                    padding: '36px 44px',
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 55%, #e0f2fe 100%)',
-                    border: '1.5px solid #bae6fd',
-                    boxShadow: '0 12px 35px rgba(1, 148, 243, 0.08)',
-                    display: 'grid',
-                    gridTemplateColumns: '1.4fr 1fr',
-                    gap: '36px',
-                    alignItems: 'center',
-                    margin: '0',
-                    width: '100%'
-                }}>
-                    {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
+            <section className="home-section-container custom-tour-banner" style={{
+                position: 'relative',
+                borderRadius: '24px',
+                overflow: 'hidden',
+                padding: '36px 40px',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 55%, #e0f2fe 100%)',
+                border: '1.5px solid #bae6fd',
+                boxShadow: '0 12px 35px rgba(1, 148, 243, 0.08)',
+                display: 'grid',
+                gridTemplateColumns: '1.4fr 1fr',
+                gap: '36px',
+                alignItems: 'center',
+                margin: '0 5% 60px 5%',
+                boxSizing: 'border-box'
+            }}>
+                {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
                     <div style={{ textAlign: 'left' }}>
                         <span style={{
                             background: '#e0f2fe',
@@ -700,7 +699,6 @@ const TourListPage = () => {
                             </span>
                         </div>
                     </div>
-                </div>
             </section>
 
             {/* 10. FOOTER */}
