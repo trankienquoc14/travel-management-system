@@ -232,7 +232,7 @@ const UserProfile = ({ onProfileUpdated }) => {
     return (
         <div style={{ maxWidth: '860px', margin: '0 auto', fontFamily: '"Outfit", "Inter", -apple-system, sans-serif' }}>
             {/* Header Profile Hero Card */}
-            <div style={{
+            <div className="user-profile-header-card" style={{
                 background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%)',
                 borderRadius: '24px',
                 padding: '28px 32px',
@@ -420,7 +420,7 @@ const UserProfile = ({ onProfileUpdated }) => {
             )}
 
             {/* Content Container */}
-            <div style={{
+            <div className="user-profile-body-card" style={{
                 background: '#ffffff',
                 padding: '30px',
                 borderRadius: '20px',
@@ -439,7 +439,7 @@ const UserProfile = ({ onProfileUpdated }) => {
                             </p>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '24px' }}>
+                        <div className="user-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '24px' }}>
                             {/* Họ và tên */}
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>

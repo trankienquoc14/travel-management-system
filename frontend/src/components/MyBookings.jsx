@@ -664,10 +664,10 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
         <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: '"Outfit", "Inter", sans-serif' }}>
             <div className="no-print"><CustomerNavbar activeTab="my-bookings" /></div>
 
-            <div className="no-print" style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 20px' }}>
+            <div className="no-print my-bookings-page-wrapper" style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 20px' }}>
                 
                 {/* 1. Header Banner & KPI Summary */}
-                <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '24px', padding: '32px', color: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.15)', marginBottom: '32px' }}>
+                <div className="my-bookings-hero-card" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '24px', padding: '32px', color: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.15)', marginBottom: '32px' }}>
                     <h2 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '800', letterSpacing: '-0.5px' }}>
                         📦 Đơn Hàng Tour Du Lịch Của Tôi
                     </h2>
@@ -675,7 +675,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                         Quản lý toàn bộ vé điện tử, lịch trình di chuyển và trạng thái thanh toán chuyến đi.
                     </p>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                    <div className="my-bookings-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                         <div style={{ background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(10px)', padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)' }}>
                             <div style={{ fontSize: '13px', opacity: 0.8, textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>TỔNG SỐ ĐƠN HÀNG</div>
                             <div style={{ fontSize: '24px', fontWeight: '800', color: '#38bdf8' }}>{bookings.length} Chuyến đi</div>
@@ -776,17 +776,17 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                     remainingPaySec > 0;
 
                                 return (
-                                    <div key={booking.booking_id} style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
+                                    <div key={booking.booking_id} className="my-booking-item-card" style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
                                         
                                         {/* Left Cover Image */}
-                                        <div style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(booking.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                                        <div className="my-booking-cover-img" style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(booking.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
                                             <div style={{ position: 'absolute', top: '14px', left: '14px', background: isCustom ? '#7e22ce' : '#0284c7', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                                                 {isCustom ? '🛎️ Tour Thiết Kế Riêng' : '🗺️ Tour Trọn Gói'}
                                             </div>
                                         </div>
 
                                         {/* Content Info */}
-                                        <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
+                                        <div className="my-booking-content-info" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
                                             <div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
                                                     <div>
@@ -963,15 +963,15 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                             })
                         ) : (
                             filteredServiceBookings.map((sb) => (
-                                <div key={sb.booking_id} style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
+                                <div key={sb.booking_id} className="my-booking-item-card" style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
                                     
-                                    <div style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(sb.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                                    <div className="my-booking-cover-img" style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(sb.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
                                         <div style={{ position: 'absolute', top: '14px', left: '14px', background: '#f59e0b', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                                             🛎️ Dịch Vụ
                                         </div>
                                     </div>
 
-                                    <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
+                                    <div className="my-booking-content-info" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
                                         <div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
                                                 <div>

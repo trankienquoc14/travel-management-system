@@ -500,6 +500,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                             {/* 7. TÀI KHOẢN (HEADER ICON & DROPDOWN MENU TÀI KHOẢN) */}
                             <div ref={dropdownRef} style={{ position: 'relative' }}>
                                 <div 
+                                    className="nav-user-pill"
                                     onClick={() => { setShowDropdown(!showDropdown); setShowNotifications(false); }}
                                     style={{ 
                                         cursor: 'pointer', 
@@ -525,14 +526,15 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                                         justifyContent: 'center', 
                                         fontWeight: '800',
                                         fontSize: '15px',
-                                        boxShadow: '0 2px 8px rgba(1, 148, 243, 0.3)'
+                                        boxShadow: '0 2px 8px rgba(1, 148, 243, 0.3)',
+                                        flexShrink: 0
                                     }}>
                                         {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                                     </div>
-                                    <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '14px' }}>
+                                    <span className="nav-user-text" style={{ fontWeight: '700', color: '#0f172a', fontSize: '14px' }}>
                                         {user.fullName}
                                     </span>
-                                    <span style={{ 
+                                    <span className="nav-user-text" style={{ 
                                         fontSize: '10px', 
                                         color: '#64748b', 
                                         transition: 'transform 0.2s', 
@@ -831,7 +833,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
 
             {/* MODAL 1: HỒ SƠ CÁ NHÂN */}
             {showProfileModal && (
-                <div style={{
+                <div className="profile-modal-overlay" style={{
                     position: 'fixed',
                     top: 0,
                     left: 0,
@@ -845,7 +847,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                     alignItems: 'center',
                     padding: '20px'
                 }}>
-                    <div style={{
+                    <div className="profile-modal-box" style={{
                         width: '100%',
                         maxWidth: '850px',
                         maxHeight: '90vh',

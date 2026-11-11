@@ -520,10 +520,10 @@ const BookingFormInner = () => {
         <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '60px', fontFamily: '"Inter", sans-serif' }}>
 <div className="no-print"><CustomerNavbar /></div>
 
-            <div className="no-print" style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+            <div className="no-print booking-layout-wrapper" style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
                 
                 {/* Cột trái: Form nhập liệu */}
-                <div style={{ flex: '1' }}>
+                <div className="booking-main-left" style={{ flex: '1', minWidth: 0 }}>
                     <h1 style={{ fontSize: '28px', color: '#0f172a', marginBottom: '8px' }}>Đặt tour của bạn</h1>
                     <p style={{ fontSize: '15px', color: '#64748b', marginBottom: '32px' }}>Hãy đảm bảo tất cả thông tin chi tiết trên trang này đã chính xác trước khi tiến hành thanh toán.</p>
 
@@ -554,7 +554,7 @@ const BookingFormInner = () => {
                             </div>
                         )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div className="booking-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Họ tên <span style={{color: '#dc2626'}}>*</span></label>
                                 <input type="text" name="fullName" value={contactInfo.fullName} onChange={handleInputChange} required style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none' }} placeholder="VD: Nguyễn Văn A" />
@@ -726,7 +726,7 @@ const BookingFormInner = () => {
                 </div>
 
                 {/* Cột phải: Sidebar Tóm tắt đơn hàng */}
-                <div style={{ width: '380px', position: 'sticky', top: '100px' }}>
+                <div className="booking-sidebar-right" style={{ width: '380px', position: 'sticky', top: '100px' }}>
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '20px' }}>Tóm tắt đơn hàng</h2>
                         

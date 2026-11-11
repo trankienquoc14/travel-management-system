@@ -3005,6 +3005,16 @@ body {
   .home-user-actions .btn-primary {
     display: none !important; /* Đăng ký hiển thị trong drawer menu */
   }
+  /* Khi đã đăng nhập: Ẩn text tên user và mũi tên trên mobile, chỉ để lại Avatar tròn */
+  .nav-user-text {
+    display: none !important;
+  }
+  .nav-user-pill {
+    padding: 2px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
 
   /* 2. Hero Banner Slider */
   .hero-wrapper {
@@ -3212,5 +3222,84 @@ body {
   .home-footer-grid {
     grid-template-columns: 1fr !important;
     gap: 24px !important;
+  }
+
+  /* 14. Modal Hồ Sơ Cá Nhân (Profile Modal) & UserProfile */
+  .profile-modal-overlay {
+    padding: 10px !important;
+  }
+  .profile-modal-box {
+    padding: 20px 14px !important;
+    border-radius: 18px !important;
+    max-height: 94vh !important;
+  }
+  .user-profile-header-card {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 20px 16px !important;
+    gap: 14px !important;
+    border-radius: 18px !important;
+  }
+  .user-profile-header-card h2 {
+    font-size: 20px !important;
+  }
+  .user-profile-body-card {
+    padding: 18px 14px !important;
+    border-radius: 16px !important;
+  }
+  .user-profile-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* 15. Trang Đơn Hàng Của Tôi (MyBookings) */
+  .my-bookings-page-wrapper {
+    padding: 16px 12px !important;
+  }
+  .my-bookings-hero-card {
+    padding: 20px 16px !important;
+    border-radius: 18px !important;
+    margin-bottom: 20px !important;
+  }
+  .my-bookings-hero-card h2 {
+    font-size: 20px !important;
+    line-height: 1.35 !important;
+  }
+  .my-bookings-stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .my-booking-item-card {
+    flex-direction: column !important;
+    border-radius: 18px !important;
+  }
+  .my-booking-cover-img {
+    width: 100% !important;
+    min-height: 160px !important;
+    height: 160px !important;
+  }
+  .my-booking-content-info {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 16px !important;
+  }
+
+  /* 16. Trang Đặt Tour (BookingForm) */
+  .booking-layout-wrapper {
+    flex-direction: column !important;
+    padding: 16px 12px !important;
+    gap: 20px !important;
+  }
+  .booking-main-left {
+    width: 100% !important;
+  }
+  .booking-sidebar-right {
+    width: 100% !important;
+    position: static !important;
+  }
+  .booking-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
   }
 }
