@@ -4,7 +4,12 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const backendUrl = env.VITE_BACKEND_URL ? env.VITE_BACKEND_URL.replace(/\/$/, '') : '';
+  const rawBackendUrl = (env.VITE_BACKEND_URL || process.env.VITE_BACKEND_URL || '').trim();
+  const backendUrl = rawBackendUrl
+    .replace(/[\r\n\t]+/g, '')
+    .replace(/^['"]+|['"]+$/g, '')
+    .replace(/\/+$/, '')
+    .trim();
 
   return {
     plugins: [
