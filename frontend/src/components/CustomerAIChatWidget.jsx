@@ -214,7 +214,7 @@ const CustomerAIChatWidget = () => {
     <>
       {/* 1. NÚT ROBOT CHAT AI NỔI - ĐẶT NGAY PHÍA TRÊN NÚT MESSAGE */}
       {!isOpen && (
-        <div style={{ position: 'fixed', bottom: '104px', right: '28px', zIndex: 99998 }}>
+        <div className="floating-ai-widget" style={{ position: 'fixed', bottom: '104px', right: '28px', zIndex: 99998 }}>
           <button
             onClick={handleOpen}
             style={{

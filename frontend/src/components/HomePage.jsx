@@ -474,16 +474,16 @@ const HomePage = () => {
                 </header>
 
                 {/* 3. TRAVEL SEARCH (FLOATING BOX REDESIGN - NO OVERFLOW) */}
-                <div style={{
+                <div className="hero-search-wrapper" style={{
                     position: 'absolute', bottom: '-45px', left: '50%', transform: 'translateX(-50%)',
                     width: '92%', maxWidth: '1140px', zIndex: 30, boxSizing: 'border-box'
                 }}>
-                    <div style={{
+                    <div className="hero-search-card" style={{
                         background: '#ffffff', borderRadius: '24px', padding: '20px 24px',
                         boxShadow: '0 20px 50px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(0,0,0,0.04)',
                         border: '1.5px solid #e2e8f0', boxSizing: 'border-box', overflow: 'hidden'
                     }}>
-                        <div style={{
+                        <div className="hero-search-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr)',
                             gap: '14px',
@@ -572,7 +572,7 @@ const HomePage = () => {
                     </p>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
+                <div className="category-chips-grid hide-scrollbar" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
                     {[
                         { title: 'Nghỉ dưỡng', icon: '🏖️', color: '#0284c7', bg: '#f0f9ff' },
                         { title: 'Khám phá', icon: '🏔️', color: '#16a34a', bg: '#f0fdf4' },
@@ -586,6 +586,7 @@ const HomePage = () => {
                         return (
                             <div 
                                 key={idx}
+                                className="category-chips-item"
                                 onClick={() => {
                                     setSelectedCategory(isSelected ? 'Tất cả' : cat.title);
                                     scrollToShowcase();
@@ -608,7 +609,7 @@ const HomePage = () => {
             </section>
 
             {/* 5. ĐIỂM ĐẾN NỔI BẬT (FEATURED DESTINATIONS REDESIGN) */}
-            <section style={{ background: 'linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%)', border: '1px solid #e0f2fe', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(2, 132, 199, 0.05)', position: 'relative' }}>
+            <section className="home-section-container" style={{ background: 'linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%)', border: '1px solid #e0f2fe', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(2, 132, 199, 0.05)', position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -645,6 +646,7 @@ const HomePage = () => {
                 {/* DESTINATION CARDS SLIDER */}
                 <div style={{ position: 'relative' }}>
                     <button 
+                        className="slider-nav-arrow slider-arrow-left"
                         onClick={() => { const slider = document.getElementById('dest-slider'); if(slider) slider.scrollBy({ left: -320, behavior: 'smooth' }); }}
                         style={{
                             position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
@@ -659,6 +661,7 @@ const HomePage = () => {
                     </button>
 
                     <button 
+                        className="slider-nav-arrow slider-arrow-right"
                         onClick={() => { const slider = document.getElementById('dest-slider'); if(slider) slider.scrollBy({ left: 320, behavior: 'smooth' }); }}
                         style={{
                             position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
@@ -699,7 +702,7 @@ const HomePage = () => {
                                         boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
                                         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
                                     }}
-                                    className="destination-card-hover"
+                                    className="destination-card-hover responsive-slider-card"
                                 >
                                     {/* Background Image */}
                                     <div 
@@ -764,7 +767,7 @@ const HomePage = () => {
 
 
             {/* 6. ƯU ĐÃI ĐẶC BIỆT (PROMOTIONS SLIDER) */}
-            <section style={{ background: 'linear-gradient(145deg, #ffffff 0%, #fff1f2 100%)', border: '1px solid #ffe4e6', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(225, 29, 72, 0.05)', position: 'relative' }}>
+            <section className="home-section-container" style={{ background: 'linear-gradient(145deg, #ffffff 0%, #fff1f2 100%)', border: '1px solid #ffe4e6', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(225, 29, 72, 0.05)', position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#ef4444', margin: 0 }}>
@@ -778,6 +781,7 @@ const HomePage = () => {
 
                 <div style={{ position: 'relative' }}>
                     <button 
+                        className="slider-nav-arrow slider-arrow-left"
                         onClick={() => scrollSlider(discountSliderRef, 'left')}
                         style={{
                             position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
@@ -792,6 +796,7 @@ const HomePage = () => {
                     </button>
 
                     <button 
+                        className="slider-nav-arrow slider-arrow-right"
                         onClick={() => scrollSlider(discountSliderRef, 'right')}
                         style={{
                             position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
@@ -838,7 +843,7 @@ const HomePage = () => {
                                         overflow: 'hidden', cursor: 'pointer', boxShadow: '0 10px 25px rgba(225, 29, 72, 0.05)',
                                         transition: 'all 0.25s ease', display: 'flex', flexDirection: 'column'
                                     }}
-                                    className="tour-card-modern"
+                                    className="tour-card-modern responsive-slider-card"
                                 >
                                     <div style={{ position: 'relative', height: '170px' }}>
                                         <div style={{ backgroundImage: `url(${getImageUrl(tour.image_url || img)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
@@ -881,7 +886,7 @@ const HomePage = () => {
 
 
             {/* 7. MAIN CONTENT: TOUR TRỌN GÓI */}
-            <section ref={showcaseRef} style={{ background: 'linear-gradient(145deg, #ffffff 0%, #eef2ff 100%)', border: '1px solid #e0e7ff', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(79, 70, 229, 0.05)', position: 'relative' }}>
+            <section ref={showcaseRef} className="home-section-container" style={{ background: 'linear-gradient(145deg, #ffffff 0%, #eef2ff 100%)', border: '1px solid #e0e7ff', margin: '0 5% 60px 5%', padding: '40px 30px', borderRadius: '24px', boxShadow: '0 12px 40px rgba(79, 70, 229, 0.05)', position: 'relative' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
                         <div>
@@ -913,7 +918,7 @@ const HomePage = () => {
                     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                         
                         {/* REGION FILTER */}
-                        <div style={{ display: 'flex', gap: '6px', background: '#e0f2fe', padding: '4px', borderRadius: '14px' }}>
+                        <div style={{ display: 'flex', gap: '6px', background: '#e0f2fe', padding: '4px', borderRadius: '14px', overflowX: 'auto', maxWidth: '100%' }} className="hide-scrollbar">
                             {['Tất cả', 'Miền Bắc', 'Miền Trung', 'Miền Nam', 'Tây Nguyên'].map(region => (
                                 <button 
                                     key={region}
@@ -924,7 +929,7 @@ const HomePage = () => {
                                         color: selectedRegion === region ? '#ffffff' : '#0369a1',
                                         fontWeight: selectedRegion === region ? '800' : '600', fontSize: '13px',
                                         cursor: 'pointer', boxShadow: selectedRegion === region ? '0 2px 6px rgba(2, 132, 199, 0.3)' : 'none',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s', whiteSpace: 'nowrap'
                                     }}
                                 >
                                     {region}
@@ -933,7 +938,7 @@ const HomePage = () => {
                         </div>
 
                         {/* TAB SORTING */}
-                        <div style={{ display: 'flex', gap: '6px', background: '#e2e8f0', padding: '4px', borderRadius: '14px' }}>
+                        <div style={{ display: 'flex', gap: '6px', background: '#e2e8f0', padding: '4px', borderRadius: '14px', overflowX: 'auto', maxWidth: '100%' }} className="hide-scrollbar">
                             {['Tất cả', 'Ưu đãi đặc quyền', 'Bán chạy', 'Giá tốt'].map(tab => (
                                 <button 
                                     key={tab}
@@ -944,7 +949,7 @@ const HomePage = () => {
                                         color: trendingTab === tab ? (tab === 'Ưu đãi đặc quyền' ? '#0284c7' : '#0f172a') : '#64748b',
                                         fontWeight: trendingTab === tab ? '800' : '600', fontSize: '13px',
                                         cursor: 'pointer', boxShadow: trendingTab === tab ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s', whiteSpace: 'nowrap'
                                     }}
                                 >
                                     {tab}
@@ -957,6 +962,7 @@ const HomePage = () => {
                 {/* TOUR SLIDER CONTAINER */}
                 <div style={{ position: 'relative' }}>
                     <button 
+                        className="slider-nav-arrow slider-arrow-left"
                         onClick={() => scrollSlider(tourSliderRef, 'left')}
                         style={{
                             position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%)',
@@ -971,6 +977,7 @@ const HomePage = () => {
                     </button>
 
                     <button 
+                        className="slider-nav-arrow slider-arrow-right"
                         onClick={() => scrollSlider(tourSliderRef, 'right')}
                         style={{
                             position: 'absolute', right: '-20px', top: '50%', transform: 'translateY(-50%)',
@@ -1029,7 +1036,7 @@ const HomePage = () => {
                                             overflow: 'hidden', cursor: 'pointer', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.04)',
                                             transition: 'all 0.25s ease', display: 'flex', flexDirection: 'column'
                                         }}
-                                        className="tour-card-modern"
+                                        className="tour-card-modern responsive-slider-card"
                                     >
                                         <div style={{ position: 'relative', height: '170px' }}>
                                             <div style={{ backgroundImage: `url(${getImageUrl(tour.image_url || img)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />

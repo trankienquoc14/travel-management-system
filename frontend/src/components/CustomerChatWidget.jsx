@@ -444,7 +444,7 @@ const CustomerChatWidget = () => {
     <>
       {/* 1. NÚT CHAT BONG BÓNG NỔI GÓC PHẢI DƯỚI */}
       {!isOpen && (
-        <div style={{ position: 'fixed', bottom: '28px', right: '28px', zIndex: 99999 }}>
+        <div className="floating-chat-widget" style={{ position: 'fixed', bottom: '28px', right: '28px', zIndex: 99999 }}>
           <button
             onClick={handleOpenChat}
             style={{

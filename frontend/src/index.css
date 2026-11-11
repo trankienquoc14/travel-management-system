@@ -2969,3 +2969,134 @@ body {
     }
     ::-webkit-scrollbar { display: none; }
 }
+
+/* ===================================================
+   MOBILE RESPONSIVE ENHANCEMENTS (CHỈ KHI MÀN HÌNH <= 768px)
+   Giữ nguyên 100% giao diện desktop, tối ưu trải nghiệm mượt mà trên điện thoại
+   =================================================== */
+@media (max-width: 768px) {
+  /* 1. Header / Navbar */
+  .home-navbar {
+    padding: 10px 14px !important;
+  }
+  .home-logo {
+    font-size: 19px !important;
+  }
+  .home-menu {
+    gap: 12px !important;
+  }
+  .home-menu li span, .home-menu li {
+    font-size: 13.5px !important;
+    padding: 4px 0 !important;
+  }
+  .home-user-actions {
+    gap: 6px !important;
+  }
+  .home-user-actions .btn-login-outline {
+    padding: 6px 14px !important;
+    font-size: 13px !important;
+  }
+  .home-user-actions .btn-primary {
+    display: none !important; /* Ẩn nút đăng ký phụ trên header mobile để tránh tràn viền */
+  }
+
+  /* 2. Hero Banner Slider */
+  .hero-wrapper {
+    margin-bottom: 20px !important;
+  }
+  .home-hero-slider {
+    height: 380px !important;
+  }
+  .hero-content-box {
+    margin-top: -30px !important;
+    padding: 0 16px !important;
+  }
+  .hero-content-box h1 {
+    font-size: 22px !important;
+    line-height: 1.3 !important;
+    margin-bottom: 8px !important;
+  }
+  .hero-content-box p {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }
+  .hero-content-box span {
+    font-size: 11px !important;
+    padding: 4px 12px !important;
+    margin-bottom: 10px !important;
+  }
+  /* Thu nhỏ 2 nút mũi tên chuyển slide banner */
+  .home-hero-slider button {
+    width: 32px !important;
+    height: 48px !important;
+    font-size: 14px !important;
+  }
+
+  /* 3. Floating Search Box (Dạng thẻ xếp dọc gọn gàng) */
+  .hero-search-wrapper {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 92% !important;
+    margin: -35px auto 25px auto !important;
+  }
+  .hero-search-card {
+    padding: 16px 16px !important;
+    border-radius: 20px !important;
+  }
+  .hero-search-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* 4. Khám phá theo nhu cầu (Category Chips cuộn ngang mượt mà) */
+  .category-chips-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 10px !important;
+    padding-bottom: 8px !important;
+  }
+  .category-chips-item {
+    min-width: 100px !important;
+    flex: 0 0 auto !important;
+    scroll-snap-align: start !important;
+    padding: 12px 8px !important;
+  }
+
+  /* 5. Khối Section Containers */
+  .home-section-container {
+    margin: 0 14px 35px 14px !important;
+    padding: 24px 16px !important;
+    border-radius: 20px !important;
+  }
+
+  /* 6. Thẻ Card Tour & Điểm đến (Hiển thị to đẹp, vuốt ngang êm ái) */
+  .responsive-slider-card {
+    min-width: 275px !important;
+    max-width: 275px !important;
+    flex: 0 0 auto !important;
+    scroll-snap-align: start !important;
+  }
+
+  /* 7. Ẩn các nút tròn mũi tên to đen trên mobile (để người dùng vuốt chạm tự nhiên) */
+  .slider-nav-arrow {
+    display: none !important;
+  }
+
+  /* 8. Nút Chat Realtime & AI Bot nổi góc dưới */
+  .floating-chat-widget {
+    bottom: 20px !important;
+    right: 16px !important;
+  }
+  .floating-ai-widget {
+    bottom: 82px !important;
+    right: 16px !important;
+  }
+  .floating-chat-widget button, 
+  .floating-ai-widget button {
+    transform: scale(0.85) !important;
+    transform-origin: bottom right !important;
+  }
+}
