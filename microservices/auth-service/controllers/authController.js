@@ -56,8 +56,8 @@ exports.login = async (req, res) => {
       email: user.email
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'travel_management_secret_key_2026', {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
     });
 
     // 8. Trả về kết quả
@@ -124,8 +124,8 @@ exports.register = async (req, res) => {
       email: newUser.email
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'travel_management_secret_key_2026', {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
     });
 
     res.status(201).json({
