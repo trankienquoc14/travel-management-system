@@ -1,0 +1,3813 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Nov 04, 2026 at 02:45 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `travel_management`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `bookings`
+--
+
+CREATE TABLE `bookings` (
+  `booking_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` int(11) DEFAULT NULL,
+  `departure_id` int(11) DEFAULT NULL,
+  `quote_id` int(11) DEFAULT NULL,
+  `num_people` int(11) NOT NULL DEFAULT 1,
+  `booking_date` datetime DEFAULT current_timestamp(),
+  `total_amount` decimal(15,2) DEFAULT NULL,
+  `booking_status` enum('Pending','Confirmed','Cancelled','Completed') DEFAULT 'Pending',
+  `payment_status` enum('Unpaid','Paid','Refunded') DEFAULT 'Unpaid',
+  `notes` text DEFAULT NULL,
+  `breakdown` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`breakdown`)),
+  `required_rooms` int(11) DEFAULT 0,
+  `single_room_count` int(11) DEFAULT 0,
+  `contact_name` varchar(150) DEFAULT NULL,
+  `contact_email` varchar(150) DEFAULT NULL,
+  `contact_phone` varchar(50) DEFAULT NULL,
+  `contact_address` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `bookings`
+--
+
+INSERT INTO `bookings` (`booking_id`, `customer_id`, `departure_id`, `quote_id`, `num_people`, `booking_date`, `total_amount`, `booking_status`, `payment_status`, `notes`, `breakdown`, `required_rooms`, `single_room_count`, `contact_name`, `contact_email`, `contact_phone`, `contact_address`) VALUES
+(1, 8, 8, NULL, 1, '2026-09-12 03:08:09', 9924000.00, 'Confirmed', 'Paid', NULL, NULL, 0, 0, NULL, NULL, NULL, NULL),
+(5, 8, 52, NULL, 3, '2026-09-18 02:31:39', 18997500.00, 'Pending', 'Unpaid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(6, 8, 52, NULL, 3, '2026-09-18 06:50:36', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(7, 8, 52, NULL, 3, '2026-09-19 04:11:41', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(8, 8, 57, NULL, 4, '2026-10-01 08:41:22', 22797000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":2,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(9, 8, 57, NULL, 5, '2026-10-01 08:47:35', 26596500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":3,\"toddlers\":0,\"infants\":0}', 2, 0, NULL, NULL, NULL, NULL),
+(10, 8, 57, NULL, 2, '2026-10-01 08:52:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1, NULL, NULL, NULL, NULL),
+(11, 8, 57, NULL, 1, '2026-10-01 08:55:26', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(12, 8, 59, NULL, 5, '2026-10-01 14:43:49', 18997500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":1}', 1, 0, NULL, NULL, NULL, NULL),
+(13, 8, 59, NULL, 2, '2026-10-01 14:47:50', 15198000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1, NULL, NULL, NULL, NULL),
+(14, 8, 59, NULL, 1, '2026-10-01 14:50:08', 7599000.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(15, 8, 59, NULL, 3, '2026-10-02 01:41:11', 11398500.00, 'Confirmed', 'Paid', NULL, '{\"adults\":1,\"children\":1,\"toddlers\":0,\"infants\":1}', 1, 1, NULL, NULL, NULL, NULL),
+(16, 8, 59, NULL, 1, '2026-10-02 01:43:11', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(17, 8, 59, NULL, 1, '2026-10-03 16:23:00', 7599000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(18, 8, 59, NULL, 2, '2026-10-04 02:05:08', 15198000.00, 'Cancelled', 'Unpaid', '[Tự động hủy: Hết thời gian thanh toán chuyển khoản 10 phút]', '{\"adults\":2,\"children\":0,\"toddlers\":0,\"infants\":0}', 2, 1, NULL, NULL, NULL, NULL),
+(19, 3, 38, NULL, 1, '2026-10-14 14:46:03', 3708000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 1, 0, NULL, NULL, NULL, NULL),
+(20, 3, 34, NULL, 1, '2026-10-14 14:47:28', 3250000.00, 'Pending', 'Unpaid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(21, 20, 56, NULL, 1, '2026-10-15 14:03:37', 2000.00, 'Cancelled', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(22, 20, 56, NULL, 1, '2026-10-15 14:30:38', 2000.00, 'Cancelled', 'Unpaid', ' [Tự động hủy: Hết thời gian thanh toán 10 phút] [Tự động hủy: Hết thời gian thanh toán 10 phút]', '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(23, 20, 56, NULL, 1, '2026-10-15 14:49:46', 2000.00, 'Cancelled', 'Unpaid', ' [Tự động hủy: Hết thời gian thanh toán 10 phút] [Tự động hủy: Hết thời gian thanh toán 10 phút]', '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL),
+(24, 20, 56, NULL, 1, '2026-10-16 00:48:58', 2000.00, 'Cancelled', 'Paid', NULL, '{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0}', 0, 0, NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `booking_change_requests`
+--
+
+CREATE TABLE `booking_change_requests` (
+  `change_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `booking_id` int(11) DEFAULT NULL,
+  `request_type` enum('Cancel','Reschedule') DEFAULT NULL,
+  `reason` text DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',
+  `processed_by` int(11) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `new_departure_id` int(11) DEFAULT NULL,
+  `staff_note` text DEFAULT NULL,
+  `fee_percentage` decimal(5,2) DEFAULT 0.00,
+  `fee_amount` decimal(12,2) DEFAULT 0.00,
+  `refund_amount` decimal(12,2) DEFAULT 0.00,
+  `days_before_departure` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `booking_change_requests`
+--
+
+INSERT INTO `booking_change_requests` (`change_id`, `booking_id`, `request_type`, `reason`, `status`, `processed_by`, `created_at`, `new_departure_id`, `staff_note`, `fee_percentage`, `fee_amount`, `refund_amount`, `days_before_departure`) VALUES
+(6, 21, 'Cancel', 'jhjhjhjh', 'Approved', 4, '2026-10-16 00:10:29', NULL, NULL, 0.00, 0.00, 0.00, NULL),
+(7, 24, 'Cancel', 'gfhjgfh\n[Tài khoản nhận hoàn tiền: gyhfg - STK: fjhj - Chủ TK: FHGJGFJ]', 'Approved', 4, '2026-10-16 00:50:26', NULL, 'Đã duyệt hoàn tiền 1.800 ₫ (khấu trừ 10% phí = 200 ₫ theo quy định). Kế toán sẽ chuyển khoản hoàn trả trong vòng 24 giờ làm việc.', 10.00, 200.00, 1800.00, 64);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `booking_passengers`
+--
+
+CREATE TABLE `booking_passengers` (
+  `passenger_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `booking_id` int(11) DEFAULT NULL,
+  `full_name` varchar(150) DEFAULT NULL,
+  `gender` enum('Male','Female','Other') DEFAULT NULL,
+  `birth_date` date DEFAULT NULL,
+  `identity_number` varchar(50) DEFAULT NULL,
+  `is_checked_in` tinyint(1) DEFAULT 0,
+  `passenger_type` enum('ADULT','CHILD','TODDLER','INFANT') DEFAULT 'ADULT',
+  `single_room` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `booking_passengers`
+--
+
+INSERT INTO `booking_passengers` (`passenger_id`, `booking_id`, `full_name`, `gender`, `birth_date`, `identity_number`, `is_checked_in`, `passenger_type`, `single_room`) VALUES
+(1, 1, 'Trần Kiến Quốc', 'Female', '2001-01-01', '—', 1, 'ADULT', 0),
+(7, 5, 'Nguyễn Văn G', 'Other', NULL, NULL, 0, 'ADULT', 0),
+(8, 5, 'Trần Thị H', 'Other', NULL, NULL, 0, 'ADULT', 0),
+(9, 5, 'Nguyễn Văn K', 'Other', NULL, NULL, 0, 'ADULT', 0),
+(12, 6, 'Nguyễn Văn A', 'Other', NULL, NULL, 0, 'ADULT', 0),
+(13, 6, 'Trần Thị Q', 'Other', NULL, NULL, 0, 'ADULT', 0),
+(14, 6, 'Nguyễn Văn G', 'Other', NULL, NULL, 0, 'ADULT', 0),
+(15, 7, 'Nguyễn Văn A', 'Other', '1999-03-10', '0345235103', 1, 'ADULT', 0),
+(16, 7, 'Trần Thị Minh A', 'Female', '2000-05-15', '0356268107', 0, 'ADULT', 0),
+(17, 7, 'Nguyễn Văn H', 'Other', '2015-09-14', NULL, 0, 'ADULT', 0),
+(18, 8, 'Trần Văn G', 'Other', '1995-03-17', '0345123456', 0, 'ADULT', 0),
+(19, 8, 'Nguyễn Minh A', 'Female', '2000-08-14', '0467543102', 0, 'ADULT', 0),
+(20, 8, 'Trần Văn D', 'Other', '2015-09-13', NULL, 0, 'CHILD', 0),
+(21, 8, 'Trần Thị Minh A', 'Female', '2018-06-16', NULL, 0, 'CHILD', 0),
+(22, 9, 'Trịnh Văn Q', 'Other', '1997-03-11', '0675103204', 0, 'ADULT', 0),
+(23, 9, 'Nguyễn Thị D', 'Female', '2000-08-12', NULL, 0, 'ADULT', 0),
+(24, 9, 'Trịnh Thị Thùy D', 'Female', '2016-05-15', NULL, 0, 'CHILD', 0),
+(25, 9, 'Trịnh Minh H', 'Other', NULL, NULL, 0, 'CHILD', 0),
+(26, 9, 'Trịnh Minh T', 'Other', '2019-06-11', NULL, 0, 'CHILD', 0),
+(27, 10, 'Đinh Văn H', 'Other', '1989-02-14', '0978345621', 0, 'ADULT', 1),
+(28, 10, 'Nguyễn Văn K', 'Other', '1988-06-16', '0345651101', 0, 'ADULT', 0),
+(29, 11, 'Hồ Đình H', 'Other', '1991-03-16', '0376245104', 0, 'ADULT', 0),
+(30, 12, 'Nguyễn Văn D', 'Other', '2000-04-15', '0345652101', 0, 'ADULT', 0),
+(31, 12, 'Hồ Thùy D', 'Female', '2001-07-14', '0345654105', 0, 'ADULT', 0),
+(32, 12, 'Nguyễn Minh A', 'Female', '2015-06-10', NULL, 0, 'CHILD', 0),
+(33, 12, 'Nguyễn Văn H', 'Other', '2022-09-14', NULL, 0, 'TODDLER', 0),
+(34, 13, 'Trần Văn D', 'Other', '1992-03-14', '0376865101', 0, 'ADULT', 1),
+(35, 13, 'Nguyễn Đình H', 'Other', '1998-02-13', '0356102387', 0, 'ADULT', 0),
+(36, 14, 'Phan Kim A', 'Female', '1998-05-15', '0346543103', 0, 'ADULT', 0),
+(37, 15, 'Nguyễn Thị Minh A', 'Female', '1995-05-15', '0345765102', 0, 'ADULT', 1),
+(38, 15, 'Nguyễn Huy H', 'Other', '2015-07-13', NULL, 0, 'CHILD', 0),
+(39, 15, 'Nguyễn Thị D', 'Female', '2025-10-16', NULL, 0, 'INFANT', 0),
+(40, 16, 'Phan Huy H', 'Other', '1992-06-12', '0267432108', 0, 'ADULT', 0),
+(41, 17, 'Trịnh Văn K', 'Other', '1990-06-15', '0345324101', 0, 'ADULT', 0),
+(42, 18, 'Phan Minh H', 'Other', '1983-03-13', '0345127651', 0, 'ADULT', 1),
+(43, 18, 'Trần Minh T', 'Other', '1995-04-15', '0356245103', 0, 'ADULT', 0),
+(44, 19, 'd,d', 'Other', '2012-01-13', '0375452033', 0, 'ADULT', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_conversations`
+--
+
+CREATE TABLE `chat_conversations` (
+  `conversation_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` int(11) DEFAULT NULL,
+  `guest_id` varchar(100) DEFAULT NULL,
+  `customer_name` varchar(150) NOT NULL,
+  `customer_email` varchar(150) DEFAULT NULL,
+  `customer_phone` varchar(50) DEFAULT NULL,
+  `staff_id` int(11) DEFAULT NULL,
+  `status` enum('active','closed') DEFAULT 'active',
+  `last_message` text DEFAULT NULL,
+  `last_message_at` datetime DEFAULT NULL,
+  `last_message_sender` enum('customer','staff','bot') DEFAULT NULL,
+  `unread_staff_count` int(11) NOT NULL DEFAULT 0,
+  `unread_customer_count` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `chat_conversations`
+--
+
+INSERT INTO `chat_conversations` (`conversation_id`, `customer_id`, `guest_id`, `customer_name`, `customer_email`, `customer_phone`, `staff_id`, `status`, `last_message`, `last_message_at`, `last_message_sender`, `unread_staff_count`, `unread_customer_count`, `created_at`, `updated_at`) VALUES
+(1, NULL, 'test_guest_123', 'Khách Thử Nghiệm', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 08:27:49', 'bot', 0, 0, '2026-10-16 08:27:49', '2026-10-16 08:27:49'),
+(2, 20, NULL, 'aaa', NULL, NULL, 4, 'active', '🎙️ [Tin nhắn thoại]', '2026-10-16 08:43:46', 'staff', 0, 0, '2026-10-16 08:31:21', '2026-10-16 08:44:26'),
+(3, NULL, 'customer_test_e2e', 'Nguyễn Văn Khách', NULL, NULL, NULL, 'active', 'Dạ em chào anh Khách ạ! Tour Phú Quốc 3N2Đ bên em khởi hành hàng tuần, em gửi anh tài liệu lịch trình chi tiết nhé!', '2026-10-16 08:32:46', 'staff', 0, 1, '2026-10-16 08:32:46', '2026-10-16 08:35:10'),
+(4, NULL, 'guest_1792129855882_4dg6so8', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 12:50:55', 'bot', 0, 0, '2026-10-16 12:50:55', '2026-10-16 12:50:55'),
+(5, NULL, 'guest_1792129855882_4dg6so8', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 12:50:55', 'bot', 0, 0, '2026-10-16 12:50:55', '2026-10-16 12:50:55'),
+(6, NULL, 'guest_1792139108996_743xrip', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 15:25:09', 'bot', 0, 0, '2026-10-16 15:25:09', '2026-10-16 15:25:09'),
+(7, NULL, 'guest_1792139108996_743xrip', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 15:25:09', 'bot', 0, 0, '2026-10-16 15:25:09', '2026-10-16 15:25:09'),
+(8, NULL, 'guest_1792114280388_xe01doh', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 15:53:36', 'bot', 0, 0, '2026-10-16 15:53:36', '2026-10-16 15:53:36'),
+(9, NULL, 'guest_1792114280388_xe01doh', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 15:53:36', 'bot', 0, 0, '2026-10-16 15:53:36', '2026-10-16 15:53:36'),
+(10, 8, NULL, 'Trần Kiến Quốc', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 15:53:44', 'bot', 0, 0, '2026-10-16 15:53:44', '2026-10-16 15:53:44'),
+(11, 8, NULL, 'Trần Kiến Quốc', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-16 15:53:44', 'bot', 0, 0, '2026-10-16 15:53:44', '2026-10-16 15:53:44'),
+(12, 21, NULL, 'ss', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-21 07:54:24', 'bot', 0, 0, '2026-10-21 07:54:24', '2026-10-21 07:54:24'),
+(13, 21, NULL, 'ss', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-21 07:54:24', 'bot', 0, 0, '2026-10-21 07:54:24', '2026-10-21 07:54:24'),
+(14, NULL, 'guest_1792544453475_s40h9v5', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-21 08:00:53', 'bot', 0, 0, '2026-10-21 08:00:53', '2026-10-21 08:00:53'),
+(15, NULL, 'guest_1792544453475_s40h9v5', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-21 08:00:53', 'bot', 0, 0, '2026-10-21 08:00:53', '2026-10-21 08:00:53'),
+(16, NULL, 'guest_1792281357177_l61r8ji', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-22 21:33:01', 'bot', 0, 0, '2026-10-22 21:33:01', '2026-10-22 21:33:01'),
+(17, NULL, 'guest_1792281357177_l61r8ji', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-22 21:33:01', 'bot', 0, 0, '2026-10-22 21:33:01', '2026-10-22 21:33:01'),
+(18, NULL, 'guest_1792290448647_dlmnak4', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-23 13:04:18', 'bot', 0, 0, '2026-10-23 13:04:17', '2026-10-23 13:04:18'),
+(19, NULL, 'guest_1792290448647_dlmnak4', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-23 13:04:18', 'bot', 0, 0, '2026-10-23 13:04:17', '2026-10-23 13:04:18'),
+(20, NULL, 'guest_1792282794410_35d1fdx', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-23 13:20:08', 'bot', 0, 0, '2026-10-23 13:20:08', '2026-10-23 13:20:08'),
+(21, NULL, 'guest_1792282794410_35d1fdx', 'Khách vãng lai', NULL, NULL, NULL, 'active', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', '2026-10-23 13:20:08', 'bot', 0, 0, '2026-10-23 13:20:08', '2026-10-23 13:20:08');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_messages`
+--
+
+CREATE TABLE `chat_messages` (
+  `message_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `conversation_id` int(11) NOT NULL,
+  `sender_type` enum('customer','staff','bot') NOT NULL,
+  `sender_id` int(11) DEFAULT NULL,
+  `sender_name` varchar(150) NOT NULL,
+  `message_type` enum('text','image','file','location','audio') NOT NULL DEFAULT 'text',
+  `content` text DEFAULT NULL,
+  `file_url` varchar(500) DEFAULT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_size` int(11) DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  `duration` int(11) DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `chat_messages`
+--
+
+INSERT INTO `chat_messages` (`message_id`, `conversation_id`, `sender_type`, `sender_id`, `sender_name`, `message_type`, `content`, `file_url`, `file_name`, `file_size`, `latitude`, `longitude`, `duration`, `is_read`, `created_at`) VALUES
+(1, 1, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 08:27:49'),
+(2, 2, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2026-10-16 08:31:22'),
+(3, 3, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 08:32:46'),
+(4, 3, 'customer', NULL, 'Nguyễn Văn Khách', 'text', 'Chào công ty, mình muốn tư vấn tour Phú Quốc 3N2Đ ạ!', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2026-10-16 08:32:46'),
+(5, 3, 'customer', NULL, 'Nguyễn Văn Khách', 'location', '📍 Đã chia sẻ vị trí hiện tại', NULL, NULL, NULL, 10.77688900, 106.70080600, NULL, 1, '2026-10-16 08:32:46'),
+(6, 3, 'staff', NULL, 'Trần Nhân Viên', 'text', 'Dạ em chào anh Khách ạ! Tour Phú Quốc 3N2Đ bên em khởi hành hàng tuần, em gửi anh tài liệu lịch trình chi tiết nhé!', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 08:32:46'),
+(7, 2, 'customer', 20, 'aaa', 'text', 'hello', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2026-10-16 08:35:32'),
+(8, 2, 'staff', 4, 'Office Staff', 'image', '📷 Hình ảnh', 'http://localhost:5000/uploads/chat/buon-ma-thuot-ho-lak-thac-dray-nur-gallery-1_1792115000021-614308584.jpg', 'buon-ma-thuot-ho-lak-thac-dray-nur-gallery-1.jpg', 10400, NULL, NULL, NULL, 1, '2026-10-16 08:43:20'),
+(9, 2, 'staff', 4, 'Office Staff', 'text', 'dd', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2026-10-16 08:43:35'),
+(10, 2, 'staff', 4, 'Office Staff', 'audio', '🎙️ Tin nhắn thoại', 'http://localhost:5000/uploads/chat/staff_voice_1792115026203_1792115026209-855145238.webm', 'staff_voice_1792115026203.webm', 33140, NULL, NULL, 2, 1, '2026-10-16 08:43:46'),
+(11, 4, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 12:50:55'),
+(12, 5, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 12:50:55'),
+(13, 6, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 15:25:09'),
+(14, 7, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 15:25:09'),
+(15, 8, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 15:53:36'),
+(16, 9, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 15:53:36'),
+(17, 10, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 15:53:44'),
+(18, 11, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-16 15:53:44'),
+(19, 13, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-21 07:54:24'),
+(20, 12, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-21 07:54:24'),
+(21, 14, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-21 08:00:53'),
+(22, 15, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-21 08:00:53'),
+(23, 17, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-22 21:33:01'),
+(24, 16, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-22 21:33:01'),
+(25, 18, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-23 13:04:17'),
+(26, 19, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-23 13:04:17'),
+(27, 20, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-23 13:20:08'),
+(28, 21, 'bot', NULL, 'Trợ lý Du lịch Travel (Bot)', 'text', 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-10-23 13:20:08');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `consultation_requests`
+--
+
+CREATE TABLE `consultation_requests` (
+  `consultation_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_name` varchar(150) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `content` text DEFAULT NULL,
+  `handled_by` int(11) DEFAULT NULL,
+  `status` enum('Pending','Handled') DEFAULT 'Pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `consultation_requests`
+--
+
+INSERT INTO `consultation_requests` (`consultation_id`, `customer_name`, `phone`, `email`, `content`, `handled_by`, `status`) VALUES
+(1, 'Khách mới', '0999', 'new@example.com', 'Tư vấn tour', 4, 'Handled');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_behavior_logs`
+--
+
+CREATE TABLE `customer_behavior_logs` (
+  `log_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` int(11) DEFAULT NULL,
+  `session_id` varchar(100) NOT NULL,
+  `event_type` enum('SEARCH','VIEW_TOUR','CLICK_TOUR','ADD_FAVORITE','BOOKING_INIT','BOOKING_COMPLETED','BOOKING_CANCEL','RATING') NOT NULL,
+  `tour_id` int(11) DEFAULT NULL,
+  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `customer_behavior_logs`
+--
+
+INSERT INTO `customer_behavior_logs` (`log_id`, `user_id`, `session_id`, `event_type`, `tour_id`, `metadata`, `created_at`) VALUES
+(1, NULL, 'session_1788569309974_zydxhv5', 'CLICK_TOUR', 48, '{\"tour_name\":\"Tour Tây Nguyên 3N3Đ: Măng Đen - Pleiku - Buôn Ma Thuột\"}', '2026-09-05 09:10:15'),
+(2, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 33, '{\"tour_name\":\"Tour Đà Nẵng - Huế - Bà Nà - Động Phong Nha 5N4Đ\"}', '2026-09-07 02:11:20'),
+(3, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 49, '{\"tour_name\":\"Tour Miền Tây 3N2Đ: Mỹ Tho - Bến Tre - Cần Thơ - Bạc Liêu - Cà Mau\"}', '2026-09-07 02:11:31'),
+(4, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 52, '{\"tour_name\":\"Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình\"}', '2026-09-07 02:36:37'),
+(5, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 34, '{\"tour_name\":\"Tour Phú Quốc 3N2Đ: Grand World - VinWonders - Cáp Treo Hòn Thơm\"}', '2026-09-07 02:37:21'),
+(6, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-07 02:37:28'),
+(7, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 38, '{\"tour_name\":\"Tour Hà Nội - Sapa - Chinh Phục Đỉnh Fansipan 3N2Đ\"}', '2026-09-07 02:37:35'),
+(8, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-07 02:55:44'),
+(9, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-07 02:55:53'),
+(10, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 36, '{\"tour_name\":\"Tour Hạ Long - Tràng An - Sapa - Fansipan 4N3Đ\"}', '2026-09-07 02:56:04'),
+(11, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 50, '{\"tour_name\":\"Tour Đồng Tháp - Làng Hoa Sa Đéc - Cần Thơ 2N1Đ\"}', '2026-09-07 02:56:15'),
+(12, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-07 03:02:13'),
+(13, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 52, '{\"tour_name\":\"Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình\"}', '2026-09-07 03:02:42'),
+(14, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-07 03:03:51'),
+(15, NULL, 'session_1788751557633_8p88p3k', 'CLICK_TOUR', 52, '{\"tour_name\":\"Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình\"}', '2026-09-07 03:25:57'),
+(16, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-07 13:56:00'),
+(17, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 34, '{\"tour_name\":\"Tour Phú Quốc 3N2Đ: Grand World - VinWonders - Cáp Treo Hòn Thơm\"}', '2026-09-07 13:56:10'),
+(18, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 52, '{\"tour_name\":\"Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình\"}', '2026-09-07 14:07:22'),
+(19, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 46, '{\"tour_name\":\"Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh\"}', '2026-09-07 14:14:46'),
+(20, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 45, '{\"tour_name\":\"Tour Vĩnh Hy - Nha Trang 3N3Đ Mùa Hè\"}', '2026-09-08 08:40:05'),
+(21, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-08 08:40:38'),
+(22, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 34, '{\"tour_name\":\"Tour Phú Quốc 3N2Đ: Grand World - VinWonders - Cáp Treo Hòn Thơm\"}', '2026-09-08 08:40:43'),
+(23, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 43, '{\"tour_name\":\"Tour Đà Lạt Mùa Hè 4N3Đ: Thác Bobla - Vùng Đất Cổ Tích\"}', '2026-09-08 08:40:56'),
+(24, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 46, '{\"tour_name\":\"Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh\"}', '2026-09-08 08:41:02'),
+(25, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 33, '{\"tour_name\":\"Tour Đà Nẵng - Huế - Bà Nà - Động Phong Nha 5N4Đ\"}', '2026-09-09 15:25:15'),
+(26, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-09-10 13:21:29'),
+(27, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-10 16:25:21'),
+(28, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-10 16:38:30'),
+(29, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 35, '{\"tour_name\":\"Tour Phú Quốc Hè 3N2Đ: Grand World - VinWonders - Safari - Hòn Thơm\"}', '2026-09-10 16:38:53'),
+(30, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-10 16:38:57'),
+(31, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-10 16:39:07'),
+(32, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-10 16:39:15'),
+(33, NULL, 'session_1788744878844_r6ut9dl', 'SEARCH', NULL, '{\"location\":\"\",\"date\":\"\",\"budget\":\"Under3M\"}', '2026-09-11 14:07:13'),
+(34, NULL, 'session_1788744878844_r6ut9dl', 'SEARCH', NULL, '{\"location\":\"\",\"date\":\"\",\"budget\":\"All\"}', '2026-09-11 14:07:25'),
+(35, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-12 02:39:24'),
+(36, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-09-12 02:39:30'),
+(37, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-12 02:40:02'),
+(38, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 48, '{\"tour_name\":\"Tour Tây Nguyên 3N3Đ: Măng Đen - Pleiku - Buôn Ma Thuột\"}', '2026-09-12 02:52:05'),
+(39, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 50, '{\"tour_name\":\"Tour Đồng Tháp - Làng Hoa Sa Đéc - Cần Thơ 2N1Đ\"}', '2026-09-12 02:54:35'),
+(40, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-12 02:56:22'),
+(41, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-12 02:56:41'),
+(42, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-12 02:59:20'),
+(43, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-12 03:06:41'),
+(44, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-12 03:07:17'),
+(45, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-14 06:38:37'),
+(46, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-14 07:21:14'),
+(47, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-14 08:29:25'),
+(48, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-09-15 12:08:14'),
+(49, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-15 12:31:28'),
+(50, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-16 03:03:40'),
+(51, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-16 03:04:44'),
+(52, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-16 03:06:07'),
+(53, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-17 10:48:43'),
+(54, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 39, '{\"tour_name\":\"Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ\"}', '2026-09-17 12:54:57'),
+(55, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-18 02:29:53'),
+(56, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-18 05:33:40'),
+(57, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-18 06:48:58'),
+(58, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-18 08:13:41'),
+(59, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-18 08:35:45'),
+(60, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-09-18 08:37:08'),
+(61, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 38, '{\"tour_name\":\"Tour Hà Nội - Sapa - Chinh Phục Đỉnh Fansipan 3N2Đ\"}', '2026-09-18 08:37:16'),
+(62, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-09-18 08:37:28'),
+(63, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 39, '{\"tour_name\":\"Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ\"}', '2026-09-18 08:37:34'),
+(64, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-19 03:53:41'),
+(65, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-20 08:12:25'),
+(66, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 39, '{\"tour_name\":\"Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ\"}', '2026-09-20 08:16:27'),
+(67, NULL, 'session_1790087089308_9l2oqhi', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-09-22 14:24:49'),
+(68, NULL, 'session_1788747080901_san3mj5', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-09-28 02:19:49'),
+(69, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 07:47:36'),
+(70, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 08:37:49'),
+(71, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 08:43:14'),
+(72, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 08:50:19'),
+(73, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 08:54:08'),
+(74, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 09:47:07'),
+(75, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 14:04:12'),
+(76, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 31, '{\"tour_name\":\"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\"}', '2026-10-01 14:38:18'),
+(77, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 14:39:26'),
+(78, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 14:45:27'),
+(79, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-01 14:48:36'),
+(80, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-02 01:38:57'),
+(81, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-02 01:42:08'),
+(82, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-03 16:21:53'),
+(83, NULL, 'session_1788744878844_r6ut9dl', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-04 02:03:19'),
+(84, NULL, 'session_1791120777935_21iigfa', 'SEARCH', NULL, '{\"location\":\"xuyên việt\",\"date\":\"\",\"budget\":\"All\"}', '2026-10-04 13:32:57'),
+(85, NULL, 'session_1791120777935_21iigfa', 'CLICK_TOUR', 52, '{\"tour_name\":\"Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình\"}', '2026-10-04 13:33:00'),
+(86, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 46, '{\"tour_name\":\"Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh\"}', '2026-10-14 14:44:57'),
+(87, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 44, '{\"tour_name\":\"Tour Đà Lạt 3N3Đ: Săn Mây - Trạm Ký Ức - Fresh Garden\"}', '2026-10-14 14:46:42'),
+(88, NULL, 'session_1792072948471_cf9d7b8', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-15 14:02:28'),
+(89, NULL, 'session_1792072948471_cf9d7b8', 'SEARCH', NULL, '{\"location\":\"\",\"date\":\"\",\"budget\":\"Under3M\"}', '2026-10-15 14:03:11'),
+(90, NULL, 'session_1792072948471_cf9d7b8', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-15 14:03:13'),
+(91, NULL, 'session_1792072948471_cf9d7b8', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-15 14:30:17'),
+(92, NULL, 'session_1792072948471_cf9d7b8', 'SEARCH', NULL, '{\"location\":\"tây ninh\",\"date\":\"\",\"budget\":\"All\"}', '2026-10-15 14:49:26'),
+(93, NULL, 'session_1792072948471_cf9d7b8', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-15 14:49:29'),
+(94, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-16 00:48:43'),
+(95, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-16 01:20:13'),
+(96, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 39, '{\"tour_name\":\"Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ\"}', '2026-10-16 08:52:37'),
+(97, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-10-16 08:54:29'),
+(98, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 34, '{\"tour_name\":\"Tour Phú Quốc 3N2Đ: Grand World - VinWonders - Cáp Treo Hòn Thơm\"}', '2026-10-16 08:54:49'),
+(99, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 39, '{\"tour_name\":\"Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ\"}', '2026-10-22 14:30:48'),
+(100, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-22 14:31:05'),
+(101, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-10-23 02:25:18'),
+(102, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-23 02:26:24'),
+(103, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 51, '{\"tour_name\":\"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\"}', '2026-10-23 02:27:03'),
+(104, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-23 02:34:28'),
+(105, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 32, '{\"tour_name\":\"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\"}', '2026-10-23 02:34:38'),
+(106, NULL, 'session_1791989097749_yyckf04', 'CLICK_TOUR', 29, '{\"tour_name\":\"Khám phá Đà Lạt - Nha Trang\"}', '2026-10-23 03:00:18');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_travel_preferences`
+--
+
+CREATE TABLE `customer_travel_preferences` (
+  `preference_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` int(11) DEFAULT NULL,
+  `session_id` varchar(100) NOT NULL,
+  `destinations` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`destinations`)),
+  `trip_purposes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`trip_purposes`)),
+  `companions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`companions`)),
+  `budget_range` varchar(50) DEFAULT NULL,
+  `interests` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`interests`)),
+  `pace_preference` varchar(50) DEFAULT NULL,
+  `accommodation_level` varchar(50) DEFAULT NULL,
+  `transport_type` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`transport_type`)),
+  `key_priorities` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`key_priorities`)),
+  `raw_preference_score` decimal(5,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `custom_tour_quotes`
+--
+
+CREATE TABLE `custom_tour_quotes` (
+  `quote_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `request_id` int(11) DEFAULT NULL,
+  `staff_id` int(11) DEFAULT NULL,
+  `manager_id` int(11) DEFAULT NULL,
+  `base_cost` decimal(15,2) DEFAULT 0.00,
+  `markup_percent` int(11) DEFAULT 20,
+  `quote_price` decimal(15,2) DEFAULT NULL,
+  `itinerary` longtext DEFAULT NULL,
+  `staff_note` text DEFAULT NULL,
+  `manager_note` text DEFAULT NULL,
+  `approval_status` varchar(50) DEFAULT 'Pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `customer_note` text DEFAULT NULL,
+  `price_breakdown` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`price_breakdown`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `custom_tour_quotes`
+--
+
+INSERT INTO `custom_tour_quotes` (`quote_id`, `request_id`, `staff_id`, `manager_id`, `base_cost`, `markup_percent`, `quote_price`, `itinerary`, `staff_note`, `manager_note`, `approval_status`, `created_at`, `customer_note`, `price_breakdown`) VALUES
+(1, 1, 4, NULL, 0.00, 20, 18408000.00, NULL, 'Công ty xin gửi anh chị báo giá sơ bộ để anh chị tham khảo ạ', NULL, 'Customer_Revision', '2026-08-28 13:05:19', 'Mức giá mong muốn của tôi là 18 triệu', '{\"adult\":5664000,\"child\":4248000,\"toddler\":2832000,\"infant\":0}'),
+(2, 1, 4, NULL, 0.00, 20, 18000000.00, NULL, 'Công ty xin gửi lại cho anh chị báo giá sơ bộ ', NULL, 'Initial_Accepted', '2026-08-28 15:10:35', '', '{\"adult\":5538462,\"child\":4153847,\"toddler\":2769231,\"infant\":0}'),
+(3, 1, 4, NULL, 5170000.00, 20, 6204000.00, '{\"tourName\":\"Khám phá Đà Lạt mộng mơ\",\"tourDescription\":\"Bạn sẽ được trải nghiệm các dịch vụ chu đáo và tân hưởng trọn vẹn các cảnh đẹp từ thiên nhiên\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thung Lũng Tình Yêu\",\"price\":\"250000.00\",\"place_id\":73},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu bò Ba Toa Quán Gỗ\",\"price\":\"200000.00\",\"place_id\":11},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đường Hầm Điêu Khắc\",\"price\":\"120000.00\",\"place_id\":74},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đồi Chè Cầu Đất\",\"price\":\"0.00\",\"place_id\":71}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Đà Lạt - Thành phố ngàn hoa\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Đà Lạt\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Tham quan\",\"name\":\"Tham quan Quảng trường Lâm Viên\",\"price\":\"0.00\",\"place_id\":72},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hồ Tuyền Lâm\",\"price\":\"0.00\",\"place_id\":70},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thiền Viện Trúc Lâm\",\"price\":\"0.00\",\"place_id\":69},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bánh tráng nướng Dì Đinh\",\"price\":\"30000.00\",\"place_id\":77},{\"type\":\"Tham quan\",\"name\":\"Tham quan Puppy Farm\",\"price\":\"100000.00\",\"place_id\":75},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"18\",\"route_title\":\"Đà Lạt - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Pongour\",\"price\":\"20000.00\",\"place_id\":76},{\"type\":\"Tham quan\",\"name\":\"Tham quan Cafe Túi Mơ To\",\"price\":\"60000.00\",\"place_id\":78},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu gà lá é Tao Ngộ\",\"price\":\"150000.00\",\"place_id\":12},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":4,\"margin\":20,\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:00\"},\"ageMultiplier\":{\"preset\":\"road\",\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"Công ty xin gửi lại cho anh chị báo giá sơ bộ \",\"dayImages\":{\"1\":\"/uploads/1787971116046-canh-dep-da-lat-1_1688379739.webp\",\"2\":\"/uploads/1787971116054-kinh-nghiem-du-lich-da-lat-tu-a-z-de-trai-nghiem-ve-dep-cuoc-song-1 (2).jpg\",\"3\":\"/uploads/1787971116058-tu-nha-trang-di-da-lat-bao-nhieu-km-banner.jpg\"}}', 'Công ty xin gửi lại cho anh chị báo giá sơ bộ ', NULL, 'Pending_Approval', '2026-08-29 02:38:36', NULL, NULL),
+(4, 1, 4, NULL, 4970000.00, 20, 5964000.00, '{\"tourName\":\"Khám phá Đà Lạt mộng mơ\",\"tourDescription\":\"Bạn sẽ được trải nghiệm các dịch vụ chu đáo và tân hưởng trọn vẹn các cảnh đẹp từ thiên nhiên\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thung Lũng Tình Yêu\",\"price\":\"250000.00\",\"place_id\":73},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu bò Ba Toa Quán Gỗ\",\"price\":\"200000.00\",\"place_id\":11},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đường Hầm Điêu Khắc\",\"price\":\"120000.00\",\"place_id\":74},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đồi Chè Cầu Đất\",\"price\":\"0.00\",\"place_id\":71}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Đà Lạt - Thành phố ngàn hoa\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Đà Lạt\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Tham quan\",\"name\":\"Tham quan Quảng trường Lâm Viên\",\"price\":\"0.00\",\"place_id\":72},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hồ Tuyền Lâm\",\"price\":\"0.00\",\"place_id\":70},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thiền Viện Trúc Lâm\",\"price\":\"0.00\",\"place_id\":69},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bánh tráng nướng Dì Đinh\",\"price\":\"30000.00\",\"place_id\":77},{\"type\":\"Tham quan\",\"name\":\"Tham quan Puppy Farm\",\"price\":\"100000.00\",\"place_id\":75},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"18\",\"route_title\":\"Đà Lạt - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Pongour\",\"price\":\"20000.00\",\"place_id\":76},{\"type\":\"Tham quan\",\"name\":\"Tham quan Cafe Túi Mơ To\",\"price\":\"60000.00\",\"place_id\":78},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu gà lá é Tao Ngộ\",\"price\":\"150000.00\",\"place_id\":12},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":\"\"}}],\"costConfig\":{\"minimumPax\":4,\"margin\":20,\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:00\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":25,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"Công ty xin gửi lại cho anh chị báo giá sơ bộ \",\"dayImages\":{\"1\":\"/uploads/1787971116046-canh-dep-da-lat-1_1688379739.webp\",\"2\":\"/uploads/1787971116054-kinh-nghiem-du-lich-da-lat-tu-a-z-de-trai-nghiem-ve-dep-cuoc-song-1 (2).jpg\",\"3\":\"/uploads/1787971116058-tu-nha-trang-di-da-lat-bao-nhieu-km-banner.jpg\"}}', 'Công ty xin gửi lại cho anh chị báo giá sơ bộ ', NULL, 'Pending_Approval', '2026-08-29 13:50:41', NULL, NULL),
+(5, 1, 4, 3, 4970000.00, 20, 5964000.00, '{\"tourName\":\"Khám phá Đà Lạt mộng mơ\",\"tourDescription\":\"Bạn sẽ được trải nghiệm các dịch vụ chu đáo và tân hưởng trọn vẹn các cảnh đẹp từ thiên nhiên\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thung Lũng Tình Yêu\",\"price\":\"250000.00\",\"place_id\":73},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu bò Ba Toa Quán Gỗ\",\"price\":\"200000.00\",\"place_id\":11},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đường Hầm Điêu Khắc\",\"price\":\"120000.00\",\"place_id\":74},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đồi Chè Cầu Đất\",\"price\":\"0.00\",\"place_id\":71}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Đà Lạt - Thành phố ngàn hoa\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Đà Lạt\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Tham quan\",\"name\":\"Tham quan Quảng trường Lâm Viên\",\"price\":\"0.00\",\"place_id\":72},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hồ Tuyền Lâm\",\"price\":\"0.00\",\"place_id\":70},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thiền Viện Trúc Lâm\",\"price\":\"0.00\",\"place_id\":69},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bánh tráng nướng Dì Đinh\",\"price\":\"30000.00\",\"place_id\":77},{\"type\":\"Tham quan\",\"name\":\"Tham quan Puppy Farm\",\"price\":\"100000.00\",\"place_id\":75},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"18\",\"route_title\":\"Đà Lạt - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Pongour\",\"price\":\"20000.00\",\"place_id\":76},{\"type\":\"Tham quan\",\"name\":\"Tham quan Cafe Túi Mơ To\",\"price\":\"60000.00\",\"place_id\":78},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu gà lá é Tao Ngộ\",\"price\":\"150000.00\",\"place_id\":12},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":\"\"}}],\"costConfig\":{\"minimumPax\":4,\"margin\":20,\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:00\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":25,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"Em gửi quản lý duyệt giúp em\",\"dayImages\":{\"1\":\"/uploads/1787971116046-canh-dep-da-lat-1_1688379739.webp\",\"2\":\"/uploads/1787971116054-kinh-nghiem-du-lich-da-lat-tu-a-z-de-trai-nghiem-ve-dep-cuoc-song-1 (2).jpg\",\"3\":\"/uploads/1787971116058-tu-nha-trang-di-da-lat-bao-nhieu-km-banner.jpg\"}}', 'Em gửi quản lý duyệt giúp em', 'Điều chỉnh lại lịch trình ngày thứ 2', 'Rejected', '2026-08-29 14:32:15', NULL, NULL),
+(6, 1, 4, 3, 4970000.00, 20, 5964000.00, '{\"tourName\":\"Khám phá Đà Lạt mộng mơ\",\"tourDescription\":\"Bạn sẽ được trải nghiệm các dịch vụ chu đáo và tân hưởng trọn vẹn các cảnh đẹp từ thiên nhiên\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thung Lũng Tình Yêu\",\"price\":\"250000.00\",\"place_id\":73},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu bò Ba Toa Quán Gỗ\",\"price\":\"200000.00\",\"place_id\":11},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đường Hầm Điêu Khắc\",\"price\":\"120000.00\",\"place_id\":74},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đồi Chè Cầu Đất\",\"price\":\"0.00\",\"place_id\":71}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Đà Lạt - Thành phố ngàn hoa\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Đà Lạt\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Tham quan\",\"name\":\"Tham quan Quảng trường Lâm Viên\",\"price\":\"0.00\",\"place_id\":72},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hồ Tuyền Lâm\",\"price\":\"0.00\",\"place_id\":70},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thiền Viện Trúc Lâm\",\"price\":\"0.00\",\"place_id\":69},{\"type\":\"Tham quan\",\"name\":\"Tham quan Puppy Farm\",\"price\":\"100000.00\",\"place_id\":75},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bánh tráng nướng Dì Đinh\",\"price\":\"30000.00\",\"place_id\":77},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"18\",\"route_title\":\"Đà Lạt - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Pongour\",\"price\":\"20000.00\",\"place_id\":76},{\"type\":\"Tham quan\",\"name\":\"Tham quan Cafe Túi Mơ To\",\"price\":\"60000.00\",\"place_id\":78},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu gà lá é Tao Ngộ\",\"price\":\"150000.00\",\"place_id\":12},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":\"\"}}],\"costConfig\":{\"minimumPax\":4,\"margin\":20,\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:00\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":25,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{\"1\":\"/uploads/1787971116046-canh-dep-da-lat-1_1688379739.webp\",\"2\":\"/uploads/1787971116054-kinh-nghiem-du-lich-da-lat-tu-a-z-de-trai-nghiem-ve-dep-cuoc-song-1 (2).jpg\",\"3\":\"/uploads/1787971116058-tu-nha-trang-di-da-lat-bao-nhieu-km-banner.jpg\"}}', '', 'Thay đổi lịch trình ngày 2', 'Rejected', '2026-08-29 14:40:22', NULL, NULL),
+(7, 1, 4, 3, 4970000.00, 20, 5964000.00, '{\"tourName\":\"Khám phá Đà Lạt mộng mơ\",\"tourDescription\":\"Bạn sẽ được trải nghiệm các dịch vụ chu đáo và tân hưởng trọn vẹn các cảnh đẹp từ thiên nhiên\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thung Lũng Tình Yêu\",\"price\":\"250000.00\",\"place_id\":73},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu bò Ba Toa Quán Gỗ\",\"price\":\"200000.00\",\"place_id\":11},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đường Hầm Điêu Khắc\",\"price\":\"120000.00\",\"place_id\":74},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đồi Chè Cầu Đất\",\"price\":\"0.00\",\"place_id\":71}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Đà Lạt - Thành phố ngàn hoa\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Đà Lạt\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Tham quan\",\"name\":\"Tham quan Quảng trường Lâm Viên\",\"price\":\"0.00\",\"place_id\":72},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hồ Tuyền Lâm\",\"price\":\"0.00\",\"place_id\":70},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thiền Viện Trúc Lâm\",\"price\":\"0.00\",\"place_id\":69},{\"type\":\"Tham quan\",\"name\":\"Tham quan Puppy Farm\",\"price\":\"100000.00\",\"place_id\":75},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bánh tráng nướng Dì Đinh\",\"price\":\"30000.00\",\"place_id\":77},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"18\",\"route_title\":\"Đà Lạt - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Pongour\",\"price\":\"20000.00\",\"place_id\":76},{\"type\":\"Tham quan\",\"name\":\"Tham quan Cafe Túi Mơ To\",\"price\":\"60000.00\",\"place_id\":78},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lẩu gà lá é Tao Ngộ\",\"price\":\"150000.00\",\"place_id\":12},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":\"\"}}],\"costConfig\":{\"minimumPax\":4,\"margin\":20,\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:00\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":25,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"Em gửi quản lý phê duyệt lại\",\"dayImages\":{\"1\":\"/uploads/1787971116046-canh-dep-da-lat-1_1688379739.webp\",\"2\":\"/uploads/1787971116054-kinh-nghiem-du-lich-da-lat-tu-a-z-de-trai-nghiem-ve-dep-cuoc-song-1 (2).jpg\",\"3\":\"/uploads/1787971116058-tu-nha-trang-di-da-lat-bao-nhieu-km-banner.jpg\"}}', 'Kính gửi quý khách, đây là bản thiết kế sơ bộ cho chuyến đi của quý khách. Nếu có bất kỳ yêu cầu điều chỉnh nào, xin vui lòng phản hồi lại để chuyên viên hỗ trợ ạ!', NULL, 'Customer_Accepted', '2026-08-29 14:42:24', NULL, NULL),
+(8, 2, 4, NULL, 0.00, 20, 16926000.00, NULL, 'Công ty gửi báo giá để anh chị tham khảo ạ', NULL, 'Initial_Accepted', '2026-09-11 16:15:40', '', '{\"adult\":5208000,\"child\":3906000,\"toddler\":2604000,\"infant\":0}'),
+(9, 3, 4, NULL, 0.00, 20, 24472500.00, NULL, '', NULL, 'Initial_Accepted', '2026-09-12 03:14:08', '', '{\"adult\":7530000,\"child\":5647500,\"toddler\":3765000,\"infant\":0}'),
+(10, 3, 4, 3, 6925000.00, 20, 8102250.00, '{\"tourName\":\"Khám phá Nha Trang\",\"tourDescription\":\"gngfnd\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"1\",\"route_title\":\"Hồ Chí Minh - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Viện Hải dương học\",\"price\":\"40000.00\",\"place_id\":79},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chùa Long Sơn\",\"price\":\"0.00\",\"place_id\":80},{\"type\":\"Tham quan\",\"name\":\"Tham quan Khu du lịch Hòn Tằm\",\"price\":\"800000.00\",\"place_id\":82},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bún cá sứa Năm Beo\",\"price\":\"45000.00\",\"place_id\":86}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Nhà thờ Núi\",\"price\":\"0.00\",\"place_id\":81},{\"type\":\"Tham quan\",\"name\":\"Tham quan Danh thắng Hòn Chồng\",\"price\":\"30000.00\",\"place_id\":83},{\"type\":\"Tham quan\",\"name\":\"Tham quan Skylight Nha Trang\",\"price\":\"200000.00\",\"place_id\":87},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đảo Khỉ\",\"price\":\"250000.00\",\"place_id\":85},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bãi Dài\",\"price\":\"0.00\",\"place_id\":88}],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":4,\"margin\":\"17\",\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Customer_Revision', '2026-09-12 03:26:48', 'Điều chỉnh lại lịch trình ngày 1', '{\"adult\":7530000,\"child\":5647500,\"toddler\":3765000,\"infant\":0}'),
+(11, 3, 4, NULL, 6925000.00, 20, 8102250.00, '{\"tourName\":\"Khám phá Nha Trang\",\"tourDescription\":\"gngfnd\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"1\",\"route_title\":\"Hồ Chí Minh - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Viện Hải dương học\",\"price\":\"40000.00\",\"place_id\":79},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chùa Long Sơn\",\"price\":\"0.00\",\"place_id\":80},{\"type\":\"Tham quan\",\"name\":\"Tham quan Khu du lịch Hòn Tằm\",\"price\":\"800000.00\",\"place_id\":82},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bún cá sứa Năm Beo\",\"price\":\"45000.00\",\"place_id\":86}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Nhà thờ Núi\",\"price\":\"0.00\",\"place_id\":81},{\"type\":\"Tham quan\",\"name\":\"Tham quan Danh thắng Hòn Chồng\",\"price\":\"30000.00\",\"place_id\":83},{\"type\":\"Tham quan\",\"name\":\"Tham quan Skylight Nha Trang\",\"price\":\"200000.00\",\"place_id\":87},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đảo Khỉ\",\"price\":\"250000.00\",\"place_id\":85},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bãi Dài\",\"price\":\"0.00\",\"place_id\":88}],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":4,\"margin\":\"17\",\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Pending_Approval', '2026-09-12 03:28:57', 'Điều chỉnh lại lịch trình ngày 1', '{\"adult\":7530000,\"child\":5647500,\"toddler\":3765000,\"infant\":0}'),
+(12, 3, 4, 3, 6925000.00, 20, 8102250.00, '{\"tourName\":\"Khám phá Nha Trang\",\"tourDescription\":\"gngfnd\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"1\",\"route_title\":\"Hồ Chí Minh - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Viện Hải dương học\",\"price\":\"40000.00\",\"place_id\":79},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chùa Long Sơn\",\"price\":\"0.00\",\"place_id\":80},{\"type\":\"Tham quan\",\"name\":\"Tham quan Khu du lịch Hòn Tằm\",\"price\":\"800000.00\",\"place_id\":82},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bún cá sứa Năm Beo\",\"price\":\"45000.00\",\"place_id\":86}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Nhà thờ Núi\",\"price\":\"0.00\",\"place_id\":81},{\"type\":\"Tham quan\",\"name\":\"Tham quan Danh thắng Hòn Chồng\",\"price\":\"30000.00\",\"place_id\":83},{\"type\":\"Tham quan\",\"name\":\"Tham quan Skylight Nha Trang\",\"price\":\"200000.00\",\"place_id\":87},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đảo Khỉ\",\"price\":\"250000.00\",\"place_id\":85},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bãi Dài\",\"price\":\"0.00\",\"place_id\":88}],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":4,\"margin\":\"17\",\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Customer_Accepted', '2026-09-12 03:34:32', 'Điều chỉnh lại lịch trình ngày 1', '{\"adult\":7530000,\"child\":5647500,\"toddler\":3765000,\"infant\":0}'),
+(13, 3, 4, 3, 6925000.00, 20, 8102250.00, '{\"tourName\":\"Khám phá Nha Trang\",\"tourDescription\":\"gngfnd\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"1\",\"route_title\":\"Hồ Chí Minh - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Viện Hải dương học\",\"price\":\"40000.00\",\"place_id\":79},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chùa Long Sơn\",\"price\":\"0.00\",\"place_id\":80},{\"type\":\"Tham quan\",\"name\":\"Tham quan Khu du lịch Hòn Tằm\",\"price\":\"800000.00\",\"place_id\":82},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6},{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bún cá sứa Năm Beo\",\"price\":\"45000.00\",\"place_id\":86}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Nhà thờ Núi\",\"price\":\"0.00\",\"place_id\":81},{\"type\":\"Tham quan\",\"name\":\"Tham quan Danh thắng Hòn Chồng\",\"price\":\"30000.00\",\"place_id\":83},{\"type\":\"Tham quan\",\"name\":\"Tham quan Skylight Nha Trang\",\"price\":\"200000.00\",\"place_id\":87},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đảo Khỉ\",\"price\":\"250000.00\",\"place_id\":85},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bãi Dài\",\"price\":\"0.00\",\"place_id\":88}],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":4,\"margin\":\"17\",\"fixed\":{\"transport\":2700000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":22,\"service_name\":\"Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.\",\"image_url\":\"/uploads/1787459248482-55394049.jpg\",\"status\":\"Active\",\"partner_id\":3,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"900000.00\",\"selling_price\":\"900000.00\",\"capacity\":7,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Công ty Xe Lữ Hành Toàn Quốc\",\"destination_name\":null,\"proposed_cost\":null},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Quote_Sent', '2026-09-23 02:45:22', 'Điều chỉnh lại lịch trình ngày 1', '{\"adult\":7530000,\"child\":5647500,\"toddler\":3765000,\"infant\":0}'),
+(14, 4, 4, NULL, 0.00, 20, 2160000.00, NULL, '', NULL, 'Initial_Accepted', '2026-10-23 02:47:49', '', '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}'),
+(15, 4, 4, NULL, 2200000.00, 20, 2640000.00, '{\"tourName\":\"\",\"tourDescription\":\"\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":{\"service_id\":\"custom\",\"name\":\"Khách tự túc\",\"price\":0,\"autoMatchPending\":false},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":1,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":\"custom\",\"service_name\":\"Công ty tự sắp xếp\",\"base_cost\":0,\"unit\":\"vé\",\"autoMatchPending\":false},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":0,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Pending_Approval', '2026-10-23 04:01:57', NULL, '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}'),
+(16, 4, 3, 3, 2200000.00, 20, 2640000.00, '{\"tourName\":\"\",\"tourDescription\":\"\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":{\"service_id\":\"custom\",\"name\":\"Khách tự túc\",\"price\":0,\"autoMatchPending\":false},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":1,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":\"custom\",\"service_name\":\"Công ty tự sắp xếp\",\"base_cost\":0,\"unit\":\"vé\",\"autoMatchPending\":false},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":0,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Approved', '2026-10-23 04:02:24', NULL, '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}'),
+(17, 4, 4, 3, 2200000.00, 20, 2640000.00, '{\"tourName\":\"\",\"tourDescription\":\"\",\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"24\",\"route_title\":\"\",\"activities\":[],\"accommodation\":{\"service_id\":\"custom\",\"name\":\"Khách tự túc\",\"price\":0,\"autoMatchPending\":false},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"24\",\"end_destination_id\":\"\",\"route_title\":\"\",\"activities\":[],\"accommodation\":null,\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":1,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"selectedTransport\":{\"service_id\":\"custom\",\"service_name\":\"Công ty tự sắp xếp\",\"base_cost\":0,\"unit\":\"vé\",\"autoMatchPending\":false},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"\"},\"ageMultiplier\":{\"preset\":\"custom\",\"child\":{\"percent\":0,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}}},\"staffNote\":\"\",\"dayImages\":{}}', NULL, NULL, 'Approved', '2026-10-23 04:03:47', NULL, '{\"adult\":2160000,\"child\":1620000,\"toddler\":1080000,\"infant\":0}');
+INSERT INTO `custom_tour_quotes` (`quote_id`, `request_id`, `staff_id`, `manager_id`, `base_cost`, `markup_percent`, `quote_price`, `itinerary`, `staff_note`, `manager_note`, `approval_status`, `created_at`, `customer_note`, `price_breakdown`) VALUES
+(18, 5, 4, NULL, 7793333.33, 15, 22405833.00, '{\"proposedServices\":{\"pickup\":{\"location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"time\":\"05:30\",\"isCustomized\":false,\"reason\":\"\"},\"transport\":{\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"requestedSegment\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"assignedVehicle\":{\"service_id\":466,\"id\":\"srv_466\",\"type\":\"🚗 Di chuyển\",\"service_name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"service_type\":\"Xe vận chuyển\",\"price\":\"800000.00\",\"base_cost\":\"800000.00\",\"selling_price\":\"850000.00\",\"capacity\":4,\"vehicle_model\":\"Toyota Camry / Mercedes E200 / Honda Accord\",\"description\":\"Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.\",\"image_url\":\"/uploads/1791430601915-990841517.jpg\"},\"isAssigned\":true,\"pricePerDay\":800000,\"capacity\":4,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"hotel\":{\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"pricePerNight\":1600000,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"meal\":{\"enabled\":true,\"name\":\"Công ty tự sắp xếp\",\"isCustomized\":false,\"prices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"reason\":\"\"},\"guide\":{\"enabled\":true,\"name\":\"Cần Hướng dẫn viên\",\"pricePerDay\":500000,\"isCustomized\":false,\"reason\":\"\"},\"selectedPlaces\":[{\"place_id\":1,\"name\":\"VinWonders Nha Trang\",\"price\":880000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":2,\"name\":\"Tháp Bà Ponagar\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":3,\"name\":\"Lặn biển Hòn Mun\",\"price\":500000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":4,\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":5,\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":6,\"name\":\"Chợ Đêm Nha Trang\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":8,\"name\":\"Viện Hải dương học\",\"price\":40000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":9,\"name\":\"Chùa Long Sơn\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":10,\"name\":\"Nhà thờ Núi\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":13,\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":14,\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":16,\"name\":\"Skylight Nha Trang\",\"price\":200000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":17,\"name\":\"Bãi Dài\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"}],\"removedPlaces\":[{\"place_id\":15,\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":12,\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":7,\"name\":\"Hải sản Thanh Sương\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":11,\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}]},\"changes\":[{\"id\":\"place_rem_15\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Bún cá sứa Năm Beo (45.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_12\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Danh thắng Hòn Chồng (30.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_7\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Hải sản Thanh Sương (250.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_11\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Khu du lịch Hòn Tằm (800.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}],\"adjHotelCost\":1600000,\"adjTransportCost\":800000,\"mealPrices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"guidePricePerDay\":500000,\"childPolicy\":{\"child\":{\"percent\":50,\"surcharge\":0},\"toddler\":{\"percent\":0,\"surcharge\":0},\"infant\":{\"percent\":0,\"surcharge\":0}},\"timestamp\":\"2026-11-03T14:19:06.177Z\"}', 'Công ty xin gửi báo giá ạ', NULL, 'Customer_Revision', '2026-11-03 14:19:06', 'Bỏ địa điểm nem nướng', '{\"adult\":8962333,\"child\":4481167,\"toddler\":0,\"infant\":0}'),
+(19, 5, 4, NULL, 7733333.33, 15, 24456666.00, '{\"proposedServices\":{\"pickup\":{\"location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"time\":\"05:30\",\"isCustomized\":false,\"reason\":\"\"},\"transport\":{\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"requestedSegment\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"assignedVehicle\":{\"service_id\":466,\"id\":\"srv_466\",\"type\":\"🚗 Di chuyển\",\"service_name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"service_type\":\"Xe vận chuyển\",\"price\":\"800000.00\",\"base_cost\":\"800000.00\",\"selling_price\":\"850000.00\",\"capacity\":4,\"vehicle_model\":\"Toyota Camry / Mercedes E200 / Honda Accord\",\"description\":\"Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.\",\"image_url\":\"/uploads/1791430601915-990841517.jpg\"},\"isAssigned\":true,\"pricePerDay\":800000,\"capacity\":4,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"hotel\":{\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"pricePerNight\":1600000,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"meal\":{\"enabled\":true,\"name\":\"Công ty tự sắp xếp\",\"isCustomized\":false,\"prices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"reason\":\"\"},\"guide\":{\"enabled\":true,\"name\":\"Cần Hướng dẫn viên\",\"pricePerDay\":500000,\"isCustomized\":false,\"reason\":\"\"},\"selectedPlaces\":[{\"place_id\":1,\"name\":\"VinWonders Nha Trang\",\"price\":880000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":2,\"name\":\"Tháp Bà Ponagar\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":3,\"name\":\"Lặn biển Hòn Mun\",\"price\":500000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":4,\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":6,\"name\":\"Chợ Đêm Nha Trang\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":8,\"name\":\"Viện Hải dương học\",\"price\":40000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":9,\"name\":\"Chùa Long Sơn\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":10,\"name\":\"Nhà thờ Núi\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":13,\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":14,\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":16,\"name\":\"Skylight Nha Trang\",\"price\":200000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":17,\"name\":\"Bãi Dài\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"}],\"removedPlaces\":[{\"place_id\":15,\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":12,\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":7,\"name\":\"Hải sản Thanh Sương\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":11,\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":5,\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}]},\"changes\":[{\"id\":\"place_rem_15\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Bún cá sứa Năm Beo (45.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_12\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Danh thắng Hòn Chồng (30.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_7\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Hải sản Thanh Sương (250.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_11\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Khu du lịch Hòn Tằm (800.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_5\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Nem nướng Đặng Văn Quyên (60.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}],\"adjHotelCost\":1600000,\"adjTransportCost\":800000,\"mealPrices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"guidePricePerDay\":500000,\"childPolicy\":{\"child\":{\"percent\":75,\"surcharge\":0},\"toddler\":{\"percent\":50,\"surcharge\":0},\"infant\":{\"percent\":0,\"surcharge\":0}},\"timestamp\":\"2026-11-03T14:50:09.462Z\"}', 'Công ty xin gửi báo giá ạ', NULL, 'Customer_Revision', '2026-11-03 14:50:09', 'Bỏ bớt hoạt động', '{\"adult\":8893333,\"child\":6670000,\"toddler\":4446667,\"infant\":0}'),
+(20, 5, 4, NULL, 7733333.33, 15, 22233333.00, '{\"proposedServices\":{\"pickup\":{\"location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"time\":\"05:30\",\"isCustomized\":false,\"reason\":\"\"},\"transport\":{\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"requestedSegment\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"assignedVehicle\":{\"service_id\":466,\"id\":\"srv_466\",\"type\":\"🚗 Di chuyển\",\"service_name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"name\":\"Toyota Camry / Mercedes E200 / Honda Accord (4 chỗ)\",\"service_type\":\"Xe vận chuyển\",\"price\":\"800000.00\",\"base_cost\":\"800000.00\",\"selling_price\":\"850000.00\",\"capacity\":4,\"vehicle_model\":\"Toyota Camry / Mercedes E200 / Honda Accord\",\"description\":\"Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.\",\"image_url\":\"/uploads/1791430601915-990841517.jpg\"},\"isAssigned\":true,\"pricePerDay\":800000,\"capacity\":4,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"hotel\":{\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"pricePerNight\":1600000,\"isCustomized\":false,\"isSelfArranged\":false,\"reason\":\"\"},\"meal\":{\"enabled\":true,\"name\":\"Công ty tự sắp xếp\",\"isCustomized\":false,\"prices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"reason\":\"\"},\"guide\":{\"enabled\":true,\"name\":\"Cần Hướng dẫn viên\",\"pricePerDay\":500000,\"isCustomized\":false,\"reason\":\"\"},\"selectedPlaces\":[{\"place_id\":1,\"name\":\"VinWonders Nha Trang\",\"price\":880000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":2,\"name\":\"Tháp Bà Ponagar\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":3,\"name\":\"Lặn biển Hòn Mun\",\"price\":500000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":4,\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":6,\"name\":\"Chợ Đêm Nha Trang\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":8,\"name\":\"Viện Hải dương học\",\"price\":40000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":9,\"name\":\"Chùa Long Sơn\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":10,\"name\":\"Nhà thờ Núi\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":13,\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":14,\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":16,\"name\":\"Skylight Nha Trang\",\"price\":200000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"},{\"place_id\":17,\"name\":\"Bãi Dài\",\"price\":0,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"\"}],\"removedPlaces\":[{\"place_id\":15,\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":12,\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":7,\"name\":\"Hải sản Thanh Sương\",\"price\":250000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":11,\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"place_id\":5,\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000,\"category\":\"Tham quan\",\"isAdded\":false,\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}]},\"changes\":[{\"id\":\"place_rem_15\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Bún cá sứa Năm Beo (45.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_12\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Danh thắng Hòn Chồng (30.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_7\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Hải sản Thanh Sương (250.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_11\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Khu du lịch Hòn Tằm (800.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"},{\"id\":\"place_rem_5\",\"group\":\"removed\",\"category\":\"Điểm tham quan\",\"original\":\"Nem nướng Đặng Văn Quyên (60.000đ)\",\"proposed\":\"Đã lược bỏ khỏi phương án\",\"reason\":\"Tạm lược bỏ điểm tham quan có chi phí cao để cân đối ngân sách\"}],\"adjHotelCost\":1600000,\"adjTransportCost\":800000,\"mealPrices\":{\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000},\"guidePricePerDay\":500000,\"childPolicy\":{\"child\":{\"percent\":50,\"surcharge\":0},\"toddler\":{\"percent\":0,\"surcharge\":0},\"infant\":{\"percent\":0,\"surcharge\":0}},\"timestamp\":\"2026-11-03T15:06:52.361Z\"}', 'Công ty xin gửi báo giá ạ', NULL, 'Customer_Revision', '2026-11-03 15:06:52', 'Bỏ bớt hoạt động', '{\"adult\":8893333,\"child\":4446667,\"toddler\":0,\"infant\":0}');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `custom_tour_requests`
+--
+
+CREATE TABLE `custom_tour_requests` (
+  `request_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` int(11) DEFAULT NULL,
+  `destination` varchar(255) DEFAULT NULL,
+  `departure_date` date DEFAULT NULL,
+  `return_date` date DEFAULT NULL,
+  `people_count` int(11) DEFAULT NULL,
+  `budget` decimal(15,2) DEFAULT NULL,
+  `requirements` text DEFAULT NULL,
+  `markup_percent` int(11) DEFAULT 20,
+  `base_cost` decimal(15,2) DEFAULT 0.00,
+  `quoted_price` decimal(15,2) DEFAULT 0.00,
+  `staff_note` text DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'Pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `custom_tour_requests`
+--
+
+INSERT INTO `custom_tour_requests` (`request_id`, `customer_id`, `destination`, `departure_date`, `return_date`, `people_count`, `budget`, `requirements`, `markup_percent`, `base_cost`, `quoted_price`, `staff_note`, `status`, `created_at`) VALUES
+(1, 8, 'Đà Lạt', '2026-09-04', '2026-09-06', 4, 5000000.00, '{\"hotel\":\"8\",\"transport\":\"22\",\"activities\":[8,9,10,13,12,11,14,69,70,73,72,71,76,74,75,78,77],\"note\":\"\",\"pickup_location\":\"Hồ Chí Minh\",\"departure_time\":\"05:00\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":650000,\"transportName\":\"Công ty Xe Lữ Hành Toàn Quốc - Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"transportPrice\":675000,\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000},{\"name\":\"Thiền Viện Trúc Lâm\",\"price\":0},{\"name\":\"Hồ Tuyền Lâm\",\"price\":0},{\"name\":\"Đồi Chè Cầu Đất\",\"price\":0},{\"name\":\"Quảng trường Lâm Viên\",\"price\":0},{\"name\":\"Thung Lũng Tình Yêu\",\"price\":250000},{\"name\":\"Đường Hầm Điêu Khắc\",\"price\":120000},{\"name\":\"Nông trại Cún Puppy Farm\",\"price\":100000},{\"name\":\"Thác Pongour\",\"price\":20000},{\"name\":\"Bánh tráng nướng Dì Đinh\",\"price\":30000},{\"name\":\"Quán cafe Túi Mơ To\",\"price\":60000}]}', 20, 0.00, 18000000.00, NULL, 'Completed', '2026-08-28 12:28:42'),
+(2, 8, 'Đà Lạt', '2026-09-25', '2026-09-27', 4, 5000000.00, '{\"hotel\":\"8\",\"transport\":\"22\",\"activities\":[8,9,10,13,14,69,70,73,72,71,74,75,76,78],\"note\":\"\",\"pickup_location\":\"Hồ Chí Minh\",\"departure_time\":\"05:00\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":0},\"hotelName\":\"Hôtel Colline Đà Lạt - Phòng Superior\",\"hotelPrice\":650000,\"transportName\":\"Công ty Xe Lữ Hành Toàn Quốc - Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"transportPrice\":675000,\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"name\":\"Thác Datanla\",\"price\":170000},{\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"name\":\"Samten Hills Dalat\",\"price\":250000},{\"name\":\"Thiền Viện Trúc Lâm\",\"price\":0},{\"name\":\"Hồ Tuyền Lâm\",\"price\":0},{\"name\":\"Đồi Chè Cầu Đất\",\"price\":0},{\"name\":\"Quảng trường Lâm Viên\",\"price\":0},{\"name\":\"Thung Lũng Tình Yêu\",\"price\":250000},{\"name\":\"Đường Hầm Điêu Khắc\",\"price\":120000},{\"name\":\"Nông trại Cún Puppy Farm\",\"price\":100000},{\"name\":\"Thác Pongour\",\"price\":20000},{\"name\":\"Quán cafe Túi Mơ To\",\"price\":60000}]}', 20, 0.00, 16926000.00, NULL, 'Designing', '2026-09-11 16:14:36'),
+(3, 8, 'Nha Trang', '2026-09-29', '2026-10-01', 4, 5000000.00, '{\"hotel\":\"7\",\"transport\":\"22\",\"activities\":[1,2,3,4,6,79,7,80,81,82,83,86,85,87,88],\"note\":\"\",\"pickup_location\":\"Hồ Chí Minh\",\"departure_time\":\"\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":1,\"infants\":0},\"hotelName\":\"Khách sạn Mường Thanh Luxury - Phòng Standard Hướng Phố\",\"hotelPrice\":450000,\"transportName\":\"Công ty Xe Lữ Hành Toàn Quốc - Xe SUV 7 chỗ (Innova/Fortuner) / Ngày\",\"transportPrice\":675000,\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000},{\"name\":\"Viện Hải dương học\",\"price\":40000},{\"name\":\"Chùa Long Sơn\",\"price\":0},{\"name\":\"Nhà thờ Núi\",\"price\":0},{\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000},{\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000},{\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000},{\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000},{\"name\":\"Skylight Nha Trang\",\"price\":200000},{\"name\":\"Bãi Dài\",\"price\":0}]}', 20, 0.00, 24472500.00, NULL, 'Designing', '2026-09-11 16:42:15'),
+(4, 20, 'Bạc Liêu', '2026-10-08', '2026-10-09', 1, 112233.00, '{\"hotel\":\"\",\"transport\":\"\",\"activities\":[],\"note\":\"\",\"pickup_location\":\"dsd\",\"departure_time\":\"22:43\",\"participantBreakdown\":{\"adults\":1,\"children\":0,\"toddlers\":0,\"infants\":0},\"hotelName\":\"Khách tự túc\",\"hotelPrice\":0,\"transportName\":\"Công ty tự sắp xếp\",\"transportPrice\":0,\"guide\":\"Khách tự túc\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[]}', 20, 0.00, 2160000.00, NULL, 'Designing', '2026-10-23 02:46:42'),
+(5, 8, 'Nha Trang', '2027-01-13', '2027-01-16', 3, 7000000.00, '{\"hotel\":\"465\",\"transport\":\"\",\"activities\":[1,2,3,4,5,6,7,79,80,81,83,86,85,84,87,88,82],\"note\":\"\",\"pickup_location\":\"41 Nguyễn Thái Sơn, Hạnh Thông, Hồ Chí Minh\",\"departure_time\":\"05:30\",\"participantBreakdown\":{\"adults\":2,\"children\":1,\"toddlers\":0,\"infants\":0},\"hotelName\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang - Phòng Standard\",\"hotelPrice\":1600000,\"hotelEstimatedCost\":{\"nights\":3,\"rooms\":2,\"pricePerNight\":800000,\"totalEstimated\":4800000,\"perPax\":1600000},\"totalEstimatedCost\":{\"perPaxMin\":6251667,\"perPaxMax\":6451667,\"groupMin\":18755000,\"groupMax\":19355000},\"transportName\":\"Xe tiêu chuẩn (Xe 4–7 chỗ) [Dự kiến: 3.200.000 – 3.800.000đ]\",\"transportPrice\":0,\"transportOption\":\"select\",\"transportCategory\":\"standard\",\"transportEstimatedCost\":{\"category\":\"standard\",\"totalMin\":3200000,\"totalMax\":3800000,\"perPaxMin\":1066667,\"perPaxMax\":1266667,\"displayRange\":\"3.200.000 – 3.800.000đ\",\"durationDays\":4},\"customTransportNote\":\"\",\"recommendedVehicle\":\"Xe 4–7 chỗ\",\"guide\":\"Cần Hướng dẫn viên\",\"meal\":\"Công ty tự sắp xếp\",\"selectedPlaces\":[{\"name\":\"VinWonders Nha Trang\",\"price\":880000},{\"name\":\"Tháp Bà Ponagar\",\"price\":30000},{\"name\":\"Lặn biển Hòn Mun\",\"price\":500000},{\"name\":\"Tắm bùn khoáng I-Resort\",\"price\":350000},{\"name\":\"Nem nướng Đặng Văn Quyên\",\"price\":60000},{\"name\":\"Chợ Đêm Nha Trang\",\"price\":0},{\"name\":\"Hải sản Thanh Sương\",\"price\":250000},{\"name\":\"Viện Hải dương học\",\"price\":40000},{\"name\":\"Chùa Long Sơn\",\"price\":0},{\"name\":\"Nhà thờ Núi\",\"price\":0},{\"name\":\"Khu du lịch Hòn Tằm\",\"price\":800000},{\"name\":\"Danh thắng Hòn Chồng\",\"price\":30000},{\"name\":\"Bò nướng Lạc Cảnh\",\"price\":150000},{\"name\":\"Đảo Khỉ (Hòn Lao)\",\"price\":250000},{\"name\":\"Bún cá sứa Năm Beo\",\"price\":45000},{\"name\":\"Skylight Nha Trang\",\"price\":200000},{\"name\":\"Bãi Dài\",\"price\":0}]}', 20, 0.00, 22233333.00, NULL, 'Customer_Revision', '2026-11-03 14:00:38');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `departures`
+--
+
+CREATE TABLE `departures` (
+  `departure_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `tour_id` int(11) DEFAULT NULL,
+  `departure_date` date DEFAULT NULL,
+  `return_date` date DEFAULT NULL,
+  `max_slots` int(11) DEFAULT NULL,
+  `available_slots` int(11) DEFAULT NULL,
+  `status` enum('Open','Closed','Completed') DEFAULT 'Open',
+  `guide_id` int(11) DEFAULT NULL,
+  `driver_id` int(11) DEFAULT NULL,
+  `vehicle_number` varchar(50) DEFAULT NULL,
+  `operational_status` enum('Pending','Reviewing','Confirmed','Cancelled') DEFAULT 'Pending',
+  `decision_history` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`decision_history`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `departures`
+--
+
+INSERT INTO `departures` (`departure_id`, `tour_id`, `departure_date`, `return_date`, `max_slots`, `available_slots`, `status`, `guide_id`, `driver_id`, `vehicle_number`, `operational_status`, `decision_history`) VALUES
+(3, 10, '2026-08-07', '2026-08-09', 30, 30, 'Closed', 5, 16, '29B-987.65', 'Pending', NULL),
+(7, 29, '2026-09-01', '2026-09-04', 2, 2, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(8, 31, '2026-09-05', '2026-09-07', 15, 14, 'Closed', 6, NULL, NULL, 'Pending', NULL),
+(9, 32, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(10, 32, '2026-10-15', '2026-10-17', 30, 28, 'Closed', 5, 16, NULL, 'Pending', NULL),
+(11, 33, '2026-09-20', '2026-09-24', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(12, 33, '2026-10-15', '2026-10-19', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(13, 34, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(14, 34, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(15, 35, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(16, 35, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(17, 36, '2026-09-20', '2026-09-23', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(18, 36, '2026-08-26', '2026-08-29', 18, 18, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(19, 37, '2026-09-20', '2026-09-23', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(20, 37, '2026-11-18', '2026-11-21', 20, 20, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(21, 38, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(22, 38, '2026-10-15', '2026-10-17', 30, 28, 'Closed', 6, 17, NULL, 'Pending', NULL),
+(23, 39, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(24, 39, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(25, 40, '2026-09-20', '2026-09-23', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(26, 40, '2026-10-15', '2026-10-18', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(27, 41, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(28, 41, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(29, 42, '2026-09-20', '2026-09-23', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(30, 42, '2026-10-15', '2026-10-18', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(31, 43, '2026-09-20', '2026-09-23', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(32, 43, '2026-10-15', '2026-10-18', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(33, 44, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(34, 44, '2026-10-15', '2026-10-17', 30, 27, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(35, 45, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(36, 45, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(37, 46, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(38, 46, '2026-10-15', '2026-10-17', 30, 27, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(39, 47, '2026-09-20', '2026-09-21', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(40, 47, '2026-10-15', '2026-10-16', 30, 28, 'Closed', NULL, NULL, NULL, 'Cancelled', '[{\"timestamp\":\"2026-10-01T01:40:01.772Z\",\"user_id\":3,\"user_name\":\"System\",\"action\":\"Đóng tour\",\"pax_at_time\":\"2/30\",\"note\":\"\"}]'),
+(41, 48, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(42, 48, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(43, 49, '2026-09-20', '2026-09-22', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(44, 49, '2026-10-15', '2026-10-17', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(45, 50, '2026-09-20', '2026-09-21', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(46, 50, '2026-10-15', '2026-10-16', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(47, 51, '2026-09-20', '2026-09-20', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(48, 51, '2026-10-15', '2026-10-15', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(49, 52, '2026-09-20', '2026-09-27', 30, 25, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(50, 52, '2026-10-15', '2026-10-22', 30, 28, 'Closed', NULL, NULL, NULL, 'Pending', NULL),
+(52, 29, '2026-11-18', '2026-11-21', 20, 9, 'Closed', 5, 17, '35B-555.66', 'Pending', NULL),
+(55, 50, '2027-01-03', '2027-01-04', 30, 30, 'Open', 6, NULL, NULL, 'Pending', NULL),
+(56, 51, '2026-12-19', '2026-12-19', 10, 12, 'Open', 6, 17, '43B-888.11', 'Pending', NULL),
+(57, 29, '2026-11-17', '2026-11-20', 16, 4, 'Closed', 6, 16, NULL, 'Pending', NULL),
+(58, 31, '2026-11-11', '2026-11-13', 15, 15, 'Closed', 6, 17, NULL, 'Pending', NULL),
+(59, 29, '2026-11-03', '2026-11-06', 17, 4, 'Closed', 6, 16, NULL, 'Pending', NULL),
+(60, 29, '2026-12-28', '2026-12-31', 30, 30, 'Open', 6, 17, '79B-333.29', 'Pending', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `departure_updates`
+--
+
+CREATE TABLE `departure_updates` (
+  `update_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) NOT NULL,
+  `guide_id` int(11) NOT NULL,
+  `location` varchar(255) NOT NULL,
+  `activity` varchar(100) NOT NULL,
+  `description` text NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `itinerary_id` int(11) DEFAULT NULL,
+  `delay_minutes` int(11) DEFAULT 0,
+  `delay_reason` varchar(255) DEFAULT NULL,
+  `milestone_index` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `departure_updates`
+--
+
+INSERT INTO `departure_updates` (`update_id`, `departure_id`, `guide_id`, `location`, `activity`, `description`, `image_url`, `created_at`, `itinerary_id`, `delay_minutes`, `delay_reason`, `milestone_index`) VALUES
+(14, 3, 1, 'Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club', '🚌 Di chuyển', 'HDV đã xác nhận hoàn thành mốc: Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club (Ngày 1)', NULL, '2026-09-01 01:06:32', 36, 0, NULL, 0),
+(15, 3, 1, 'Phú Quốc', '🏞️ Tham quan', '[Mốc #2 - Ngày 1] ☀️ 10:00 - 12:00: Tham quan Cơ sở nuôi cấy Ngọc Trai Phú Quốc, lắng nghe quy trình nuôi cấy ngọc trai thiên nhiên biển Nam. HDV tư vấn đòn mua sắm ngọc trai chính hiệu.', NULL, '2026-09-01 01:34:53', 36, 0, NULL, 1),
+(16, 3, 1, 'dfe', '🚌 Di chuyển', 'ẻe', NULL, '2026-09-28 15:11:57', NULL, 0, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `destinations`
+--
+
+CREATE TABLE `destinations` (
+  `destination_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `destination_name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `slogan` varchar(150) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `destinations`
+--
+
+INSERT INTO `destinations` (`destination_id`, `destination_name`, `description`, `image_url`, `status`, `slogan`) VALUES
+(1, 'Nha Trang', NULL, NULL, 'Active', 'Thành phố biển'),
+(2, 'Đà Lạt', NULL, NULL, 'Active', 'Thành phố ngàn hoa'),
+(3, 'Phú Quốc', NULL, NULL, 'Active', NULL),
+(4, 'Lào Cai', NULL, NULL, 'Active', NULL),
+(5, 'Đà Nẵng', 'Thành phố biển đáng sống nhất Việt Nam', 'danang.jpg', 'Active', NULL),
+(6, 'Hội An', 'Phố cổ Hội An - Di sản Văn hóa Thế giới', 'hoian.jpg', 'Active', NULL),
+(7, 'Huế', 'Cố đô Huế với nhiều di tích lịch sử', 'hue.jpg', 'Active', NULL),
+(8, 'Hà Nội', 'Thủ đô nghìn năm văn hiến', 'hanoi.jpg', 'Active', NULL),
+(9, 'Hạ Long', 'Vịnh Hạ Long - Kỳ quan thiên nhiên thế giới', 'halong.jpg', 'Active', NULL),
+(10, 'Quy Nhơn', 'Thành phố biển Bình Định', 'quynhon.jpg', 'Active', NULL),
+(11, 'Mũi Né', 'Thiên đường nghỉ dưỡng của Bình Thuận', 'muine.jpg', 'Active', NULL),
+(12, 'Cần Thơ', 'Thủ phủ miền Tây sông nước', 'cantho.jpg', 'Active', NULL),
+(13, 'Côn Đảo', 'Quần đảo nổi tiếng về lịch sử và biển đẹp', 'condao.jpg', 'Active', NULL),
+(14, 'Vũng Tàu', 'Thành phố biển gần TP.HCM', 'vungtau.jpg', 'Active', NULL),
+(15, 'Ninh Bình', 'Di sản Tràng An và Tam Cốc', 'ninhbinh.jpg', 'Active', NULL),
+(16, 'Quảng Bình', 'Vương quốc hang động Việt Nam', 'quangbinh.jpg', 'Active', NULL),
+(18, 'Hồ Chí Minh', NULL, NULL, 'Active', NULL),
+(19, 'Hà Giang', NULL, NULL, 'Active', NULL),
+(20, 'Phú Yên', NULL, NULL, 'Active', NULL),
+(21, 'Tây Nguyên', NULL, NULL, 'Active', NULL),
+(22, 'Cà Mau', NULL, NULL, 'Active', NULL),
+(23, 'Tây Ninh', NULL, NULL, 'Active', NULL),
+(24, 'Bạc Liêu', NULL, NULL, 'Active', NULL),
+(25, 'Đồng Tháp', NULL, NULL, 'Active', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `driver_expenses`
+--
+
+CREATE TABLE `driver_expenses` (
+  `expense_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) NOT NULL,
+  `driver_id` int(11) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `description` text DEFAULT NULL,
+  `receipt_image` varchar(255) DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `driver_incidents`
+--
+
+CREATE TABLE `driver_incidents` (
+  `incident_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) DEFAULT NULL,
+  `driver_id` int(11) NOT NULL,
+  `vehicle_number` varchar(50) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('Reported','Processing','Resolved') DEFAULT 'Reported',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `driver_incidents`
+--
+
+INSERT INTO `driver_incidents` (`incident_id`, `departure_id`, `driver_id`, `vehicle_number`, `title`, `description`, `location`, `image_url`, `status`, `created_at`) VALUES
+(1, 52, 17, '35B-555.66', 'kjj', 'jjj', 'jjj', NULL, 'Reported', '2026-10-16 05:55:20'),
+(2, 56, 17, '43B-888.11', 'test xe', 'hỏng bánh\r\n', 'định vị A', NULL, 'Processing', '2026-10-16 05:56:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `guides`
+--
+
+CREATE TABLE `guides` (
+  `guide_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` int(11) DEFAULT NULL,
+  `license_number` varchar(100) DEFAULT NULL,
+  `experience_years` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `guides`
+--
+
+INSERT INTO `guides` (`guide_id`, `user_id`, `license_number`, `experience_years`) VALUES
+(1, 5, 'HDV001', 5),
+(2, 6, 'HDV002', 3);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `guide_assignments`
+--
+
+CREATE TABLE `guide_assignments` (
+  `assignment_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) DEFAULT NULL,
+  `guide_id` int(11) DEFAULT NULL,
+  `assigned_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `guide_assignments`
+--
+
+INSERT INTO `guide_assignments` (`assignment_id`, `departure_id`, `guide_id`, `assigned_at`) VALUES
+(5, 3, 1, '2026-07-28 13:24:01'),
+(28, 55, 2, '2026-09-20 14:05:26'),
+(35, 20, 2, '2026-09-22 13:48:46'),
+(42, 8, 2, '2026-10-01 14:38:02'),
+(43, 58, 2, '2026-10-01 14:38:02'),
+(48, 56, 2, '2026-10-04 13:46:05'),
+(49, 10, 1, '2026-10-16 12:41:32'),
+(50, 22, 2, '2026-10-16 12:41:32'),
+(51, 59, 2, '2026-10-16 08:30:31'),
+(52, 57, 2, '2026-10-16 08:30:31'),
+(53, 52, 1, '2026-10-16 08:30:31'),
+(54, 60, 2, '2026-10-16 08:30:31');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `holidays`
+--
+
+CREATE TABLE `holidays` (
+  `holiday_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `holiday_date` date NOT NULL,
+  `holiday_name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `holidays`
+--
+
+INSERT INTO `holidays` (`holiday_id`, `holiday_date`, `holiday_name`, `created_at`) VALUES
+(1, '2026-09-02', 'Lễ Quốc khánh', '2026-09-19 08:43:51');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hotel_service_details`
+--
+
+CREATE TABLE `hotel_service_details` (
+  `hotel_service_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `service_id` int(11) NOT NULL,
+  `room_type` varchar(100) DEFAULT NULL,
+  `bed_type` varchar(50) DEFAULT NULL,
+  `star_rating` int(11) DEFAULT 0,
+  `max_adults` int(11) DEFAULT 2,
+  `max_children` int(11) DEFAULT 2,
+  `max_infants` int(11) DEFAULT 1,
+  `min_adults` int(11) DEFAULT 1,
+  `single_room_allowed` tinyint(1) DEFAULT 1,
+  `single_room_supplement` decimal(10,2) DEFAULT 0.00,
+  `extra_bed_allowed` tinyint(1) DEFAULT 0,
+  `max_extra_beds` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `hotel_service_details`
+--
+
+INSERT INTO `hotel_service_details` (`hotel_service_id`, `service_id`, `room_type`, `bed_type`, `star_rating`, `max_adults`, `max_children`, `max_infants`, `min_adults`, `single_room_allowed`, `single_room_supplement`, `extra_bed_allowed`, `max_extra_beds`) VALUES
+(1, 6, 'Deluxe', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(2, 7, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(3, 8, 'Superior', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(4, 9, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(5, 10, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(6, 12, 'Deluxe', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(7, 13, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(8, 20, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(9, 21, 'Standard', NULL, 0, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(10, 26, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(11, 27, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(12, 28, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(13, 29, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(14, 30, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(15, 31, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(16, 32, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(17, 33, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(18, 34, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(19, 35, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(20, 36, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(21, 37, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(22, 38, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(23, 39, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(24, 40, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(25, 41, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(26, 42, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(27, 43, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(28, 44, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(29, 45, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(30, 46, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(31, 47, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(32, 48, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(33, 49, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(34, 50, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(35, 51, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(36, 52, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(37, 53, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(38, 54, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(39, 55, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(40, 56, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(41, 57, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(42, 58, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(43, 59, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(44, 60, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(45, 61, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(46, 62, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(47, 63, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(48, 64, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(49, 65, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(50, 66, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(51, 67, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(52, 68, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(53, 69, 'Standard', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 400000.00, 0, 0),
+(54, 70, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(55, 71, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(56, 72, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(57, 73, 'Standard', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 960000.00, 0, 0),
+(58, 74, 'Standard', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 640000.00, 0, 0),
+(66, 75, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(67, 76, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(68, 77, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(69, 78, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(70, 79, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(71, 80, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(72, 81, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(73, 82, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(74, 83, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(75, 84, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(76, 85, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(77, 86, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(78, 87, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(79, 88, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(80, 89, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(81, 90, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(82, 91, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(83, 92, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(84, 93, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(85, 94, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(86, 95, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(87, 96, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(88, 97, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(89, 98, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(90, 99, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(91, 100, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(92, 101, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(93, 102, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(94, 103, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(95, 104, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(96, 105, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(97, 106, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(98, 107, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(99, 108, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(100, 109, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(101, 110, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(102, 111, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(103, 112, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(104, 113, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(105, 114, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(106, 115, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(107, 116, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(108, 117, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(109, 118, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(110, 119, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(111, 120, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(112, 121, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(113, 122, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(114, 123, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(115, 124, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(116, 125, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(117, 126, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(118, 127, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(119, 128, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(120, 129, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(121, 130, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(122, 131, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(123, 132, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(124, 133, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(125, 134, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(126, 135, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(127, 136, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(128, 137, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(129, 138, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(130, 139, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(131, 140, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(132, 141, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(133, 142, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(134, 143, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(135, 144, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(136, 145, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(137, 146, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(138, 147, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(139, 148, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(140, 149, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(141, 150, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(142, 151, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(143, 152, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(144, 153, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(145, 154, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(146, 155, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(147, 156, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(148, 157, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(149, 158, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(150, 159, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(151, 160, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(152, 161, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(153, 162, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(154, 163, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(155, 164, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(156, 165, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(157, 166, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(158, 167, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(159, 168, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(160, 169, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(161, 170, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(162, 171, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(163, 172, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(164, 173, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(165, 174, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(166, 175, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(167, 176, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(168, 177, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(169, 178, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(170, 179, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(171, 180, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(172, 181, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(173, 182, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(174, 183, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(175, 184, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(176, 185, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(177, 186, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(178, 187, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(179, 188, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(180, 189, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(181, 190, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(182, 191, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(183, 192, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(184, 193, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(185, 194, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(186, 195, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(187, 196, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(188, 197, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(189, 198, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(190, 199, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(191, 200, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(192, 201, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(193, 202, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(194, 203, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(195, 204, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(196, 205, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(197, 206, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(198, 207, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(199, 208, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(200, 209, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(201, 210, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(202, 211, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(203, 212, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(204, 213, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(205, 214, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(206, 215, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(207, 216, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(208, 217, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(209, 218, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(210, 219, 'Superior', '1 Double Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 520000.00, 1, 1),
+(211, 220, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 3, 2, 2, 1, 1, 1, 680000.00, 1, 1),
+(212, 221, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(213, 222, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(214, 223, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(215, 224, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(216, 225, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(217, 226, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(218, 227, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(219, 228, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(220, 229, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(221, 230, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(222, 231, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(223, 232, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(224, 233, 'Superior', '1 Double Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1080000.00, 1, 1),
+(225, 234, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 5, 2, 2, 1, 1, 1, 1240000.00, 1, 1),
+(226, 235, 'Executive', '1 King Bed', 5, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(227, 236, 'Suite', '1 King Bed', 5, 2, 2, 1, 1, 1, 1760000.00, 1, 1),
+(228, 237, 'Superior', '1 Double Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 760000.00, 1, 1),
+(229, 238, 'Deluxe', '1 King Bed hoặc 2 Single Beds', 4, 2, 2, 1, 1, 1, 920000.00, 1, 1),
+(230, 239, 'Executive', '1 King Bed', 4, 2, 2, 1, 1, 1, 1120000.00, 1, 1),
+(231, 240, 'Suite', '1 King Bed', 4, 2, 2, 1, 1, 1, 1440000.00, 1, 1),
+(232, 454, 'Standard', 'Twin/Double', 4, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(234, 455, 'Superior', 'Twin/Double', 4, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(235, 456, 'Deluxe', 'King', 4, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(236, 457, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(237, 458, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(238, 459, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(239, 460, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(240, 461, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(241, 462, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(242, 463, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(243, 464, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0),
+(244, 465, 'Standard', 'Twin/Double', 3, 2, 2, 1, 1, 1, 0.00, 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `incident_reports`
+--
+
+CREATE TABLE `incident_reports` (
+  `incident_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `guide_id` int(11) DEFAULT NULL,
+  `departure_id` int(11) DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('Open','Resolved') DEFAULT 'Open',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `image_url` varchar(255) DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `resolution_notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `itineraries`
+--
+
+CREATE TABLE `itineraries` (
+  `itinerary_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `tour_id` int(11) DEFAULT NULL,
+  `day_number` int(11) DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `itineraries`
+--
+
+INSERT INTO `itineraries` (`itinerary_id`, `tour_id`, `day_number`, `title`, `description`) VALUES
+(27, 7, 1, 'Ngày 1: TP.HCM - Đà Lạt: Thành Phố Ngàn Hoa & Quảng Trường Lâm Viên', '🌅 06:00 - 08:30: Tập trung đoàn tại Văn phòng TravelERP. HDV phát thẻ đoàn, kiểm tra danh sách hành khách và phổ biến nội quy chuyến đi. Khởi hành đi Đà Lạt bằng xe du lịch đời mới. Dùng điểm tâm sáng với Bánh canh Trảng Bàng đặc sản.\n\n☀️ 11:30 - 13:00: Đoàn dừng chân dùng cơm trưa tại Nhà hàng Tâm Châu (Bảo Lộc), thưởng thức danh trà & cà phê tự do. HDV điểm danh số lượng khách trước khi xe vượt đèo Bảo Lộc.\n\n🌇 15:30 - 17:30: Đến Đà Lạt, đoàn làm thủ tục nhận phòng tại Khách sạn TTC Hotel Premium (4 sao). Tự do nghỉ ngơi. HDV chuẩn bị sẵn vé tham quan cho các ngày tiếp theo.\n\n🌙 18:00 - 21:00: Dùng tiệc tối tại Nhà hàng Lê Lai với thực đơn đặc sản vùng cao. Tự do dạo ngắm Chợ Đêm Đà Lạt, check-in Quảng trường Lâm Viên, nụ hoa Atiso khổng lồ và thưởng thức sữa đậu nành nóng. HDV nhắc nhở khách giờ tập trung sáng Ngày 2.'),
+(28, 7, 2, 'Ngày 2: Chinh Phục Đỉnh Langbiang - Thung Lũng Tình Yêu - Đồi Chè Cầu Đất', '🌅 07:00 - 08:00: Dùng điểm tâm buffet sáng tại khách sạn. HDV kiểm tra sĩ số đoàn lên xe khởi hành.\n\n☀️ 08:30 - 11:30: Khởi hành tham quan Khu du lịch Langbiang. HDV làm thủ tục hỗ trợ đoàn lên xe Jeep chinh phục đỉnh Rada ngắm toàn cảnh thung lũng Đankia và suối Vàng suối Bạc.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng dưới chân núi Langbiang với thực đơn Cơm lam thịt nướng Tây Nguyên. \n\n🌆 14:30 - 17:30: Di chuyển tham quan Đồi Chè Cầu Đất & Tuabin gió khổng lồ. HDV hỗ trợ chụp ảnh lưu niệm đoàn. Trên đường về ghé tham quan Vườn dâu tây công nghệ cao và cơ sở mua sắm mứt Đà Lạt.\n\n🌙 18:30 - 21:30: Tham gia đêm Giao lưu Cồng chiêng Tây Nguyên dưới chân núi Mẹ, thưởng thức rượu cần & thịt lợn rừng nướng. HDV điều phối hoạt động văn hóa nghệ thuật với đồng bào dân tộc K\'Ho.'),
+(29, 7, 3, 'Ngày 3: Thiền Viện Trúc Lâm - Chợ Đà Lạt - TP.HCM', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet, làm thủ tục trả phòng khách sạn. HDV kiểm tra kỹ hành lý và tài sản cá nhân giúp hành khách.\n\n☀️ 08:30 - 11:00: Viếng Thiền Viện Trúc Lâm thanh tĩnh ngắm Hồ Tuyền Lâm. HDV hướng dẫn đoàn trải nghiệm cáp treo Đồi Robin ngắm toàn cảnh rừng thông thơ mộng.\n\n🌇 11:30 - 13:30: Dùng cơm trưa tại Nhà hàng Hướng Dương (Bảo Lộc). Mua sắm quà lưu niệm (Trà, Cà phê, Mứt hoa quả) cho người thân.\n\n🌙 18:00 - 19:00: Xe đưa đoàn về lại điểm đón ban đầu tại TP.HCM. HDV phát phiếu khảo sát chất lượng dịch vụ, gửi lời cảm ơn và hỗ trợ hành khách trả hành lý. Kết thúc chuyến đi an toàn.'),
+(30, 9, 1, 'Ngày 1: TP.HCM - Đà Lạt: Thành Phố Ngàn Hoa & Quảng Trường Lâm Viên', '🌅 06:00 - 08:30: Tập trung đoàn tại Văn phòng TravelERP. HDV phát thẻ đoàn, kiểm tra danh sách hành khách và phổ biến nội quy chuyến đi. Khởi hành đi Đà Lạt bằng xe du lịch đời mới. Dùng điểm tâm sáng với Bánh canh Trảng Bàng đặc sản.\n\n☀️ 11:30 - 13:00: Đoàn dừng chân dùng cơm trưa tại Nhà hàng Tâm Châu (Bảo Lộc), thưởng thức danh trà & cà phê tự do. HDV điểm danh số lượng khách trước khi xe vượt đèo Bảo Lộc.\n\n🌇 15:30 - 17:30: Đến Đà Lạt, đoàn làm thủ tục nhận phòng tại Khách sạn TTC Hotel Premium (4 sao). Tự do nghỉ ngơi. HDV chuẩn bị sẵn vé tham quan cho các ngày tiếp theo.\n\n🌙 18:00 - 21:00: Dùng tiệc tối tại Nhà hàng Lê Lai với thực đơn đặc sản vùng cao. Tự do dạo ngắm Chợ Đêm Đà Lạt, check-in Quảng trường Lâm Viên, nụ hoa Atiso khổng lồ và thưởng thức sữa đậu nành nóng. HDV nhắc nhở khách giờ tập trung sáng Ngày 2.'),
+(31, 9, 2, 'Ngày 2: Chinh Phục Đỉnh Langbiang - Thung Lũng Tình Yêu - Đồi Chè Cầu Đất', '🌅 07:00 - 08:00: Dùng điểm tâm buffet sáng tại khách sạn. HDV kiểm tra sĩ số đoàn lên xe khởi hành.\n\n☀️ 08:30 - 11:30: Khởi hành tham quan Khu du lịch Langbiang. HDV làm thủ tục hỗ trợ đoàn lên xe Jeep chinh phục đỉnh Rada ngắm toàn cảnh thung lũng Đankia và suối Vàng suối Bạc.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng dưới chân núi Langbiang với thực đơn Cơm lam thịt nướng Tây Nguyên. \n\n🌆 14:30 - 17:30: Di chuyển tham quan Đồi Chè Cầu Đất & Tuabin gió khổng lồ. HDV hỗ trợ chụp ảnh lưu niệm đoàn. Trên đường về ghé tham quan Vườn dâu tây công nghệ cao và cơ sở mua sắm mứt Đà Lạt.\n\n🌙 18:30 - 21:30: Tham gia đêm Giao lưu Cồng chiêng Tây Nguyên dưới chân núi Mẹ, thưởng thức rượu cần & thịt lợn rừng nướng. HDV điều phối hoạt động văn hóa nghệ thuật với đồng bào dân tộc K\'Ho.'),
+(32, 9, 3, 'Ngày 3: Thiền Viện Trúc Lâm - Chợ Đà Lạt - TP.HCM', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet, làm thủ tục trả phòng khách sạn. HDV kiểm tra kỹ hành lý và tài sản cá nhân giúp hành khách.\n\n☀️ 08:30 - 11:00: Viếng Thiền Viện Trúc Lâm thanh tĩnh ngắm Hồ Tuyền Lâm. HDV hướng dẫn đoàn trải nghiệm cáp treo Đồi Robin ngắm toàn cảnh rừng thông thơ mộng.\n\n🌇 11:30 - 13:30: Dùng cơm trưa tại Nhà hàng Hướng Dương (Bảo Lộc). Mua sắm quà lưu niệm (Trà, Cà phê, Mứt hoa quả) cho người thân.\n\n🌙 18:00 - 19:00: Xe đưa đoàn về lại điểm đón ban đầu tại TP.HCM. HDV phát phiếu khảo sát chất lượng dịch vụ, gửi lời cảm ơn và hỗ trợ hành khách trả hành lý. Kết thúc chuyến đi an toàn.'),
+(33, 8, 1, 'Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club', '🌅 07:30 - 09:30: Xe & HDV đón đoàn tại Sân bay Phú Quốc / Bến tàu Rạch Giá. Dùng điểm tâm sáng với đặc sản Bún quậy Kiến Xây nổi tiếng.\n\n☀️ 10:00 - 12:00: Tham quan Cơ sở nuôi cấy Ngọc Trai Phú Quốc, lắng nghe quy trình nuôi cấy ngọc trai thiên nhiên biển Nam. HDV tư vấn đòn mua sắm ngọc trai chính hiệu.\n\n🌇 12:30 - 15:30: Dùng cơm trưa hải sản tại Nhà hàng ven biển. Nhận phòng Resort Sunset Beach (4 sao). Tự do tắm biển & nghỉ ngơi.\n\n🌙 16:30 - 21:00: HDV đưa đoàn đến Sunset Sanato Beach Club ngắm hoàng hôn ngút ngàn và chụp ảnh tượng voi chân dài, tượng người gác cổng. Dùng tiệc tối hải sản tươi sống và tự do dạo Chợ đêm Phú Quốc.'),
+(34, 8, 2, 'Ngày 2: Tour 4 Đảo Canô - Lặn Ngắm San Ho - Cáp Treo Hòn Thơm', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet tại Resort. HDV nhắc nhở quý khách chuẩn bị trang phục bơi, kem chống nắng, túi chống nước điện thoại.\n\n☀️ 08:30 - 12:30: Di chuyển xuống Cảng An Thới. Lên Canô cao tốc lướt biển khám phá 4 đảo: Hòn Mây Rút, Hòn Móng Tay, Hòn Gầm Ghì. HDV hỗ trợ trang thiết bị lặn ngắm san hô tự nhiên & chụp ảnh quay phim flycam.\n\n🌇 13:00 - 16:30: Dùng bữa trưa hải sản trên đảo. Trải nghiệm Cáp treo Hòn Thơm vượt biển dài nhất thế giới và vui chơi tại Công viên nước Aquatopia.\n\n🌙 18:30 - 21:30: Xe đưa đoàn dùng cơm tối với đặc sản Gỏi cá trích & Rượu sim rừng. Tự do dạo phố biển hoặc đăng ký Tour trải nghiệm câu mực đêm cùng ngư dân.'),
+(35, 8, 3, 'Ngày 3: Chùa Hộ Quốc - Dinh Cậu - Tạm Biệt Phú Quốc', '🌅 07:30 - 08:30: Dùng điểm tâm sáng, làm thủ tục trả phòng resort. HDV tập trung đoàn kiểm tra hành lý.\n\n☀️ 09:00 - 11:30: Viếng Chùa Hộ Quốc (Thiền Viện Trúc Lâm Hộ Quốc) tựa lưng núi hướng biển xanh. Tham quan Nhà thùng nước mắm truyền thống Phụng Hưng & Dinh Cậu tâm linh.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng. Mua sắm đặc sản Nước mắm Phú Quốc, Hạt tiêu Suối Đá, Rượu sim làm quà.\n\n🌙 15:00 - 17:00: Xe đưa đoàn ra Sân bay Phú Quốc / Bến tàu. HDV hỗ trợ làm thủ tục check-in vé và gửi lời chào tạm biệt quý khách.'),
+(36, 10, 1, 'Ngày 1: Đón Đoàn - Khám Phá Nam Đảo - Sunset Sanato Beach Club', '🌅 07:30 - 09:30: Xe & HDV đón đoàn tại Sân bay Phú Quốc / Bến tàu Rạch Giá. Dùng điểm tâm sáng với đặc sản Bún quậy Kiến Xây nổi tiếng.\n\n☀️ 10:00 - 12:00: Tham quan Cơ sở nuôi cấy Ngọc Trai Phú Quốc, lắng nghe quy trình nuôi cấy ngọc trai thiên nhiên biển Nam. HDV tư vấn đòn mua sắm ngọc trai chính hiệu.\n\n🌇 12:30 - 15:30: Dùng cơm trưa hải sản tại Nhà hàng ven biển. Nhận phòng Resort Sunset Beach (4 sao). Tự do tắm biển & nghỉ ngơi.\n\n🌙 16:30 - 21:00: HDV đưa đoàn đến Sunset Sanato Beach Club ngắm hoàng hôn ngút ngàn và chụp ảnh tượng voi chân dài, tượng người gác cổng. Dùng tiệc tối hải sản tươi sống và tự do dạo Chợ đêm Phú Quốc.'),
+(37, 10, 2, 'Ngày 2: Tour 4 Đảo Canô - Lặn Ngắm San Ho - Cáp Treo Hòn Thơm', '🌅 07:00 - 08:00: Dùng điểm tâm sáng buffet tại Resort. HDV nhắc nhở quý khách chuẩn bị trang phục bơi, kem chống nắng, túi chống nước điện thoại.\n\n☀️ 08:30 - 12:30: Di chuyển xuống Cảng An Thới. Lên Canô cao tốc lướt biển khám phá 4 đảo: Hòn Mây Rút, Hòn Móng Tay, Hòn Gầm Ghì. HDV hỗ trợ trang thiết bị lặn ngắm san hô tự nhiên & chụp ảnh quay phim flycam.\n\n🌇 13:00 - 16:30: Dùng bữa trưa hải sản trên đảo. Trải nghiệm Cáp treo Hòn Thơm vượt biển dài nhất thế giới và vui chơi tại Công viên nước Aquatopia.\n\n🌙 18:30 - 21:30: Xe đưa đoàn dùng cơm tối với đặc sản Gỏi cá trích & Rượu sim rừng. Tự do dạo phố biển hoặc đăng ký Tour trải nghiệm câu mực đêm cùng ngư dân.'),
+(38, 10, 3, 'Ngày 3: Chùa Hộ Quốc - Dinh Cậu - Tạm Biệt Phú Quốc', '🌅 07:30 - 08:30: Dùng điểm tâm sáng, làm thủ tục trả phòng resort. HDV tập trung đoàn kiểm tra hành lý.\n\n☀️ 09:00 - 11:30: Viếng Chùa Hộ Quốc (Thiền Viện Trúc Lâm Hộ Quốc) tựa lưng núi hướng biển xanh. Tham quan Nhà thùng nước mắm truyền thống Phụng Hưng & Dinh Cậu tâm linh.\n\n🌇 12:00 - 14:00: Dùng cơm trưa tại Nhà hàng. Mua sắm đặc sản Nước mắm Phú Quốc, Hạt tiêu Suối Đá, Rượu sim làm quà.\n\n🌙 15:00 - 17:00: Xe đưa đoàn ra Sân bay Phú Quốc / Bến tàu. HDV hỗ trợ làm thủ tục check-in vé và gửi lời chào tạm biệt quý khách.'),
+(110, 32, 1, 'Ngày 1: TP.HCM / Hà Nội - Đà Nẵng - Sơn Trà - Biển Mỹ Khê', '🌅 07:30 - 09:30: Đón đoàn tại Sân bay Đà Nẵng / Bến xe\n\n☀️ 10:00 - 12:30: Viếng Chùa Linh Ứng Bán Đảo Sơn Trà & Tượng Phật Bà 67m\n\n🌇 13:00 - 16:30: Tự do tắm biển Mỹ Khê & Thưởng thức hải sản biển\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Sala Đà Nẵng Beach. Tự do khám phá thành phố về đêm.'),
+(111, 32, 2, 'Ngày 2: Đà Nẵng - Bà Nà Hills - Cầu Vàng - Phố Cổ Hội An', '🌅 07:30 - 09:30: Đi cáp treo Bà Nà Hills & Check-in Cầu Vàng bàn tay khổng lồ\n\n☀️ 10:00 - 12:30: Khám phá Làng Pháp & Vui chơi Công viên Fantasy Park\n\n🌇 13:00 - 16:30: Dạo Phố Cổ Hội An lung linh đèn lồng & Thưởng thức Cao Lầu\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Sala Đà Nẵng Beach. Tự do khám phá thành phố về đêm.'),
+(112, 32, 3, 'Ngày 3: Đà Nẵng - Mua Sắm Đặc Sản - Tiễn Sân Bay', '🌅 07:30 - 09:30: Tham quan Danh thắng Ngũ Hành Sơn & Làng đá mỹ nghệ Non Nước\n\n☀️ 10:00 - 12:30: Mua sắm đặc sản Chả bò Đà Nẵng & Trái cây sấy tại Chợ Cồn\n\n🌇 13:00 - 16:30: Xe tiễn đoàn ra Sân bay Đà Nẵng - Kết thúc chương trình'),
+(113, 33, 1, 'Ngày 1: Đón đoàn Đà Nẵng - Bán đảo Sơn Trà - Phố cổ Hội An', '🌅 07:30 - 09:30: Đón đoàn tại Đà Nẵng, nhận phòng nghỉ ngơi\n\n☀️ 10:00 - 12:30: Tham quan Bán đảo Sơn Trà & Thả hoa đăng Phố cổ Hội An\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Mường Thanh Đà Nẵng. Tự do khám phá thành phố về đêm.'),
+(114, 33, 2, 'Ngày 2: Đà Nẵng - KDL Bà Nà Hills - Cầu Vàng - Cầu Rồng Phun Nước', '🌅 07:30 - 09:30: Chinh phục Bà Nà Hills bằng cáp treo đạt 4 kỷ lục thế giới\n\n☀️ 10:00 - 12:30: Ngắm Cầu Rồng & Cầu Tình Yêu sông Hàn về đêm\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Mường Thanh Đà Nẵng. Tự do khám phá thành phố về đêm.'),
+(115, 33, 3, 'Ngày 3: Đà Nẵng - Đèo Hải Vân - Cố Đô Huế - Đại Nội - Chùa Thiên Mụ', '🌅 07:30 - 09:30: Vượt Đèo Hải Vân thiên hạ đệ nhất hùng quan ra Huế\n\n☀️ 10:00 - 12:30: Tham quan Đại Nội Hoàng Thành Huế & Chùa Thiên Mụ cổ kính\n\n🌇 13:00 - 16:30: Nghe ca trù & Thả hoa đăng trên Sông Hương\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Century Riverside Huế. Tự do khám phá thành phố về đêm.'),
+(116, 33, 4, 'Ngày 4: Huế - Quảng Bình - Khám Phá Động Thiên Đường Kỳ Vĩ', '🌅 07:30 - 09:30: Khởi hành ra Quảng Bình qua Thánh địa La Vang\n\n☀️ 10:00 - 12:30: Khám phá Động Thiên Đường - Hoàng cung trong lòng đất\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Mường Thanh Quảng Bình. Tự do khám phá thành phố về đêm.'),
+(117, 33, 5, 'Ngày 5: Quảng Bình - Viếng Mộ Đại Tướng - Tiễn Đoàn', '🌅 07:30 - 09:30: Viếng mộ Đại tướng Võ Nguyên Giáp tại Vũng Chùa Đảo Yến\n\n☀️ 10:00 - 12:30: Mua sắm đặc sản Nón lá, Mắm tôm chua Cố Đô & Tiễn sân bay'),
+(118, 34, 1, 'Ngày 1: Đón khách Sân bay Phú Quốc - Check-in Grand World', '🌅 07:30 - 09:30: Bay đến Đảo Ngọc Phú Quốc, xe đưa về khách sạn\n\n☀️ 10:00 - 12:30: Khám phá Grand World - Kênh đào Venice & Show Tinh Hoa Việt Nam\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Vinholidays Fiesta Phú Quốc 4★. Tự do khám phá thành phố về đêm.'),
+(119, 34, 2, 'Ngày 2: Trải Nghiệm Cáp Treo Hòn Thơm - Bãi Sao - Tự Do Tắm Biển', '🌅 07:30 - 09:30: Đi cáp treo Hòn Thơm vượt biển dài nhất thế giới 7.899m\n\n☀️ 10:00 - 12:30: Vui chơi Công viên nước Aquatopia & Tắm biển Bãi Sao\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Vinholidays Fiesta Phú Quốc 4★. Tự do khám phá thành phố về đêm.'),
+(120, 34, 3, 'Ngày 3: Chợ Đêm Dinh Cậu - Bún Quậy Kiến Xây - Tiễn Sân Bay', '🌅 07:30 - 09:30: Thưởng thức Bún quậy Kiến Xây & Mua sắm Rượu sim Phú Quốc\n\n☀️ 10:00 - 12:30: Tham quan Cơ sở nuôi cấy Ngọc Trai cao cấp & Tiễn sân bay'),
+(121, 35, 1, 'Ngày 1: Phú Quốc - Vinpearl Safari & VinWonders Đỉnh Cao', '🌅 07:30 - 09:30: Bay đến Phú Quốc, xe riêng đón về Vinpearl Resort 5★\n\n☀️ 10:00 - 12:30: Khám phá Công viên vạn thú bán hoang dã Vinpearl Safari\n\n🌇 13:00 - 16:30: Vui chơi công viên chủ đề VinWonders & Thủy cung Cung Điện Hải Vương\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Vinpearl Resort & Spa Phú Quốc 5★. Tự do khám phá thành phố về đêm.'),
+(122, 35, 2, 'Ngày 2: Tour 4 Đảo Cano Cao Tốc - Lặn Ngắm San Hô Bãi Thơm', '🌅 07:30 - 09:30: Cano lướt sóng thăm Hòn Mây Rút, Hòn Mầm Xương & Hòn Gầm Ghì\n\n☀️ 10:00 - 12:30: Chụp hình SUP cá nhân & Lặn ngắm rạn san hô đa sắc màu\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Vinpearl Resort & Spa Phú Quốc 5★. Tự do khám phá thành phố về đêm.'),
+(123, 35, 3, 'Ngày 3: Grand World - Thưởng Thức Hải Sản Bãi Trường - Tiễn Sân Bay', '🌅 07:30 - 09:30: Dạo thuyền Gondola phong cách Ý tại Grand World\n\n☀️ 10:00 - 12:30: Tiễn sân bay Phú Quốc chuyến chiều - Kết thúc chuyến nghỉ dưỡng 5★'),
+(149, 43, 1, 'Ngày 1: TP.HCM - Lâm Đồng - Thám Hiểm Thác Bobla - Đến Đà Lạt', '🌅 07:30 - 09:30: Khởi hành từ TP.HCM theo QL20 lên Cao nguyên Lâm Viên\n\n☀️ 10:00 - 12:30: Khám phá Thác Bobla giữa đại ngàn rừng xanh\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Golf Valley Đà Lạt. Tự do khám phá thành phố về đêm.'),
+(150, 43, 2, 'Ngày 2: Đà Lạt - Quảng Trường Lâm Viên - Fairytale Land - Hầm Vang', '🌅 07:30 - 09:30: Check-in Nụ hoa Atiso Quảng trường Lâm Viên & Hồ Xuân Hương\n\n☀️ 10:00 - 12:30: Khám phá Vùng đất cổ tích Fairytale Land & Thử rượu vang Đà Lạt\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Golf Valley Đà Lạt. Tự do khám phá thành phố về đêm.'),
+(151, 43, 3, 'Ngày 3: Thung Lũng Tình Yêu - Alpine Coaster Thác Datanla - Chợ Đêm', '🌅 07:30 - 09:30: Trải nghiệm Xe trượt máng Alpine Coaster xuyên rừng Thác Datanla\n\n☀️ 10:00 - 12:30: Tham quan Thung lũng Tình Yêu & Dạo Chợ đêm Đà Lạt\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Golf Valley Đà Lạt. Tự do khám phá thành phố về đêm.'),
+(152, 43, 4, 'Ngày 4: Thiền Viện Trúc Lâm - Mua Mứt Đà Lạt - Trở Về TP.HCM', '🌅 07:30 - 09:30: Viếng Thiền viện Trúc Lâm ngắm Hồ Tuyền Lâm xanh biếc\n\n☀️ 10:00 - 12:30: Mua sắm mứt đà lạt & Trở về TP.HCM - Kết thúc chuyến đi'),
+(153, 44, 1, 'Ngày 1: Săn Mây Đồi Cầu Đất - Tiệm Cà Phê Trạm Ký Ức', '🌅 07:30 - 09:30: Trải nghiệm Săn mây biển sương Đồi Cầu Đất lúc 05:00 sáng\n\n☀️ 10:00 - 12:30: Thưởng thức cà phê chiều tại Trạm Ký Ức ngắm hoàng hôn Đà Lạt\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 3★ Duparc Đà Lạt. Tự do khám phá thành phố về đêm.'),
+(154, 44, 2, 'Ngày 2: KDL Fresh Garden Ngàn Hoa - Trang Trại Cún Puppy Farm', '🌅 07:30 - 09:30: Tham quan Đồi hoa cánh bướm & Cổng trời KDL Fresh Garden\n\n☀️ 10:00 - 12:30: Vui chơi cùng các chú cún dễ thương tại Trang trại Puppy Farm\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 3★ Duparc Đà Lạt. Tự do khám phá thành phố về đêm.'),
+(155, 44, 3, 'Ngày 3: Nông Trại Cầu Đất Tea Hill - Vườn Dâu Tây - Tiễn Đoàn', '🌅 07:30 - 09:30: Hái dâu tây sạch tại vườn & Thưởng thức bánh mì xíu mại\n\n☀️ 10:00 - 12:30: Tiễn đoàn về lại TP.HCM / Sân bay Liên Khương'),
+(164, 48, 1, 'Ngày 1: Đón Khách Kon Tum - Thị Trấn Sương Mù Măng Đen - Thác Pa Sỹ', '🌅 07:30 - 09:30: Đón đoàn tại Kon Tum khởi hành đi Măng Đen\n\n☀️ 10:00 - 12:30: Tham quan Thác Pa Sỹ nguyên sơ & Chiêm bái Tượng Đức Mẹ Măng Đen\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 3★ Pleiku Hotel. Tự do khám phá thành phố về đêm.'),
+(165, 48, 2, 'Ngày 2: Pleiku - Biển Hồ Tơ Nưng - Hàng Cây Trăm Tuổi - Buôn Ma Thuột', '🌅 07:30 - 09:30: Check-in Biển Hồ Tơ Nưng - Đôi mắt Pleiku mơ màng\n\n☀️ 10:00 - 12:30: Dạo bước Hàng cây thông trăm tuổi & Đồi trà Biển Hồ\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Khách sạn 4★ Saigon Ban Me. Tự do khám phá thành phố về đêm.'),
+(166, 48, 3, 'Ngày 3: Bảo Tàng Thế Giới Cà Phê - Buôn Đôn - Tiễn Đoàn', '🌅 07:30 - 09:30: Tham quan Bảo tàng Thế giới Cà phê kiến trúc nhà dài Tây Nguyên\n\n☀️ 10:00 - 12:30: Thưởng thức Cà phê Trung Nguyên chính hiệu & Tiễn sân bay Buôn Ma Thuột'),
+(181, 27, 1, 'Ngày 1: Hồ Chí Minh - Đà Lạt', '🌅 07:30 - 09:30: Di chuyển từ Hồ Chí Minh đến Đà Lạt\n\n☀️ 10:00 - 12:30: Đến khách sạn nhận phòng\n\n🌇 13:00 - 16:30: Tham quan Đỉnh Langbiang\n\n🌙 17:30 - 21:30: Tham quan Thác Datanla\n\n📌 20:00 - 22:00: Tham quan Vườn thú Zoodoo\n\n📌 23:00 - 25:00: Dùng bữa tối tại nhà hàng\n\n📌 26:00 - 28:00: Tham quan Chợ Đêm Âm Phủ\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Phòng Superior (hoặc tương đương). Tự do khám phá thành phố về đêm.'),
+(182, 27, 2, 'Ngày 2: Đà Lạt - Nha Trang', '🌅 07:30 - 09:30: Tham quan Samten Hills Dalat\n\n☀️ 10:00 - 12:30: Di chuyển từ Đà Lạt đến Nha Trang\n\n🌇 13:00 - 16:30: Đến khách sạn nhận phòng\n\n🌙 17:30 - 21:30: Tự do tắm biển / Nghỉ ngơi\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Phòng Standard Hướng Phố (hoặc tương đương). Tự do khám phá thành phố về đêm.'),
+(183, 27, 3, 'Ngày 3: Nha Trang - Thành phố biển', '🌅 07:30 - 09:30: Khởi hành tham quan tại Nha Trang\n\n☀️ 10:00 - 12:30: Tham quan VinWonders Nha Trang\n\n🌇 13:00 - 16:30: Tham quan Lặn biển Hòn Mun\n\n🌙 17:30 - 21:30: Tham quan Tháp Bà Ponagar\n\n📌 20:00 - 22:00: Tham quan Tắm bùn khoáng I-Resort\n\n📌 23:00 - 25:00: Tự do tắm biển / Nghỉ ngơi\n\n📌 26:00 - 28:00: Dùng bữa tối tại nhà hàng\n\n📌 29:00 - 31:00: Tham quan Chợ Đêm Nha Trang\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Phòng Standard Hướng Phố (hoặc tương đương). Tự do khám phá thành phố về đêm.'),
+(184, 27, 4, 'Ngày 4: Nha Trang - Hồ Chí Minh', '🌅 07:30 - 09:30: Tham quan Hải sản Thanh Sương\n\n☀️ 10:00 - 12:30: Tham quan Nem nướng Đặng Văn Quyên\n\n🌇 13:00 - 16:30: Mua sắm đặc sản & Trả khách\n\n🌙 17:30 - 21:30: Khởi hành về Hồ Chí Minh'),
+(248, 29, 1, 'Ngày 1: Hồ Chí Minh - Đà Lạt', '🌅 07:30 - 09:30: Di chuyển từ Hồ Chí Minh đến Đà Lạt\n\n☀️ 10:00 - 12:30: Đến khách sạn nhận phòng\n\n🌇 13:00 - 16:30: Tham quan Đỉnh Langbiang\n\n🌙 17:30 - 21:30: Tham quan Vườn thú Zoodoo\n\n📌 20:00 - 22:00: Tham quan Thác Datanla\n\n📌 23:00 - 25:00: Dùng bữa tối tại nhà hàng\n\n📌 26:00 - 28:00: Tham quan Chợ Đêm Âm Phủ\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Phòng Superior (hoặc tương đương). Tự do khám phá thành phố về đêm.'),
+(249, 29, 2, 'Ngày 2: Đà Lạt - Nha Trang', '🌅 07:30 - 09:30: Tham quan Samten Hills Dalat\n\n☀️ 10:00 - 12:30: Di chuyển từ Đà Lạt đến Nha Trang\n\n🌇 13:00 - 16:30: Đến khách sạn nhận phòng\n\n🌙 17:30 - 21:30: Tham quan Lặn biển Hòn Mun\n\n📌 20:00 - 22:00: Tự do tắm biển / Nghỉ ngơi\n\n📌 23:00 - 25:00: Dùng bữa tối tại nhà hàng\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Phòng Standard Hướng Phố (hoặc tương đương). Tự do khám phá thành phố về đêm.'),
+(250, 29, 3, 'Ngày 3: Nha Trang - Thành phố biển', '🌅 07:30 - 09:30: Khởi hành tham quan tại Nha Trang\n\n☀️ 10:00 - 12:30: Tham quan VinWonders Nha Trang\n\n🌇 13:00 - 16:30: Tham quan Tháp Bà Ponagar\n\n🌙 17:30 - 21:30: Tham quan Tắm bùn khoáng I-Resort\n\n📌 20:00 - 22:00: Tham quan Nem nướng Đặng Văn Quyên\n\n📌 23:00 - 25:00: Tự do tắm biển / Nghỉ ngơi\n\n📌 26:00 - 28:00: Dùng bữa tối tại nhà hàng\n\n📌 29:00 - 31:00: Tham quan Chợ Đêm Nha Trang\n\n🏨 Nghỉ đêm: Đoàn nhận phòng và nghỉ ngơi tại Phòng Standard Hướng Phố (hoặc tương đương). Tự do khám phá thành phố về đêm.'),
+(251, 29, 4, 'Ngày 4: Nha Trang - Hồ Chí Minh', '🌅 07:30 - 09:30: Tham quan Hải sản Thanh Sương\n\n☀️ 10:00 - 12:30: Mua sắm đặc sản & Trả khách\n\n🌇 13:00 - 16:30: Khởi hành về Hồ Chí Minh');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `itinerary_activities`
+--
+
+CREATE TABLE `itinerary_activities` (
+  `activity_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `itinerary_id` int(11) NOT NULL,
+  `activity_type` enum('Place','Accommodation','Transport','Meal','FreeTime') NOT NULL,
+  `reference_id` int(11) DEFAULT NULL,
+  `start_time` time DEFAULT NULL,
+  `end_time` time DEFAULT NULL,
+  `order_index` int(11) DEFAULT 1,
+  `note` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `itinerary_activities`
+--
+
+INSERT INTO `itinerary_activities` (`activity_id`, `itinerary_id`, `activity_type`, `reference_id`, `start_time`, `end_time`, `order_index`, `note`) VALUES
+(25, 110, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(26, 110, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(27, 110, 'Place', 1, '08:00:00', NULL, 3, NULL),
+(28, 111, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(29, 111, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(30, 111, 'Place', 1, '08:00:00', NULL, 3, NULL),
+(31, 112, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(32, 112, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(33, 112, 'Place', 1, '08:00:00', NULL, 3, NULL),
+(34, 113, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(35, 113, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(36, 114, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(37, 114, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(38, 115, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(39, 115, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(40, 115, 'Place', 1, '08:00:00', NULL, 3, NULL),
+(41, 116, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(42, 116, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(43, 117, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(44, 117, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(45, 118, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(46, 118, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(47, 119, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(48, 119, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(49, 120, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(50, 120, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(51, 121, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(52, 121, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(53, 121, 'Place', 1, '08:00:00', NULL, 3, NULL),
+(54, 122, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(55, 122, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(56, 123, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(57, 123, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(110, 149, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(111, 149, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(112, 150, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(113, 150, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(114, 151, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(115, 151, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(116, 152, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(117, 152, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(118, 153, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(119, 153, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(120, 154, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(121, 154, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(122, 155, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(123, 155, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(140, 164, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(141, 164, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(142, 165, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(143, 165, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(144, 166, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(145, 166, 'Place', 1, '08:00:00', NULL, 2, NULL),
+(172, 181, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(173, 182, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(174, 183, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(175, 184, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(268, 248, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(269, 249, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(270, 250, 'Place', 1, '08:00:00', NULL, 1, NULL),
+(271, 251, 'Place', 1, '08:00:00', NULL, 1, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `itinerary_places`
+--
+
+CREATE TABLE `itinerary_places` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `itinerary_id` int(11) NOT NULL COMMENT 'Liên kết với ngày cụ thể trong bảng itineraries',
+  `place_id` int(11) NOT NULL COMMENT 'Liên kết với địa điểm trong bảng places',
+  `visit_order` int(11) DEFAULT 1 COMMENT 'Thứ tự tham quan trong ngày',
+  `visit_time` time DEFAULT NULL COMMENT 'Giờ dự kiến (VD: 08:30:00)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `leave_requests`
+--
+
+CREATE TABLE `leave_requests` (
+  `request_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `employee_id` int(11) NOT NULL,
+  `request_type` enum('Future_Leave','Past_Explanation') NOT NULL DEFAULT 'Future_Leave',
+  `leave_type` varchar(100) DEFAULT NULL,
+  `explanation_type` varchar(100) DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `target_date` date DEFAULT NULL,
+  `proposed_check_in` time DEFAULT NULL,
+  `proposed_check_out` time DEFAULT NULL,
+  `reason` text NOT NULL,
+  `attachment_url` varchar(255) DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+  `manager_id` int(11) DEFAULT NULL,
+  `manager_note` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `leave_requests`
+--
+
+INSERT INTO `leave_requests` (`request_id`, `employee_id`, `request_type`, `leave_type`, `explanation_type`, `start_date`, `end_date`, `target_date`, `proposed_check_in`, `proposed_check_out`, `reason`, `attachment_url`, `status`, `manager_id`, `manager_note`, `created_at`, `updated_at`) VALUES
+(1, 4, 'Past_Explanation', NULL, 'Quên Check-in', NULL, NULL, '2026-08-24', '08:00:00', '17:00:00', 'Giải trình test quên check in', NULL, 'Approved', 2, NULL, '2026-08-31 23:48:31', '2026-08-31 23:52:14'),
+(3, 4, 'Future_Leave', 'Nghỉ ốm', NULL, '2026-09-17', '2026-09-17', NULL, NULL, NULL, 'sdfdf', NULL, 'Pending', NULL, NULL, '2026-08-31 23:49:13', '2026-08-31 23:49:13');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `notification_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` int(11) DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `content` text DEFAULT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `type` varchar(50) DEFAULT 'TOUR_CLOSED',
+  `target_role` varchar(50) DEFAULT 'STAFF',
+  `departure_id` int(11) DEFAULT NULL,
+  `tour_id` int(11) DEFAULT NULL,
+  `departure_date` date DEFAULT NULL,
+  `num_booked` int(11) DEFAULT 0,
+  `action_url` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `content`, `is_read`, `created_at`, `type`, `target_role`, `departure_id`, `tour_id`, `departure_date`, `num_booked`, `action_url`) VALUES
+(1, 7, 'Chào mừng', 'Xin chào', 1, '2026-06-20 17:53:18', 'TOUR_CLOSED', 'STAFF', NULL, NULL, NULL, 0, NULL),
+(2, NULL, '🔒 Tour [Tour Vĩnh Hy - Nha Trang 3N3Đ Mùa Hè] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 36, 45, '2026-10-15', 0, 'create_request'),
+(3, NULL, '🔒 Tour [Tour Hà Giang - Quản Bạ - Sông Nho Quế 4N3Đ] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 26, 40, '2026-10-15', 0, 'create_request'),
+(4, NULL, '🔒 Tour [Tour Đà Nẵng - Huế - Bà Nà - Động Phong Nha 5N4Đ] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 12, 33, '2026-10-15', 0, 'create_request'),
+(5, NULL, '🔒 Tour [Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 48, 51, '2026-10-15', 0, 'create_request'),
+(6, NULL, '🔒 Tour [Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 1 khách đã đặt (1 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 38, 46, '2026-10-15', 1, 'create_request'),
+(7, NULL, '🔒 Tour [Tour Quy Nhơn Mùa Hè 3N2Đ: Hầm Hồ - Ghềnh Ráng - Kỳ Co - Eo Gió] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 28, 41, '2026-10-15', 0, 'create_request'),
+(8, NULL, '🔒 Tour [Tour Phú Quốc 3N2Đ: Grand World - VinWonders - Cáp Treo Hòn Thơm] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 14, 34, '2026-10-15', 0, 'create_request'),
+(9, NULL, '🔒 Tour [Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 50, 52, '2026-10-15', 0, 'create_request'),
+(10, NULL, '🔒 Tour [Tour Hồ Tràm 2N1Đ: Tận Hưởng Biển Xanh - Nghỉ Dưỡng Cao Cấp] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 40, 47, '2026-10-15', 0, 'create_request'),
+(11, NULL, '🔒 Tour [Tour Quy Nhơn - Phú Yên 4N3Đ: Mũi Điện - Gành Đá Đĩa - Kỳ Co] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 30, 42, '2026-10-15', 0, 'create_request'),
+(12, NULL, '🔒 Tour [Tour Phú Quốc Hè 3N2Đ: Grand World - VinWonders - Safari - Hòn Thơm] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 16, 35, '2026-10-15', 0, 'create_request'),
+(13, NULL, '🔒 Tour [Tour Tây Nguyên 3N3Đ: Măng Đen - Pleiku - Buôn Ma Thuột] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 42, 48, '2026-10-15', 0, 'create_request'),
+(14, NULL, '🔒 Tour [Tour Đà Lạt Mùa Hè 4N3Đ: Thác Bobla - Vùng Đất Cổ Tích] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 32, 43, '2026-10-15', 0, 'create_request'),
+(15, NULL, '🔒 Tour [Tour Hà Nội - Sapa - Chinh Phục Đỉnh Fansipan 3N2Đ] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 22, 38, '2026-10-15', 0, 'create_request'),
+(16, NULL, '🔒 Tour [Tour Miền Tây 3N2Đ: Mỹ Tho - Cần Thơ - Sóc Trăng - Bạc Liêu - Cà Mau] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 44, 49, '2026-10-15', 0, 'create_request'),
+(17, NULL, '🔒 Tour [Tour Đà Lạt 3N3Đ: Săn Mây - Trạm Ký Ức - Fresh Garden] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 1 khách đã đặt (1 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 34, 44, '2026-10-15', 1, 'create_request'),
+(18, NULL, '🔒 Tour [Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 24, 39, '2026-10-15', 0, 'create_request'),
+(19, NULL, '🔒 Tour [Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 10, 32, '2026-10-15', 0, 'create_request'),
+(20, NULL, '🔒 Tour [Tour Đồng Tháp - Làng Hoa Sa Đéc - Cần Thơ 2N1Đ] đã khóa nhận khách', 'Đợt khởi hành ngày 15/10/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 46, 50, '2026-10-15', 0, 'create_request'),
+(21, NULL, '🔒 Tour [Khám phá Đà Lạt - Nha Trang] đã khóa nhận khách', 'Đợt khởi hành ngày 03/11/2026 (hôm nay) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 15 khách đã đặt (7 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 59, 29, '2026-11-03', 15, 'create_request'),
+(22, NULL, '🔒 Tour [Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)] đã khóa nhận khách', 'Đợt khởi hành ngày 11/11/2026 (còn 8 ngày) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 1, '2026-10-16 01:01:46', 'TOUR_CLOSED', 'STAFF', 58, 31, '2026-11-11', 0, 'create_request'),
+(23, 3, '🎉 Đặt tour thành công!', 'Đơn đặt tour #20 (Tour Đà Lạt 3N3Đ: Săn Mây - Trạm Ký Ức - Fresh Garden - Ngày đi: 15/10/2026) đã được ghi nhận. Vui lòng kiểm tra chi tiết đơn hàng.', 0, '2026-10-14 21:47:28', 'BOOKING_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(24, 3, '🎉 Đặt tour thành công!', 'Đơn đặt tour #19 (Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh - Ngày đi: 15/10/2026) đã được ghi nhận. Vui lòng kiểm tra chi tiết đơn hàng.', 0, '2026-10-14 21:46:03', 'BOOKING_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(25, 20, '🗑️ Đơn tour đã hủy', 'Đơn hàng #24 (Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu) đã chuyển sang trạng thái đã hủy. Mã QR check-in đã vô hiệu hóa.', 0, '2026-10-16 07:48:58', 'BOOKING_CANCELLED', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(26, 20, '🗑️ Đơn tour đã hủy', 'Đơn hàng #23 (Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu) đã chuyển sang trạng thái đã hủy. Mã QR check-in đã vô hiệu hóa.', 0, '2026-10-15 21:49:46', 'BOOKING_CANCELLED', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(27, 20, '🗑️ Đơn tour đã hủy', 'Đơn hàng #22 (Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu) đã chuyển sang trạng thái đã hủy. Mã QR check-in đã vô hiệu hóa.', 0, '2026-10-15 21:30:38', 'BOOKING_CANCELLED', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(28, 20, '🗑️ Đơn tour đã hủy', 'Đơn hàng #21 (Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu) đã chuyển sang trạng thái đã hủy. Mã QR check-in đã vô hiệu hóa.', 0, '2026-10-15 21:03:37', 'BOOKING_CANCELLED', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(29, 20, '✅ Yêu cầu Hủy tour đã được chấp thuận!', 'Yêu cầu cho đơn tour #24 (Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu) đã được chấp thuận. Tiền hoàn lại: 1.800đ.', 1, '2026-10-16 07:50:26', 'CHANGE_REQUEST_RESULT', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(30, 20, '✅ Yêu cầu Hủy tour đã được chấp thuận!', 'Yêu cầu cho đơn tour #21 (Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu) đã được chấp thuận. Tiền hoàn lại: 0đ.', 0, '2026-10-16 07:10:29', 'CHANGE_REQUEST_RESULT', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(31, NULL, '🛒 Đơn đặt tour mới #20', 'Khách hàng Tour Manager vừa đặt tour \"Tour Đà Lạt 3N3Đ: Săn Mây - Trạm Ký Ức - Fresh Garden\" (1 khách - 3.250.000 ₫). Mã đơn #20.', 0, '2026-10-14 21:47:28', 'BOOKING_NEW', 'STAFF', NULL, NULL, NULL, 0, 'orders'),
+(32, NULL, '🛒 Đơn đặt tour mới #19', 'Khách hàng Tour Manager vừa đặt tour \"Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh\" (1 khách - 3.708.000 ₫). Mã đơn #19.', 0, '2026-10-14 21:46:03', 'BOOKING_NEW', 'STAFF', NULL, NULL, NULL, 0, 'orders'),
+(33, 5, '🚩 Phân công HDV: Khám phá Đà Lạt - Nha Trang', 'Bạn đã được phân công dẫn đoàn cho tour \"Khám phá Đà Lạt - Nha Trang\" - Khởi hành ngày 18/11/2026. Hiện có 9 hành khách. Vui lòng kiểm tra lịch trình và danh sách đoàn!', 1, '2026-10-16 02:32:37', 'GUIDE_ASSIGNED', 'GUIDE', 52, 29, '2026-11-18', 9, 'guide_assigned'),
+(34, 2, '📝 Đơn xin Nghỉ ốm cần phê duyệt', 'Nhân viên Office Staff vừa gửi đơn #3 (Nghỉ ốm). Vui lòng xem xét và xử lý phê duyệt.', 0, '2026-09-01 06:49:13', 'HR_LEAVE_REQUEST', 'HR', NULL, NULL, NULL, 0, 'hr_employees'),
+(35, 11, '🛎️ Yêu cầu dịch vụ [HOTEL] #34', 'Bạn nhận được yêu cầu cung cấp dịch vụ HOTEL cho tour \"Khám phá Đà Lạt - Nha Trang\" (Ngày đi: 3/11/2026). Trạng thái: Accepted. Vui lòng kiểm tra và xử lý báo giá/xác nhận!', 0, '2026-10-04 10:30:35', 'PARTNER_SERVICE_REQUEST', 'PARTNER', 59, NULL, NULL, 0, 'partner_requests'),
+(36, 11, '🛎️ Yêu cầu dịch vụ [HOTEL] #27', 'Bạn nhận được yêu cầu cung cấp dịch vụ HOTEL cho tour \"Khám phá Đà Lạt - Nha Trang\" (Ngày đi: 17/11/2026). Trạng thái: Pending. Vui lòng kiểm tra và xử lý báo giá/xác nhận!', 0, '2026-10-04 09:54:03', 'PARTNER_SERVICE_REQUEST', 'PARTNER', 57, NULL, NULL, 0, 'partner_requests'),
+(37, 11, '🛎️ Yêu cầu dịch vụ [HOTEL] #20', 'Bạn nhận được yêu cầu cung cấp dịch vụ HOTEL cho tour \"Khám phá Đà Lạt - Nha Trang\" (Ngày đi: 3/11/2026). Trạng thái: Accepted. Vui lòng kiểm tra và xử lý báo giá/xác nhận!', 0, '2026-10-03 22:03:55', 'PARTNER_SERVICE_REQUEST', 'PARTNER', 59, NULL, NULL, 0, 'partner_requests'),
+(38, 16, '🚌 Phân công lái xe: Khám phá Đà Lạt - Nha Trang', 'Bạn được phân công phụ trách xe cho tour \"Khám phá Đà Lạt - Nha Trang\" - Ngày khởi hành: 03/11/2026. Đoàn có 15 khách. Vui lòng kiểm tra phương tiện sẵn sàng.', 0, '2026-10-16 02:33:16', 'DRIVER_ASSIGNED', 'DRIVER', 59, 29, '2026-11-03', 15, 'driver_assigned'),
+(39, 16, '🚌 Phân công lái xe: Khám phá Đà Lạt - Nha Trang', 'Bạn được phân công phụ trách xe cho tour \"Khám phá Đà Lạt - Nha Trang\" - Ngày khởi hành: 17/11/2026. Đoàn có 12 khách. Vui lòng kiểm tra phương tiện sẵn sàng.', 0, '2026-10-16 02:33:16', 'DRIVER_ASSIGNED', 'DRIVER', 57, 29, '2026-11-17', 12, 'driver_assigned'),
+(40, 17, '🚌 Phân công lái xe: Tour Hà Nội - Sapa - Chinh Phục Đỉnh Fansipan 3N2Đ', 'Bạn được phân công phụ trách xe cho tour \"Tour Hà Nội - Sapa - Chinh Phục Đỉnh Fansipan 3N2Đ\" - Ngày khởi hành: 15/10/2026. Đoàn có 0 khách. Vui lòng kiểm tra phương tiện sẵn sàng.', 0, '2026-10-16 05:53:05', 'DRIVER_ASSIGNED', 'DRIVER', 22, 38, '2026-10-15', 0, 'driver_assigned'),
+(41, 17, '🚌 Phân công lái xe: Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)', 'Bạn được phân công phụ trách xe cho tour \"Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)\" - Ngày khởi hành: 11/11/2026. Đoàn có 0 khách. Vui lòng kiểm tra phương tiện sẵn sàng.', 0, '2026-10-16 05:53:06', 'DRIVER_ASSIGNED', 'DRIVER', 58, 31, '2026-11-11', 0, 'driver_assigned'),
+(42, 17, '🚌 Phân công lái xe: Khám phá Đà Lạt - Nha Trang', 'Bạn được phân công phụ trách xe cho tour \"Khám phá Đà Lạt - Nha Trang\" (Xe: 35B-555.66) - Ngày khởi hành: 18/11/2026. Đoàn có 9 khách. Vui lòng kiểm tra phương tiện sẵn sàng.', 0, '2026-10-16 05:53:06', 'DRIVER_ASSIGNED', 'DRIVER', 52, 29, '2026-11-18', 9, 'driver_assigned'),
+(43, 17, '🚌 Phân công lái xe: Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu', 'Bạn được phân công phụ trách xe cho tour \"Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu\" (Xe: 43B-888.11) - Ngày khởi hành: 19/12/2026. Đoàn có 0 khách. Vui lòng kiểm tra phương tiện sẵn sàng.', 0, '2026-10-16 05:53:06', 'DRIVER_ASSIGNED', 'DRIVER', 56, 51, '2026-12-19', 0, 'driver_assigned'),
+(44, 5, '🚩 Phân công HDV: Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ', 'Bạn đã được phân công dẫn đoàn cho tour \"Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ\" - Khởi hành ngày 15/10/2026. Hiện có 0 hành khách. Vui lòng kiểm tra lịch trình và danh sách đoàn!', 0, '2026-10-16 08:26:34', 'GUIDE_ASSIGNED', 'GUIDE', 10, 32, '2026-10-15', 0, 'guide_assigned'),
+(45, 6, '🚩 Phân công HDV: Khám phá Đà Lạt - Nha Trang', 'Bạn đã được phân công dẫn đoàn cho tour \"Khám phá Đà Lạt - Nha Trang\" - Ngày khởi hành: 3/11/2026. Vui lòng kiểm tra lịch trình và danh sách đoàn!', 0, '2026-10-16 08:30:31', 'GUIDE_ASSIGNED', 'GUIDE', 59, NULL, NULL, 0, 'guide_assigned'),
+(46, 6, '🚩 Phân công HDV: Khám phá Đà Lạt - Nha Trang', 'Bạn đã được phân công dẫn đoàn cho tour \"Khám phá Đà Lạt - Nha Trang\" - Ngày khởi hành: 17/11/2026. Vui lòng kiểm tra lịch trình và danh sách đoàn!', 0, '2026-10-16 08:30:31', 'GUIDE_ASSIGNED', 'GUIDE', 57, NULL, NULL, 0, 'guide_assigned'),
+(47, 5, '🚩 Phân công HDV: Khám phá Đà Lạt - Nha Trang', 'Bạn đã được phân công dẫn đoàn cho tour \"Khám phá Đà Lạt - Nha Trang\" - Ngày khởi hành: 18/11/2026. Vui lòng kiểm tra lịch trình và danh sách đoàn!', 0, '2026-10-16 08:30:31', 'GUIDE_ASSIGNED', 'GUIDE', 52, NULL, NULL, 0, 'guide_assigned'),
+(48, 17, '🚌 Phân công lái xe: Khám phá Đà Lạt - Nha Trang', 'Bạn được phân công phụ trách xe cho tour \"Khám phá Đà Lạt - Nha Trang\" (Xe: 35B-555.66) - Ngày khởi hành: 18/11/2026. Vui lòng kiểm tra phương tiện sẵn sàng!', 0, '2026-10-16 08:30:31', 'DRIVER_ASSIGNED', 'DRIVER', 52, NULL, NULL, 0, 'driver_assigned'),
+(49, 6, '🚩 Phân công HDV: Khám phá Đà Lạt - Nha Trang', 'Bạn đã được phân công dẫn đoàn cho tour \"Khám phá Đà Lạt - Nha Trang\" - Ngày khởi hành: 28/12/2026. Vui lòng kiểm tra lịch trình và danh sách đoàn!', 0, '2026-10-16 08:30:31', 'GUIDE_ASSIGNED', 'GUIDE', 60, NULL, NULL, 0, 'guide_assigned'),
+(50, 17, '🚌 Phân công lái xe: Khám phá Đà Lạt - Nha Trang', 'Bạn được phân công phụ trách xe cho tour \"Khám phá Đà Lạt - Nha Trang\" (Xe: 79B-333.29) - Ngày khởi hành: 28/12/2026. Vui lòng kiểm tra phương tiện sẵn sàng!', 0, '2026-10-16 08:30:31', 'DRIVER_ASSIGNED', 'DRIVER', 60, NULL, NULL, 0, 'driver_assigned'),
+(51, 8, '🎉 Đặt tour thành công!', 'Đơn đặt tour #18 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã được ghi nhận. Vui lòng kiểm tra chi tiết đơn hàng.', 0, '2026-10-04 09:05:08', 'BOOKING_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(52, 8, '🎉 Đặt tour thành công!', 'Đơn đặt tour #17 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã được ghi nhận. Vui lòng kiểm tra chi tiết đơn hàng.', 0, '2026-10-03 23:23:00', 'BOOKING_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(53, 8, '🎉 Đặt tour thành công!', 'Đơn đặt tour #16 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã được ghi nhận. Vui lòng kiểm tra chi tiết đơn hàng.', 0, '2026-10-02 08:43:11', 'BOOKING_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(54, 8, '💳 Thanh toán thành công!', 'Đơn hàng #15 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-02 08:41:11', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(55, 8, '💳 Thanh toán thành công!', 'Đơn hàng #14 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-01 21:50:08', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(56, 8, '💳 Thanh toán thành công!', 'Đơn hàng #13 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-01 21:47:50', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(57, 8, '💳 Thanh toán thành công!', 'Đơn hàng #12 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 3/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-01 21:43:49', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(58, 8, '💳 Thanh toán thành công!', 'Đơn hàng #11 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 17/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-01 15:55:26', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(59, 8, '💳 Thanh toán thành công!', 'Đơn hàng #10 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 17/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-01 15:52:50', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(60, 8, '💳 Thanh toán thành công!', 'Đơn hàng #9 (Khám phá Đà Lạt - Nha Trang - Ngày đi: 17/11/2026) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!', 0, '2026-10-01 15:47:35', 'PAYMENT_SUCCESS', 'CUSTOMER', NULL, NULL, NULL, 0, '/my-bookings'),
+(61, NULL, '🔒 Tour [Khám phá Đà Lạt - Nha Trang] đã khóa nhận khách', 'Đợt khởi hành ngày 17/11/2026 (còn 14 ngày) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 12 khách đã đặt (4 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 0, '2026-10-22 14:33:04', 'TOUR_CLOSED', 'STAFF', 57, 29, '2026-11-17', 12, 'create_request'),
+(62, NULL, '🔒 Tour [Tour Vịnh Hạ Long 4N3Đ - Du Thuyền 5 Sao Sang Trọng] đã khóa nhận khách', 'Đợt khởi hành ngày 18/11/2026 (còn 15 ngày) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 0 khách đã đặt (0 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 0, '2026-10-22 14:33:04', 'TOUR_CLOSED', 'STAFF', 20, 37, '2026-11-18', 0, 'create_request'),
+(63, NULL, '🔒 Tour [Khám phá Đà Lạt - Nha Trang] đã khóa nhận khách', 'Đợt khởi hành ngày 18/11/2026 (còn 15 ngày) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có 9 khách đã đặt (3 đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!', 0, '2026-10-22 14:33:04', 'TOUR_CLOSED', 'STAFF', 52, 29, '2026-11-18', 9, 'create_request');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `partners`
+--
+
+CREATE TABLE `partners` (
+  `partner_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `destination_id` int(11) DEFAULT NULL,
+  `partner_name` varchar(255) DEFAULT NULL,
+  `partner_type` enum('Hotel','Restaurant','Transport','Other') DEFAULT NULL,
+  `contact_name` varchar(150) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `partners`
+--
+
+INSERT INTO `partners` (`partner_id`, `destination_id`, `partner_name`, `partner_type`, `contact_name`, `phone`, `email`, `address`, `status`) VALUES
+(1, NULL, 'Vietnam Airlines', 'Transport', 'Tổng đài VNA', '19001100', NULL, NULL, 'Active'),
+(2, NULL, 'Nhà xe Phương Trang (FUTA)', 'Transport', 'Mr. Hùng CSKH', '19006067', NULL, NULL, 'Active'),
+(3, NULL, 'Công ty Xe Lữ Hành Toàn Quốc', 'Transport', 'Mr. Tuấn Điều hành', '0988111222', NULL, NULL, 'Active'),
+(4, 1, 'Vinpearl Resort & Spa Nha Trang', 'Hotel', NULL, NULL, NULL, 'Đảo Hòn Tre, Nha Trang', 'Active'),
+(5, 1, 'Khách sạn Mường Thanh Luxury', 'Hotel', NULL, NULL, 'partner.muongthanh@travel.com', '60 Trần Phú, Nha Trang', 'Active'),
+(6, 2, 'Hôtel Colline Đà Lạt', 'Hotel', NULL, NULL, NULL, '10 Phan Bội Châu, Đà Lạt', 'Active'),
+(7, 2, 'Ana Mandara Villas Dalat', 'Hotel', NULL, NULL, NULL, 'Lê Lai, Phường 5, Đà Lạt', 'Active'),
+(8, 3, 'JW Marriott Phu Quoc', 'Hotel', NULL, NULL, NULL, 'Bãi Khem, Phú Quốc', 'Active'),
+(9, 5, 'Mường Thanh Đà Nẵng', 'Hotel', 'Quản lý', '0900000000', 'muongthanh_dn@gmail.com', NULL, 'Active'),
+(10, 1, 'Vinpearl Resort Nha Trang', 'Hotel', 'Quản lý', '0900000000', 'vinpearl_nt@gmail.com', NULL, 'Active'),
+(11, NULL, 'Nhà Xe Hoàng Long Toàn Quốc', 'Transport', 'Quản lý', '0900000000', 'hoanglong_trans@gmail.com', NULL, 'Active'),
+(12, 19, 'Đồng Văn Hoa Cổ', 'Hotel', 'Admin', '0900000000', 'contact_26@hotel.com', 'Vietnam', 'Active'),
+(13, 19, 'Phoenix Hà Giang', 'Hotel', 'Admin', '0900000000', 'contact_27@hotel.com', 'Vietnam', 'Active'),
+(14, 19, 'Hmong Village Resort', 'Hotel', 'Admin', '0900000000', 'contact_28@hotel.com', 'Vietnam', 'Active'),
+(15, 20, 'Sala Phú Yên Beach', 'Hotel', 'Admin', '0900000000', 'contact_29@hotel.com', 'Vietnam', 'Active'),
+(16, 20, 'Stelia Beach Resort', 'Hotel', 'Admin', '0900000000', 'contact_30@hotel.com', 'Vietnam', 'Active'),
+(17, 20, 'Hùng Vương Phú Yên', 'Hotel', 'Admin', '0900000000', 'contact_31@hotel.com', 'Vietnam', 'Active'),
+(18, 20, 'Seagull Quy Nhơn', 'Hotel', 'Admin', '0900000000', 'contact_32@hotel.com', 'Vietnam', 'Active'),
+(19, 10, 'FLC Luxury Resort Quy Nhơn', 'Hotel', 'Admin', '0900000000', 'contact_33@hotel.com', 'Vietnam', 'Active'),
+(20, 10, 'Hải Âu Quy Nhơn', 'Hotel', 'Admin', '0900000000', 'contact_34@hotel.com', 'Vietnam', 'Active'),
+(21, 6, 'Phố Cổ Hội An', 'Hotel', 'Admin', '0900000000', 'contact_35@hotel.com', 'Vietnam', 'Active'),
+(22, 6, 'Silk Sense Hoi An River Resort', 'Hotel', 'Admin', '0900000000', 'contact_36@hotel.com', 'Vietnam', 'Active'),
+(23, 6, 'Hoi An Historic', 'Hotel', 'Admin', '0900000000', 'contact_37@hotel.com', 'Vietnam', 'Active'),
+(24, 7, 'Century Riverside Huế', 'Hotel', 'Admin', '0900000000', 'contact_38@hotel.com', 'Vietnam', 'Active'),
+(25, 7, 'Silk Path Grand Hue Hotel', 'Hotel', 'Admin', '0900000000', 'contact_39@hotel.com', 'Vietnam', 'Active'),
+(26, 7, 'Moonlight Huế', 'Hotel', 'Admin', '0900000000', 'contact_40@hotel.com', 'Vietnam', 'Active'),
+(27, 16, 'Mường Thanh Quảng Bình', 'Hotel', 'Admin', '0900000000', 'contact_41@hotel.com', 'Vietnam', 'Active'),
+(28, 16, 'Sun Spa Resort Quảng Bình', 'Hotel', 'Admin', '0900000000', 'contact_42@hotel.com', 'Vietnam', 'Active'),
+(29, 16, 'Tân Bình Quảng Bình', 'Hotel', 'Admin', '0900000000', 'contact_43@hotel.com', 'Vietnam', 'Active'),
+(30, 4, 'Sapa Horizon', 'Hotel', 'Admin', '0900000000', 'contact_44@hotel.com', 'Vietnam', 'Active'),
+(31, 4, 'Hotel de la Coupole Sapa', 'Hotel', 'Admin', '0900000000', 'contact_45@hotel.com', 'Vietnam', 'Active'),
+(32, 4, 'Bamboo Sapa', 'Hotel', 'Admin', '0900000000', 'contact_46@hotel.com', 'Vietnam', 'Active'),
+(33, 9, 'Mường Thanh Luxury Hạ Long', 'Hotel', 'Admin', '0900000000', 'contact_47@hotel.com', 'Vietnam', 'Active'),
+(34, 9, 'Vinpearl Resort & Spa Hạ Long', 'Hotel', 'Admin', '0900000000', 'contact_48@hotel.com', 'Vietnam', 'Active'),
+(35, 9, 'Halong Bay Hotel', 'Hotel', 'Admin', '0900000000', 'contact_49@hotel.com', 'Vietnam', 'Active'),
+(36, 15, 'Emeralda Resort Ninh Bình', 'Hotel', 'Admin', '0900000000', 'contact_50@hotel.com', 'Vietnam', 'Active'),
+(37, 15, 'Legend Ninh Bình', 'Hotel', 'Admin', '0900000000', 'contact_51@hotel.com', 'Vietnam', 'Active'),
+(38, 15, 'Bái Đính Ninh Bình', 'Hotel', 'Admin', '0900000000', 'contact_52@hotel.com', 'Vietnam', 'Active'),
+(39, 12, 'TTC Cần Thơ', 'Hotel', 'Admin', '0900000000', 'contact_53@hotel.com', 'Vietnam', 'Active'),
+(40, 12, 'Victoria Cần Thơ Resort', 'Hotel', 'Admin', '0900000000', 'contact_54@hotel.com', 'Vietnam', 'Active'),
+(41, 12, 'Ninh Kiều Cần Thơ', 'Hotel', 'Admin', '0900000000', 'contact_55@hotel.com', 'Vietnam', 'Active'),
+(42, 13, 'Six Senses Côn Đảo', 'Hotel', 'Admin', '0900000000', 'contact_56@hotel.com', 'Vietnam', 'Active'),
+(43, 13, 'The Secret Côn Đảo', 'Hotel', 'Admin', '0900000000', 'contact_57@hotel.com', 'Vietnam', 'Active'),
+(44, 13, 'Côn Đảo Resort', 'Hotel', 'Admin', '0900000000', 'contact_58@hotel.com', 'Vietnam', 'Active'),
+(45, 14, 'The Grand Ho Tram Resort', 'Hotel', 'Admin', '0900000000', 'contact_59@hotel.com', 'Vietnam', 'Active'),
+(46, 14, 'Imperial Hotel Vũng Tàu', 'Hotel', 'Admin', '0900000000', 'contact_60@hotel.com', 'Vietnam', 'Active'),
+(47, 14, 'Malibu Vũng Tàu', 'Hotel', 'Admin', '0900000000', 'contact_61@hotel.com', 'Vietnam', 'Active'),
+(48, 21, 'Saigon Ban Me', 'Hotel', 'Admin', '0900000000', 'contact_62@hotel.com', 'Vietnam', 'Active'),
+(49, 21, 'Pleiku Hotel', 'Hotel', 'Admin', '0900000000', 'contact_63@hotel.com', 'Vietnam', 'Active'),
+(50, 21, 'Elephants Hotel Buôn Ma Thuột', 'Hotel', 'Admin', '0900000000', 'contact_64@hotel.com', 'Vietnam', 'Active'),
+(51, 22, 'Mũi Cà Mau', 'Hotel', 'Admin', '0900000000', 'contact_65@hotel.com', 'Vietnam', 'Active'),
+(52, 22, 'Mường Thanh Luxury Cà Mau', 'Hotel', 'Admin', '0900000000', 'contact_66@hotel.com', 'Vietnam', 'Active'),
+(53, 23, 'Melia Vinpearl Tây Ninh', 'Hotel', 'Admin', '0900000000', 'contact_67@hotel.com', 'Vietnam', 'Active'),
+(54, 23, 'Sunrise Tây Ninh', 'Hotel', 'Admin', '0900000000', 'contact_68@hotel.com', 'Vietnam', 'Active'),
+(55, 11, 'Phú Quý Island Hotel', 'Hotel', 'Admin', '0900000000', 'contact_69@hotel.com', 'Vietnam', 'Active'),
+(56, 11, 'Centara Mirage Resort Mũi Né', 'Hotel', 'Admin', '0900000000', 'contact_70@hotel.com', 'Vietnam', 'Active'),
+(57, 8, 'Lotte Hotel Hà Nội', 'Hotel', 'Admin', '0900000000', 'contact_71@hotel.com', 'Vietnam', 'Active'),
+(58, 8, 'Silk Path Hà Nội', 'Hotel', 'Admin', '0900000000', 'contact_72@hotel.com', 'Vietnam', 'Active'),
+(59, 18, 'Rex Hotel Saigon', 'Hotel', 'Admin', '0900000000', 'contact_73@hotel.com', 'Vietnam', 'Active'),
+(60, 18, 'Liberty Central Saigon', 'Hotel', 'Admin', '0900000000', 'contact_74@hotel.com', 'Vietnam', 'Active'),
+(201, 1, 'Nhà hàng Âu Lạc Thịnh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110001', NULL, NULL, 'Active'),
+(202, 1, 'Nhà hàng Thùy Dương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110002', NULL, NULL, 'Active'),
+(203, 1, 'Nhà hàng Làng Biển', 'Restaurant', 'Quản lý Đặt tiệc', '0901110003', NULL, NULL, 'Active'),
+(204, 2, 'Nhà hàng Buffet Rau Leguda', 'Restaurant', 'Quản lý Đặt tiệc', '0901110004', NULL, NULL, 'Active'),
+(205, 2, 'Nhà hàng Rừng Thông Mơ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110005', NULL, NULL, 'Active'),
+(206, 2, 'Trạm dừng Tâm Châu (Bảo Lộc)', 'Restaurant', 'Quản lý Đặt tiệc', '0901110006', NULL, NULL, 'Active'),
+(207, 3, 'Nhà hàng Hạnh Nhung Luxury', 'Restaurant', 'Quản lý Đặt tiệc', '0901110007', NULL, NULL, 'Active'),
+(208, 3, 'Nhà hàng Xin Chào Phú Quốc', 'Restaurant', 'Quản lý Đặt tiệc', '0901110008', NULL, NULL, 'Active'),
+(209, 3, 'Nhà hàng Trùng Dương Marina', 'Restaurant', 'Quản lý Đặt tiệc', '0901110009', NULL, NULL, 'Active'),
+(210, 4, 'Nhà hàng Chợ Tình Sapa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110010', NULL, NULL, 'Active'),
+(211, 4, 'Nhà hàng Cá Hồi Vua Sapa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110011', NULL, NULL, 'Active'),
+(212, 4, 'Nhà hàng Hải Lâm Sapa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110012', NULL, NULL, 'Active'),
+(213, 5, 'Nhà hàng Không Gian Xưa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110013', NULL, NULL, 'Active'),
+(214, 5, 'Nhà hàng 4U Beach', 'Restaurant', 'Quản lý Đặt tiệc', '0901110014', NULL, NULL, 'Active'),
+(215, 5, 'Đặc Sản Trần (Cơ sở Lê Duẩn)', 'Restaurant', 'Quản lý Đặt tiệc', '0901110015', NULL, NULL, 'Active'),
+(216, 6, 'Nhà hàng Làng Lụa Hội An', 'Restaurant', 'Quản lý Đặt tiệc', '0901110016', NULL, NULL, 'Active'),
+(217, 6, 'Nhà hàng Fullmoon', 'Restaurant', 'Quản lý Đặt tiệc', '0901110017', NULL, NULL, 'Active'),
+(218, 6, 'Khu Sinh Thái Rừng Dừa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110018', NULL, NULL, 'Active'),
+(219, 7, 'Nhà hàng Cung Đình Huế', 'Restaurant', 'Quản lý Đặt tiệc', '0901110019', NULL, NULL, 'Active'),
+(220, 7, 'Nhà hàng Nổi Sông Hương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110020', NULL, NULL, 'Active'),
+(221, 7, 'Nhà hàng Chân Đồi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110021', NULL, NULL, 'Active'),
+(222, 8, 'Khu Ẩm thực Sen Tây Hồ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110022', NULL, NULL, 'Active'),
+(223, 8, 'Nhà hàng Lục Thủy', 'Restaurant', 'Quản lý Đặt tiệc', '0901110023', NULL, NULL, 'Active'),
+(224, 8, 'Hệ thống Trống Đồng Palace', 'Restaurant', 'Quản lý Đặt tiệc', '0901110024', NULL, NULL, 'Active'),
+(225, 9, 'Nhà hàng Hồng Hạnh 3', 'Restaurant', 'Quản lý Đặt tiệc', '0901110025', NULL, NULL, 'Active'),
+(226, 9, 'Nhà hàng Cua Vàng', 'Restaurant', 'Quản lý Đặt tiệc', '0901110026', NULL, NULL, 'Active'),
+(227, 9, 'Nhà hàng Phương Nam', 'Restaurant', 'Quản lý Đặt tiệc', '0901110027', NULL, NULL, 'Active'),
+(228, 10, 'Nhà hàng Cococamp Kỳ Co', 'Restaurant', 'Quản lý Đặt tiệc', '0901110028', NULL, NULL, 'Active'),
+(229, 10, 'Nhà hàng Hướng Dương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110029', NULL, NULL, 'Active'),
+(230, 10, 'Nhà hàng Mộc Viên', 'Restaurant', 'Quản lý Đặt tiệc', '0901110030', NULL, NULL, 'Active'),
+(231, 11, 'Nhà hàng Cây Bàng Mũi Né', 'Restaurant', 'Quản lý Đặt tiệc', '0901110031', NULL, NULL, 'Active'),
+(232, 11, 'Nhà hàng Hồng Vinh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110032', NULL, NULL, 'Active'),
+(233, 11, 'Khu Ẩm thực Làng Chài', 'Restaurant', 'Quản lý Đặt tiệc', '0901110033', NULL, NULL, 'Active'),
+(234, 12, 'Nhà hàng Du thuyền Cần Thơ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110034', NULL, NULL, 'Active'),
+(235, 12, 'KDL Sinh thái Hoa Sứ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110035', NULL, NULL, 'Active'),
+(236, 12, 'Nhà hàng Lúa Nếp', 'Restaurant', 'Quản lý Đặt tiệc', '0901110036', NULL, NULL, 'Active'),
+(237, 13, 'Nhà hàng Thu Ba', 'Restaurant', 'Quản lý Đặt tiệc', '0901110037', NULL, NULL, 'Active'),
+(238, 13, 'Nhà hàng Cánh Buồm', 'Restaurant', 'Quản lý Đặt tiệc', '0901110038', NULL, NULL, 'Active'),
+(239, 13, 'Nhà hàng Hải sản Ớt', 'Restaurant', 'Quản lý Đặt tiệc', '0901110039', NULL, NULL, 'Active'),
+(240, 14, 'Nhà hàng Gành Hào', 'Restaurant', 'Quản lý Đặt tiệc', '0901110040', NULL, NULL, 'Active'),
+(241, 14, 'Nhà hàng Hải sản Lâm Đường', 'Restaurant', 'Quản lý Đặt tiệc', '0901110041', NULL, NULL, 'Active'),
+(242, 14, 'Làng Nướng Vạn Chài', 'Restaurant', 'Quản lý Đặt tiệc', '0901110042', NULL, NULL, 'Active'),
+(243, 15, 'Nhà hàng Hoàng Giang', 'Restaurant', 'Quản lý Đặt tiệc', '0901110043', NULL, NULL, 'Active'),
+(244, 15, 'Nhà hàng Thăng Long', 'Restaurant', 'Quản lý Đặt tiệc', '0901110044', NULL, NULL, 'Active'),
+(245, 15, 'Nhà hàng Tam Cốc Bích Động', 'Restaurant', 'Quản lý Đặt tiệc', '0901110045', NULL, NULL, 'Active'),
+(246, 16, 'Nhà hàng Lá Cọ Beach', 'Restaurant', 'Quản lý Đặt tiệc', '0901110046', NULL, NULL, 'Active'),
+(247, 16, 'Nhà hàng nổi Đại Dương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110047', NULL, NULL, 'Active'),
+(248, 16, 'Nhà hàng Sabochi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110048', NULL, NULL, 'Active'),
+(249, 18, 'Khu du lịch Tân Cảng', 'Restaurant', 'Quản lý Đặt tiệc', '0901110049', NULL, NULL, 'Active'),
+(250, 18, 'Nhà hàng Tân Hải Vân', 'Restaurant', 'Quản lý Đặt tiệc', '0901110050', NULL, NULL, 'Active'),
+(251, 18, 'Nhà hàng Vườn Cau', 'Restaurant', 'Quản lý Đặt tiệc', '0901110051', NULL, NULL, 'Active'),
+(252, 19, 'Nhà hàng Ngói Đỏ Hà Giang', 'Restaurant', 'Quản lý Đặt tiệc', '0901110052', NULL, NULL, 'Active'),
+(253, 19, 'Nhà hàng Cơm Niêu Hà Giang', 'Restaurant', 'Quản lý Đặt tiệc', '0901110053', NULL, NULL, 'Active'),
+(254, 19, 'Nhà hàng Sông Miện', 'Restaurant', 'Quản lý Đặt tiệc', '0901110054', NULL, NULL, 'Active'),
+(255, 20, 'Nhà hàng Quang Anh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110055', NULL, NULL, 'Active'),
+(256, 20, 'Nhà hàng Sala Tuy Hòa', 'Restaurant', 'Quản lý Đặt tiệc', '0901110056', NULL, NULL, 'Active'),
+(257, 20, 'Nhà hàng Năm Đô', 'Restaurant', 'Quản lý Đặt tiệc', '0901110057', NULL, NULL, 'Active'),
+(258, 21, 'KDL Sinh Thái Suối Ong', 'Restaurant', 'Quản lý Đặt tiệc', '0901110058', NULL, NULL, 'Active'),
+(259, 21, 'Điền Trang Hoa Mai', 'Restaurant', 'Quản lý Đặt tiệc', '0901110059', NULL, NULL, 'Active'),
+(260, 21, 'Nhà hàng Thủy Cương', 'Restaurant', 'Quản lý Đặt tiệc', '0901110060', NULL, NULL, 'Active'),
+(261, 22, 'Nhà hàng Phượng Vĩ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110061', NULL, NULL, 'Active'),
+(262, 22, 'Nhà hàng Hương Đất Mũi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110062', NULL, NULL, 'Active'),
+(263, 22, 'Nhà hàng Vân Thủy', 'Restaurant', 'Quản lý Đặt tiệc', '0901110063', NULL, NULL, 'Active'),
+(264, 23, 'Nhà hàng Long Châu', 'Restaurant', 'Quản lý Đặt tiệc', '0901110064', NULL, NULL, 'Active'),
+(265, 23, 'Khu ẩm thực Sinh Đôi', 'Restaurant', 'Quản lý Đặt tiệc', '0901110065', NULL, NULL, 'Active'),
+(266, 23, 'Bò Tơ Năm Sánh', 'Restaurant', 'Quản lý Đặt tiệc', '0901110066', NULL, NULL, 'Active'),
+(267, 24, 'Nhà hàng Công Tử Bạc Liêu', 'Restaurant', 'Quản lý Đặt tiệc', '0901110067', NULL, NULL, 'Active'),
+(268, 24, 'KDL Sinh Thái Hồ Nam', 'Restaurant', 'Quản lý Đặt tiệc', '0901110068', NULL, NULL, 'Active'),
+(269, 24, 'Nhà hàng Thủy Tạ', 'Restaurant', 'Quản lý Đặt tiệc', '0901110069', NULL, NULL, 'Active'),
+(270, 25, 'Nhà hàng Hoa Sứ Sa Đéc', 'Restaurant', 'Quản lý Đặt tiệc', '0901110070', NULL, NULL, 'Active'),
+(271, 25, 'Nhà hàng KDL Xẻo Quýt', 'Restaurant', 'Quản lý Đặt tiệc', '0901110071', NULL, NULL, 'Active'),
+(272, 25, 'Nhà hàng Tám Thành', 'Restaurant', 'Quản lý Đặt tiệc', '0901110072', NULL, NULL, 'Active'),
+(273, 1, 'InterContinental Nha Trang', 'Hotel', 'Bộ phận Đặt phòng', '02583887777', 'reservation@icnhatrang.com', '32-34 Trần Phú, Nha Trang', 'Active'),
+(274, 1, 'Premier Havana Nha Trang Hotel', 'Hotel', 'Phòng Kinh doanh Tour', '02583889999', 'sales@havanahotel.vn', '38 Trần Phú, Nha Trang', 'Active'),
+(275, 1, 'Nhà hàng Chăm Pa Garden', 'Restaurant', 'Quản lý Đặt tiệc', '0901110007', 'booking@champagarden.vn', '304 2/4, Vĩnh Phước, Nha Trang', 'Active'),
+(276, 1, 'Nhà hàng Yến Sào Khánh Hòa', 'Restaurant', 'Lễ tân Nhà hàng', '0901110008', 'sales@yensaokhanhhoa.com.vn', '21 Trần Phú, Nha Trang', 'Active'),
+(277, 2, 'Swiss-Belresort Tuyền Lâm', 'Hotel', 'Phòng Đặt phòng', '02633637999', 'resv@swiss-belresorttuyenlam.com', 'KDL Hồ Tuyền Lâm, Đà Lạt', 'Active'),
+(278, 2, 'Terracotta Hotel & Resort Đà Lạt', 'Hotel', 'Bộ phận Lễ tân', '02633883838', 'info@terracottaresort.com', 'Phân khu chức năng 7.9 KDL Hồ Tuyền Lâm', 'Active'),
+(279, 2, 'Nhà hàng Song Mây Đà Lạt', 'Restaurant', 'Quản lý Nhà hàng', '0901110009', 'songmaydalat@gmail.com', '46 Trần Quang Khải, Đà Lạt', 'Active'),
+(280, 2, 'Nhà hàng Memory Đà Lạt', 'Restaurant', 'Đặt bàn Đoàn', '0901110010', 'memorydalat@gmail.com', '24/7 Hùng Vương, Đà Lạt', 'Active'),
+(281, 3, 'Sol by Meliá Phú Quốc Resort', 'Hotel', 'Sales Tour Team', '02973869999', 'sol.phuquoc@melia.com', 'Đường Bãi Trường, Dương Tơ, Phú Quốc', 'Active'),
+(282, 3, 'Novotel Phú Quốc Resort', 'Hotel', 'Phòng Đặt phòng', '02973625888', 'H9770-RE@accor.com', 'Ấp Đường Bào, Xã Dương Tơ, Phú Quốc', 'Active'),
+(283, 3, 'Nhà hàng Gió Biển Phú Quốc', 'Restaurant', 'Lễ tân Nhà hàng', '0902220001', 'giobienpq@gmail.com', 'Chuồng Cọp, Gành Dầu, Phú Quốc', 'Active'),
+(284, 3, 'Nhà hàng Mỹ Lan Bãi Sao', 'Restaurant', 'Quản lý Tiệc đoàn', '0902220002', 'mylanbaisao@gmail.com', 'Bãi Sao, An Thới, Phú Quốc', 'Active'),
+(285, 4, 'Silk Path Grand Resort & Spa Sa Pa', 'Hotel', 'Phòng Đặt Phòng', '02143788555', 'reservation@silkpathhotel.com', 'Đồi Hoàng Liên, Sa Pa, Lào Cai', 'Active'),
+(286, 4, 'BB Hotel Sa Pa', 'Hotel', 'Sales Executive', '02143871999', 'info@bbhotelsapa.com', '08 Cầu Mây, Sa Pa, Lào Cai', 'Active'),
+(287, 4, 'Nhà hàng Ô Quý Hồ Sa Pa', 'Restaurant', 'Đặt bàn Tây Bắc', '0903330001', 'oquyhosapa@gmail.com', '08 Thạch Sơn, Sa Pa, Lào Cai', 'Active'),
+(288, 4, 'Nhà hàng A Phủ Sa Pa', 'Restaurant', 'Lễ Tân Quán', '0903330002', 'aphusapa@gmail.com', '15 Fansipan, Sa Pa, Lào Cai', 'Active'),
+(289, 5, 'Furama Resort Đà Nẵng', 'Hotel', 'Sales Tour Manager', '02363847333', 'reservation@furamavietnam.com', '105 Võ Nguyên Giáp, Ngũ Hành Sơn, Đà Nẵng', 'Active'),
+(290, 5, 'Grand Mercure Đà Nẵng', 'Hotel', 'Phòng Đặt phòng', '02363797777', 'h7821-res@accor.com', 'Lô A1 Khu Đảo Xanh, Hải Châu, Đà Nẵng', 'Active'),
+(291, 5, 'Nhà hàng Madame Lạn Đà Nẵng', 'Restaurant', 'Quản lý Đặt tiệc', '0904440001', 'booking@madamelan.vn', '04 Bạch Đằng, Hải Châu, Đà Nẵng', 'Active'),
+(292, 5, 'Nhà hàng Hải Sản Cậu Ba', 'Restaurant', 'Lễ Tân', '0904440002', 'caubaseafood@gmail.com', '254 Võ Nguyên Giáp, Sơn Trà, Đà Nẵng', 'Active'),
+(293, 6, 'La Siesta Hoi An Resort & Spa', 'Hotel', 'Resort Sales', '02353915915', 'info@lasiestaresorts.com', '132 Hùng Vương, Hội An, Quảng Nam', 'Active'),
+(294, 6, 'Belle Maison Hadana Hoi An', 'Hotel', 'Lễ Tân Đặt phòng', '02353757666', 'info@bellemaisonhadana.com', '538 Cửa Đại, Hội An', 'Active'),
+(295, 6, 'Nhà hàng Morning Glory Hội An', 'Restaurant', 'Đặt bàn Đoàn', '0905550001', 'morningglory@hoian.com', '106 Nguyễn Thái Học, Hội An', 'Active'),
+(296, 6, 'Nhà hàng Cơm Gà Bà Buồn Hội An', 'Restaurant', 'Quản lý', '0905550002', 'comgababuan@gmail.com', '26 Phan Châu Trinh, Hội An', 'Active'),
+(297, 7, 'Silk Path Grand Huế Hotel & Spa', 'Hotel', 'Phòng Kinh doanh', '02343979777', 'reservation@silkpathhue.com', '02 Lê Lợi, TP Huế', 'Active'),
+(298, 7, 'Century Riverside Hotel Huế', 'Hotel', 'Lễ Tân', '02343823390', 'info@centuryriversidehue.com', '49 Lê Lợi, TP Huế', 'Active'),
+(299, 7, 'Nhà hàng Cung Đình Y Thảo Garden', 'Restaurant', 'Đặt bàn Cung Đình', '0906660001', 'ythao@huecuisine.vn', '15 Thạch Hãn, TP Huế', 'Active'),
+(300, 7, 'Nhà hàng Không Gian Vượt Huế', 'Restaurant', 'Lễ tân Tiệc', '0906660002', 'khonggianxa@gmail.com', '205 Điện Biên Phủ, TP Huế', 'Active'),
+(301, 8, 'Pan Pacific Hà Nội', 'Hotel', 'Reservations Team', '02438238888', 'enquiry.pphan@panpacific.com', '1 Thanh Niên, Ba Đình, Hà Nội', 'Active'),
+(302, 8, 'Lotte Hotel Hà Nội', 'Hotel', 'Tour Booking', '02433331000', 'hotel-hanoi@lotte.net', '54 Liễu Giai, Ba Đình, Hà Nội', 'Active'),
+(303, 8, 'Nhà hàng Sen Tây Hồ', 'Restaurant', 'Quản lý Đặt tiệc Đoàn', '0907770001', 'sentayho@gmail.com', '614 Lạc Long Quân, Tây Hồ, Hà Nội', 'Active'),
+(304, 8, 'Nhà hàng Chả Cả Lăng Vọng', 'Restaurant', 'Đặt bàn', '0907770002', 'chacalangvong@gmail.com', '18 Chả Cả, Hoàn Kiếm, Hà Nội', 'Active'),
+(305, 9, 'FLC Grand Hotel Hạ Long', 'Hotel', 'Sales Executive', '02033628999', 'resa@flc.vn', 'Đồi Văn Nghệ, Hồng Hà, Hạ Long', 'Active'),
+(306, 9, 'Wyndham Legend Hạ Long', 'Hotel', 'Lễ Tân Đặt Phòng', '02033636555', 'info@wyndhamhalong.com', '12 Hạ Long, Bãi Cháy, Hạ Long', 'Active'),
+(307, 9, 'Nhà hàng Cua Vàng Hạ Long', 'Restaurant', 'Quản lý Đặt tiệc', '0908880001', 'cuavanghalong@gmail.com', '32 Phan Chu Trinh, Bãi Cháy, Hạ Long', 'Active'),
+(308, 9, 'Nhà hàng Phương Nam Hạ Long', 'Restaurant', 'Phòng Tiệc Đoàn', '0908880002', 'phuongnamhalong@gmail.com', 'Khu Đô Thị Đỗ Xá, Bãi Cháy, Hạ Long', 'Active'),
+(309, 10, 'Seagull Hotel Quy Nhơn (Hải Âu)', 'Hotel', 'Lễ tân', '02563846377', 'reservation@seagullhotel.com.vn', '489 An Dương Vương, Quy Nhơn', 'Active'),
+(310, 10, 'Anya Hotel Quy Nhơn', 'Hotel', 'Phòng Đặt phòng', '02562220777', 'info@anyahotel.com', '03 Nguyễn Trung Trực, Quy Nhơn', 'Active'),
+(311, 10, 'Nhà hàng Hướng Dương Eo Gió', 'Restaurant', 'Đặt bàn Eo Gió', '0909990001', 'huongduongeogio@gmail.com', 'Eo Gió, Nhơn Lý, Quy Nhơn', 'Active'),
+(312, 10, 'Nhà hàng Tre Kỳ Co', 'Restaurant', 'Quản lý', '0909990002', 'trekico@gmail.com', 'KDL Kỳ Co, Nhơn Lý, Quy Nhơn', 'Active'),
+(313, 11, 'The Cliff Resort & Residences', 'Hotel', 'Sales Resort', '02523719111', 'reservation@thecliffresort.com.vn', 'Khu phố 5, Phú Hài, Phan Thiết', 'Active'),
+(314, 12, 'TTC Hotel Premium Cần Thơ', 'Hotel', 'Lễ Tân', '02923812210', 'info@ttchotelcantho.com', '02 Hai Bà Trưng, Ninh Kiều, Cần Thơ', 'Active'),
+(315, 14, 'Pullman Vũng Tàu', 'Hotel', 'Reservations', '02543551777', 'h9223-re@accor.com', '15 Thi Sách, Thắng Tam, Vũng Tàu', 'Active'),
+(316, 14, 'Nhà hàng Gành Hào 1 Vũng Tàu', 'Restaurant', 'Lễ Tân', '0913330001', 'ganhhao@vungtau.com', '03 Trần Phú, Vũng Tàu', 'Active'),
+(317, 15, 'Ninh Binh Hidden Charm Hotel & Resort', 'Hotel', 'Sales Tour', '02293888555', 'info@hiddencharmresort.com', 'KDL Tam Cốc Bích Động, Ninh Bình', 'Active'),
+(318, 15, 'Nhà hàng Đức Dê Ninh Bình', 'Restaurant', 'Quản lý', '0914440001', 'ducdeninhbinh@gmail.com', '448 Nguyễn Huệ, Ninh Bình', 'Active'),
+(319, 18, 'Rex Hotel Sài Gòn', 'Hotel', 'Lễ Tân Đặt phòng', '02838292185', 'rexhotel@rex.com.vn', '141 Nguyễn Huệ, Q.1, TP.HCM', 'Active'),
+(320, 18, 'Nhà hàng Cơm Niêu Sài Gòn', 'Restaurant', 'Đặt bàn Đoàn', '0915550001', 'comnieusaigon@gmail.com', '27 Tú Xương, Q.3, TP.HCM', 'Active'),
+(321, 19, 'Phoenix Hotel Hà Giang', 'Hotel', 'Phòng Đặt phòng', '02196558888', 'info@phoenixhotel.com.vn', '92T Nguyễn Trãi, TP Hà Giang', 'Active'),
+(322, 20, 'Sala Tuy Hoa Beach Hotel', 'Hotel', 'Lễ Tân', '02573686666', 'booking@salamiyagroup.com', '51 Độc Lập, Tuy Hòa, Phú Yên', 'Active'),
+(323, 20, 'Nhà hàng Hải Sản Thúy Kiều (Đầm O Loan)', 'Restaurant', 'Đặt tiệc Đầm O Loan', '0917770001', 'thuykieuoloan@gmail.com', 'Đầm O Loan, Tuy An, Phú Yên', 'Active'),
+(324, 11, 'Anantara Mui Ne Resort', 'Hotel', 'Lễ Tân', '02523741888', 'muine@anantara.com', '12.5 Nguyễn Đình Chiểu, Mũi Né', 'Active'),
+(325, 11, 'Bamboo Village Beach Resort', 'Hotel', 'Phòng Đặt phòng', '02523847007', 'info@bamboovillageresort.com', '38 Nguyễn Đình Chiểu, Mũi Né', 'Active'),
+(326, 11, 'Nhà hàng Làng Chài Mũi Né', 'Restaurant', 'Quản lý tiệc', '0911110002', 'langchaimuine@gmail.com', '114 Huỳnh Thúc Kháng, Mũi Né', 'Active'),
+(327, 12, 'Vinpearl Hotel Cần Thơ', 'Hotel', 'Sales Executive', '02923761888', 'res.VPCNCT@vinpearl.com', '209 30 Tháng 4, Ninh Kiều, Cần Thơ', 'Active'),
+(328, 12, 'Victoria Cần Thơ Resort', 'Hotel', 'Lễ Tân Resort', '02923810111', 'resa.cantho@victoriahotels.asia', 'Cái Khế, Ninh Kiều, Cần Thơ', 'Active'),
+(329, 12, 'Nhà hàng Cơm Niêu Lô Lô Cần Thơ', 'Restaurant', 'Đặt tiệc', '0912220002', 'comnieulolo@gmail.com', '08 Trần Văn Hoài, Ninh Kiều, Cần Thơ', 'Active'),
+(330, 13, 'Six Senses Côn Đảo', 'Hotel', 'Reservations Team', '02543837888', 'reservations-condao@sixsenses.com', 'Bãi Đất Dốc, Côn Đảo', 'Active'),
+(331, 13, 'The Secret Côn Đảo', 'Hotel', 'Sales Tour', '02543837889', 'reservation@thesecrethotels.com', '08 Tôn Đức Thắng, Côn Đảo', 'Active'),
+(332, 13, 'Nhà hàng Ớt Côn Đảo', 'Restaurant', 'Lễ Tân', '0913330002', 'otcondao@gmail.com', 'Nguyễn Đức Thuận, Côn Đảo', 'Active'),
+(333, 16, 'Sun Spa Resort Quảng Bình', 'Hotel', 'Sales Manager', '02323842999', 'res@sunsparesortvietnam.com', 'Mỹ Cảnh, Bảo Ninh, Đồng Hới', 'Active'),
+(334, 16, 'Melia Vinpearl Quảng Bình', 'Hotel', 'Lễ Tân', '02323868888', 'res.VPQB@melia.com', 'Quách Xuân Kỳ, Đồng Hới', 'Active'),
+(335, 16, 'Nhà hàng Nổi Bình Minh Quảng Bình', 'Restaurant', 'Đặt tiệc', '0914440002', 'binhminhquangbinh@gmail.com', 'Đường Hương Giang, Đồng Hới', 'Active'),
+(336, 21, 'Mường Thanh Luxury Buôn Ma Thuột', 'Hotel', 'Lễ Tân', '02623961888', 'info@buonmathuot.muongthanh.vn', '81 Nguyễn Tất Thành, Buôn Ma Thuột', 'Active'),
+(337, 21, 'Elephants Hotel Buôn Ma Thuột', 'Hotel', 'Phòng Kinh doanh', '02623544444', 'sales@elephantshotel.com', '142 Phan Chu Trinh, Buôn Ma Thuột', 'Active'),
+(338, 21, 'Nhà hàng Gà Nướng Đầm Sen', 'Restaurant', 'Đặt bàn Đoàn', '0915550002', 'ganuongdamsen@gmail.com', 'Trần Nhật Duật, Buôn Ma Thuột', 'Active'),
+(339, 22, 'Mường Thanh Luxury Cà Mau', 'Hotel', 'Lễ Tân', '02903668888', 'info@camau.muongthanh.vn', 'Lô C03A Khu Trung Tâm Hành Chính Cà Mau', 'Active'),
+(340, 22, 'Khách sạn Ánh Nguyệt Cà Mau', 'Hotel', 'Sales Office', '02903656666', 'anhnguyethotelcm@gmail.com', '207 Phan Ngọc Hiển, Cà Mau', 'Active'),
+(341, 22, 'Nhà hàng Cua Cà Mau Rạch Gốc', 'Restaurant', 'Đặt tiệc Cua', '0916660002', 'cuacamaurachgoc@gmail.com', 'KDL Đất Mũi, Ngọc Hiển, Cà Mau', 'Active'),
+(342, 23, 'Melia Vinpearl Tây Ninh', 'Hotel', 'Lễ Tân', '02763786888', 'res.VPTN@melia.com', '90 Lê Duẩn, TP Tây Ninh', 'Active'),
+(343, 23, 'Sunrise Hotel Tây Ninh', 'Hotel', 'Đặt phòng', '02763711111', 'info@sunrisehoteltayninh.vn', '81 Hoàng Lê Kha, TP Tây Ninh', 'Active'),
+(344, 23, 'Nhà hàng Trang Bàng Chín Mỹ', 'Restaurant', 'Lễ tân Tiệc', '0917770002', 'chinmytrangbang@gmail.com', 'QL22, Trảng Bàng, Tây Ninh', 'Active'),
+(345, 24, 'Khách sạn Công Tử Bạc Liêu', 'Hotel', 'Lễ Tân Dinh Thự', '02913953304', 'congtubaclieu@gmail.com', '13 Điện Biên Phủ, Bạc Liêu', 'Active'),
+(346, 24, 'Trần Vinh Hotel Bạc Liêu', 'Hotel', 'Sales', '02913828888', 'tranvinhhotelbl@gmail.com', '85 Trần Huỳnh, Bạc Liêu', 'Active'),
+(347, 24, 'Nhà hàng Hải Sản Nam Hưng', 'Restaurant', 'Đặt bàn', '0918880001', 'namhungbaclieu@gmail.com', '89 Hoàng Văn Thụ, Bạc Liêu', 'Active'),
+(348, 25, 'Khách sạn Sông Trà Cao Lãnh', 'Hotel', 'Lễ Tân', '02773852624', 'songtrahotel@gmail.com', '178 Nguyễn Huệ, Cao Lãnh, Đồng Tháp', 'Active'),
+(349, 25, 'Bông Hồng Hotel Sa Đéc', 'Hotel', 'Kinh doanh', '02773868288', 'bonghonghotel@gmail.com', '251 Nguyễn Sinh Sắc, Sa Đéc, Đồng Tháp', 'Active'),
+(350, 25, 'Nhà hàng Đầm Sen Cao Lãnh', 'Restaurant', 'Đặt bàn Đầm Sen', '0919990001', 'damsencaolanh@gmail.com', 'KDL Đầm Sen, Cao Lãnh', 'Active'),
+(351, 5, 'Sala Đà Nẵng Beach Hotel', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(352, 5, 'Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(354, 3, 'Vinholidays Fiesta Phú Quốc 4★', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(355, 8, 'Khách sạn 5★ Hotel de l\'Opera Hà Nội', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(356, 19, 'Homestay Panorama Mèo Vạc', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(357, 19, 'Khách sạn 3★ Hà Giang Historic', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(358, 10, 'Khách sạn 4★ Anya Quy Nhơn', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(359, 2, 'Khách sạn 3★ Duparc Đà Lạt', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active'),
+(360, 1, 'Khách sạn 4★ Vinpearl Condotel Nha Trang', 'Hotel', 'Admin', NULL, NULL, NULL, 'Active');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payments`
+--
+
+CREATE TABLE `payments` (
+  `payment_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `booking_id` int(11) DEFAULT NULL,
+  `payment_method` varchar(50) DEFAULT NULL,
+  `amount` decimal(15,2) DEFAULT NULL,
+  `transaction_code` varchar(255) DEFAULT NULL,
+  `payment_status` enum('Pending','Success','Failed') DEFAULT 'Pending',
+  `paid_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `booking_id`, `payment_method`, `amount`, `transaction_code`, `payment_status`, `paid_at`) VALUES
+(1, 1, 'Cash', 9924000.00, 'TXN_1789182489511', 'Success', '2026-09-12 03:30:36'),
+(5, 5, 'Cash', 18997500.00, 'TXN_1789698699591', 'Pending', NULL),
+(6, 6, 'Cash', 18997500.00, 'TXN_1789714236834', 'Success', '2026-09-18 06:51:38'),
+(7, 7, 'Cash', 18997500.00, 'TXN_1789791101886', 'Success', '2026-09-19 07:38:41'),
+(8, 8, 'Cash', 22797000.00, 'TXN_1790844082616', 'Success', '2026-10-01 08:42:29'),
+(9, 9, 'Cash', 26596500.00, 'TXN_1790844455991', 'Success', '2026-10-01 08:48:34'),
+(10, 10, 'Cash', 15198000.00, 'TXN_1790844770999', 'Success', '2026-10-01 08:53:28'),
+(11, 11, 'Cash', 7599000.00, 'TXN_1790844926500', 'Success', '2026-10-01 08:55:44'),
+(12, 12, 'Cash', 18997500.00, 'TXN_1790865829745', 'Success', '2026-10-01 14:44:41'),
+(13, 13, 'Cash', 15198000.00, 'TXN_1790866070789', 'Success', '2026-10-01 14:48:05'),
+(14, 14, 'Cash', 7599000.00, 'TXN_1790866208770', 'Success', '2026-10-01 14:50:18'),
+(15, 15, 'Cash', 11398500.00, 'TXN_1790905271149', 'Success', '2026-10-02 01:41:30'),
+(16, 16, 'Cash', 7599000.00, 'TXN_1790905391782', 'Pending', NULL),
+(17, 17, 'Cash', 7599000.00, 'TXN_1791044580839', 'Pending', NULL),
+(18, 18, 'VNPAY_QR', 15198000.00, 'THANHTOAN18', 'Failed', NULL),
+(19, 19, 'VNPAY_QR', 3708000.00, 'THANHTOAN19', 'Pending', NULL),
+(20, 20, 'VNPAY_QR', 3250000.00, 'THANHTOAN20', 'Pending', NULL),
+(21, 21, 'VNPAY_QR', 2000.00, 'THANHTOAN21 (SePay #665V602262886415)', 'Success', '2026-10-15 14:04:37'),
+(22, 22, 'VNPAY_QR', 2000.00, 'THANHTOAN22', 'Failed', NULL),
+(23, 23, 'VNPAY_QR', 2000.00, 'THANHTOAN23', 'Failed', NULL),
+(24, 24, 'VNPAY_QR', 2000.00, 'THANHTOAN24 (SePay #665ITC1262891561)', 'Failed', '2026-10-16 00:49:26');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payroll`
+--
+
+CREATE TABLE `payroll` (
+  `payroll_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `employee_id` int(11) NOT NULL,
+  `salary_month` varchar(7) NOT NULL,
+  `base_salary` decimal(12,2) NOT NULL DEFAULT 8000000.00,
+  `working_days` decimal(4,1) NOT NULL DEFAULT 0.0,
+  `allowance` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `bonus` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `deductions` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `net_salary` decimal(12,2) NOT NULL,
+  `status` enum('Draft','Calculated','Paid') DEFAULT 'Draft',
+  `payment_date` date DEFAULT NULL,
+  `notes` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `performance_reviews`
+--
+
+CREATE TABLE `performance_reviews` (
+  `performance_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `employee_id` int(11) DEFAULT NULL,
+  `reviewer_id` int(11) DEFAULT NULL,
+  `score` int(11) DEFAULT NULL,
+  `comment` text DEFAULT NULL,
+  `review_date` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `performance_reviews`
+--
+
+INSERT INTO `performance_reviews` (`performance_id`, `employee_id`, `reviewer_id`, `score`, `comment`, `review_date`) VALUES
+(1, 4, 2, 90, 'Hoàn thành tốt', '2026-06-01'),
+(2, 4, 2, 30, 'ttfr', '2026-08-09');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `personal_work_tasks`
+--
+
+CREATE TABLE `personal_work_tasks` (
+  `task_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `work_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `priority` enum('Thấp','Trung bình','Cao') DEFAULT 'Trung bình',
+  `status` enum('Chưa làm','Đang thực hiện','Hoàn thành','Quá hạn') DEFAULT 'Chưa làm',
+  `related_type` varchar(50) DEFAULT NULL,
+  `related_id` varchar(50) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `completed_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `personal_work_tasks`
+--
+
+INSERT INTO `personal_work_tasks` (`task_id`, `user_id`, `title`, `description`, `work_date`, `start_time`, `end_time`, `priority`, `status`, `related_type`, `related_id`, `created_at`, `updated_at`, `completed_at`) VALUES
+(1, 4, 'Kiểm tra Booking', 'Kiểm tra các đơn đặt tour cho khách hàng', '2026-09-20', '08:00:00', '09:00:00', 'Trung bình', 'Chưa làm', NULL, NULL, '2026-09-19 08:54:42', '2026-09-19 08:55:25', NULL),
+(2, 4, 'Tư vấn cho khách hàng', 'Nhận các tin nhắn từ khách hàng và tiến hành tư vấn, giải đáp thắt mắt cho khách hàng', '2026-09-20', '09:00:00', '12:00:00', 'Trung bình', 'Chưa làm', NULL, NULL, '2026-09-19 08:57:18', '2026-09-19 08:57:18', NULL),
+(3, 1, 'km', 'kkkkkkj', '2026-09-20', '08:00:00', '12:00:00', 'Trung bình', 'Chưa làm', NULL, NULL, '2026-09-22 02:35:44', '2026-09-22 02:35:44', NULL),
+(4, 5, 'jh', 'bgjnm', '2026-09-24', '08:00:00', '12:00:00', 'Trung bình', 'Chưa làm', NULL, NULL, '2026-09-22 02:43:37', '2026-09-22 02:43:37', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `places`
+--
+
+CREATE TABLE `places` (
+  `place_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `destination_id` int(11) DEFAULT NULL,
+  `partner_id` int(11) DEFAULT NULL,
+  `place_name` varchar(255) NOT NULL COMMENT 'Tên địa điểm / Quán ăn',
+  `category` enum('Tham quan','Ăn uống','Vui chơi','Mua sắm','Nghỉ dưỡng') NOT NULL,
+  `description` text DEFAULT NULL,
+  `estimated_price` decimal(15,2) DEFAULT 0.00 COMMENT 'Giá vé/Chi phí tham khảo (0 nếu miễn phí)',
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `action_verb` varchar(50) DEFAULT NULL,
+  `short_display_name` varchar(150) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `places`
+--
+
+INSERT INTO `places` (`place_id`, `destination_id`, `partner_id`, `place_name`, `category`, `description`, `estimated_price`, `image_url`, `status`, `action_verb`, `short_display_name`) VALUES
+(1, 1, NULL, 'VinWonders Nha Trang', 'Vui chơi', 'Khu giải trí đẳng cấp quốc tế trên đảo Hòn Tre, bao gồm cáp treo vượt biển và công viên nước.', 880000.00, 'vinwonders-nt.jpg', 'Active', NULL, 'VinWonders Nha Trang'),
+(2, 1, NULL, 'Tháp Bà Ponagar', 'Tham quan', 'Quần thể đền tháp Chăm Pa cổ kính, nơi lưu giữ giá trị văn hóa lịch sử độc đáo.', 30000.00, 'thap-ba-nt.jpg', 'Active', NULL, 'Tháp Bà Ponagar'),
+(3, 1, NULL, 'Lặn biển Hòn Mun', 'Vui chơi', 'Khu bảo tồn biển với rạn san hô tuyệt đẹp, thích hợp cho lặn bình dưỡng khí.', 500000.00, 'hon-mun-nt.jpg', 'Active', NULL, 'Lặn biển Hòn Mun'),
+(4, 1, NULL, 'Tắm bùn khoáng I-Resort', 'Nghỉ dưỡng', 'Khu nghỉ dưỡng suối khoáng nóng, dịch vụ tắm bùn chăm sóc sức khỏe.', 350000.00, 'iresort-nt.jpg', 'Active', NULL, 'Tắm bùn khoáng I-Resort'),
+(5, 1, NULL, 'Nem nướng Đặng Văn Quyên', 'Ăn uống', 'Đặc sản nem nướng nổi tiếng nhất Nha Trang.', 60000.00, 'nem-nuong-nt.jpg', 'Active', NULL, 'Nem nướng Đặng Văn Quyên'),
+(6, 1, NULL, 'Chợ Đêm Nha Trang', 'Mua sắm', 'Khu phố đi bộ sầm uất về đêm, bán đồ lưu niệm và các món ăn đường phố.', 0.00, 'cho-dem-nt.jpg', 'Active', NULL, 'Chợ Đêm Nha Trang'),
+(7, 1, NULL, 'Hải sản Thanh Sương', 'Ăn uống', 'Quán hải sản tươi sống bình dân, chế biến tại chỗ.', 250000.00, 'haisan-nt.jpg', 'Active', NULL, 'Hải sản Thanh Sương'),
+(8, 2, NULL, 'Đỉnh Langbiang', 'Tham quan', 'Nóc nhà của Đà Lạt, trải nghiệm đi xe Jeep lên đỉnh ngắm toàn cảnh thành phố.', 120000.00, 'langbiang-dl.jpg', 'Active', NULL, 'Đỉnh Langbiang'),
+(9, 2, NULL, 'Thác Datanla', 'Vui chơi', 'Hệ thống máng trượt xuyên rừng thông dài nhất Đông Nam Á.', 170000.00, 'datanla-dl.jpg', 'Active', NULL, 'Thác Datanla'),
+(10, 2, NULL, 'Vườn thú Zoodoo', 'Tham quan', 'Mô hình sở thú thân thiện mang phong cách Úc, thích hợp cho gia đình có trẻ nhỏ.', 100000.00, 'zoodoo-dl.jpg', 'Active', NULL, 'Vườn thú Zoodoo'),
+(11, 2, NULL, 'Lẩu bò Ba Toa Quán Gỗ', 'Ăn uống', 'Quán lẩu bò mộc mạc lâu đời, hương vị đậm đà xua tan cái lạnh Đà Lạt.', 200000.00, 'laubo-dl.jpg', 'Active', NULL, 'Lẩu bò Ba Toa Quán Gỗ'),
+(12, 2, NULL, 'Lẩu gà lá é Tao Ngộ', 'Ăn uống', 'Đặc sản lẩu gà nấm kết hợp với vị cay nồng của lá é.', 150000.00, 'lauga-dl.jpg', 'Active', NULL, 'Lẩu gà lá é Tao Ngộ'),
+(13, 2, NULL, 'Chợ Đêm Âm Phủ', 'Mua sắm', 'Thiên đường đồ len và ẩm thực đường phố (bánh tráng nướng, sữa đậu nành).', 50000.00, 'chodem-dl.jpg', 'Active', NULL, 'Chợ Đêm Âm Phủ'),
+(14, 2, NULL, 'Samten Hills Dalat', 'Nghỉ dưỡng', 'Khu du lịch tâm linh với bảo tháp kinh luân lớn nhất thế giới.', 250000.00, 'samten-dl.jpg', 'Active', NULL, 'Samten Hills Dalat'),
+(15, 3, NULL, 'Sun World Hòn Thơm', 'Vui chơi', 'Cáp treo 3 dây vượt biển dài nhất thế giới và công viên nước Aquatopia.', 600000.00, 'honthom-pq.jpg', 'Active', NULL, 'Sun World Hòn Thơm'),
+(16, 3, NULL, 'Vinpearl Safari Phú Quốc', 'Tham quan', 'Công viên chăm sóc và bảo tồn động vật bán hoang dã lớn nhất Việt Nam.', 650000.00, 'safari-pq.jpg', 'Active', NULL, 'Vinpearl Safari Phú Quốc'),
+(17, 3, NULL, 'Grand World Phú Quốc', 'Tham quan', 'Thành phố không ngủ với kiến trúc Venice thu nhỏ và các show diễn thực cảnh.', 0.00, 'grandworld-pq.jpg', 'Active', NULL, 'Grand World Phú Quốc'),
+(18, 3, NULL, 'Bãi Sao', 'Nghỉ dưỡng', 'Một trong những bãi biển đẹp nhất đảo ngọc với cát trắng mịn như kem.', 0.00, 'baisao-pq.jpg', 'Active', NULL, 'Bãi Sao'),
+(19, 3, NULL, 'Bún quậy Kiến Xây', 'Ăn uống', 'Món bún đặc trưng, thực khách tự tay pha nước chấm theo khẩu vị.', 70000.00, 'bunquay-pq.jpg', 'Active', NULL, 'Bún quậy Kiến Xây'),
+(20, 3, NULL, 'Chợ đêm Dinh Cậu', 'Mua sắm', 'Khu chợ sầm uất chuyên các món hải sản nướng, đậu phộng chou chou.', 200000.00, 'dinhcau-pq.jpg', 'Active', NULL, 'Chợ đêm Dinh Cậu'),
+(21, 4, NULL, 'Đỉnh Fansipan (Cáp treo)', 'Tham quan', 'Chinh phục nóc nhà Đông Dương bằng hệ thống cáp treo hiện đại nhất thế giới.', 800000.00, 'fansipan-sp.jpg', 'Active', NULL, 'Đỉnh Fansipan (Cáp treo)'),
+(22, 4, NULL, 'Bản Cát Cát', 'Tham quan', 'Bản làng cổ của người H\'Mông, mang đậm bản sắc văn hóa Tây Bắc.', 90000.00, 'catcat-sp.jpg', 'Active', NULL, 'Bản Cát Cát'),
+(23, 4, NULL, 'Đèo Ô Quy Hồ', 'Tham quan', 'Một trong tứ đại đỉnh đèo của Việt Nam, điểm săn mây tuyệt đẹp.', 0.00, 'oquyho-sp.jpg', 'Active', NULL, 'Đèo Ô Quy Hồ'),
+(24, 4, NULL, 'Nhà hàng Lẩu Cá Tầm', 'Ăn uống', 'Thưởng thức món lẩu cá tầm tươi ngon sưởi ấm giữa tiết trời lạnh giá.', 300000.00, 'catam-sp.jpg', 'Active', 'Thưởng thức', 'Nhà hàng Lẩu Cá Tầm'),
+(25, 5, NULL, 'Bà Nà Hills', 'Tham quan', 'Khu du lịch nổi tiếng của Đà Nẵng', 900000.00, 'banahills.jpg', 'Active', NULL, 'Bà Nà Hills'),
+(26, 5, NULL, 'Cầu Vàng', 'Tham quan', 'Biểu tượng du lịch Đà Nẵng', 0.00, 'cauvang.jpg', 'Active', NULL, 'Cầu Vàng'),
+(27, 5, NULL, 'Cầu Rồng', 'Tham quan', 'Cầu phun lửa cuối tuần', 0.00, 'caurong.jpg', 'Active', NULL, 'Cầu Rồng'),
+(28, 5, NULL, 'Biển Mỹ Khê', 'Tham quan', 'Một trong những bãi biển đẹp nhất thế giới', 0.00, 'mykhe.jpg', 'Active', NULL, 'Biển Mỹ Khê'),
+(29, 5, NULL, 'Ngũ Hành Sơn', 'Tham quan', 'Quần thể núi đá vôi nổi tiếng', 40000.00, 'nguhanhson.jpg', 'Active', NULL, 'Ngũ Hành Sơn'),
+(30, 5, NULL, 'Asia Park', 'Vui chơi', 'Công viên giải trí', 200000.00, 'asiapark.jpg', 'Active', NULL, 'Asia Park'),
+(31, 5, NULL, 'Bảo tàng Chăm', 'Tham quan', 'Bảo tàng nghệ thuật Chăm lớn nhất', 60000.00, 'cham.jpg', 'Active', NULL, 'Bảo tàng Chăm'),
+(32, 5, NULL, 'Sơn Trà', 'Tham quan', 'Bán đảo Sơn Trà', 0.00, 'sontra.jpg', 'Active', NULL, 'Sơn Trà'),
+(33, 5, NULL, 'Chùa Linh Ứng', '', 'Ngôi chùa nổi tiếng', 0.00, 'linhung.jpg', 'Active', NULL, 'Chùa Linh Ứng'),
+(34, 5, NULL, 'Chợ Hàn', 'Mua sắm', 'Đặc sản Đà Nẵng', 0.00, 'chohan.jpg', 'Active', NULL, 'Chợ Hàn'),
+(35, 6, NULL, 'Phố cổ Hội An', 'Tham quan', 'Di sản UNESCO', 120000.00, 'phohoian.jpg', 'Active', NULL, 'Phố cổ Hội An'),
+(36, 6, NULL, 'Chùa Cầu', 'Tham quan', 'Biểu tượng Hội An', 0.00, 'chuacau.jpg', 'Active', NULL, 'Chùa Cầu'),
+(37, 6, NULL, 'Rừng dừa Bảy Mẫu', 'Tham quan', 'Đi thuyền thúng', 180000.00, '/uploads/1786237814077-tour-rung-dua-bay-mau-c.jpg', 'Active', NULL, 'Rừng dừa Bảy Mẫu'),
+(38, 6, NULL, 'Biển An Bàng', 'Tham quan', 'Biển đẹp của Hội An', 0.00, 'anbang.jpg', 'Active', NULL, 'Biển An Bàng'),
+(39, 6, NULL, 'Làng gốm Thanh Hà', '', 'Làm gốm', 80000.00, 'thanhha.jpg', 'Active', NULL, 'Làng gốm Thanh Hà'),
+(40, 6, NULL, 'Làng rau Trà Quế', '', 'Làm nông dân', 100000.00, 'traque.jpg', 'Active', NULL, 'Làng rau Trà Quế'),
+(41, 7, NULL, 'Đại Nội Huế', 'Tham quan', 'Hoàng thành Huế', 200000.00, 'dainoi.jpg', 'Active', NULL, 'Đại Nội Huế'),
+(42, 7, NULL, 'Chùa Thiên Mụ', '', 'Ngôi chùa nổi tiếng', 0.00, 'thienmu.jpg', 'Active', NULL, 'Chùa Thiên Mụ'),
+(43, 7, NULL, 'Lăng Khải Định', 'Tham quan', 'Lăng vua Khải Định', 150000.00, 'khaidinh.jpg', 'Active', NULL, 'Lăng Khải Định'),
+(44, 7, NULL, 'Lăng Minh Mạng', 'Tham quan', 'Lăng vua Minh Mạng', 150000.00, 'minhmang.jpg', 'Active', NULL, 'Lăng Minh Mạng'),
+(45, 7, NULL, 'Sông Hương', '', 'Nghe ca Huế', 150000.00, 'songhuong.jpg', 'Active', NULL, 'Sông Hương'),
+(46, 7, NULL, 'Chợ Đông Ba', 'Mua sắm', 'Chợ nổi tiếng Huế', 0.00, 'dongba.jpg', 'Active', NULL, 'Chợ Đông Ba'),
+(47, 8, NULL, 'Hồ Hoàn Kiếm', 'Tham quan', 'Biểu tượng Hà Nội', 0.00, 'hohoankiem.jpg', 'Active', NULL, 'Hồ Hoàn Kiếm'),
+(48, 8, NULL, 'Lăng Bác', 'Tham quan', 'Lăng Chủ tịch Hồ Chí Minh', 0.00, 'langbac.jpg', 'Active', NULL, 'Lăng Bác'),
+(49, 8, NULL, 'Văn Miếu', 'Tham quan', 'Trường đại học đầu tiên', 70000.00, 'vanmieu.jpg', 'Active', NULL, 'Văn Miếu'),
+(50, 8, NULL, 'Phố cổ Hà Nội', 'Tham quan', '36 phố phường', 0.00, 'phoco.jpg', 'Active', NULL, 'Phố cổ Hà Nội'),
+(51, 8, NULL, 'Nhà hát Lớn', 'Tham quan', 'Kiến trúc Pháp', 0.00, 'nhahatlon.jpg', 'Active', NULL, 'Nhà hát Lớn'),
+(52, 8, NULL, 'Hồ Tây', 'Tham quan', 'Hồ lớn nhất Hà Nội', 0.00, '/uploads/1786237754477-185-1773836446051568605896.jpg', 'Active', NULL, 'Hồ Tây'),
+(53, 9, NULL, 'Vịnh Hạ Long', 'Tham quan', 'Kỳ quan thiên nhiên', 950000.00, '/uploads/1786211402112-du-lich-vinh-Ha-Long-hinh-anh1_1625911963.webp', 'Active', NULL, 'Vịnh Hạ Long'),
+(54, 9, NULL, 'Hang Sửng Sốt', 'Tham quan', 'Hang động nổi tiếng', 150000.00, '/uploads/1786211339888-hang-sung-sot-2_1627633591.webp', 'Active', NULL, 'Hang Sửng Sốt'),
+(55, 9, NULL, 'Đảo Ti Tốp', 'Tham quan', 'Đảo đẹp của Hạ Long', 100000.00, '/uploads/1784714136526-dao-titop-quang-ninh-02_1625285135.webp', 'Active', NULL, 'Đảo Ti Tốp'),
+(56, 9, NULL, 'Sun World Hạ Long', 'Vui chơi', 'Công viên giải trí', 350000.00, '/uploads/1784714091209-sunworldHL.jpg', 'Active', NULL, 'Sun World Hạ Long'),
+(57, 9, NULL, 'Bảo tàng Quảng Ninh', 'Tham quan', 'Kiến trúc độc đáo', 40000.00, '/uploads/1784713934970-images.jpg', 'Active', NULL, 'Bảo tàng Quảng Ninh'),
+(58, 18, NULL, 'Dinh Độc Lập', 'Tham quan', 'Di tích lịch sử nổi tiếng tại trung tâm TP.HCM, nơi lưu giữ nhiều dấu ấn của lịch sử Việt Nam.', 65000.00, 'dinh-doc-lap.jpg', 'Active', NULL, 'Dinh Độc Lập'),
+(59, 18, NULL, 'Chợ Bến Thành', 'Mua sắm', 'Biểu tượng thương mại và văn hóa của Sài Gòn, nơi bán đa dạng các mặt hàng và ẩm thực địa phương.', 0.00, 'cho-ben-thanh.jpg', 'Active', NULL, 'Chợ Bến Thành'),
+(60, 18, NULL, 'Địa đạo Củ Chi', 'Tham quan', 'Hệ thống đường hầm kháng chiến lịch sử với kiến trúc độc đáo dưới lòng đất.', 120000.00, 'dia-dao-cu-chi.jpg', 'Active', NULL, 'Địa đạo Củ Chi'),
+(61, 15, NULL, 'Quần thể danh thắng Tràng An', 'Tham quan', 'Di sản văn hóa và thiên nhiên thế giới được UNESCO công nhận, nổi tiếng với hệ thống hang động xuyên thủy.', 250000.00, 'trang-an-nb.jpg', 'Active', NULL, 'Tràng An'),
+(62, 15, NULL, 'Chùa Bái Đính', 'Tham quan', 'Quần thể chùa mang kiến trúc đồ sộ, sở hữu nhiều kỷ lục nhất Việt Nam và Châu Á.', 50000.00, 'bai-dinh-nb.jpg', 'Active', NULL, 'Chùa Bái Đính'),
+(63, 16, NULL, 'Động Phong Nha', 'Tham quan', 'Động nước tuyệt đẹp thuộc Di sản thiên nhiên thế giới, có hệ thống thạch nhũ tráng lệ.', 150000.00, 'phong-nha-qb.jpg', 'Active', NULL, 'Động Phong Nha'),
+(64, 16, NULL, 'Động Thiên Đường', 'Tham quan', 'Động khô dài nhất châu Á với vẻ đẹp huyền ảo, tráng lệ như cung điện hoàng gia.', 250000.00, 'thien-duong-qb.jpg', 'Active', NULL, 'Động Thiên Đường'),
+(65, 12, NULL, 'Chợ nổi Cái Răng', 'Tham quan', 'Khu chợ sầm uất trên sông, mang đậm nét văn hóa giao thương đặc trưng của miền Tây Nam Bộ.', 0.00, 'cai-rang-ct.jpg', 'Active', NULL, 'Chợ nổi Cái Răng'),
+(66, 12, NULL, 'Bến Ninh Kiều', 'Vui chơi', 'Biểu tượng của Cần Thơ, nơi tập trung nhiều nhà hàng, du thuyền và hoạt động về đêm.', 0.00, 'ninh-kieu-ct.jpg', 'Active', NULL, 'Bến Ninh Kiều'),
+(67, 14, NULL, 'Tượng Chúa Kito Vua', 'Tham quan', 'Bức tượng Chúa khổng lồ nằm trên đỉnh núi Nhỏ, có thể ngắm toàn cảnh thành phố biển Vũng Tàu.', 0.00, 'tuong-chua-vt.jpg', 'Active', NULL, 'Tượng Chúa Kito Vua'),
+(68, 14, NULL, 'Hải đăng Vũng Tàu', 'Tham quan', 'Ngọn hải đăng cổ nhất Việt Nam với kiến trúc kiểu Pháp, view ngắm hoàng hôn cực đẹp.', 0.00, 'hai-dang-vt.jpg', 'Active', NULL, 'Hải đăng Vũng Tàu'),
+(69, 2, NULL, 'Thiền Viện Trúc Lâm', 'Tham quan', 'Ngôi thiền viện lớn nhất Đà Lạt, nằm uy nghi trên núi Phụng Hoàng, nhìn ra Hồ Tuyền Lâm.', 0.00, 'thien-vien-truc-lam-dl.jpg', 'Active', NULL, 'Thiền Viện Trúc Lâm'),
+(70, 2, NULL, 'Hồ Tuyền Lâm', 'Tham quan', 'Hồ nước ngọt rộng lớn và đẹp nhất Đà Lạt, bao quanh bởi rừng thông xanh mát.', 0.00, 'ho-tuyen-lam-dl.jpg', 'Active', NULL, 'Hồ Tuyền Lâm'),
+(71, 2, NULL, 'Đồi Chè Cầu Đất', 'Tham quan', 'Cánh đồng chè xanh ngát trải dài, điểm săn mây và check-in cùng các tuabin gió khổng lồ.', 0.00, 'doi-che-cau-dat-dl.jpg', 'Active', NULL, 'Đồi Chè Cầu Đất'),
+(72, 2, NULL, 'Quảng trường Lâm Viên', 'Tham quan', 'Biểu tượng của Đà Lạt với khối nụ hoa Atiso và nụ hoa Dã Quỳ bằng kính khổng lồ.', 0.00, 'quang-truong-lam-vien-dl.jpg', 'Active', NULL, 'Quảng trường Lâm Viên'),
+(73, 2, NULL, 'Thung Lũng Tình Yêu', 'Vui chơi', 'Khu du lịch sinh thái lãng mạn với nhiều tiểu cảnh, vườn hoa và các trò chơi giải trí.', 250000.00, 'thung-lung-tinh-yeu-dl.jpg', 'Active', NULL, 'Thung Lũng Tình Yêu'),
+(74, 2, NULL, 'Đường Hầm Điêu Khắc', 'Tham quan', 'Ngôi làng đất sét độc đáo tái hiện lịch sử Đà Lạt, nổi tiếng với góc check-in Hồ Vô Cực.', 120000.00, 'duong-ham-dieu-khac-dl.jpg', 'Active', NULL, 'Đường Hầm Điêu Khắc'),
+(75, 2, NULL, 'Nông trại Cún Puppy Farm', 'Tham quan', 'Nông trại với hàng chục giống chó đáng yêu, kết hợp vườn dâu tây và vườn cà chua công nghệ cao.', 100000.00, 'puppy-farm-dl.jpg', 'Active', NULL, 'Puppy Farm'),
+(76, 2, NULL, 'Thác Pongour', 'Tham quan', 'Được mệnh danh là Nam Thiên Đệ Nhất Thác với 7 tầng đá hình bậc thang tuyệt đẹp giữa rừng.', 20000.00, 'thac-pongour-dl.jpg', 'Active', NULL, 'Thác Pongour'),
+(77, 2, NULL, 'Bánh tráng nướng Dì Đinh', 'Ăn uống', 'Quán bánh tráng nướng (pizza Đà Lạt) cực kỳ nổi tiếng, đa dạng các loại topping.', 30000.00, 'banh-trang-di-dinh-dl.jpg', 'Active', NULL, 'Bánh tráng nướng Dì Đinh'),
+(78, 2, NULL, 'Quán cafe Túi Mơ To', 'Ăn uống', 'Quán cafe mang phong cách mộc mạc, có view ngắm trọn khu nhà lồng trồng hoa sáng rực về đêm.', 60000.00, 'tui-mo-to-dl.jpg', 'Active', NULL, 'Cafe Túi Mơ To'),
+(79, 1, NULL, 'Viện Hải dương học', 'Tham quan', 'Nơi lưu giữ và bảo tồn hàng chục ngàn mẫu vật sinh vật biển, cùng các hồ nuôi sinh vật biển sống.', 40000.00, 'vien-hai-duong-hoc-nt.jpg', 'Active', NULL, 'Viện Hải dương học'),
+(80, 1, NULL, 'Chùa Long Sơn', 'Tham quan', 'Ngôi chùa cổ kính nổi tiếng với bức tượng Kim Thân Phật Tổ khổng lồ trên đỉnh đồi Trại Thủy.', 0.00, 'chua-long-son-nt.jpg', 'Active', NULL, 'Chùa Long Sơn'),
+(81, 1, NULL, 'Nhà thờ Núi', 'Tham quan', 'Công trình kiến trúc Gothic tuyệt đẹp bằng đá đặc trưng, nằm ngay trung tâm thành phố.', 0.00, 'nha-tho-nui-nt.jpg', 'Active', NULL, 'Nhà thờ Núi'),
+(82, 1, NULL, 'Khu du lịch Hòn Tằm', 'Nghỉ dưỡng', 'Đảo sinh thái tuyệt đẹp với bãi biển cát trắng, dịch vụ tắm bùn khoáng trên đảo và các trò chơi thể thao nước.', 800000.00, 'hon-tam-nt.jpg', 'Active', NULL, 'Khu du lịch Hòn Tằm'),
+(83, 1, NULL, 'Danh thắng Hòn Chồng', 'Tham quan', 'Quần thể khối đá lớn với những hình thù kỳ lạ xếp chồng lên nhau bên bờ biển, gắn với nhiều truyền thuyết.', 30000.00, 'hon-chong-nt.jpg', 'Active', NULL, 'Danh thắng Hòn Chồng'),
+(84, 1, NULL, 'Bò nướng Lạc Cảnh', 'Ăn uống', 'Quán ăn lâu đời với món thịt bò nướng than hoa tẩm ướp gia vị bí truyền trứ danh của Nha Trang.', 150000.00, 'bo-nuong-lac-canh-nt.jpg', 'Active', NULL, 'Bò nướng Lạc Cảnh'),
+(85, 1, NULL, 'Đảo Khỉ (Hòn Lao)', 'Vui chơi', 'Hòn đảo hoang sơ là vương quốc của hàng ngàn chú khỉ tự nhiên, kết hợp các show diễn xiếc thú ấn tượng.', 250000.00, 'dao-khi-nt.jpg', 'Active', NULL, 'Đảo Khỉ'),
+(86, 1, NULL, 'Bún cá sứa Năm Beo', 'Ăn uống', 'Món ăn sáng đặc sản Nha Trang với nước lùng thanh ngọt, chả cá dai và sứa giòn sần sật.', 45000.00, 'bun-ca-sua-nt.jpg', 'Active', NULL, 'Bún cá sứa Năm Beo'),
+(87, 1, NULL, 'Skylight Nha Trang', 'Vui chơi', 'Rooftop beach club cao nhất Nha Trang, nơi ngắm toàn cảnh thành phố biển cực chill về đêm.', 200000.00, 'skylight-nt.jpg', 'Active', NULL, 'Skylight Nha Trang'),
+(88, 1, NULL, 'Bãi Dài', 'Tham quan', 'Bãi biển hoang sơ, nước trong vắt và bãi cát trắng mịn trải dài tuyệt đẹp nằm cách xa trung tâm.', 0.00, 'bai-dai-nt.jpg', 'Active', NULL, 'Bãi Dài'),
+(89, 5, NULL, 'Cầu Tình Yêu', 'Tham quan', 'Cây cầu lãng mạn bên bờ sông Hàn với những cột đèn lồng hình trái tim, điểm check-in yêu thích của giới trẻ.', 0.00, 'cau-tinh-yeu-dn.jpg', 'Active', NULL, 'Cầu Tình Yêu'),
+(90, 5, NULL, 'Chợ Cồn', 'Mua sắm', 'Thiên đường ẩm thực đường phố và mua sắm đặc sản lớn nhất Đà Nẵng, đa dạng các món ăn vặt.', 0.00, 'cho-con-dn.jpg', 'Active', NULL, 'Chợ Cồn'),
+(91, 5, NULL, 'Đỉnh Bàn Cờ', 'Tham quan', 'Nằm trên bán đảo Sơn Trà, điểm cao nhất để ngắm toàn cảnh thành phố Đà Nẵng tuyệt đẹp từ trên cao.', 0.00, 'dinh-ban-co-dn.jpg', 'Active', NULL, 'Đỉnh Bàn Cờ'),
+(92, 5, NULL, 'Mì Quảng Bà Mua', 'Ăn uống', 'Quán mì Quảng nổi tiếng với hương vị đậm đà, nước dùng chuẩn vị miền Trung.', 50000.00, 'mi-quang-ba-mua-dn.jpg', 'Active', NULL, 'Mì Quảng Bà Mua'),
+(93, 5, NULL, 'Hải sản Năm Đảnh', 'Ăn uống', 'Quán hải sản bình dân ngon, bổ, rẻ ẩn mình trong hẻm nhỏ nhưng luôn tấp nập thực khách.', 150000.00, 'hai-san-nam-danh-dn.jpg', 'Active', NULL, 'Hải sản Năm Đảnh'),
+(94, 5, NULL, 'Bánh tráng cuốn thịt heo Quán Trần', 'Ăn uống', 'Đặc sản trứ danh Đà Nẵng với thịt heo hai đầu da, rau rừng tươi và mắm nêm đậm vị.', 120000.00, 'banh-trang-thit-heo-dn.jpg', 'Active', NULL, 'Bánh tráng cuốn thịt heo'),
+(95, 5, NULL, 'Bãi biển Non Nước', 'Nghỉ dưỡng', 'Bãi biển tuyệt đẹp nằm dưới chân núi Ngũ Hành Sơn, cát trắng mịn và nước biển trong xanh.', 0.00, 'bai-bien-non-nuoc-dn.jpg', 'Active', NULL, 'Bãi biển Non Nước'),
+(96, 5, NULL, 'Rạn Nam Ô', 'Tham quan', 'Bãi đá phủ rêu xanh mướt tuyệt đẹp vào mùa xuân, điểm chụp ảnh mang vẻ hoang sơ, tự nhiên.', 0.00, 'ran-nam-o-dn.jpg', 'Active', NULL, 'Rạn Nam Ô'),
+(97, 5, NULL, 'Công viên Biển Đông', 'Vui chơi', 'Công viên ven biển với hàng ngàn chú chim bồ câu thân thiện, nơi thường xuyên tổ chức sự kiện ngoài trời.', 0.00, 'cong-vien-bien-dong-dn.jpg', 'Active', NULL, 'Công viên Biển Đông'),
+(98, 5, NULL, 'Suối khoáng nóng Núi Thần Tài', 'Nghỉ dưỡng', 'Khu du lịch nghỉ dưỡng với các hồ tắm khoáng nóng tự nhiên, công viên nước và dịch vụ tắm bùn.', 450000.00, 'nui-than-tai-dn.jpg', 'Active', NULL, 'Núi Thần Tài'),
+(99, 8, NULL, 'Hoàng Thành Thăng Long', 'Tham quan', 'Quần thể di tích lịch sử quan trọng, ghi dấu nghìn năm lịch sử của các triều đại phong kiến Việt Nam.', 30000.00, 'hoang-thanh-tl-hn.jpg', 'Active', NULL, 'Hoàng Thành Thăng Long'),
+(100, 8, NULL, 'Chùa Trấn Quốc', 'Tham quan', 'Ngôi chùa cổ nhất Hà Nội nằm trên một hòn đảo nhỏ của Hồ Tây, mang kiến trúc độc đáo và linh thiêng.', 0.00, 'chua-tran-quoc-hn.jpg', 'Active', NULL, 'Chùa Trấn Quốc'),
+(101, 8, NULL, 'Chợ Đồng Xuân', 'Mua sắm', 'Khu chợ đầu mối lớn và lâu đời nhất khu vực phố cổ, bày bán đa dạng các mặt hàng tiêu dùng và quà lưu niệm.', 0.00, 'cho-dong-xuan-hn.jpg', 'Active', NULL, 'Chợ Đồng Xuân'),
+(102, 8, NULL, 'Cầu Long Biên', 'Tham quan', 'Cây cầu thép lịch sử bắc qua sông Hồng, một chứng nhân lịch sử với nét đẹp cổ kính, hoang sơ.', 0.00, 'cau-long-bien-hn.jpg', 'Active', NULL, 'Cầu Long Biên'),
+(103, 8, NULL, 'Nhà tù Hỏa Lò', 'Tham quan', 'Di tích lịch sử nhà tù thực dân Pháp xây dựng, nơi giáo dục truyền thống yêu nước sâu sắc.', 30000.00, 'hoa-lo-hn.jpg', 'Active', NULL, 'Nhà tù Hỏa Lò'),
+(104, 8, NULL, 'Bảo tàng Dân tộc học Việt Nam', 'Tham quan', 'Nơi lưu giữ, trưng bày và tái hiện sống động bản sắc văn hóa của 54 dân tộc anh em.', 40000.00, 'bao-tang-dth-hn.jpg', 'Active', NULL, 'Bảo tàng Dân tộc học'),
+(105, 8, NULL, 'Phở Gia Truyền Bát Đàn', 'Ăn uống', 'Quán phở bò nổi tiếng với hương vị nước dùng thanh ngọt, thịt bò mềm và văn hóa xếp hàng đặc trưng.', 60000.00, 'pho-bat-dan-hn.jpg', 'Active', NULL, 'Phở Bát Đàn'),
+(106, 8, NULL, 'Bún chả Hương Liên', 'Ăn uống', 'Quán bún chả nổi danh từng đón cựu Tổng thống Obama thưởng thức, thịt nướng thơm lừng.', 70000.00, 'bun-cha-obama-hn.jpg', 'Active', NULL, 'Bún chả Hương Liên'),
+(107, 8, NULL, 'Chả cá Lã Vọng', 'Ăn uống', 'Món ăn tinh hoa ẩm thực Hà Thành, chả cá lăng nướng than hoa ăn kèm bún, mắm tôm và hành thì là.', 150000.00, 'cha-ca-la-vong-hn.jpg', 'Active', NULL, 'Chả cá Lã Vọng'),
+(108, 8, NULL, 'Kem Tràng Tiền', 'Ăn uống', 'Thương hiệu kem lâu đời gắn liền với tuổi thơ người Hà Nội, nổi tiếng với kem cốm và kem ốc quế.', 15000.00, 'kem-trang-tien-hn.jpg', 'Active', NULL, 'Kem Tràng Tiền'),
+(109, 11, NULL, 'Đồi Cát Bay', 'Tham quan', 'Đồi cát thay đổi hình dáng liên tục theo hướng gió, trải nghiệm trượt cát vô cùng thú vị.', 0.00, 'doi-cat-bay-mn.jpg', 'Active', NULL, 'Đồi Cát Bay'),
+(110, 11, NULL, 'Bàu Trắng', 'Vui chơi', 'Được ví như tiểu sa mạc Sahara, có hồ nước ngọt trong xanh ở giữa và dịch vụ thuê xe máy cày, xe Jeep vượt địa hình.', 150000.00, 'bau-trang-mn.jpg', 'Active', NULL, 'Bàu Trắng'),
+(111, 11, NULL, 'Suối Tiên', 'Tham quan', 'Dòng suối nhỏ chảy quanh năm giữa những đồi cát nhấp nhô màu đỏ vàng, cảnh quan thiên nhiên vô cùng độc đáo.', 15000.00, 'suoi-tien-mn.jpg', 'Active', NULL, 'Suối Tiên'),
+(112, 11, NULL, 'Làng chài Mũi Né', 'Tham quan', 'Nơi neo đậu của hàng trăm tàu thuyền đánh cá màu sắc rực rỡ, tìm hiểu đời sống ngư dân và mua hải sản tươi sống.', 0.00, 'lang-chai-mn.jpg', 'Active', NULL, 'Làng chài Mũi Né'),
+(113, 11, NULL, 'Tháp Chàm Poshanư', 'Tham quan', 'Di tích đền tháp của vương quốc Chăm Pa cổ đại, mang đậm nét văn hóa kiến trúc tôn giáo và lịch sử.', 15000.00, 'thap-poshanu-mn.jpg', 'Active', NULL, 'Tháp Poshanư'),
+(114, 11, NULL, 'Lâu đài Rượu Vang', 'Tham quan', 'Công trình kiến trúc mô phỏng lâu đài châu Âu thời trung cổ, nơi tham quan hầm rượu và nếm thử các loại vang hảo hạng.', 120000.00, 'lau-dai-ruou-vang-mn.jpg', 'Active', NULL, 'Lâu đài Rượu Vang'),
+(115, 11, NULL, 'Bãi đá Ông Địa', 'Tham quan', 'Bãi biển trong xanh với những mỏm đá nhô ra biển cùng bờ kè chắn sóng, là điểm check-in và tắm biển lý tưởng.', 0.00, 'bai-da-ong-dia-mn.jpg', 'Active', NULL, 'Bãi đá Ông Địa'),
+(116, 11, NULL, 'Hải đăng Kê Gà', 'Tham quan', 'Ngọn hải đăng cổ bằng đá cao nhất Việt Nam nằm trên một hòn đảo nhỏ, cảnh quan hùng vĩ và hoang sơ.', 50000.00, 'hai-dang-ke-ga-mn.jpg', 'Active', NULL, 'Hải đăng Kê Gà'),
+(117, 11, NULL, 'Lẩu thả Phan Thiết', 'Ăn uống', 'Món ăn đặc sản địa phương kết hợp nhiều nguyên liệu tươi ngon được bày biện rực rỡ trong bẹ hoa chuối.', 250000.00, 'lau-tha-mn.jpg', 'Active', NULL, 'Lẩu thả Phan Thiết'),
+(118, 11, NULL, 'Khu ẩm thực Bờ Kè', 'Ăn uống', 'Dãy các quán hải sản bình dân nằm sát bờ biển, thưởng thức hải sản tươi sống đón gió biển mát rượi.', 200000.00, 'bo-ke-mn.jpg', 'Active', NULL, 'Hải sản Bờ Kè');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reviews`
+--
+
+CREATE TABLE `reviews` (
+  `review_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` int(11) DEFAULT NULL,
+  `booking_id` int(11) DEFAULT NULL,
+  `tour_id` int(11) DEFAULT NULL,
+  `rating` int(11) DEFAULT NULL,
+  `rating_guide` int(11) DEFAULT 5,
+  `rating_vehicle` int(11) DEFAULT 5,
+  `rating_service` int(11) DEFAULT 5,
+  `comment` text DEFAULT NULL,
+  `images` longtext DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `role_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `role_name` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `roles`
+--
+
+INSERT INTO `roles` (`role_id`, `role_name`) VALUES
+(1, 'Administrator'),
+(6, 'Customer'),
+(8, 'Driver'),
+(2, 'HR Manager'),
+(4, 'Office Staff'),
+(7, 'Partner'),
+(5, 'Tour Guide'),
+(3, 'Tour Manager');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `services`
+--
+
+CREATE TABLE `services` (
+  `service_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `service_name` varchar(255) DEFAULT NULL,
+  `service_type` varchar(100) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('Active','Inactive','Pending') DEFAULT 'Active',
+  `partner_id` int(11) DEFAULT NULL,
+  `destination_id` int(11) DEFAULT NULL,
+  `unit` varchar(50) DEFAULT NULL,
+  `base_cost` decimal(15,2) DEFAULT NULL,
+  `selling_price` decimal(15,2) DEFAULT NULL,
+  `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
+  `action_verb` varchar(50) DEFAULT NULL,
+  `short_display_name` varchar(150) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `services`
+--
+
+INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `attributes`, `action_verb`, `short_display_name`) VALUES
+(1, 'Vé máy bay Khứ hồi - Phổ thông', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 2200000.00, 2200000.00, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Airbus A321\", \"has_baggage\": \"20kg Ký gửi\"}', NULL, NULL),
+(2, 'Vé máy bay Khứ hồi - Thương gia', 'Vé máy bay', NULL, NULL, 'Active', 1, NULL, 'Vé', 5500000.00, 5500000.00, '{\"vehicle_type\": \"Máy bay\", \"brand\": \"Boeing 787\", \"has_baggage\": \"30kg Ký gửi + Phòng chờ VIP\"}', NULL, NULL),
+(4, 'Xe Du lịch 16 chỗ (Ford Transit / Solati Nội bộ) / Ngày', 'Xe vận chuyển', 'Xe 16 chỗ đời mới trần cao thoáng mát, ghế da cao cấp, phù hợp tour gia đình lớn và cơ quan.', '/uploads/1791429909308-21477970.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1200000.00, 1300000.00, NULL, NULL, NULL),
+(5, 'Xe Limousine 9 chỗ VIP (Dcar President Nội bộ) / Ngày', 'Xe vận chuyển', 'Xe Limousine 9 chỗ VIP ghế bọc da hạng thương gia, cổng sạc USB, tủ lạnh mini.', '/uploads/1791430031325-788172631.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 2000000.00, 2100000.00, NULL, NULL, NULL),
+(6, 'Phòng Deluxe Ocean View', 'Khách sạn', NULL, NULL, 'Active', 4, 1, 'Phòng/Đêm', 2500000.00, 2500000.00, '{\"star_rating\": 5, \"room_type\": \"Deluxe\", \"bed_type\": \"1 King Bed\", \"has_breakfast\": true}', NULL, NULL),
+(7, 'Phòng Standard Hướng Phố', 'Khách sạn', NULL, NULL, 'Active', 5, 1, 'Phòng/Đêm', 900000.00, 900000.00, '{\"star_rating\": 4, \"room_type\": \"Standard\", \"bed_type\": \"2 Twin Beds\", \"has_breakfast\": true}', NULL, NULL),
+(8, 'Phòng Superior', 'Khách sạn', '', '/uploads/1786237947856-208711390.jpg', 'Active', 6, 2, 'Phòng/Đêm', 1300000.00, 1300000.00, '{}', NULL, NULL),
+(9, 'Villa 1 Phòng Ngủ (Cổ điển)', 'Khách sạn', '', '/uploads/1786237896616-604688624.jpg', 'Active', 7, 2, 'Căn/Đêm', 3200000.00, 3200000.00, '{}', NULL, NULL),
+(10, 'Emerald Bay View', 'Khách sạn', '', '/uploads/1786211032534-907253131.avif', 'Active', 8, 3, 'Phòng/Đêm', 5000000.00, 5000000.00, '{}', NULL, NULL),
+(12, 'Phòng Deluxe Hướng Biển', 'Khách sạn', '', '/uploads/1786211263783-230213333.jpg', 'Active', NULL, 5, 'Phòng/Đêm', 1200000.00, 1200000.00, '{}', NULL, NULL),
+(13, 'Phòng Suite Cao Cấp', 'Khách sạn', '', '/uploads/1786211185878-710398912.webp', 'Active', NULL, 1, 'Phòng/Đêm', 2000000.00, 2000000.00, '{}', NULL, NULL),
+(20, 'Phòng Suite Cơ Bản', 'Khách sạn', 'Trải nghiệm sang trọng, dịch vụ đẳng cấp', '/uploads/1786209370282-387963415.webp', 'Active', 10, 1, 'Phòng/Đêm', 0.00, 0.00, '{}', NULL, NULL),
+(21, 'Phòng Suite Cao Cấp', 'Khách sạn', 'ỷhh', '/uploads/1786246706834-935012199.webp', 'Pending', 10, 1, 'Phòng/Đêm', 0.00, 0.00, NULL, NULL, NULL),
+(22, 'Xe SUV 7 chỗ (Innova/Fortuner Nội bộ) / Ngày', 'Xe vận chuyển', 'Xe 7 chỗ đời mới, gầm cao, phù hợp cho nhóm gia đình nhỏ hoặc tour thiết kế riêng.', '/uploads/1791430309252-300596267.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 900000.00, 950000.00, NULL, NULL, NULL),
+(23, 'Xe Limousine 11 chỗ Hạng Thượng Đỉnh (Nội bộ) / Ngày', 'Xe vận chuyển', 'Xe Limousine 11 chỗ VIP độ trần bầu trời sao Rolls-Royce, dàn loa cao cấp, chuyên phục vụ đoàn VIP.', '/uploads/1791430119669-73230061.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 2200000.00, 2300000.00, '{}', NULL, NULL),
+(24, 'Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày', 'Xe vận chuyển', 'Xe 29 chỗ rộng rãi, hầm cốp lớn, lốp hơi êm ái, phù hợp cho đoàn công ty vừa và nhỏ.', '/uploads/1791429505017-709194872.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 1600000.00, 1700000.00, NULL, NULL, NULL),
+(25, 'Xe Du lịch 45 chỗ (Hyundai Universe Nội bộ) / Ngày', 'Xe vận chuyển', 'Dòng xe 45 chỗ cao cấp nhất, bầu hơi 6 túi êm ái, dàn loa karaoke, hầm hàng 50 vali.', '/uploads/1791259263111-353021071.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 2500000.00, 2600000.00, NULL, NULL, NULL),
+(26, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 12, 19, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(27, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 13, 19, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(28, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 14, 19, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(29, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 15, 20, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(30, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 16, 20, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(31, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 17, 20, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(32, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 18, 10, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(33, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 19, 10, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(34, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 20, 10, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(35, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 21, 6, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(36, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 22, 6, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(37, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 23, 6, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(38, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 24, 7, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(39, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 25, 7, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(40, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 26, 7, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(41, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 27, 16, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(42, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 28, 16, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(43, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 29, 16, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(44, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 30, 4, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(45, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 31, 4, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(46, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 32, 4, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(47, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 33, 9, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(48, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 34, 9, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(49, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 35, 9, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(50, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 36, 15, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(51, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 37, 15, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(52, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 38, 15, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(53, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 39, 12, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(54, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 40, 12, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(55, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 41, 12, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(56, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 42, 13, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(57, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 43, 13, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(58, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 44, 13, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(59, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 45, 14, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(60, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 46, 14, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(61, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 47, 14, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(62, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 48, 21, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(63, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 49, 21, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(64, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 50, 21, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(65, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 51, 22, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(66, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 52, 22, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(67, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 53, 23, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(68, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 54, 23, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(69, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 55, 11, 'Phòng/Đêm', 500000.00, 700000.00, NULL, NULL, NULL),
+(70, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 56, 11, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(71, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 57, 8, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(72, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 58, 8, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(73, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 59, 18, 'Phòng/Đêm', 1200000.00, 1600000.00, NULL, NULL, NULL),
+(74, 'Phòng Standard', 'Khách sạn', 'Dịch vụ lưu trú chất lượng cao', NULL, 'Active', 60, 18, 'Phòng/Đêm', 800000.00, 1050000.00, NULL, NULL, NULL),
+(75, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 12, 19, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(76, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 12, 19, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(77, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(78, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(79, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(80, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 13, 19, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(81, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(82, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(83, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(84, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 14, 19, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(85, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(86, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(87, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(88, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 15, 20, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(89, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(90, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(91, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(92, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 16, 20, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(93, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 17, 20, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(94, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 17, 20, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(95, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(96, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(97, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(98, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 18, 10, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(99, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(100, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(101, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(102, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 19, 10, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(103, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 20, 10, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(104, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 20, 10, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(105, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(106, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(107, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(108, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 21, 6, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(109, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(110, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(111, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(112, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 22, 6, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(113, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 23, 6, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(114, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 23, 6, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(115, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(116, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(117, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(118, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 24, 7, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(119, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(120, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(121, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(122, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 25, 7, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(123, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 26, 7, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(124, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 26, 7, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(125, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(126, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(127, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(128, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 27, 16, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(129, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(130, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(131, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(132, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 28, 16, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(133, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 29, 16, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(134, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 29, 16, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(135, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(136, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(137, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(138, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 30, 4, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(139, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(140, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(141, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(142, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 31, 4, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(143, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 32, 4, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(144, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 32, 4, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(145, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(146, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(147, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(148, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 33, 9, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(149, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(150, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(151, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(152, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 34, 9, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(153, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 35, 9, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(154, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 35, 9, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(155, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(156, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(157, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(158, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 36, 15, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(159, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(160, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(161, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(162, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 37, 15, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(163, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 38, 15, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(164, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 38, 15, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(165, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(166, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(167, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(168, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 39, 12, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(169, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(170, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(171, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(172, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 40, 12, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(173, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 41, 12, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(174, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 41, 12, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(175, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(176, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(177, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(178, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 42, 13, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(179, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(180, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(181, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(182, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 43, 13, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(183, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 44, 13, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(184, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 44, 13, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(185, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(186, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(187, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(188, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 45, 14, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(189, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(190, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(191, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(192, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 46, 14, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(193, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(194, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(195, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(196, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 47, 14, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(197, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(198, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(199, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(200, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 48, 21, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(201, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 49, 21, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(202, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 49, 21, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(203, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(204, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(205, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(206, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 50, 21, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(207, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 51, 22, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(208, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 51, 22, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(209, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(210, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(211, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(212, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 52, 22, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(213, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(214, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(215, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(216, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 53, 23, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(217, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 54, 23, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(218, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 54, 23, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(219, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 55, 11, NULL, 650000.00, 900000.00, NULL, NULL, NULL),
+(220, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 55, 11, NULL, 850000.00, 1200000.00, NULL, NULL, NULL),
+(221, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(222, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(223, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(224, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 56, 11, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(225, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(226, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(227, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(228, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 57, 8, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(229, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(230, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(231, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(232, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 58, 8, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(233, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 1350000.00, 1800000.00, NULL, NULL, NULL),
+(234, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 1550000.00, 2100000.00, NULL, NULL, NULL),
+(235, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 1800000.00, 2450000.00, NULL, NULL, NULL),
+(236, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 59, 18, NULL, 2200000.00, 2900000.00, NULL, NULL, NULL),
+(237, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 950000.00, 1250000.00, NULL, NULL, NULL),
+(238, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 1150000.00, 1550000.00, NULL, NULL, NULL),
+(239, 'Phòng Executive', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 1400000.00, 1900000.00, NULL, NULL, NULL),
+(240, 'Phòng Suite', 'Khách sạn', NULL, NULL, 'Active', 60, 18, NULL, 1800000.00, 2350000.00, NULL, NULL, NULL),
+(301, 'Set Menu Tiêu Chuẩn - Âu Lạc Thịnh', 'Nhà hàng', 'Thực đơn 6 món chuẩn đoàn, bàn 10 người', NULL, 'Active', 201, 1, 'Suất', 130000.00, 150000.00, NULL, NULL, NULL),
+(302, 'Set Menu Hải Sản - Thùy Dương', 'Nhà hàng', 'Thực đơn 7 món hải sản biển, có lẩu', NULL, 'Active', 202, 1, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(303, 'Set Menu V.I.P - Làng Biển', 'Nhà hàng', 'Thực đơn 8 món, setup riêng khu vực VIP', NULL, 'Active', 203, 1, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(304, 'Buffet Rau Không Giới Hạn - Leguda', 'Nhà hàng', 'Ăn kèm 2 loại nước lẩu và hải sản, thịt nướng', NULL, 'Active', 204, 2, 'Suất', 140000.00, 169000.00, NULL, NULL, NULL),
+(305, 'Set Menu Cơm Đoàn - Rừng Thông Mơ', 'Nhà hàng', 'Đặc sản Cơm lam gà nướng nguyên con', NULL, 'Active', 205, 2, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(306, 'Set Cơm Niêu - Tâm Châu', 'Nhà hàng', 'Phục vụ ăn trưa nhanh dọc đường', NULL, 'Active', 206, 2, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(307, 'Set Menu Gala Dinner - Hạnh Nhung', 'Nhà hàng', 'Hải sản cao cấp, hỗ trợ setup âm thanh sân khấu', NULL, 'Active', 207, 3, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(308, 'Set Menu Hoàng Hôn - Xin Chào', 'Nhà hàng', 'Bàn view biển ngắm hoàng hôn, thực đơn 8 món', NULL, 'Active', 208, 3, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(309, 'Set Menu Đoàn Đông - Trùng Dương', 'Nhà hàng', 'Thực đơn cơ bản, lên món siêu tốc cho đoàn >100 người', NULL, 'Active', 209, 3, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(310, 'Set Lẩu Cá Hồi - Chợ Tình Sapa', 'Nhà hàng', 'Lẩu cá hồi Sapa đặc sản, ăn kèm rau rừng', NULL, 'Active', 210, 4, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(311, 'Set Menu Đặc Sản - Cá Hồi Vua', 'Nhà hàng', 'Cá hồi tươi sống làm 4 món, lẩu cá tầm', NULL, 'Active', 211, 4, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(312, 'Set Gà Đồi Lợn Bản - Hải Lâm', 'Nhà hàng', 'Thực đơn đậm chất Tây Bắc, phù hợp mọi lứa tuổi', NULL, 'Active', 212, 4, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(313, 'Set Menu Cung Đình - Không Gian Xưa', 'Nhà hàng', 'Thực đơn cung đình kết hợp dân dã, bàn 10 người', NULL, 'Active', 213, 5, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(314, 'Buffet Hải Sản Tiệc - 4U Beach', 'Nhà hàng', 'Tổ chức Gala Dinner trên bãi biển Mỹ Khê', NULL, 'Active', 214, 5, 'Suất', 350000.00, 450000.00, NULL, NULL, NULL),
+(315, 'Combo Đặc Sản - Trần', 'Nhà hàng', 'Bánh tráng cuốn thịt heo 2 đầu da, Mì Quảng', NULL, 'Active', 215, 5, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(316, 'Buffet Làng Quê - Làng Lụa', 'Nhà hàng', 'Gánh hàng rong với hơn 40 món đặc sản Quảng Nam', NULL, 'Active', 216, 6, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(317, 'Set Menu Phố Cổ - Fullmoon', 'Nhà hàng', 'Cao lầu, hoành thánh, cơm gà và thả hoa đăng', NULL, 'Active', 217, 6, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(318, 'Set Ăn Miệt Vườn - Rừng Dừa', 'Nhà hàng', 'Dùng bữa tại chòi lá sau khi đi thuyền thúng', NULL, 'Active', 218, 6, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(319, 'Set Cơm Vua - Cung Đình Huế', 'Nhà hàng', 'Cơm Vua 8 món, khách được mặc hoàng bào chụp ảnh', NULL, 'Active', 219, 7, 'Suất', 300000.00, 380000.00, NULL, NULL, NULL),
+(320, 'Set Menu Ăn Tối Trên Sông - Nổi SH', 'Nhà hàng', 'Vừa dùng bữa tối vừa nghe Ca Huế trên sông Hương', NULL, 'Active', 220, 7, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(321, 'Set Menu Tiêu Chuẩn - Chân Đồi', 'Nhà hàng', 'Thực đơn 6 món ăn kèm chuẩn vị Huế', NULL, 'Active', 221, 7, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(322, 'Buffet Quốc Tế - Sen Tây Hồ', 'Nhà hàng', 'Hơn 200 món ăn Á Âu, sức chứa hàng ngàn khách', NULL, 'Active', 222, 8, 'Suất', 380000.00, 450000.00, NULL, NULL, NULL),
+(323, 'Set Menu Cao Cấp - Lục Thủy', 'Nhà hàng', 'Thực đơn chuẩn sao, view nhìn ra Hồ Gươm', NULL, 'Active', 223, 8, 'Suất', 400000.00, 500000.00, NULL, NULL, NULL),
+(324, 'Set Hội Nghị - Trống Đồng Palace', 'Nhà hàng', 'Chuyên nhận đoàn MICE, hội trường cực lớn', NULL, 'Active', 224, 8, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(325, 'Set Menu Hải Sản - Hồng Hạnh 3', 'Nhà hàng', 'Hải sản Hạ Long tươi sống, bề bề rang muối', NULL, 'Active', 225, 9, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(326, 'Set Lẩu Cua Biển - Cua Vàng', 'Nhà hàng', 'Lẩu cua biển nấu trong niêu đất độc quyền', NULL, 'Active', 226, 9, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(327, 'Set Menu View Vịnh - Phương Nam', 'Nhà hàng', 'Bàn 10 người ngắm Vịnh Hạ Long, có sẵn sân khấu', NULL, 'Active', 227, 9, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(328, 'Set Menu Hải Sản Kỳ Co - Cococamp', 'Nhà hàng', 'Thực đơn ăn trưa 8 món sau khi lặn ngắm san hô', NULL, 'Active', 228, 10, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(329, 'Set Menu Tiêu Chuẩn - Hướng Dương', 'Nhà hàng', 'Phục vụ đoàn tham quan Eo Gió, đầy đủ tôm mực', NULL, 'Active', 229, 10, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(330, 'Set Cơm Đoàn - Mộc Viên', 'Nhà hàng', 'Phục vụ cơm phần gia đình mộc mạc, đậm vị đất Võ', NULL, 'Active', 230, 10, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(331, 'Set Menu Hải Sản - Cây Bàng', 'Nhà hàng', 'Gỏi cá mai, tôm nướng muối ớt, lẩu cá bớp', NULL, 'Active', 231, 11, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(332, 'Set Gala Dinner - Hồng Vinh', 'Nhà hàng', 'Có khuôn viên tổ chức Gala ngoài trời, hỗ trợ âm thanh', NULL, 'Active', 232, 11, 'Suất', 250000.00, 300000.00, NULL, NULL, NULL),
+(333, 'Set Tiêu Chuẩn - Làng Chài', 'Nhà hàng', 'Set thực đơn 7 món hải sản bình dân', NULL, 'Active', 233, 11, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(334, 'Set Ăn Tối Du Thuyền - Cần Thơ', 'Nhà hàng', 'Du ngoạn sông Hậu 2 tiếng, đờn ca tài tử', NULL, 'Active', 234, 12, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(335, 'Set Menu Miệt Vườn - Hoa Sứ', 'Nhà hàng', 'Cá tai tượng chiên xù, lẩu mắm đồng quê', NULL, 'Active', 235, 12, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(336, 'Set Menu Cao Cấp - Lúa Nếp', 'Nhà hàng', 'Thực đơn các món ăn biến tấu từ đặc sản miền Tây', NULL, 'Active', 236, 12, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(337, 'Set Tiêu Chuẩn - Thu Ba', 'Nhà hàng', 'Phục vụ đoàn lớn, thực đơn 6 món hải sản tươi', NULL, 'Active', 237, 13, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(338, 'Set Đặc Sản Biển - Cánh Buồm', 'Nhà hàng', 'Có ốc vú nàng, gỏi cá nhám đặc trưng', NULL, 'Active', 238, 13, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(339, 'Set Cơm Đoàn - Hải Sản Ớt', 'Nhà hàng', 'Đồ ăn lên nhanh, nóng hổi, phù hợp tour tâm linh', NULL, 'Active', 239, 13, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(340, 'Set Menu Hải Sản - Gành Hào', 'Nhà hàng', 'Thực đơn 8 món, nhà hàng sát biển view hoàng hôn', NULL, 'Active', 240, 14, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(341, 'Set Tiêu Chuẩn - Lâm Đường', 'Nhà hàng', 'Không gian nổi trên biển, khu Gala riêng biệt', NULL, 'Active', 241, 14, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(342, 'Buffet Nướng Vạn Chài', 'Nhà hàng', 'Phục vụ không giới hạn các loại ốc, tôm, mực', NULL, 'Active', 242, 14, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(343, 'Set Dê Núi - Hoàng Giang', 'Nhà hàng', 'Cơm cháy sốt mỡ hành, dê tái chanh, dê xào lăn', NULL, 'Active', 243, 15, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(344, 'Set Buffet Chay - Thăng Long', 'Nhà hàng', 'Phục vụ các đoàn hành hương Chùa Bái Đính', NULL, 'Active', 244, 15, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(345, 'Set Menu Tiêu Chuẩn - Tam Cốc', 'Nhà hàng', 'Phục vụ bữa trưa trước/sau khi đi thuyền Tam Cốc', NULL, 'Active', 245, 15, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(346, 'Set Gala Dinner - Lá Cọ Beach', 'Nhà hàng', 'Mực nháy, cá đối nướng, thiết kế sẵn backdrop', NULL, 'Active', 246, 16, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(347, 'Set Menu Trên Sông - Đại Dương', 'Nhà hàng', 'Ăn tối trên nhà hàng nổi sông Nhật Lệ', NULL, 'Active', 247, 16, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(348, 'Set Bồi Bổ - Sabochi', 'Nhà hàng', 'Các món ăn tiềm, hầm kết hợp sâm Bố Chính', NULL, 'Active', 248, 16, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(349, 'Buffet Khẩn Hoang - Bình Quới', 'Nhà hàng', 'Gánh hàng rong tái hiện ẩm thực 3 miền', NULL, 'Active', 249, 18, 'Suất', 280000.00, 350000.00, NULL, NULL, NULL),
+(350, 'Set Menu Dimsum - Tân Hải Vân', 'Nhà hàng', 'Menu đồ Hoa đặc sắc phục vụ khách Inbound', NULL, 'Active', 250, 18, 'Suất', 300000.00, 380000.00, NULL, NULL, NULL),
+(351, 'Set Tiệc Cưới/Hội Nghị - Vườn Cau', 'Nhà hàng', 'Sảnh tiệc hoành tráng, âm thanh ánh sáng chuẩn', NULL, 'Active', 251, 18, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(352, 'Set Đặc Sản - Ngói Đỏ', 'Nhà hàng', 'Gà đồi nướng, lợn bản xào, rau rừng', NULL, 'Active', 252, 19, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(353, 'Set Cơm Niêu Tiêu Chuẩn', 'Nhà hàng', 'Bữa trưa dọc đường, các món kho quẹt đậm đà', NULL, 'Active', 253, 19, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(354, 'Set Ăn View Sông - Sông Miện', 'Nhà hàng', 'Cá suối chiên giòn, măng rừng xào', NULL, 'Active', 254, 19, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(355, 'Set Sò Huyết Đầm Ô Loan - Quang Anh', 'Nhà hàng', 'Đặc sản sò huyết, mắt cá ngừ đại dương', NULL, 'Active', 255, 20, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(356, 'Set Gala Dinner - Sala Tuy Hòa', 'Nhà hàng', 'Phục vụ tiệc cao cấp, hội nghị khách hàng', NULL, 'Active', 256, 20, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(357, 'Set Tiêu Chuẩn - Năm Đô', 'Nhà hàng', 'Ăn trưa nhanh chóng, giá cả cực kỳ cạnh tranh', NULL, 'Active', 257, 20, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(358, 'Set Menu Sinh Thái - Suối Ong', 'Nhà hàng', 'Gà nướng mọi, heo rừng xào sả ớt', NULL, 'Active', 258, 21, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(359, 'Set Cơm Lam Gà Sa Lửa - Hoa Mai', 'Nhà hàng', 'Đặc sản Tây Nguyên không thể thiếu trong tour', NULL, 'Active', 259, 21, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(360, 'Set Bê Thui - Thủy Cương', 'Nhà hàng', 'Thực đơn ăn nhậu lai rai cho khách đoàn', NULL, 'Active', 260, 21, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(361, 'Set Menu Tiêu Chuẩn - Phượng Vĩ', 'Nhà hàng', 'Lẩu cá kèo, lươn om sả, cá rô kho tộ', NULL, 'Active', 261, 22, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(362, 'Set Cua Cà Mau - Hương Đất Mũi', 'Nhà hàng', 'Đảm bảo mỗi khách 1 con cua Cà Mau chính gốc', NULL, 'Active', 262, 22, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(363, 'Set Menu Hội Nghị - Vân Thủy', 'Nhà hàng', 'Không gian lịch sự, phục vụ chuyên nghiệp', NULL, 'Active', 263, 22, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(364, 'Set Tiêu Chuẩn - Long Châu', 'Nhà hàng', 'Các món cuốn bánh tráng, rau rừng Tây Ninh', NULL, 'Active', 264, 23, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(365, 'Set Menu Chay - Sinh Đôi', 'Nhà hàng', 'Phục vụ đoàn hành hương các dịp rằm, lễ lớn', NULL, 'Active', 265, 23, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(366, 'Set Bò Tơ - Năm Sánh', 'Nhà hàng', 'Bò tơ nướng lụi, lẩu bò sụn ngon nức tiếng', NULL, 'Active', 266, 23, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(367, 'Set Công Tử Bạc Liêu', 'Nhà hàng', 'Các món ăn mang phong vị gia đình bá hộ xưa', NULL, 'Active', 267, 24, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(368, 'Set Gala Trữ Tình - Hồ Nam', 'Nhà hàng', 'Vừa dùng tiệc vừa nghe vọng cổ đờn ca tài tử', NULL, 'Active', 268, 24, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(369, 'Set Menu Tiêu Chuẩn - Thủy Tạ', 'Nhà hàng', 'Lẩu chua cá hú, cá lóc kho tộ mặn mà', NULL, 'Active', 269, 24, 'Suất', 150000.00, 180000.00, NULL, NULL, NULL),
+(370, 'Set Menu Xứ Hoa - Hoa Sứ Sa Đéc', 'Nhà hàng', 'Bữa trưa miệt vườn giữa làng hoa kiểng', NULL, 'Active', 270, 25, 'Suất', 140000.00, 170000.00, NULL, NULL, NULL),
+(371, 'Set Đặc Sản - Xẻo Quýt', 'Nhà hàng', 'Cá lóc nướng trui cuộn lá sen non đặc trưng', NULL, 'Active', 271, 25, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(372, 'Set Tiêu Chuẩn - Tám Thành', 'Nhà hàng', 'Cơm đoàn lên món nhanh chóng, giá siêu tốt', NULL, 'Active', 272, 25, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(373, 'Phòng Classic King View Biển', 'Khách sạn', 'Bao gồm ăn sáng buffet, hướng biển tuyệt đẹp', NULL, 'Active', 273, 1, 'Phòng/Đêm', 2800000.00, 3200000.00, NULL, NULL, NULL),
+(374, 'Phòng Deluxe Ocean Front', 'Khách sạn', 'Có đường hầm riêng ra biển, 2 giường đơn', NULL, 'Active', 274, 1, 'Phòng/Đêm', 1600000.00, 1900000.00, NULL, NULL, NULL),
+(375, 'Set Menu Tiệc Nướng Ven Sông', 'Nhà hàng', 'Tôm hùm baby, mực lá nướng sa tế, lẩu cá bớp', NULL, 'Active', 275, 1, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(376, 'Set Menu Cao Cấp Yến Sào Hải Sản', 'Nhà hàng', 'Súp yến thả gà, tôm sốt hoàng kim, cơm chiên hải sản', NULL, 'Active', 276, 1, 'Suất', 350000.00, 450000.00, NULL, NULL, NULL),
+(377, 'Phòng Deluxe Mountain View', 'Khách sạn', 'View đồi núi thông reo, bao gồm buffet sáng', NULL, 'Active', 277, 2, 'Phòng/Đêm', 1800000.00, 2200000.00, NULL, NULL, NULL),
+(378, 'Phòng Superior Garden View', 'Khách sạn', 'Khuôn viên ven hồ ngợp hoa cỏ, hồ bơi nước ấm', NULL, 'Active', 278, 2, 'Phòng/Đêm', 1500000.00, 1850000.00, NULL, NULL, NULL),
+(379, 'Set Cơm Niêu Lẩu Gà Lá É', 'Nhà hàng', 'Lẩu gà lá é đặc sản, cơm niêu thịt kho tộ', NULL, 'Active', 279, 2, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(380, 'Set Menu BBQ Nhạc Trịnh Memory', 'Nhà hàng', 'Thịt nướng đá, lẩu nấm rơm, chương trình ca nhạc', NULL, 'Active', 280, 2, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(381, 'Phòng Standard Ocean View', 'Khách sạn', 'Resort sát biển bãi Trường, hồ bơi ngoài trời tràn bờ', NULL, 'Active', 281, 3, 'Phòng/Đêm', 2100000.00, 2600000.00, NULL, NULL, NULL),
+(382, 'Phòng Superior King', 'Khách sạn', 'Tiêu chuẩn 5 sao Accor, bao gồm ăn sáng', NULL, 'Active', 282, 3, 'Phòng/Đêm', 2300000.00, 2800000.00, NULL, NULL, NULL),
+(383, 'Set Menu Hải Sản Bãi Dài', 'Nhà hàng', 'Gỏi cá trích, lẩu mắm hải sản, còi biên mai nướng', NULL, 'Active', 283, 3, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(384, 'Set Cơm Đoàn Bãi Sao', 'Nhà hàng', 'Mực trứng hấp gừng, canh chua cá bớp, ghẹ hấp', NULL, 'Active', 284, 3, 'Suất', 180000.00, 220000.00, NULL, NULL, NULL),
+(385, 'Phòng Classic Garden View', 'Khách sạn', 'Tầm nhìn đỉnh Fansipan, dịch vụ khoáng nóng', NULL, 'Active', 285, 4, 'Phòng/Đêm', 2200000.00, 2700000.00, NULL, NULL, NULL),
+(386, 'Phòng Executive Suite', 'Khách sạn', 'Nằm ngay trung tâm quảng trường Sa Pa', NULL, 'Active', 286, 4, 'Phòng/Đêm', 1400000.00, 1750000.00, NULL, NULL, NULL),
+(387, 'Set Gà Đen Hầm Sâm Tây Bắc', 'Nhà hàng', 'Gà đen H\'Mông hầm sâm, lợn mán quay giòn, xôi ngũ sắc', NULL, 'Active', 287, 4, 'Suất', 200000.00, 260000.00, NULL, NULL, NULL),
+(388, 'Set Thắng Cố & Lẩu Nấm Ngựa', 'Nhà hàng', 'Đặc sản Thắng cố ngựa truyền thống, rau mầm đá', NULL, 'Active', 288, 4, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL),
+(389, 'Phòng Garden Superior', 'Khách sạn', 'Resort 5 sao bãi biển Mỹ Khê, hồ bơi Lagoon', NULL, 'Active', 289, 5, 'Phòng/Đêm', 2900000.00, 3500000.00, NULL, NULL, NULL),
+(390, 'Phòng Superior King River View', 'Khách sạn', 'View sông Hàn & cầu Trần Thị Lý', NULL, 'Active', 290, 5, 'Phòng/Đêm', 1600000.00, 2000000.00, NULL, NULL, NULL),
+(391, 'Set Menu Đất Quảng Madame Lạn', 'Nhà hàng', 'Bánh tráng cuốn thịt heo hai đầu da, mì Quảng gà', NULL, 'Active', 291, 5, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL),
+(392, 'Set Menu Hải Sản Biển Mỹ Khê', 'Nhà hàng', 'Chip chip hấp sả, tôm đất nướng muối ớt, lẩu cá bớp', NULL, 'Active', 292, 5, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(393, 'Phòng Deluxe Wing Garden View', 'Khách sạn', 'Hồ bơi nước mặn, đưa đón phố cổ miễn phí', NULL, 'Active', 293, 6, 'Phòng/Đêm', 1900000.00, 2400000.00, NULL, NULL, NULL),
+(394, 'Phòng Senior Deluxe', 'Khách sạn', 'Gần bãi biển Cửa Đại và Phố cổ', NULL, 'Active', 294, 6, 'Phòng/Đêm', 1300000.00, 1650000.00, NULL, NULL, NULL),
+(395, 'Set Menu Phố Cổ Đặc Sản', 'Nhà hàng', 'Cao lầu Hội An, hoành thánh chiên, bánh vạc', NULL, 'Active', 295, 6, 'Suất', 170000.00, 220000.00, NULL, NULL, NULL),
+(396, 'Set Cơm Gà xé lá chanh & Gỏi gà', 'Nhà hàng', 'Cơm gà luộc xé lá chanh, lòng mề xào nghệ', NULL, 'Active', 296, 6, 'Suất', 120000.00, 150000.00, NULL, NULL, NULL),
+(397, 'Phòng Deluxe City View', 'Khách sạn', 'Phong cách kiến trúc Cung đình pha Pháp cổ', NULL, 'Active', 297, 7, 'Phòng/Đêm', 1600000.00, 2000000.00, NULL, NULL, NULL),
+(398, 'Phòng Superior River View', 'Khách sạn', 'View sông Hương thơ mộng, gần cầu Tràng Tiền', NULL, 'Active', 298, 7, 'Phòng/Đêm', 1100000.00, 1400000.00, NULL, NULL, NULL),
+(399, 'Set Menu Tiệc Cung Đình Cố Đô', 'Nhà hàng', 'Chả phụng, nem công, cơm hấp lá sen, chè hạt sen', NULL, 'Active', 299, 7, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(400, 'Set Bánh Huế & Bún Bò Cố Đô', 'Nhà hàng', 'Khay bánh bèo, nậm, lọc, bún bò Huế chuẩn vị', NULL, 'Active', 300, 7, 'Suất', 140000.00, 180000.00, NULL, NULL, NULL),
+(401, 'Phòng Deluxe Lake View', 'Khách sạn', 'View Hồ Tây và Hồ Trúc Bạch ngút ngàn', NULL, 'Active', 301, 8, 'Phòng/Đêm', 2500000.00, 3100000.00, NULL, NULL, NULL),
+(402, 'Phòng Deluxe King High Floor', 'Khách sạn', 'Tầng cao view ôm trọn thành phố Hà Nội', NULL, 'Active', 302, 8, 'Phòng/Đêm', 2800000.00, 3400000.00, NULL, NULL, NULL),
+(403, 'Buffet Quốc Tế Sen Tây Hồ', 'Nhà hàng', 'Hơn 150 món hải sản, đồ nướng, đặc sản 3 miền', NULL, 'Active', 303, 8, 'Suất', 290000.00, 360000.00, NULL, NULL, NULL),
+(404, 'Set Chả Cả Lăng Gia Truyền', 'Nhà hàng', 'Cá lăng chiên thì là, mắm tôm tỏi ớt, bún tươi', NULL, 'Active', 304, 8, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL),
+(405, 'Phòng Deluxe Golf View', 'Khách sạn', 'View sân golf 18 lỗ và Vịnh Hạ Long', NULL, 'Active', 305, 9, 'Phòng/Đêm', 1700000.00, 2100000.00, NULL, NULL, NULL),
+(406, 'Phòng Superior Bay View', 'Khách sạn', 'Gần công viên Sun World, view cầu Bãi Cháy', NULL, 'Active', 306, 9, 'Phòng/Đêm', 1800000.00, 2200000.00, NULL, NULL, NULL),
+(407, 'Set Lẩu Cua Vàng Hải Sản', 'Nhà hàng', 'Cua biển Hạ Long, chả mực giã tay, ốc hương', NULL, 'Active', 307, 9, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(408, 'Set Cơm Đoàn Hải Sản Quảng Ninh', 'Nhà hàng', 'Cá song hấp hồng kông, bề bề rang muối, canh nghêu', NULL, 'Active', 308, 9, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL),
+(409, 'Phòng Deluxe Sea View', 'Khách sạn', 'Khách sạn 4 sao ngay bờ biển thành phố', NULL, 'Active', 309, 10, 'Phòng/Đêm', 1200000.00, 1500000.00, NULL, NULL, NULL),
+(410, 'Phòng Superior City View', 'Khách sạn', 'Thiết kế hiện đại, bao gồm ăn sáng', NULL, 'Active', 310, 10, 'Phòng/Đêm', 1100000.00, 1400000.00, NULL, NULL, NULL),
+(411, 'Set Menu Hải Sản Nhơn Lý', 'Nhà hàng', 'Cua huỳnh đế, ốc vú nàng, bún chả cá Quy Nhơn', NULL, 'Active', 311, 10, 'Suất', 200000.00, 260000.00, NULL, NULL, NULL),
+(412, 'Set Cơm Đoàn Hải Sản Kỳ Co', 'Nhà hàng', 'Mực lá hấp gừng, tôm biển nướng, lẩu sứa', NULL, 'Active', 312, 10, 'Suất', 170000.00, 220000.00, NULL, NULL, NULL),
+(413, 'Phòng Azul Sea View', 'Khách sạn', 'Nằm trên dốc đồi nhìn ra biển Mũi Né', NULL, 'Active', 313, 11, 'Phòng/Đêm', 1800000.00, 2300000.00, NULL, NULL, NULL),
+(414, 'Set Menu Hải Sản Cây Bàng', 'Nhà hàng', 'Lẩu thả Mũi Né đặc sản, gỏi dông cát', NULL, 'Active', 231, 11, 'Suất', 220000.00, 280000.00, NULL, NULL, NULL),
+(415, 'Phòng Deluxe River View', 'Khách sạn', 'View sông Hậu & bến Ninh Kiều', NULL, 'Active', 314, 12, 'Phòng/Đêm', 1100000.00, 1400000.00, NULL, NULL, NULL),
+(416, 'Set Menu Tiệc Du Thuyền Sông Hậu', 'Nhà hàng', 'Vừa dùng bữa vừa thưởng thức đờn ca tài tử', NULL, 'Active', 234, 12, 'Suất', 200000.00, 260000.00, NULL, NULL, NULL),
+(417, 'Phòng Superior Executive', 'Khách sạn', 'Tiêu chuẩn 5 sao quốc tế Accor', NULL, 'Active', 315, 14, 'Phòng/Đêm', 1900000.00, 2400000.00, NULL, NULL, NULL),
+(418, 'Set Menu Hải Sản Hoàng Hôn Gành Hào', 'Nhà hàng', 'Cua rang me, tôm tích nướng, ngắm hoàng hôn', NULL, 'Active', 316, 14, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(419, 'Phòng Superior Garden View', 'Khách sạn', 'Ngay lối vào bến thuyền Tam Cốc', NULL, 'Active', 317, 15, 'Phòng/Đêm', 1500000.00, 1900000.00, NULL, NULL, NULL),
+(420, 'Set Đặc Sản Dê Núi Ninh Bình', 'Nhà hàng', 'Dê tái chanh, dê nướng tảng, cơm cháy sốt dê', NULL, 'Active', 318, 15, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL);
+INSERT INTO `services` (`service_id`, `service_name`, `service_type`, `description`, `image_url`, `status`, `partner_id`, `destination_id`, `unit`, `base_cost`, `selling_price`, `attributes`, `action_verb`, `short_display_name`) VALUES
+(421, 'Phòng Premium Deluxe', 'Khách sạn', 'Nằm ngay phố đi bộ Nguyễn Huệ', NULL, 'Active', 319, 18, 'Phòng/Đêm', 2200000.00, 2700000.00, NULL, NULL, NULL),
+(422, 'Set Cơm Niêu Đập Nổi Tiếng', 'Nhà hàng', 'Trình diễn đập niêu cơm, cá kho tộ, canh chua', NULL, 'Active', 320, 18, 'Suất', 200000.00, 260000.00, NULL, NULL, NULL),
+(423, 'Phòng Deluxe City View', 'Khách sạn', 'Khách sạn 4 sao đẹp nhất thành phố Hà Giang', NULL, 'Active', 321, 19, 'Phòng/Đêm', 1200000.00, 1500000.00, NULL, NULL, NULL),
+(424, 'Set Menu Đặc Sản Hà Giang', 'Nhà hàng', 'Thịt lợn cắp nách nướng, lạp xưởng hun khói, rau cải mèo', NULL, 'Active', 252, 19, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(425, 'Phòng Superior Ocean View', 'Khách sạn', 'Sát biển Tuy Hòa, bao gồm ăn sáng', NULL, 'Active', 322, 20, 'Phòng/Đêm', 1100000.00, 1400000.00, NULL, NULL, NULL),
+(426, 'Set Sò Huyết Đầm O Loan', 'Nhà hàng', 'Sò huyết nướng mỡ hành, tôm hùm nướng, cháo hàu', NULL, 'Active', 323, 20, 'Suất', 200000.00, 250000.00, NULL, NULL, NULL),
+(427, 'Phòng Premier Ocean View', 'Khách sạn', 'Resort 5 sao cao cấp ven biển Mũi Né', NULL, 'Active', 324, 11, 'Phòng/Đêm', 2600000.00, 3200000.00, NULL, NULL, NULL),
+(428, 'Phòng Deluxe Garden View', 'Khách sạn', 'Khuôn viên làng tre xanh mát', NULL, 'Active', 325, 11, 'Phòng/Đêm', 1500000.00, 1850000.00, NULL, NULL, NULL),
+(429, 'Set Menu Cơm Đoàn Làng Chài', 'Nhà hàng', 'Cá thùy nướng, gỏi ốc giác, canh chua cá bớp', NULL, 'Active', 326, 11, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL),
+(430, 'Phòng Executive Suite City View', 'Khách sạn', 'Tòa nhà cao nhất Tây Nam Bộ, góc nhìn ôm trọn sông Hậu', NULL, 'Active', 327, 12, 'Phòng/Đêm', 1800000.00, 2200000.00, NULL, NULL, NULL),
+(431, 'Phòng Superior Garden', 'Khách sạn', 'Kiến trúc phong cách Indochine Pháp cổ', NULL, 'Active', 328, 12, 'Phòng/Đêm', 1600000.00, 1950000.00, NULL, NULL, NULL),
+(432, 'Set Cơm Niêu Đột Phá Miền Tây', 'Nhà hàng', 'Cá kho tộ, lẩu mắm miền Tây, rau luộc kho quẹt', NULL, 'Active', 329, 12, 'Suất', 160000.00, 200000.00, NULL, NULL, NULL),
+(433, 'Villa 1 Phòng Ngủ Ocean View', 'Khách sạn', 'Resort 5 sao siêu sang trọng hàng đầu Côn Đảo', NULL, 'Active', 330, 13, 'Căn/Đêm', 9500000.00, 11500000.00, NULL, NULL, NULL),
+(434, 'Phòng Deluxe City View', 'Khách sạn', 'Ngay trung tâm thị trấn Côn Đảo, sát biển', NULL, 'Active', 331, 13, 'Phòng/Đêm', 1800000.00, 2200000.00, NULL, NULL, NULL),
+(435, 'Set Menu Hải Sản Côn Đảo', 'Nhà hàng', 'Cua mặt người, ốc vú nàng, gỏi cá nhám', NULL, 'Active', 332, 13, 'Suất', 250000.00, 320000.00, NULL, NULL, NULL),
+(436, 'Phòng Superior Garden View', 'Khách sạn', 'Resort bán đảo Bảo Ninh sát biển & sông Nhật Lệ', NULL, 'Active', 333, 16, 'Phòng/Đêm', 1500000.00, 1850000.00, NULL, NULL, NULL),
+(437, 'Phòng Deluxe River View', 'Khách sạn', 'Tòa nhà cao tầng trung tâm Đồng Hới', NULL, 'Active', 334, 16, 'Phòng/Đêm', 1400000.00, 1750000.00, NULL, NULL, NULL),
+(438, 'Set Menu Hải Sản Nhật Lệ', 'Nhà hàng', 'Đẻn biển hấp nướng, mực tuộc nhúng giấm, lẩu cá khoai', NULL, 'Active', 335, 16, 'Suất', 180000.00, 230000.00, NULL, NULL, NULL),
+(439, 'Phòng Deluxe King', 'Khách sạn', 'Khách sạn 5 sao cao cấp nhất trung tâm Buôn Ma Thuột', NULL, 'Active', 336, 21, 'Phòng/Đêm', 1200000.00, 1500000.00, NULL, NULL, NULL),
+(440, 'Phòng Superior Twin', 'Khách sạn', 'Nằm ở vị trí đắc địa, thiết kế độc đáo', NULL, 'Active', 337, 21, 'Phòng/Đêm', 950000.00, 1200000.00, NULL, NULL, NULL),
+(441, 'Set Gà Nướng Sa Lửa & Cơm Lam', 'Nhà hàng', 'Gà sa lửa, cơm lam Tây Nguyên, heo rẫy nướng sả', NULL, 'Active', 338, 21, 'Suất', 170000.00, 210000.00, NULL, NULL, NULL),
+(442, 'Phòng Deluxe King City View', 'Khách sạn', 'Khách sạn 5 sao hàng đầu tỉnh Cà Mau', NULL, 'Active', 339, 22, 'Phòng/Đêm', 1100000.00, 1400000.00, NULL, NULL, NULL),
+(443, 'Phòng Superior Twin', 'Khách sạn', 'Khuôn viên thoáng mát, bể bơi ngoài trời', NULL, 'Active', 340, 22, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(444, 'Set Menu Cua Gạch Đất Mũi', 'Nhà hàng', 'Mỗi khách 1 con cua gạch Cà Mau hấp/sốt me, vọp nướng mỡ hành', NULL, 'Active', 341, 22, 'Suất', 260000.00, 330000.00, NULL, NULL, NULL),
+(445, 'Phòng Deluxe King Mountain View', 'Khách sạn', 'Tòa tháp 30 tầng ngắm trọn vẹn Núi Bà Đen', NULL, 'Active', 342, 23, 'Phòng/Đêm', 1300000.00, 1600000.00, NULL, NULL, NULL),
+(446, 'Phòng Superior City', 'Khách sạn', 'Khách sạn 4 sao ngay trung tâm TP Tây Ninh', NULL, 'Active', 343, 23, 'Phòng/Đêm', 850000.00, 1050000.00, NULL, NULL, NULL),
+(447, 'Set Bánh Tráng Phơi Sương Thịt Luộc', 'Nhà hàng', 'Bánh tráng phơi sương Trảng Bàng, rau rừng 10 loại, bún tươi', NULL, 'Active', 344, 23, 'Suất', 130000.00, 160000.00, NULL, NULL, NULL),
+(448, 'Phòng Dinh Thự Cổ Điển', 'Khách sạn', 'Trải nghiệm không gian sống của Công Tử Bạc Liêu xưa', NULL, 'Active', 345, 24, 'Phòng/Đêm', 950000.00, 1200000.00, NULL, NULL, NULL),
+(449, 'Phòng Deluxe City', 'Khách sạn', 'Khách sạn 3 sao hiện đại trung tâm Bạc Liêu', NULL, 'Active', 346, 24, 'Phòng/Đêm', 750000.00, 950000.00, NULL, NULL, NULL),
+(450, 'Set Menu Hải Sản Bạc Liêu', 'Nhà hàng', 'Cá thòi lòi nướng muối ớt, lẩu mắm cá sặc, bún nước lèo', NULL, 'Active', 347, 24, 'Suất', 190000.00, 240000.00, NULL, NULL, NULL),
+(451, 'Phòng Deluxe City View', 'Khách sạn', 'Khách sạn 3 sao lâu đời và uy tín nhất Cao Lãnh', NULL, 'Active', 348, 25, 'Phòng/Đêm', 750000.00, 950000.00, NULL, NULL, NULL),
+(452, 'Phòng Superior Garden', 'Khách sạn', 'Nằm ngay trung tâm thành phố Làng hoa Sa Đéc', NULL, 'Active', 349, 25, 'Phòng/Đêm', 700000.00, 900000.00, NULL, NULL, NULL),
+(453, 'Set Đặc Sản Sen Đồng Tháp', 'Nhà hàng', 'Cơm gói lá sen, cá lóc nướng trui cuộn lá sen non, chè hạt sen', NULL, 'Active', 350, 25, 'Suất', 170000.00, 210000.00, NULL, NULL, NULL),
+(454, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 351, 5, 'Phòng/Đêm', 1000000.00, 1200000.00, NULL, NULL, NULL),
+(455, 'Phòng Superior', 'Khách sạn', NULL, NULL, 'Active', 351, 5, 'Phòng/Đêm', 1200000.00, 1500000.00, NULL, NULL, NULL),
+(456, 'Phòng Deluxe', 'Khách sạn', NULL, NULL, 'Active', 351, 5, 'Phòng/Đêm', 1500000.00, 1800000.00, NULL, NULL, NULL),
+(457, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 352, 5, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(458, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 9, 5, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(459, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 354, 3, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(460, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 355, 8, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(461, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 356, 19, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(462, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 357, 19, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(463, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 358, 10, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(464, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 359, 2, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(465, 'Phòng Standard', 'Khách sạn', NULL, NULL, 'Active', 360, 1, 'Phòng/Đêm', 800000.00, 1000000.00, NULL, NULL, NULL),
+(466, 'Xe Sedan 4 chỗ (Nội bộ) / Ngày', 'Xe vận chuyển', 'Xe Sedan 4 chỗ đời mới, di chuyển linh hoạt, tiện lợi cho gia đình hoặc cặp đôi.', '/uploads/1791430601915-990841517.jpg', 'Active', NULL, NULL, 'Xe/Ngày', 800000.00, 850000.00, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_bookings`
+--
+
+CREATE TABLE `service_bookings` (
+  `booking_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 1,
+  `usage_date` date NOT NULL,
+  `total_amount` decimal(15,2) NOT NULL,
+  `payment_method` enum('Prepaid','Pay_at_Location') DEFAULT 'Prepaid',
+  `status` enum('Pending','Confirmed','Paid','Rejected','Completed') DEFAULT 'Pending',
+  `voucher_code` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `service_bookings`
+--
+
+INSERT INTO `service_bookings` (`booking_id`, `customer_id`, `service_id`, `quantity`, `usage_date`, `total_amount`, `payment_method`, `status`, `voucher_code`, `notes`, `created_at`) VALUES
+(1, 8, 7, 1, '2026-08-09', 1200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-7C4CIH', '', '2026-08-08 03:30:55'),
+(3, 8, 20, 1, '2026-08-13', 4200000.00, 'Pay_at_Location', 'Confirmed', 'VOUCHER-PJ14XB', '', '2026-08-08 18:03:44'),
+(4, 8, 20, 1, '2026-08-14', 4200000.00, 'Pay_at_Location', '', NULL, '', '2026-08-09 03:36:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_migration_backup`
+--
+
+CREATE TABLE `service_migration_backup` (
+  `backup_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `old_service_id` int(11) DEFAULT NULL,
+  `old_service_name` varchar(255) DEFAULT NULL,
+  `old_partner_id` int(11) DEFAULT NULL,
+  `old_service_type` varchar(100) DEFAULT NULL,
+  `old_capacity` int(11) DEFAULT NULL,
+  `old_max_adults` int(11) DEFAULT NULL,
+  `old_max_children` int(11) DEFAULT NULL,
+  `old_max_infants` int(11) DEFAULT NULL,
+  `old_min_adults` int(11) DEFAULT NULL,
+  `old_single_room_allowed` tinyint(1) DEFAULT NULL,
+  `old_single_room_supplement` decimal(10,2) DEFAULT NULL,
+  `migration_status` varchar(50) DEFAULT NULL,
+  `migration_note` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `service_migration_backup`
+--
+
+INSERT INTO `service_migration_backup` (`backup_id`, `old_service_id`, `old_service_name`, `old_partner_id`, `old_service_type`, `old_capacity`, `old_max_adults`, `old_max_children`, `old_max_infants`, `old_min_adults`, `old_single_room_allowed`, `old_single_room_supplement`, `migration_status`, `migration_note`) VALUES
+(1, 1, 'Vé máy bay Khứ hồi - Phổ thông', 1, 'Vé máy bay', 1, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(2, 2, 'Vé máy bay Khứ hồi - Thương gia', 1, 'Vé máy bay', 1, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(3, 4, 'Xe Du lịch 16 chỗ / Ngày', NULL, 'Xe vận chuyển', 15, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(4, 5, 'Thuê xe Limousine 9 chỗ / Ngày', NULL, 'Xe vận chuyển', 9, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(5, 6, 'Phòng Deluxe Ocean View', 4, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(6, 7, 'Phòng Standard Hướng Phố', 5, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(7, 8, 'Phòng Superior', 6, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(8, 9, 'Villa 1 Phòng Ngủ (Cổ điển)', 7, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(9, 10, 'Emerald Bay View', 8, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(10, 12, 'Phòng Deluxe Hướng Biển', NULL, 'Accommodation', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(11, 13, 'Phòng Suite Cao Cấp', NULL, 'Accommodation', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(12, 14, 'Xe Ford Transit 16 Chỗ', NULL, 'Xe vận chuyển', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(13, 15, 'Xe Thaco 29 Chỗ', NULL, 'Xe vận chuyển', 0, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(14, 20, 'Phòng Suite Cơ Bản', 10, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(15, 21, 'Phòng Suite Cao Cấp', 10, 'Khách sạn', 2, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(16, 22, 'Xe SUV 7 chỗ (Innova/Fortuner) / Ngày', NULL, 'Xe vận chuyển', 7, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(17, 23, 'Xe Limousine 11 chỗ VIP / Ngày', NULL, 'Xe vận chuyển', 11, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(18, 24, 'Xe 29 chỗ Thaco Town / Ngày', NULL, 'Xe vận chuyển', 29, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(19, 25, 'Xe 45 chỗ Universe / Ngày', NULL, 'Xe vận chuyển', 45, 2, 2, 1, 1, 1, 0.00, 'Success', 'Migrated to details tables'),
+(20, 26, 'Khách sạn 3★ Đồng Văn Hoa Cổ', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(21, 27, 'Khách sạn 4★ Phoenix Hà Giang', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(22, 28, 'Hmong Village Resort 4★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(23, 29, 'Khách sạn 4★ Sala Phú Yên Beach', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(24, 30, 'Stelia Beach Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(25, 31, 'Khách sạn 3★ Hùng Vương Phú Yên', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(26, 32, 'Khách sạn 4★ Seagull Quy Nhơn', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(27, 33, 'FLC Luxury Resort Quy Nhơn 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(28, 34, 'Khách sạn 3★ Hải Âu Quy Nhơn', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(29, 35, 'Khách sạn 4★ Phố Cổ Hội An', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(30, 36, 'Silk Sense Hoi An River Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(31, 37, 'Khách sạn 3★ Hoi An Historic', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(32, 38, 'Khách sạn 4★ Century Riverside Huế', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(33, 39, 'Silk Path Grand Hue Hotel 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(34, 40, 'Khách sạn 3★ Moonlight Huế', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(35, 41, 'Khách sạn 4★ Mường Thanh Quảng Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(36, 42, 'Sun Spa Resort Quảng Bình 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(37, 43, 'Khách sạn 3★ Tân Bình Quảng Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(38, 44, 'Khách sạn 4★ Sapa Horizon', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(39, 45, 'Hotel de la Coupole Sapa 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(40, 46, 'Khách sạn 3★ Bamboo Sapa', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(41, 47, 'Khách sạn 4★ Mường Thanh Luxury Hạ Long', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(42, 48, 'Vinpearl Resort & Spa Hạ Long 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(43, 49, 'Khách sạn 3★ Halong Bay Hotel', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(44, 50, 'Emeralda Resort Ninh Bình 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(45, 51, 'Khách sạn 4★ Legend Ninh Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(46, 52, 'Khách sạn 3★ Bái Đính Ninh Bình', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(47, 53, 'Khách sạn 4★ TTC Cần Thơ', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(48, 54, 'Victoria Cần Thơ Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(49, 55, 'Khách sạn 3★ Ninh Kiều Cần Thơ', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(50, 56, 'Six Senses Côn Đảo 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(51, 57, 'The Secret Côn Đảo 4★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(52, 58, 'Khách sạn 3★ Côn Đảo Resort', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(53, 59, 'The Grand Ho Tram Resort 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(54, 60, 'Imperial Hotel Vũng Tàu 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(55, 61, 'Khách sạn 4★ Malibu Vũng Tàu', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(56, 62, 'Khách sạn 4★ Saigon Ban Me', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(57, 63, 'Khách sạn 3★ Pleiku Hotel', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(58, 64, 'Elephants Hotel Buôn Ma Thuột 4★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(59, 65, 'Khách sạn 3★ Mũi Cà Mau', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(60, 66, 'Khách sạn 4★ Mường Thanh Luxury Cà Mau', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(61, 67, 'Melia Vinpearl Tây Ninh 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(62, 68, 'Khách sạn 3★ Sunrise Tây Ninh', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(63, 69, 'Phú Quý Island Hotel 3★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(64, 70, 'Centara Mirage Resort Mũi Né 5★', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(65, 71, 'Khách sạn 5★ Lotte Hotel Hà Nội', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(66, 72, 'Khách sạn 4★ Silk Path Hà Nội', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(67, 73, 'Khách sạn 5★ Rex Hotel Saigon', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers'),
+(68, 74, 'Khách sạn 4★ Liberty Central Saigon', NULL, 'Khách sạn', NULL, 2, 2, 1, 1, 1, 0.00, 'Success', 'Auto mapped to Standard & generated tiers');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_requests`
+--
+
+CREATE TABLE `service_requests` (
+  `request_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) DEFAULT NULL,
+  `service_booking_id` int(11) DEFAULT NULL,
+  `partner_id` int(11) DEFAULT NULL,
+  `requested_by` int(11) DEFAULT NULL,
+  `request_content` text DEFAULT NULL,
+  `status` enum('Pending','Accepted','Rejected') DEFAULT 'Pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `agreed_price` int(11) DEFAULT 0 COMMENT 'Giá thỏa thuận chốt cứng tại thời điểm đặt',
+  `group_id` int(11) DEFAULT NULL,
+  `service_type` varchar(50) DEFAULT NULL,
+  `quantity` int(11) DEFAULT NULL,
+  `responded_by` int(11) DEFAULT NULL,
+  `responded_at` datetime DEFAULT NULL,
+  `response_note` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `service_requests`
+--
+
+INSERT INTO `service_requests` (`request_id`, `departure_id`, `service_booking_id`, `partner_id`, `requested_by`, `request_content`, `status`, `created_at`, `agreed_price`, `group_id`, `service_type`, `quantity`, `responded_by`, `responded_at`, `response_note`) VALUES
+(19, 59, NULL, 6, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-03\",\"checkOut\":\"2026-11-04\",\"nights\":1,\"service_id\":8}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'HOTEL', 5, 18, '2026-10-03 15:18:02', ''),
+(20, 59, NULL, 5, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-04\",\"checkOut\":\"2026-11-06\",\"nights\":2,\"service_id\":7}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'HOTEL', 5, 18, '2026-10-03 15:18:08', ''),
+(21, 59, NULL, 205, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Trưa\",\"service_id\":305,\"destName\":\"\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:12', ''),
+(22, 59, NULL, 204, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Tối\",\"service_id\":304,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:18', ''),
+(23, 59, NULL, 203, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Trưa\",\"service_id\":303,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-05\",\"mealType\":\"Tối\",\"service_id\":303,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:15', ''),
+(24, 59, NULL, 202, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Tối\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-06\",\"mealType\":\"Trưa\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\",\"18\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:20', ''),
+(25, 59, NULL, 201, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-05\",\"mealType\":\"Trưa\",\"service_id\":301,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-03 15:03:55', 0, 2, 'RESTAURANT', 12, 19, '2026-10-03 15:18:23', ''),
+(26, 57, NULL, 6, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-17\",\"checkOut\":\"2026-11-18\",\"nights\":1,\"service_id\":8}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'HOTEL', 4, NULL, NULL, NULL),
+(27, 57, NULL, 5, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-18\",\"checkOut\":\"2026-11-20\",\"nights\":2,\"service_id\":7}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'HOTEL', 4, NULL, NULL, NULL),
+(28, 57, NULL, 205, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-17\",\"mealType\":\"Trưa\",\"service_id\":305,\"destName\":\"\",\"possible_dests\":[\"2\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(29, 57, NULL, 204, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-17\",\"mealType\":\"Tối\",\"service_id\":304,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(30, 57, NULL, 203, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-18\",\"mealType\":\"Trưa\",\"service_id\":303,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-19\",\"mealType\":\"Tối\",\"service_id\":303,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(31, 57, NULL, 202, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-18\",\"mealType\":\"Tối\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-20\",\"mealType\":\"Trưa\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\",\"18\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(32, 57, NULL, 201, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-19\",\"mealType\":\"Trưa\",\"service_id\":301,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Pending', '2026-10-04 02:54:03', 0, 3, 'RESTAURANT', 12, NULL, NULL, NULL),
+(33, 59, NULL, 6, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-03\",\"checkOut\":\"2026-11-04\",\"nights\":1,\"service_id\":8}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'HOTEL', 2, 18, '2026-10-04 03:31:54', ''),
+(34, 59, NULL, 5, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-11-04\",\"checkOut\":\"2026-11-06\",\"nights\":2,\"service_id\":7}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'HOTEL', 2, 18, '2026-10-04 03:31:56', ''),
+(35, 59, NULL, 205, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Trưa\",\"service_id\":305,\"destName\":\"\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:17', ''),
+(36, 59, NULL, 204, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-03\",\"mealType\":\"Tối\",\"service_id\":304,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:20', ''),
+(37, 59, NULL, 203, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Trưa\",\"service_id\":303,\"destName\":\"Đà Lạt\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-05\",\"mealType\":\"Tối\",\"service_id\":303,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:22', ''),
+(38, 59, NULL, 202, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-04\",\"mealType\":\"Tối\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"2\",\"1\"]},{\"date\":\"2026-11-06\",\"mealType\":\"Trưa\",\"service_id\":302,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\",\"18\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:25', ''),
+(39, 59, NULL, 201, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-11-05\",\"mealType\":\"Trưa\",\"service_id\":301,\"destName\":\"Nha Trang\",\"possible_dests\":[\"1\"]}]}', 'Accepted', '2026-10-04 03:30:35', 0, 4, 'RESTAURANT', 3, 19, '2026-10-04 03:34:27', ''),
+(40, 22, NULL, 355, 3, '{\"isGrouped\":true,\"items\":[{\"checkIn\":\"2026-10-15\",\"checkOut\":\"2026-10-17\",\"nights\":2,\"service_id\":460}]}', 'Pending', '2026-10-05 09:03:43', 0, 5, 'HOTEL', 1, NULL, NULL, NULL),
+(41, 22, NULL, 304, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-10-15\",\"mealType\":\"Trưa\",\"service_id\":404,\"destName\":\"\",\"possible_dests\":[\"8\"]}]}', 'Pending', '2026-10-05 09:03:43', 0, 5, 'RESTAURANT', 2, NULL, NULL, NULL),
+(42, 22, NULL, 303, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-10-15\",\"mealType\":\"Tối\",\"service_id\":403,\"destName\":\"Hà Nội\",\"possible_dests\":[\"8\"]}]}', 'Pending', '2026-10-05 09:03:43', 0, 5, 'RESTAURANT', 2, NULL, NULL, NULL),
+(43, 22, NULL, 288, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-10-16\",\"mealType\":\"Trưa\",\"service_id\":388,\"destName\":\"Hà Nội\",\"possible_dests\":[\"8\",\"4\"]}]}', 'Pending', '2026-10-05 09:03:43', 0, 5, 'RESTAURANT', 2, NULL, NULL, NULL),
+(44, 22, NULL, 287, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-10-16\",\"mealType\":\"Tối\",\"service_id\":387,\"destName\":\"Lào Cai\",\"possible_dests\":[\"8\",\"4\"]}]}', 'Pending', '2026-10-05 09:03:43', 0, 5, 'RESTAURANT', 2, NULL, NULL, NULL),
+(45, 22, NULL, 211, 3, '{\"isGrouped\":true,\"items\":[{\"date\":\"2026-10-17\",\"mealType\":\"Trưa\",\"service_id\":311,\"destName\":\"Lào Cai\",\"possible_dests\":[\"4\",\"8\"]}]}', 'Pending', '2026-10-05 09:03:43', 0, 5, 'RESTAURANT', 2, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_request_groups`
+--
+
+CREATE TABLE `service_request_groups` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `code` varchar(50) NOT NULL,
+  `departure_id` int(11) NOT NULL,
+  `request_type` enum('INITIAL','SUPPLEMENT') DEFAULT 'INITIAL',
+  `passenger_count` int(11) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `status` varchar(50) DEFAULT 'DRAFT',
+  `parent_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `service_request_groups`
+--
+
+INSERT INTO `service_request_groups` (`id`, `code`, `departure_id`, `request_type`, `passenger_count`, `created_by`, `created_at`, `status`, `parent_id`) VALUES
+(2, 'YCT-2799', 59, 'INITIAL', 12, 3, '2026-10-03 15:03:55', 'PROCESSING', NULL),
+(3, 'YCT-0168', 57, 'INITIAL', 12, 3, '2026-10-04 02:54:03', 'PROCESSING', NULL),
+(4, 'YCB-2799-01', 59, 'SUPPLEMENT', 3, 3, '2026-10-04 03:30:35', 'PROCESSING', 2),
+(5, 'YCT-9303', 22, 'INITIAL', 2, 3, '2026-10-05 09:03:43', 'PROCESSING', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `timekeeping`
+--
+
+CREATE TABLE `timekeeping` (
+  `timekeeping_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `employee_id` int(11) NOT NULL,
+  `work_date` date NOT NULL,
+  `status` enum('Present','Absent','Late','Leave') DEFAULT 'Present',
+  `check_in` time DEFAULT NULL,
+  `check_out` time DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  `location_address` varchar(255) DEFAULT NULL,
+  `device_info` varchar(255) DEFAULT NULL,
+  `face_image_url` varchar(255) DEFAULT NULL,
+  `face_verified` tinyint(1) DEFAULT 1,
+  `match_confidence` decimal(5,2) DEFAULT 98.50,
+  `notes` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `timekeeping`
+--
+
+INSERT INTO `timekeeping` (`timekeeping_id`, `employee_id`, `work_date`, `status`, `check_in`, `check_out`, `latitude`, `longitude`, `location_address`, `device_info`, `face_image_url`, `face_verified`, `match_confidence`, `notes`) VALUES
+(1, 2, '2026-08-04', 'Late', '14:35:57', '14:36:12', 10.83480407, 106.63652891, 'Hẻm 54/75 Bùi Quang Là, Khu phố 16, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71509, Việt Nam', 'Browser Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb', NULL, 1, 98.50, 'Định vị GPS chính xác ±124m | Định vị GPS chính xác ±124m'),
+(2, 5, '2026-08-04', 'Late', '20:59:42', '21:00:26', 10.83481648, 106.63652603, 'Hẻm 74 Bùi Quang Là, Khu phố 15, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71427, Việt Nam', 'Browser AI Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_5_1785851982704.jpg', 1, 98.50, 'Đã xác thực AI khuôn mặt (98.5%) + GPS ±117m | Đã xác thực AI khuôn mặt (98.5%) + GPS ±121m'),
+(3, 6, '2026-08-04', 'Late', '21:07:28', NULL, 10.83485025, 106.63647016, 'Hẻm 74 Bùi Quang Là, Khu phố 15, Phường An Hội Tây, Thuận An, Thành phố Hồ Chí Minh, 71427, Việt Nam', 'Browser AI Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_6_1785852448081.jpg', 1, 98.50, 'Đã xác thực AI khuôn mặt (98.5%) + GPS ±115m'),
+(4, 4, '2026-08-22', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-24 đã được duyệt'),
+(5, 4, '2026-08-24', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Giải trình quên chấm công (Quên Check-in) theo đơn #1'),
+(6, 10, '2026-09-03', 'Late', '09:19:50', NULL, 19.04385760, 105.42948170, 'Tọa độ GPS: 19.04386°N, 105.42948°E (±279m)', 'Browser AI Live Camera • Mozilla/5.0 (Windows NT 10.0; Win64; x64', '/uploads/face_10_1788401990425.jpg', 1, 98.50, 'Xác thực AI khuôn mặt camera trực tiếp (98.5%) + GPS ±279m'),
+(7, 6, '2026-09-05', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-1 đã được duyệt'),
+(8, 4, '2026-09-04', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-4 đã được duyệt'),
+(10, 5, '2026-11-18', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-7 đã được duyệt'),
+(12, 6, '2026-11-17', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-11 đã được duyệt'),
+(16, 6, '2026-11-03', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-15 đã được duyệt'),
+(20, 2, '2026-10-15', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-19 đã được duyệt'),
+(21, 6, '2026-12-19', 'Present', '08:00:00', '17:00:00', NULL, NULL, NULL, NULL, NULL, 1, 98.50, 'Tự động chốt công ngày đi tour theo đơn hàng #BKG-24 đã được duyệt');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tours`
+--
+
+CREATE TABLE `tours` (
+  `tour_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `tour_name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `destination` varchar(255) DEFAULT NULL,
+  `duration_days` int(11) DEFAULT NULL,
+  `base_price` decimal(15,2) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('Pending','Approved','Active','Inactive','Rejected') DEFAULT 'Pending',
+  `created_by` int(11) DEFAULT NULL,
+  `base_cost` decimal(15,2) DEFAULT 0.00 COMMENT 'Tổng chi phí gốc ghép dịch vụ',
+  `markup_percent` int(11) DEFAULT 20 COMMENT 'Tỉ lệ lợi nhuận mong muốn (%)',
+  `design_data` longtext DEFAULT NULL COMMENT 'Lưu trạng thái UI kéo thả',
+  `rejection_reason` text DEFAULT NULL,
+  `is_custom` tinyint(1) DEFAULT 0,
+  `average_rating` decimal(3,2) DEFAULT 5.00,
+  `review_count` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tours`
+--
+
+INSERT INTO `tours` (`tour_id`, `tour_name`, `description`, `destination`, `duration_days`, `base_price`, `image_url`, `status`, `created_by`, `base_cost`, `markup_percent`, `design_data`, `rejection_reason`, `is_custom`, `average_rating`, `review_count`) VALUES
+(7, 'Khám phá Đà Lạt', 'Khám phá thành phố ngàn hoa', 'Đà Lạt', 3, 2928000.00, '/uploads/74691fd358e36379d4a32e8986a561e9', 'Inactive', 4, 2440000.00, 20, '{\"days\":[{\"dayIndex\":1,\"route_title\":\"TP.HCM - Đà Lạt - Quảng Trường Lâm Viên - Hồ Xuân Hương\",\"activities\":[{\"name\":\"Check-in Quảng Trường Lâm Viên & Nụ Hoa Atiso\",\"type\":\"Tham quan\",\"price\":0},{\"name\":\"Dạo Hồ Xuân Hương & Thưởng thức bánh mì xíu mại\",\"type\":\"Tham quan\",\"price\":50000}],\"accommodation\":{\"name\":\"Khách sạn 3★ Trung Tâm Đà Lạt\",\"price\":800000},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"route_title\":\"Dinh Bảo Đại - Thiền Viện Trúc Lâm - Thác Datanla\",\"activities\":[{\"name\":\"Tham quan Dinh III Bảo Đại\",\"type\":\"Tham quan\",\"price\":50000},{\"name\":\"Đi cáp treo Thiền Viện Trúc Lâm - Hồ Tuyền Lâm\",\"type\":\"Tham quan\",\"price\":100000},{\"name\":\"Trải nghiệm máng trượt Thác Datanla\",\"type\":\"Tham quan\",\"price\":200000}],\"accommodation\":{\"name\":\"Khách sạn 3★ Trung Tâm Đà Lạt\",\"price\":800000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"route_title\":\"Chợ Đà Lạt - Langbiang - Trở Về TP.HCM\",\"activities\":[{\"name\":\"Mua sắm mứt hoa quả Chợ Đà Lạt\",\"type\":\"Tham quan\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":4500000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":800000,\"singleSupplement\":600000,\"breakfast\":80000,\"countBreakfast\":2,\"lunch\":150000,\"countLunch\":3,\"dinner\":180000,\"countDinner\":2,\"tickets\":400000,\"insurance\":50000},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"capacity\":29,\"seat_capacity\":29,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"partner_id\":null,\"partner_name\":null}},\"computed\":{\"netCost\":2440000,\"sellingPrice\":2928000,\"totalDays\":3,\"totalNights\":2}}', NULL, 0, 5.00, 0),
+(8, 'Khám phá Phú Quốc', '', 'Phú Quốc', 3, 6144000.00, '/uploads/2caf891f3b5404c5d53fb225dbc185b7', 'Pending', 4, 5120000.00, 20, '{\"days\":[{\"dayIndex\":1,\"route_title\":\"Đón Sân Bay Phú Quốc - Dinh Cậu - Grand World Không Ngủ\",\"activities\":[{\"name\":\"Tham quan Dinh Cậu & Biểu tượng biển đảo\",\"type\":\"Tham quan\",\"price\":0},{\"name\":\"Dạo phố không ngủ Grand World Phú Quốc\",\"type\":\"Tham quan\",\"price\":200000}],\"accommodation\":{\"name\":\"Khách sạn 4★ Sunset Beach Phú Quốc\",\"price\":1400000},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"route_title\":\"Cano Khám Phá 4 Đảo - Tắm Biển & Lặn Ngắm San Hô Hòn Mây Rút\",\"activities\":[{\"name\":\"Tour Cano 4 Đảo & Lặn ngắm san hô thiên nhiên\",\"type\":\"Tham quan\",\"price\":600000}],\"accommodation\":{\"name\":\"Khách sạn 4★ Sunset Beach Phú Quốc\",\"price\":1400000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"route_title\":\"Cơ Sở Ngọc Trai - Chợ Đêm Phú Quốc - Tiễn Sân Bay\",\"activities\":[{\"name\":\"Tham quan trang trại nuôi cấy ngọc trai Phú Quốc\",\"type\":\"Tham quan\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":1800000,\"guidePerDay\":600000,\"otherFixed\":0},\"variable\":{\"transportTicket\":2200000,\"accommPerNight\":1400000,\"singleSupplement\":1000000,\"breakfast\":100000,\"countBreakfast\":2,\"lunch\":200000,\"countLunch\":3,\"dinner\":250000,\"countDinner\":2,\"tickets\":800000,\"insurance\":50000},\"selectedTransport\":{\"service_id\":2,\"service_name\":\"Vé máy bay Khứ hồi - Thương gia\",\"service_type\":\"Vé máy bay\",\"vehicle_detail_type\":\"Máy bay - Thương gia\",\"capacity\":250,\"seat_capacity\":250,\"unit\":\"Vé\"}},\"computed\":{\"netCost\":5120000,\"sellingPrice\":6144000,\"totalDays\":3,\"totalNights\":2}}', NULL, 0, 5.00, 0),
+(9, 'Tour Đà Lạt ', '', 'Đà Lạt', 3, 4248000.00, '/uploads/985ba96391367fa25195b9f957ffa672', 'Pending', 4, 3540000.00, 20, '{\"days\":[{\"dayIndex\":1,\"route_title\":\"Tour Đà Lạt  - Ngày 1\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đón khách & Khởi hành\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Vườn thú Zoodoo\",\"price\":100000},{\"type\":\"Tham quan\",\"name\":\"Lẩu bò Ba Toa Quán Gỗ\",\"price\":200000},{\"type\":\"Tham quan\",\"name\":\"Tự do dạo phố ngắm cảnh\",\"price\":0}],\"accommodation\":{\"name\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"price\":\"1000000.00\",\"service_id\":457},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"route_title\":\"Tour Đà Lạt  - Ngày 2\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đỉnh Langbiang\",\"price\":120000},{\"type\":\"Tham quan\",\"name\":\"Lẩu gà lá é Tao Ngộ\",\"price\":150000},{\"type\":\"Tham quan\",\"name\":\"Chợ Đêm Âm Phủ\",\"price\":50000},{\"type\":\"Tham quan\",\"name\":\"Tự do dạo phố ngắm cảnh\",\"price\":0}],\"accommodation\":{\"name\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"price\":\"1000000.00\",\"service_id\":457},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"route_title\":\"Tour Đà Lạt  - Ngày 3\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Thác Datanla\",\"price\":170000},{\"type\":\"Tham quan\",\"name\":\"Samten Hills Dalat\",\"price\":250000},{\"type\":\"Tham quan\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tự do dạo phố ngắm cảnh\",\"price\":0}],\"accommodation\":{\"name\":\"Colline Hotel Dalat - Phòng Tiêu chuẩn (Standard) - Đêm\",\"price\":\"1000000.00\",\"service_id\":457},\"meals\":{\"breakfast\":true,\"lunch\":true,\"dinner\":true}}],\"costConfig\":{\"minimumPax\":15,\"margin\":18,\"selectedTransport\":{\"name\":\"Dịch vụ xe ghép 16 chỗ - Thuê xe Du lịch 16 chỗ - Ngày\",\"price\":\"1500000.00\"},\"transportTimes\":{\"startD\":\"07:00\",\"endD\":\"11:30\",\"startR\":\"13:00\",\"endR\":\"18:00\"},\"fixed\":{\"guidePerDay\":500000},\"variable\":{\"breakfast\":100000,\"lunch\":150000,\"dinner\":200000}},\"computed\":{\"netCost\":3620000,\"sellingPrice\":4271600,\"totalDays\":3,\"totalNights\":2},\"categories\":[\"Khám phá\",\"Nghỉ dưỡng\"],\"highlights\":\"Khám phá các điểm đến hấp dẫn và thưởng thức đặc sản tuyệt vời\"}', NULL, 0, 5.00, 0),
+(10, 'Khám phá Phú Quốc ', '', 'Phú Quốc', 3, 6144000.00, '/uploads/1784651147243-499615130.jpg', 'Inactive', 4, 5120000.00, 20, '{\"days\":[{\"dayIndex\":1,\"route_title\":\"Đón Sân Bay Phú Quốc - Dinh Cậu - Grand World Không Ngủ\",\"activities\":[{\"name\":\"Tham quan Dinh Cậu & Biểu tượng biển đảo\",\"type\":\"Tham quan\",\"price\":0},{\"name\":\"Dạo phố không ngủ Grand World Phú Quốc\",\"type\":\"Tham quan\",\"price\":200000}],\"accommodation\":{\"name\":\"Khách sạn 4★ Sunset Beach Phú Quốc\",\"price\":1400000},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"route_title\":\"Cano Khám Phá 4 Đảo - Tắm Biển & Lặn Ngắm San Hô Hòn Mây Rút\",\"activities\":[{\"name\":\"Tour Cano 4 Đảo & Lặn ngắm san hô thiên nhiên\",\"type\":\"Tham quan\",\"price\":600000}],\"accommodation\":{\"name\":\"Khách sạn 4★ Sunset Beach Phú Quốc\",\"price\":1400000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"route_title\":\"Cơ Sở Ngọc Trai - Chợ Đêm Phú Quốc - Tiễn Sân Bay\",\"activities\":[{\"name\":\"Tham quan trang trại nuôi cấy ngọc trai Phú Quốc\",\"type\":\"Tham quan\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":1800000,\"guidePerDay\":600000,\"otherFixed\":0},\"variable\":{\"transportTicket\":2200000,\"accommPerNight\":1400000,\"singleSupplement\":1000000,\"breakfast\":100000,\"countBreakfast\":2,\"lunch\":200000,\"countLunch\":3,\"dinner\":250000,\"countDinner\":2,\"tickets\":800000,\"insurance\":50000},\"selectedTransport\":{\"service_id\":2,\"service_name\":\"Vé máy bay Khứ hồi - Thương gia\",\"service_type\":\"Vé máy bay\",\"vehicle_detail_type\":\"Máy bay - Thương gia\",\"capacity\":250,\"seat_capacity\":250,\"unit\":\"Vé\"}},\"computed\":{\"netCost\":5120000,\"sellingPrice\":6144000,\"totalDays\":3,\"totalNights\":2}}', NULL, 0, 5.00, 0),
+(27, 'Khám phá Đà Lạt - Nha Trang 4N3Đ', '', 'Đà Lạt', 4, 7636000.00, '/uploads/1786955134884-399383371.jpg', 'Pending', 4, 6363333.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"isTitleEdited\":false,\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\",\"meals\":{\"breakfast\":false,\"lunch\":false,\"dinner\":false}}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"1\",\"route_title\":\"Đà Lạt - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Đà Lạt đến Nha Trang\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0}],\"isTitleEdited\":false,\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\",\"meals\":{\"breakfast\":true,\"lunch\":false,\"dinner\":false}}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Nha Trang\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6}],\"isTitleEdited\":false,\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\",\"meals\":{\"breakfast\":true,\"lunch\":false,\"dinner\":false}}},{\"dayIndex\":4,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Tham quan\",\"name\":\"Tham quan Nem nướng Đặng Văn Quyên\",\"price\":\"60000.00\",\"place_id\":5},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"isTitleEdited\":false}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":\"200000\",\"lunch\":\"200000\",\"dinner\":\"200000\",\"tickets\":0,\"insurance\":0},\"ageMultiplier\":{\"child\":75,\"infant\":25},\"selectedTransport\":{\"service_id\":4,\"name\":\"Thuê xe Du lịch 16 chỗ / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1200000.00\",\"service_name\":\"Xe Du lịch 16 chỗ (Ford Transit / Solati Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 16 chỗ\",\"capacity\":16,\"seat_capacity\":16,\"base_cost\":\"1200000\",\"selling_price\":\"1300000\",\"partner_id\":null,\"partner_name\":null},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":6363333,\"sellingPrice\":7636000,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":1,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":2760000,\"autoAccommodationCost\":1550000,\"autoFixedTransport\":4800000,\"autoVariableTransport\":0},\"dayImages\":{\"1\":\"/uploads/1786953540270-33229155.jpg\"}}', NULL, 0, 5.00, 0),
+(29, 'Khám phá Đà Lạt - Nha Trang', 'Bạn có thể tự do khám phá thiên nhiên kỳ thú, tận hưởng trọn vẹn từng khoảng khắc bên bạn bè và người thân', 'Đà Lạt', 4, 7599000.00, '/uploads/1787155033861-300696428.jpg', 'Active', 4, 6312666.67, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"2\",\"route_title\":\"Hồ Chí Minh - Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Hồ Chí Minh đến Đà Lạt\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đỉnh Langbiang\",\"price\":\"120000.00\",\"place_id\":8},{\"type\":\"Tham quan\",\"name\":\"Tham quan Vườn thú Zoodoo\",\"price\":\"100000.00\",\"place_id\":10},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Datanla\",\"price\":\"170000.00\",\"place_id\":9},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Âm Phủ\",\"price\":\"50000.00\",\"place_id\":13}],\"accommodation\":{\"service_id\":8,\"name\":\"Phòng Superior (hoặc tương đương)\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":\"external\",\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"1\",\"route_title\":\"Đà Lạt - Nha Trang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Samten Hills Dalat\",\"price\":\"250000.00\",\"place_id\":14},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển từ Đà Lạt đến Nha Trang\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến khách sạn nhận phòng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Lặn biển Hòn Mun\",\"price\":\"500000.00\",\"place_id\":3},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành tham quan tại Nha Trang\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan VinWonders Nha Trang\",\"price\":\"880000.00\",\"place_id\":1},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar\",\"price\":\"30000.00\",\"place_id\":2},{\"type\":\"Tham quan\",\"name\":\"Tham quan Tắm bùn khoáng I-Resort\",\"price\":\"350000.00\",\"place_id\":4},{\"type\":\"Tham quan\",\"name\":\"Tham quan Nem nướng Đặng Văn Quyên\",\"price\":\"60000.00\",\"place_id\":5},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển / Nghỉ ngơi\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ Đêm Nha Trang\",\"price\":\"0.00\",\"place_id\":6}],\"accommodation\":{\"service_id\":7,\"name\":\"Phòng Standard Hướng Phố (hoặc tương đương)\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"1\",\"end_destination_id\":\"18\",\"route_title\":\"Nha Trang - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Hải sản Thanh Sương\",\"price\":\"250000.00\",\"place_id\":7},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm đặc sản & Trả khách\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20.377019748653492,\"fixed\":{\"transport\":7040000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0,\"transportTicket\":0},\"ageMultiplier\":{\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"road\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1800000.00\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":6312666.666666667,\"sellingPrice\":7599000,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":0,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":2760000},\"categories\":[\"Nghỉ dưỡng\",\"Khám phá\",\"Văn hóa\",\"Biển đảo\",\"Gia đình\"],\"highlights\":\"Tặng đặt sản địa phương\\nKhám phá vẻ đẹp tự nhiên, hoang sơ\",\"dayImages\":{\"1\":\"/uploads/1787155033875-510651347.webp\",\"2\":\"/uploads/1787155033878-433529452.jpg\",\"3\":\"/uploads/1787155033878-395761434.webp\",\"4\":\"/uploads/1787155033882-633882125.jpg\"}}', NULL, 0, 5.00, 0),
+(31, 'Khám phá Đảo Ngọc Phú Quốc 3N2Đ (Cao cấp)', 'Trải nghiệm kỳ nghỉ dưỡng đẳng cấp tại Phú Quốc cùng vé máy bay khứ hồi và khách sạn 5 sao.', 'Phú Quốc', 3, 9566400.00, '/uploads/1787457747363-251721431.png', 'Pending', 4, 7972000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"3\",\"route_title\":\"Hồ Chí Minh - Phú Quốc\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Bay đến Phú Quốc\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Sun World Hòn Thơm\",\"price\":\"600000.00\",\"place_id\":15},{\"type\":\"Tham quan\",\"name\":\"Tham quan Chợ đêm Dinh Cậu\",\"price\":\"200000.00\",\"place_id\":20}],\"accommodation\":{\"service_id\":10,\"name\":\"Emerald Bay View (JW Marriott)\",\"price\":\"5000000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Phú Quốc - Tuyệt tác thiên nhiên\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Vinpearl Safari Phú Quốc\",\"price\":\"650000.00\",\"place_id\":16},{\"type\":\"Tham quan\",\"name\":\"Tham quan Grand World Phú Quốc\",\"price\":\"0.00\",\"place_id\":17},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bãi Sao\",\"price\":\"0.00\",\"place_id\":18}],\"accommodation\":{\"service_id\":10,\"name\":\"Emerald Bay View (JW Marriott)\",\"price\":\"5000000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"3\",\"end_destination_id\":\"18\",\"route_title\":\"Phú Quốc - Hồ Chí Minh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Bún quậy Kiến Xây\",\"price\":\"70000.00\",\"place_id\":19},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành về Hồ Chí Minh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":5280000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":200000,\"lunch\":200000,\"dinner\":200000,\"tickets\":0,\"insurance\":0},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1760000.00\",\"capacity\":29,\"max_adults\":null,\"max_children\":null,\"max_infants\":null,\"min_adults\":null,\"single_room_allowed\":null,\"single_room_supplement\":null,\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":7972000,\"sellingPrice\":9566400,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":0,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1520000,\"breakEvenPax\":4,\"totalFixed\":6780000,\"totalVariable\":7520000},\"categories\":[\"Biển đảo\",\"Khám phá\",\"Nghỉ dưỡng cao cấp\"],\"highlights\":\"\",\"dayImages\":{\"1\":\"/uploads/1787457747380-101710045.jpg\",\"2\":\"/uploads/1787457747382-812222074.jpg\",\"3\":\"/uploads/1787457747383-723507097.jpg\"}}', NULL, 0, 5.00, 0),
+(32, 'Tour Đà Nẵng - Bà Nà Hills - Phố Cổ Hội An 3N2Đ', 'Khám phá thành phố đáng sống Đà Nẵng, chiêm ngưỡng Cầu Vàng trên đỉnh Bà Nà Hills, dạo phố cổ Hội An rực rỡ đèn lồng và tắm biển Mỹ Khê tuyệt đẹp.', 'Đà Nẵng', 3, 4250000.00, '/uploads/19466_TOUR_ĐÀ_NẴNG_3N2Đ_BÀ_NÀ_-_PHỐ_CỔ_HỘI_AN.jpg', 'Active', 1, 3541666.67, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"5\",\"end_destination_id\":\"5\",\"route_title\":\"TP.HCM / Hà Nội - Đà Nẵng - Sơn Trà - Biển Mỹ Khê\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón đoàn tại Sân bay Đà Nẵng / Bến xe\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Viếng Chùa Linh Ứng Bán Đảo Sơn Trà & Tượng Phật Bà 67m\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tự do tắm biển Mỹ Khê & Thưởng thức hải sản biển\",\"price\":250000}],\"accommodation\":{\"service_id\":454,\"name\":\"Khách sạn 4★ Sala Đà Nẵng Beach\",\"price\":\"1200000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"5\",\"end_destination_id\":\"5\",\"route_title\":\"Đà Nẵng - Bà Nà Hills - Cầu Vàng - Phố Cổ Hội An\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi cáp treo Bà Nà Hills & Check-in Cầu Vàng bàn tay khổng lồ\",\"price\":900000},{\"type\":\"Tham quan\",\"name\":\"Khám phá Làng Pháp & Vui chơi Công viên Fantasy Park\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Dạo Phố Cổ Hội An lung linh đèn lồng & Thưởng thức Cao Lầu\",\"price\":150000}],\"accommodation\":{\"service_id\":454,\"name\":\"Khách sạn 4★ Sala Đà Nẵng Beach\",\"price\":\"1200000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"5\",\"end_destination_id\":\"5\",\"route_title\":\"Đà Nẵng - Mua Sắm Đặc Sản - Tiễn Sân Bay\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Danh thắng Ngũ Hành Sơn & Làng đá mỹ nghệ Non Nước\",\"price\":50000},{\"type\":\"Tham quan\",\"name\":\"Mua sắm đặc sản Chả bò Đà Nẵng & Trái cây sấy tại Chợ Cồn\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Xe tiễn đoàn ra Sân bay Đà Nẵng - Kết thúc chương trình\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":1,\"service_name\":\"Vé máy bay Khứ hồi - Phổ thông\",\"unit\":\"Vé\",\"price\":\"1800000.00\",\"service_type\":\"Vé máy bay\",\"vehicle_detail_type\":\"Máy bay - Phổ thông\",\"capacity\":180,\"seat_capacity\":180},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":3541667,\"sellingPrice\":4250000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":2,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1200000},\"categories\":[\"Biển đảo\",\"Khám phá\",\"Văn hóa\"],\"highlights\":\"Đi cáp treo Bà Nà Hills, check-in Cầu Vàng, phố cổ Hội An đêm lung linh, tắm biển Mỹ Khê\"}', NULL, 0, 5.00, 0),
+(33, 'Tour Đà Nẵng - Huế - Bà Nà - Động Phong Nha 5N4Đ', 'Hành trình di sản Miền Trung tuyệt vời xuyên Việt qua Đà Nẵng, Cố đô Huế cổ kính và hành trình khám phá kỳ quan Động Phong Nha hùng vĩ tại Quảng Bình.', 'Đà Nẵng', 5, 6850000.00, '/uploads/19070_TOUR_ĐÀ_NẴNG_MÙA_HÈ_5N4Đ_BÀ_NÀ_-_HỘI_AN_-_HUẾ_-_ĐỘNG_PHONG_NHA.jpg', 'Active', 1, 5708333.33, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"5\",\"end_destination_id\":\"5\",\"route_title\":\"Đón đoàn Đà Nẵng - Bán đảo Sơn Trà - Phố cổ Hội An\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón đoàn tại Đà Nẵng, nhận phòng nghỉ ngơi\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bán đảo Sơn Trà & Thả hoa đăng Phố cổ Hội An\",\"price\":150000}],\"accommodation\":{\"service_id\":458,\"name\":\"Khách sạn 4★ Mường Thanh Đà Nẵng\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"5\",\"end_destination_id\":\"5\",\"route_title\":\"Đà Nẵng - KDL Bà Nà Hills - Cầu Vàng - Cầu Rồng Phun Nước\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Chinh phục Bà Nà Hills bằng cáp treo đạt 4 kỷ lục thế giới\",\"price\":900000},{\"type\":\"Tham quan\",\"name\":\"Ngắm Cầu Rồng & Cầu Tình Yêu sông Hàn về đêm\",\"price\":0}],\"accommodation\":{\"service_id\":458,\"name\":\"Khách sạn 4★ Mường Thanh Đà Nẵng\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"5\",\"end_destination_id\":\"5\",\"route_title\":\"Đà Nẵng - Đèo Hải Vân - Cố Đô Huế - Đại Nội - Chùa Thiên Mụ\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Vượt Đèo Hải Vân thiên hạ đệ nhất hùng quan ra Huế\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đại Nội Hoàng Thành Huế & Chùa Thiên Mụ cổ kính\",\"price\":200000},{\"type\":\"Tham quan\",\"name\":\"Nghe ca trù & Thả hoa đăng trên Sông Hương\",\"price\":150000}],\"accommodation\":{\"service_id\":38,\"name\":\"Khách sạn 4★ Century Riverside Huế\",\"price\":\"1200000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"7\",\"end_destination_id\":\"7\",\"route_title\":\"Huế - Quảng Bình - Khám Phá Động Thiên Đường Kỳ Vĩ\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Khởi hành ra Quảng Bình qua Thánh địa La Vang\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Khám phá Động Thiên Đường - Hoàng cung trong lòng đất\",\"price\":250000}],\"accommodation\":{\"service_id\":41,\"name\":\"Khách sạn 4★ Mường Thanh Quảng Bình\",\"price\":\"1250000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":5,\"start_destination_id\":\"16\",\"end_destination_id\":\"16\",\"route_title\":\"Quảng Bình - Viếng Mộ Đại Tướng - Tiễn Đoàn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Viếng mộ Đại tướng Võ Nguyên Giáp tại Vũng Chùa Đảo Yến\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Mua sắm đặc sản Nón lá, Mắm tôm chua Cố Đô & Tiễn sân bay\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1800000.00\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"capacity\":29,\"seat_capacity\":29,\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"partner_id\":null,\"partner_name\":null},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":5708333,\"sellingPrice\":6850000,\"totalDays\":5,\"totalNights\":4,\"totalMeals\":{\"breakfast\":4,\"lunch\":5,\"dinner\":4},\"autoTicketsCost\":1200000},\"categories\":[\"Văn hóa\",\"Di sản\",\"Khám phá\"],\"highlights\":\"Khám phá Bà Nà Hills, Cố đồ Huế, Đại Nội Hoàng Thành, Động Thiên Đường Quảng Bình\"}', NULL, 0, 5.00, 0),
+(34, 'Tour Phú Quốc 3N2Đ: Grand World - VinWonders - Cáp Treo Hòn Thơm', 'Trải nghiệm thiên đường nghỉ dưỡng Đảo Ngọc Phú Quốc, tham quan thành phố không ngủ Grand World, công viên chủ đề VinWonders và cáp treo Hòn Thơm vượt biển dài nhất thế giới.', 'Phú Quốc', 3, 5490000.00, '/uploads/19464_TOUR_PHÚ_QUỐC_3N2Đ_GRAND_WORLD_-_VINWONDERS_-_CÁP_TREO_HÒN_THƠM.jpg', 'Active', 1, 4575000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Đón khách Sân bay Phú Quốc - Check-in Grand World\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Bay đến Đảo Ngọc Phú Quốc, xe đưa về khách sạn\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Khám phá Grand World - Kênh đào Venice & Show Tinh Hoa Việt Nam\",\"price\":300000}],\"accommodation\":{\"service_id\":459,\"name\":\"Vinholidays Fiesta Phú Quốc 4★\",\"price\":\"1800000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Trải Nghiệm Cáp Treo Hòn Thơm - Bãi Sao - Tự Do Tắm Biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi cáp treo Hòn Thơm vượt biển dài nhất thế giới 7.899m\",\"price\":600000},{\"type\":\"Tham quan\",\"name\":\"Vui chơi Công viên nước Aquatopia & Tắm biển Bãi Sao\",\"price\":0}],\"accommodation\":{\"service_id\":459,\"name\":\"Vinholidays Fiesta Phú Quốc 4★\",\"price\":\"1800000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Chợ Đêm Dinh Cậu - Bún Quậy Kiến Xây - Tiễn Sân Bay\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Thưởng thức Bún quậy Kiến Xây & Mua sắm Rượu sim Phú Quốc\",\"price\":70000},{\"type\":\"Tham quan\",\"name\":\"Tham quan Cơ sở nuôi cấy Ngọc Trai cao cấp & Tiễn sân bay\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":1,\"service_name\":\"Vé máy bay Khứ hồi - Phổ thông\",\"unit\":\"Vé\",\"price\":\"1800000.00\",\"service_type\":\"Vé máy bay\",\"vehicle_detail_type\":\"Máy bay - Phổ thông\",\"capacity\":180,\"seat_capacity\":180},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":4575000,\"sellingPrice\":5490000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":2,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1200000},\"categories\":[\"Biển đảo\",\"Nghỉ dưỡng\",\"Công viên giải trí\"],\"highlights\":\"Thành phố không ngủ Grand World, Show Tinh Hoa Việt Nam, Cáp treo Hòn Thơm\"}', NULL, 0, 5.00, 0),
+(35, 'Tour Phú Quốc Hè 3N2Đ: Grand World - VinWonders - Safari - Hòn Thơm', 'Chương trình du lịch Phú Quốc hè trọn gói cao cấp bao gồm vé Vinpearl Safari bán hoang dã, VinWonders, show diễn Tinh Hoa Việt Nam và dịch vụ nghỉ dưỡng resort 4 sao sát biển.', 'Phú Quốc', 3, 7990000.00, '/uploads/19465_TOUR_PHÚ_QUỐC_HÈ_3N2Đ_GRAND_WORLD_-_VINWONDERS_-_SAFARI_-_CÁP_TREO_HÒN_THƠM.jpg', 'Active', 1, 6658333.33, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Phú Quốc - Vinpearl Safari & VinWonders Đỉnh Cao\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Bay đến Phú Quốc, xe riêng đón về Vinpearl Resort 5★\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Khám phá Công viên vạn thú bán hoang dã Vinpearl Safari\",\"price\":650000},{\"type\":\"Tham quan\",\"name\":\"Vui chơi công viên chủ đề VinWonders & Thủy cung Cung Điện Hải Vương\",\"price\":950000}],\"accommodation\":{\"service_id\":6,\"name\":\"Vinpearl Resort & Spa Phú Quốc 5★\",\"price\":\"3500000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Tour 4 Đảo Cano Cao Tốc - Lặn Ngắm San Hô Bãi Thơm\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Cano lướt sóng thăm Hòn Mây Rút, Hòn Mầm Xương & Hòn Gầm Ghì\",\"price\":500000},{\"type\":\"Tham quan\",\"name\":\"Chụp hình SUP cá nhân & Lặn ngắm rạn san hô đa sắc màu\",\"price\":200000}],\"accommodation\":{\"service_id\":6,\"name\":\"Vinpearl Resort & Spa Phú Quốc 5★\",\"price\":\"3500000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"3\",\"end_destination_id\":\"3\",\"route_title\":\"Grand World - Thưởng Thức Hải Sản Bãi Trường - Tiễn Sân Bay\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Dạo thuyền Gondola phong cách Ý tại Grand World\",\"price\":200000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tiễn sân bay Phú Quốc chuyến chiều - Kết thúc chuyến nghỉ dưỡng 5★\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":1,\"service_name\":\"Vé máy bay Khứ hồi - Phổ thông\",\"unit\":\"Vé\",\"price\":\"1800000.00\",\"service_type\":\"Vé máy bay\",\"vehicle_detail_type\":\"Máy bay - Phổ thông\",\"capacity\":180,\"seat_capacity\":180},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":6658333,\"sellingPrice\":7990000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":2,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1200000},\"categories\":[\"Biển đảo\",\"Nghỉ dưỡng cao cấp\",\"Safari\"],\"highlights\":\"Vinpearl Safari bán hoang dã, VinWonders, Du thuyền lặn ngắm san hô, Khách sạn 5★\"}', NULL, 0, 5.00, 0),
+(36, 'Tour Hạ Long - Tràng An - Sapa - Fansipan 4N3Đ', 'Chuyến du ngoạn Miền Bắc tuyệt mỹ kết hợp danh thắng Vịnh Hạ Long, quần thể danh thắng di sản Tràng An - Ninh Bình và đỉnh núi Fansipan mờ sương Sapa.', 'Hạ Long', 4, 6876571.43, '/uploads/1790584256041-557531239.webp', 'Pending', 1, 5730476.19, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Hà Nội - Vịnh Hạ Long - Động Thiên Cung\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón đoàn tại Hà Nội khởi hành đi Quảng Ninh\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Lên thuyền ngắm Đỉnh Hương, Hòn Gà Chọi & Động Thiên Cung\",\"price\":350000}],\"accommodation\":{\"service_id\":7,\"name\":\"Khách sạn 4★ Mường Thanh Hạ Long\",\"price\":\"1200000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"9\",\"end_destination_id\":\"9\",\"route_title\":\"Hạ Long - Tràng An Ninh Bình - Khởi Hành Đi Sapa\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi thuyền trên dòng sông Sào Khê Quần thể Tràng An\",\"price\":250000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành theo đường cao tốc Nội Bài - Lao Cai lên Sapa\",\"price\":0}],\"accommodation\":{\"service_id\":8,\"name\":\"Khách sạn 4★ Sapa Horizon\",\"price\":\"1400000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"4\",\"end_destination_id\":\"4\",\"route_title\":\"Sapa - Chinh Phục Đỉnh Fansipan 3.143m - Bản Cát Cát\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi Cáp treo chinh phục Nóc nhà Đông Dương Fansipan\",\"price\":850000},{\"type\":\"Tham quan\",\"name\":\"Tham quan Bản Cát Cát người H\'Mông & Thác Thủy Điện\",\"price\":150000}],\"accommodation\":{\"service_id\":8,\"name\":\"Khách sạn 4★ Sapa Horizon\",\"price\":\"1400000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Sapa - Moana Sapa Check-in - Trở Về Hà Nội\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Check-in điểm sống ảo Moana Sapa & Mua đặc sản thịt trâu gắp bếp\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Trở về Hà Nội - Tiễn đoàn tại Sân bay Nội Bài\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":21,\"margin\":20,\"fixed\":{\"transport\":7040000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1800000.00\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":5730476.19047619,\"sellingPrice\":6876571.428571428,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":0,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":1700000,\"breakEvenPax\":6,\"totalFixed\":9040000,\"totalVariable\":5300000},\"categories\":[\"Khám phá\",\"Nghỉ dưỡng\",\"Vùng cao\"],\"highlights\":\"Vịnh Hạ Long, Tràng An Ninh Bình, Chinh phục Fansipan Sapa\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(37, 'Tour Vịnh Hạ Long 4N3Đ - Du Thuyền 5 Sao Sang Trọng', 'Đặc quyền nghỉ dưỡng trên du thuyền 5 sao vịnh Hạ Long, chèo thuyền Kayak ngắm hoàng hôn, tắm biển Đảo Ti Tốp và tham quan Sun World Hạ Long Park.', 'Hạ Long', 4, 14520000.00, '/uploads/19624_TOUR_MIỀN_BẮC_MÙA_HÈ_4N3Đ_VỊNH_HẠ_LONG_-_TRẢI_NGHIỆM_DU_THUYỀN_ĐẶC_QUYỀN_GIÁ_SUN.jpg', 'Pending', 1, 12100000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Hà Nội - Vịnh Hạ Long - Du Thuyền 5★ Ambassador Cruise\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Xe Limousine đón tại Hà Nội ra Cảng quốc tế Tuần Châu\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Check-in Du thuyền 5★ Ambassador Cruise & Thưởng thức Buffet Hải sản\",\"price\":2500000},{\"type\":\"Tham quan\",\"name\":\"Chèo thuyền Kayak ngắm hoàng hôn Vịnh Hạ Long\",\"price\":200000}],\"accommodation\":{\"service_id\":9,\"name\":\"Du thuyền 5★ Ambassador Cruise Hạ Long\",\"price\":\"4500000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"15\",\"end_destination_id\":\"15\",\"route_title\":\"Thăm Hang Sửng Sốt - Đảo TiTop - Ninh Bình Emeralda 5★\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Khám phá Hang Sửng Sốt - Hang động rộng đẹp nhất Vịnh\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Leo núi ngắm toàn cảnh Vịnh từ đỉnh Đảo TiTop\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển về Ninh Bình, nhận phòng Emeralda Resort 5★\",\"price\":0}],\"accommodation\":{\"service_id\":10,\"name\":\"Emeralda Resort Ninh Bình 5★\",\"price\":\"2800000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Ninh Bình - Tuyệt Tình Cốc - Tràng An Đầm Vân Long - Hà Nội\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Check-in Tuyệt tình cốc Động Am Tiên Ninh Bình\",\"price\":100000},{\"type\":\"Tham quan\",\"name\":\"Đi thuyền sinh thái Đầm Vân Long ngắm Vọoc mông trắng\",\"price\":150000}],\"accommodation\":{\"service_id\":460,\"name\":\"Khách sạn 5★ Hotel de l\'Opera Hà Nội\",\"price\":\"3200000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Dạo Phố Cổ Hà Nội - Mua Sắm Ô Mai - Tiễn Sân Bay Nội Bài\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Dạo chơi Hồ Hoàn Kiếm, Đền Ngọc Sơn & Phố cổ 36 phố phường\",\"price\":50000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm ô mai Hàng Đường & Xe Limousine tiễn sân bay Nội Bài\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":40,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":2200000,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":1,\"service_name\":\"Vé máy bay Khứ hồi - Phổ thông\",\"service_type\":\"Vé máy bay\",\"description\":null,\"image_url\":null,\"status\":\"Active\",\"partner_id\":1,\"destination_id\":null,\"unit\":\"Vé\",\"base_cost\":\"2200000.00\",\"selling_price\":\"2200000.00\",\"attributes\":\"{\\\"vehicle_type\\\": \\\"Máy bay\\\", \\\"brand\\\": \\\"Airbus A321\\\", \\\"has_baggage\\\": \\\"20kg Ký gửi\\\"}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Vietnam Airlines\",\"destination_name\":null,\"proposed_cost\":\"2200000.00\",\"capacity\":180,\"max_adults\":null,\"max_children\":null,\"max_infants\":null,\"min_adults\":null,\"single_room_allowed\":null,\"single_room_supplement\":null,\"vehicle_detail_type\":\"Máy bay - Phổ thông\",\"seat_capacity\":180},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":12100000,\"sellingPrice\":14520000,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":0,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":3000000,\"breakEvenPax\":1,\"totalFixed\":2000000,\"totalVariable\":12050000},\"categories\":[\"Du thuyền\",\"Nghỉ dưỡng cao cấp\",\"Biển đảo\"],\"highlights\":\"Du thuyền 5★ Ambassador Hạ Long, Động TiTop, Hang Sửng Sốt, Ninh Bình Emeralda\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(38, 'Tour Hà Nội - Sapa - Chinh Phục Đỉnh Fansipan 3N2Đ', 'Khám phá thị trấn mờ sương Sapa, trải nghiệm văn hóa bản địa dân tộc H’Mông, Dao Đỏ và chinh phục cột mốc Nóc nhà Đông Dương Fansipan cao 3.143m.', 'Sapa', 3, 4108695.65, '/uploads/19471_TOUR_MIỀN_BẮC_MÙA_HÈ_3N2Đ_HÀ_NỘI_-_SAPA_-_FANSIPAN.jpg', 'Pending', 1, 3423913.04, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Hà Nội - Xe Cao Cấp Đi Sapa - Bản Cát Cát\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón khách tại Hà Nội đi xe giường nằm lên Sapa\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Khám phá Bản Cát Cát, chụp ảnh trang phục dân tộc H\'Mông\",\"price\":150000}],\"accommodation\":{\"service_id\":12,\"name\":\"Khách sạn 3★ Sapa Unique\",\"price\":\"800000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"4\",\"end_destination_id\":\"4\",\"route_title\":\"Sapa - Cáp Treo Fansipan 3.143m - Thung Lũng Mường Hoa\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Chinh phục Đỉnh Fansipan bằng cáp treo & Tàu hỏa mường hoa\",\"price\":850000},{\"type\":\"Tham quan\",\"name\":\"Dạo chợ đêm Sapa & Thưởng thức lẩu thắng cố / đồ nướng\",\"price\":200000}],\"accommodation\":{\"service_id\":12,\"name\":\"Khách sạn 3★ Sapa Unique\",\"price\":\"800000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Sapa - Nhà Thờ Đá - Trở Về Hà Nội\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Check-in Nhà thờ đá cổ Sapa & Mua đặc sản nấm hương, rau mầm\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Xe giường nằm đưa khách về Hà Nội - Kết thúc chuyến đi\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":\"23\",\"margin\":20,\"fixed\":{\"transport\":4800000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 29 chỗ rộng rãi, hầm cốp lớn, phù hợp cho đoàn công ty vừa và nhỏ.\",\"image_url\":\"/uploads/1787459151889-630393448.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":3423913.0434782607,\"sellingPrice\":4108695.6521739126,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":0,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1200000,\"breakEvenPax\":7,\"totalFixed\":6300000,\"totalVariable\":3150000},\"categories\":[\"Vùng cao\",\"Khám phá\",\"Chinh phục\"],\"highlights\":\"Sapa Nóc nhà Đông Dương, Cáp treo Fansipan, Bản Cát Cát người H\'Mông\",\"dayImages\":{}}', NULL, 0, 5.00, 0);
+INSERT INTO `tours` (`tour_id`, `tour_name`, `description`, `destination`, `duration_days`, `base_price`, `image_url`, `status`, `created_by`, `base_cost`, `markup_percent`, `design_data`, `rejection_reason`, `is_custom`, `average_rating`, `review_count`) VALUES
+(39, 'Tour Hà Nội - Chùa Tam Chúc - Ninh Bình - Tràng An 3N2Đ', 'Hành trình tâm linh và danh thắng nổi tiếng Miền Bắc: Viếng Ngôi Chùa Tam Chúc lớn nhất thế giới, đi thuyền sinh thái Tràng An và thưởng thức cơm cháy dê núi Ninh Bình.', 'Hà Nội', 3, 3625440.00, '/uploads/19470_TOUR_MIỀN_BẮC_MÙA_HÈ_3N2Đ_HÀ_NỘI_-_CHÙA_TAM_CHÚC_-_NINH_BÌNH_-_TRÀNG_AN.jpg', 'Active', 1, 3021200.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"8\",\"end_destination_id\":\"15\",\"route_title\":\"Hà Nội - Hà Nam (Chùa Tam Chúc) - Ninh Bình\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón khách tại Hà Nội khởi hành đi Hà Nam\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tới Hà Nam, tham quan khu du lịch tâm linh Chùa Tam Chúc - được mệnh danh là ngôi chùa lớn nhất thế giới. Quý khách trải nghiệm đi thuyền trên hồ Tam Chúc, viếng Điện Tam Thế, Điện Pháp Chủ, Điện Quan Âm.\",\"price\":200000},{\"type\":\"Ăn trưa\",\"name\":\"Dùng bữa trưa tại nhà hàng ở khu vực Tam Chúc hoặc trên đường di chuyển sang Ninh Bình.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển về Ninh Bình. Nhận phòng khách sạn 4 sao và nghỉ ngơi.\",\"price\":0},{\"type\":\"Ăn tối\",\"name\":\"Dùng bữa tối tại nhà hàng, thưởng thức đặc sản cơm cháy dê núi Ninh Bình. Tự do khám phá thành phố Ninh Bình về đêm.\",\"price\":0}],\"accommodation\":{\"service_id\":13,\"name\":\"Khách sạn 4★ The Readon Ninh Bình\",\"price\":\"1100000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true},\"isTitleEdited\":true},{\"dayIndex\":2,\"start_destination_id\":\"15\",\"end_destination_id\":\"8\",\"route_title\":\"Khám phá Cố Đô Hoa Lư - Danh Thắng Tràng An\",\"activities\":[{\"type\":\"Ăn sáng\",\"name\":\"Dùng điểm tâm sáng tại khách sạn. Khởi hành tham quan Cố đô Hoa Lư, viếng đền vua Đinh Tiên Hoàng và đền vua Lê Đại Hành, tìm hiểu về lịch sử các triều đại phong kiến Việt Nam.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Đi thuyền chèo dọc sông Sào Khê xuyên Hang Sáng, Hang Tối\",\"price\":250000},{\"type\":\"Ăn trưa\",\"name\":\"Dùng bữa trưa buffet hoặc set menu tại nhà hàng địa phương.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Check-in Hang Múa ngắm toàn cảnh sông núi Tam Cốc\",\"price\":100000},{\"type\":\"Ăn tối\",\"name\":\"Về lại khách sạn. Dùng bữa tối và tự do nghỉ ngơi.\",\"price\":0}],\"accommodation\":{\"service_id\":13,\"name\":\"Khách sạn 4★ The Readon Ninh Bình\",\"price\":\"1100000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true},\"isTitleEdited\":true},{\"dayIndex\":3,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"Ninh Bình - Hang Múa - Trở Về Hà Nội\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Dùng điểm tâm sáng. Trả phòng khách sạn. Khởi hành đi chinh phục Hang Múa ,leo gần 500 bậc thang đá ngắm nhìn toàn cảnh Tam Cốc từ trên cao.\",\"price\":150000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Dùng bữa trưa tại nhà hàng. Tự do mua sắm đặc sản Ninh Bình làm quà.\",\"price\":0},{\"type\":\"Di chuyển\",\"name\":\"Lên xe khởi hành về lại Hà Nội.\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":\"hotel\",\"dinner\":false},\"isTitleEdited\":true}],\"costConfig\":{\"minimumPax\":\"25\",\"margin\":20,\"fixed\":{\"transport\":5280000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1800000.00\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":3021200,\"sellingPrice\":3625440,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":0,\"lunch\":2,\"dinner\":2},\"autoTicketsCost\":700000,\"breakEvenPax\":8,\"totalFixed\":6780000,\"totalVariable\":2750000},\"categories\":[\"Văn hóa\",\"Tâm linh\",\"Di sản\"],\"highlights\":\"Chùa Tam Chúc Hà Nam, Danh thắng Tràng An Ninh Bình, Cố đô Hoa Lư\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(40, 'Tour Hà Giang - Quản Bạ - Sông Nho Quế 4N3Đ', 'Chinh phục cung đường di sản Cao nguyên đá Đồng Văn Hà Giang, trải nghiệm đi thuyền hẻm vực Tu Sản - Sông Nho Quế và check-in Cột cờ Lũng Cú.', 'Hà Giang', 4, 4233272.73, '/uploads/19476_TOUR_ĐÔNG_BẮC_MÙA_HÈ_4N3Đ_HÀ_GIANG_-_QUẢN_BẠ_-_SÔNG_NHO_QUẾ.jpg', 'Pending', 1, 3527727.27, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"8\",\"end_destination_id\":\"19\",\"route_title\":\"Hà Nội - Tuyên Quang - TP. Hà Giang - Quản Bạ\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành từ Hà Nội đi Hà Giang theo QL2\",\"price\":0},{\"type\":\"Ăn trưa\",\"name\":\"Dùng bữa trưa tại nhà hàng ở Tuyên Quang.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Đến TP. Hà Giang, chụp ảnh kỷ niệm tại Cột mốc số 0. Tiếp tục di chuyển qua dốc Bắc Sum lên Quản Bạ. Check-in Núi đôi Quản Bạ và Cổng trời Quản Bạ.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Nhận phòng Homestay/Khách sạn tại Quản Bạ. Dùng bữa tối với đặc sản địa phương.\",\"price\":0}],\"accommodation\":{\"service_id\":26,\"name\":\"Khách sạn 3★ Đồng Văn Hoa Cổ\",\"price\":\"850000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true},\"isTitleEdited\":true},{\"dayIndex\":2,\"start_destination_id\":\"19\",\"end_destination_id\":\"19\",\"route_title\":\"Quản Bạ - Yên Minh - Cao nguyên đá Đồng Văn - Lũng Cú\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Ăn sáng, trả phòng. Di chuyển qua dốc Thẩm Mã, dốc Chín Khoanh. Tham quan Bản Sủng Là\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Dùng bữa trưa tại thị trấn Đồng Văn.\",\"price\":200000},{\"type\":\"Tham quan\",\"name\":\"Tham quan Dinh thự Vua Mèo (Vương Chính Đức). Tiếp tục hành trình chinh phục Cột cờ Lũng Cú - điểm cực Bắc của Tổ quốc.\",\"price\":0},{\"type\":\"Ăn tối\",\"name\":\"Về lại thị trấn Đồng Văn nhận phòng. Ăn tối và tự do khám phá Phố cổ Đồng Văn về đêm, thưởng thức cafe phố cổ.\",\"price\":0}],\"accommodation\":{\"service_id\":461,\"name\":\"Homestay Panorama Mèo Vạc\",\"price\":\"700000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true},\"isTitleEdited\":true},{\"dayIndex\":3,\"start_destination_id\":\"19\",\"end_destination_id\":\"19\",\"route_title\":\"Đồng Văn - Mã Pí Lèng - Sông Nho Quế - TP. Hà Giang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Viếng Cột cờ Lũng Cú - Cực Bắc thiêng liêng của Tổ Quốc\",\"price\":50000},{\"type\":\"Tham quan\",\"name\":\"Tham quan Dinh biệt thự Vua Mèo Vương Chính Đức\",\"price\":30000},{\"type\":\"Di chuyển\",\"name\":\"Lên xe khởi hành về lại Thành phố Hà Giang.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Nhận phòng khách sạn tại TP. Hà Giang. Ăn tối và tự do dạo phố, thưởng thức cháo ấu tẩu.\",\"price\":0}],\"accommodation\":{\"service_id\":462,\"name\":\"Khách sạn 3★ Hà Giang Historic\",\"price\":\"800000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true},\"isTitleEdited\":true},{\"dayIndex\":4,\"start_destination_id\":\"8\",\"end_destination_id\":\"8\",\"route_title\":\"TP. Hà Giang - Hà Nội - Tiễn khách\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Ngắm Thác Tiên Đèo Gió nguyên sơ & Mua cam sành Hà Giang\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Trở về Hà Nội\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false},\"isTitleEdited\":true}],\"costConfig\":{\"minimumPax\":\"22\",\"margin\":20,\"fixed\":{\"transport\":6400000,\"guidePerDay\":\"1000000\",\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 29 chỗ rộng rãi, hầm cốp lớn, phù hợp cho đoàn công ty vừa và nhỏ.\",\"image_url\":\"/uploads/1787459151889-630393448.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":3527727.2727272725,\"sellingPrice\":4233272.727272727,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":0,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":280000,\"breakEvenPax\":9,\"totalFixed\":10400000,\"totalVariable\":3055000},\"categories\":[\"Khám phá\",\"Vùng cao\",\"Trải nghiệm\"],\"highlights\":\"Đi thuyền Sông Nho Quế, Cột cờ Lũng Cú, Đèo Mã Pí Lèng, Núi đôi Quản Bạ\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(41, 'Tour Quy Nhơn Mùa Hè 3N2Đ: Hầm Hồ - Ghềnh Ráng - Kỳ Co - Eo Gió', 'Đến với miền đất võ thiên đường biển Quy Nhơn, lặn biển ngắm san hô tại đảo Kỳ Co, đón bình minh tại Eo Gió ngắm tuyệt tác thiên nhiên.', 'Quy Nhơn', 3, 10581818.18, '/uploads/19104_TOUR_QUY_NHƠN_MÙA_HÈ_3N2Đ_KDL_HẦM_HÔ_-_GHỀNH_RÁNG_-_KỲ_CO_-_EO_GIÓ.jpg', 'Pending', 1, 8818181.82, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"10\",\"end_destination_id\":\"10\",\"route_title\":\"Đón Khách Quy Nhơn - Ghềnh Ráng Tiên Sa - Mộ Hàn Mặc Tử\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón khách tại Sân bay Phù Cát về Quy Nhơn\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan KDL Ghềnh Ráng Tiên Sa, Mộ thi sĩ Hàn Mặc Tử & Bãi Hoàng Hậu\",\"price\":50000}],\"accommodation\":{\"service_id\":463,\"name\":\"Khách sạn 4★ Anya Quy Nhơn\",\"price\":\"1350000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"10\",\"end_destination_id\":\"10\",\"route_title\":\"Cano Đảo Kỳ Co - Lặn San Hô - Eo Gió Lung Linh\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Cano cao tốc ra Đảo Kỳ Co - Thiên đường Maldives Việt Nam\",\"price\":450000},{\"type\":\"Tham quan\",\"name\":\"Lặn ngắm san hô Bãi Rạn & Check-in con đường đi bộ Eo Gió\",\"price\":150000}],\"accommodation\":{\"service_id\":463,\"name\":\"Khách sạn 4★ Anya Quy Nhơn\",\"price\":\"1350000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"10\",\"end_destination_id\":\"10\",\"route_title\":\"Khu Sinh Thái Hầm Hồ - Mua Sắm Bánh Ít Lá Gai - Tiễn Đoàn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi thuyền chèo KDL Sinh thái Hầm Hồ giữa lòng rừng xanh\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua đặc sản Bánh ít lá gai, Tré Bình Định - Tiễn sân bay Phù Cát\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":22,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":5500000,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":2,\"service_name\":\"Vé máy bay Khứ hồi - Thương gia\",\"service_type\":\"Vé máy bay\",\"description\":null,\"image_url\":null,\"status\":\"Active\",\"partner_id\":1,\"destination_id\":null,\"unit\":\"Vé\",\"base_cost\":\"5500000.00\",\"selling_price\":\"5500000.00\",\"attributes\":\"{\\\"vehicle_type\\\": \\\"Máy bay\\\", \\\"brand\\\": \\\"Boeing 787\\\", \\\"has_baggage\\\": \\\"30kg Ký gửi + Phòng chờ VIP\\\"}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Vietnam Airlines\",\"destination_name\":null,\"proposed_cost\":\"5500000.00\",\"capacity\":250,\"max_adults\":null,\"max_children\":null,\"max_infants\":null,\"min_adults\":null,\"single_room_allowed\":null,\"single_room_supplement\":null,\"vehicle_detail_type\":\"Máy bay - Thương gia\",\"seat_capacity\":250},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":8818181.818181818,\"sellingPrice\":10581818.181818182,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":0,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":750000,\"breakEvenPax\":1,\"totalFixed\":1500000,\"totalVariable\":8750000},\"categories\":[\"Biển đảo\",\"Khám phá\",\"Ẩm thực\"],\"highlights\":\"Biển Kỳ Co, Eo Gió đón bình minh, Ghềnh Ráng Tiên Sa, Hầm Hồ\",\"dayImages\":{\"1\":\"/uploads/1787457747380-101710045.jpg\",\"2\":\"/uploads/1787457747382-812222074.jpg\",\"3\":\"/uploads/1787457747383-723507097.jpg\"}}', NULL, 0, 5.00, 0),
+(42, 'Tour Quy Nhơn - Phú Yên 4N3Đ: Mũi Điện - Gành Đá Đĩa - Kỳ Co', 'Hành trình liên tuyến tuyệt vời khám phá xứ sở Hoa Vàng Trên Cỏ Xanh Phú Yên và thiên đường biển xanh Quy Nhơn trọn gói.', 'Phú Yên', 4, 5413200.00, '/uploads/19106_TOUR_QUY_NHƠN_-_PHÚ_YÊN_MÙA_HÈ_4N3Đ_MŨI_ĐIỆN_-_GÀNH_ĐÁ_DĨA_-_KỲ_CO_-_EO_GIÓ.jpg', 'Pending', 1, 4511000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"20\",\"end_destination_id\":\"20\",\"route_title\":\"Đón Khách Tuy Hòa Phú Yên - Gành Đá Đĩa - Đầm O Loan\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón khách tại Phú Yên, thưởng thức Sò huyết Đầm O Loan\",\"price\":200000},{\"type\":\"Tham quan\",\"name\":\"Tham quan Gành Đá Đĩa - Kiệt tác tổ tinh thể đá thiên nhiên\",\"price\":50000}],\"accommodation\":{\"service_id\":29,\"name\":\"Khách sạn 4★ Sala Phú Yên Beach\",\"price\":\"1250000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"10\",\"end_destination_id\":\"10\",\"route_title\":\"Mũi Điện Cực Đông - Tháp Nghinh Phong - Sang Quy Nhơn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Chinh phục Mũi Điện - Nơi đón ánh bình minh đầu tiên trên đất liền\",\"price\":50000},{\"type\":\"Tham quan\",\"name\":\"Check-in Tháp Nghinh Phong biểu tượng mới của Phú Yên\",\"price\":0}],\"accommodation\":{\"service_id\":32,\"name\":\"Khách sạn 4★ Seagull Quy Nhơn\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"10\",\"end_destination_id\":\"10\",\"route_title\":\"Quy Nhơn - Đảo Kỳ Co - Eo Gió - Tịnh Xá Ngọc Hòa\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Cano vượt biển tắm biển Kỳ Co & Lặn ngắm san hô\",\"price\":450000},{\"type\":\"Tham quan\",\"name\":\"Chiêm bái Tượng Phật đôi cao nhất Việt Nam tại Tịnh Xá Ngọc Hòa\",\"price\":0}],\"accommodation\":{\"service_id\":32,\"name\":\"Khách sạn 4★ Seagull Quy Nhơn\",\"price\":\"1300000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"20\",\"end_destination_id\":\"20\",\"route_title\":\"Bảo Tàng Quang Trung - Võ Thuật Tây Sơn - Tiễn Đoàn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Viếng Bảo tàng Quang Trung & Thưởng thức màn biểu diễn Võ thuật Tây Sơn\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tiễn khách tại Sân bay Phù Cát / Bến xe Quy Nhơn\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":\"25\",\"margin\":20,\"fixed\":{\"transport\":6400000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 29 chỗ rộng rãi, hầm cốp lớn, phù hợp cho đoàn công ty vừa và nhỏ.\",\"image_url\":\"/uploads/1787459151889-630393448.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":4511000,\"sellingPrice\":5413200,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":0,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":650000,\"breakEvenPax\":7,\"totalFixed\":8400000,\"totalVariable\":4175000},\"categories\":[\"Biển đảo\",\"Khám phá\",\"Nghỉ dưỡng\"],\"highlights\":\"Gành Đá Đĩa Phú Yên, Mũi Điện cực Đông, Kỳ Co Eo Gió Quy Nhơn\",\"dayImages\":{\"1\":\"/uploads/1787457747380-101710045.jpg\",\"2\":\"/uploads/1787457747382-812222074.jpg\",\"3\":\"/uploads/1787457747383-723507097.jpg\"}}', NULL, 0, 5.00, 0),
+(43, 'Tour Đà Lạt Mùa Hè 4N3Đ: Thác Bobla - Vùng Đất Cổ Tích', 'Trải nghiệm mùa hè mát lạnh tại ngàn hoa Đà Lạt, thưởng ngoạn Thác Bobla nguyên sơ hùng vĩ, Fresh Garden và Vùng đất cổ tích Fairytale Land.', 'Đà Lạt', 4, 4650000.00, '/uploads/19508_TOUR_ĐÀ_LẠT_MÙA_HÈ_4N3Đ_THÁC_BOBLA_-_VÙNG_ĐẤT_CỔ_TÍCH.jpg', 'Active', 1, 3875000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"TP.HCM - Lâm Đồng - Thám Hiểm Thác Bobla - Đến Đà Lạt\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành từ TP.HCM theo QL20 lên Cao nguyên Lâm Viên\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Khám phá Thác Bobla giữa đại ngàn rừng xanh\",\"price\":100000}],\"accommodation\":{\"service_id\":20,\"name\":\"Khách sạn 4★ Golf Valley Đà Lạt\",\"price\":\"1500000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Đà Lạt - Quảng Trường Lâm Viên - Fairytale Land - Hầm Vang\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Check-in Nụ hoa Atiso Quảng trường Lâm Viên & Hồ Xuân Hương\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Khám phá Vùng đất cổ tích Fairytale Land & Thử rượu vang Đà Lạt\",\"price\":150000}],\"accommodation\":{\"service_id\":20,\"name\":\"Khách sạn 4★ Golf Valley Đà Lạt\",\"price\":\"1500000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Thung Lũng Tình Yêu - Alpine Coaster Thác Datanla - Chợ Đêm\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trải nghiệm Xe trượt máng Alpine Coaster xuyên rừng Thác Datanla\",\"price\":200000},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thung lũng Tình Yêu & Dạo Chợ đêm Đà Lạt\",\"price\":250000}],\"accommodation\":{\"service_id\":20,\"name\":\"Khách sạn 4★ Golf Valley Đà Lạt\",\"price\":\"1500000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Thiền Viện Trúc Lâm - Mua Mứt Đà Lạt - Trở Về TP.HCM\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Viếng Thiền viện Trúc Lâm ngắm Hồ Tuyền Lâm xanh biếc\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm mứt đà lạt & Trở về TP.HCM - Kết thúc chuyến đi\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1800000.00\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"capacity\":29,\"seat_capacity\":29,\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"partner_id\":null,\"partner_name\":null},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":3875000,\"sellingPrice\":4650000,\"totalDays\":4,\"totalNights\":3,\"totalMeals\":{\"breakfast\":3,\"lunch\":4,\"dinner\":3},\"autoTicketsCost\":1200000},\"categories\":[\"Nghỉ dưỡng\",\"Cổ tích\",\"Hoa mộng\"],\"highlights\":\"Thác Bobla hùng vĩ, Fairytale Land, Alpine Coaster Datanla, Thung lũng Tình Yêu\"}', NULL, 0, 5.00, 0),
+(44, 'Tour Đà Lạt 3N3Đ: Săn Mây - Trạm Ký Ức - Fresh Garden', 'Tour săn mây bình minh Cầu Đất siêu HOT, check-in Trạm Ký Ức hoài niệm, vườn hoa Fresh Garden và thưởng thức lẩu gà lá é đặc sản Đà Lạt.', 'Đà Lạt', 3, 3250000.00, '/uploads/19510_TOUR_ĐÀ_LẠT_MÙA_HÈ_3N3Đ_Săn_Mây_-_Trạm_Ký_Ức_-_Fresh_Garden.jpg', 'Active', 1, 2708333.33, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Săn Mây Đồi Cầu Đất - Tiệm Cà Phê Trạm Ký Ức\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trải nghiệm Săn mây biển sương Đồi Cầu Đất lúc 05:00 sáng\",\"price\":120000},{\"type\":\"Tham quan\",\"name\":\"Thưởng thức cà phê chiều tại Trạm Ký Ức ngắm hoàng hôn Đà Lạt\",\"price\":80000}],\"accommodation\":{\"service_id\":464,\"name\":\"Khách sạn 3★ Duparc Đà Lạt\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"KDL Fresh Garden Ngàn Hoa - Trang Trại Cún Puppy Farm\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Đồi hoa cánh bướm & Cổng trời KDL Fresh Garden\",\"price\":100000},{\"type\":\"Tham quan\",\"name\":\"Vui chơi cùng các chú cún dễ thương tại Trang trại Puppy Farm\",\"price\":100000}],\"accommodation\":{\"service_id\":464,\"name\":\"Khách sạn 3★ Duparc Đà Lạt\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"2\",\"end_destination_id\":\"2\",\"route_title\":\"Nông Trại Cầu Đất Tea Hill - Vườn Dâu Tây - Tiễn Đoàn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Hái dâu tây sạch tại vườn & Thưởng thức bánh mì xíu mại\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tiễn đoàn về lại TP.HCM / Sân bay Liên Khương\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1800000.00\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"capacity\":29,\"seat_capacity\":29,\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"partner_id\":null,\"partner_name\":null},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":2708333,\"sellingPrice\":3250000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":2,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1200000},\"categories\":[\"Săn mây\",\"Check-in\",\"Nghỉ dưỡng\"],\"highlights\":\"Săn mây Đồi Cầu Đất, Trạm Ký Ức, Fresh Garden ngàn hoa, Puppy Farm\"}', NULL, 0, 5.00, 0),
+(45, 'Tour Vĩnh Hy - Nha Trang 3N3Đ Mùa Hè', 'Kết hợp khám phá Vịnh Vĩnh Hy - một trong bốn vịnh đẹp nhất Việt Nam và thành phố biển Nha Trang sôi động với Tháp Bà Ponagar, đảo Hòn Mun.', 'Nha Trang', 3, 4905000.00, '/uploads/1790582913361-227060529.jpg', 'Pending', 1, 4087500.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón khách tại Ninh Thuận đi Vịnh Vĩnh Hy\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Đi tàu đáy kính ngắm san hô Vĩnh Hy & Thám hiểm thềm đá Hang Rái\",\"price\":200000}],\"accommodation\":{\"service_id\":465,\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang\",\"price\":\"1400000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Cano lướt sóng thăm Hòn Mun, Hòn Một & Tắm biển Bãi Tranh\",\"price\":400000},{\"type\":\"Tham quan\",\"name\":\"Thư giãn tắm bùn khoáng nóng thiên nhiên Tháp Bà\",\"price\":250000}],\"accommodation\":{\"service_id\":465,\"name\":\"Khách sạn 4★ Vinpearl Condotel Nha Trang\",\"price\":\"1400000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"1\",\"end_destination_id\":\"1\",\"route_title\":\"Nha Trang - Thành phố biển\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Tháp Bà Ponagar kiến trúc Chăm Pa cổ & Chùa Long Sơn\",\"price\":50000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Mua sắm Yến sào Nha Trang, Nem nướng Ninh Hòa - Tiễn sân bay Cam Ranh\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":8,\"margin\":20,\"fixed\":{\"transport\":3600000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":4,\"service_name\":\"Xe Du lịch 16 chỗ (Ford Transit / Solati Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Xe 16 chỗ đời mới trần cao thoáng mát, ghế da cao cấp, phù hợp tour gia đình lớn và cơ quan.\",\"image_url\":\"/uploads/1791429909308-21477970.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1200000.00\",\"selling_price\":\"1300000.00\",\"attributes\":null,\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1200000.00\",\"vehicle_service_id\":23,\"capacity\":16,\"vehicle_detail_type\":\"Xe 16 chỗ\",\"vehicle_model\":\"Ford Transit Luxury / Hyundai Solati DLX\",\"total_quantity\":6,\"max_adults\":null,\"max_children\":null,\"max_infants\":null,\"min_adults\":null,\"single_room_allowed\":null,\"single_room_supplement\":null,\"available_vehicles_count\":5,\"total_vehicles_count\":6},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":4087500,\"sellingPrice\":4905000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":0,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":900000,\"breakEvenPax\":4,\"totalFixed\":5100000,\"totalVariable\":3450000},\"categories\":[\"Biển đảo\",\"Khám phá\",\"Vịnh biển\"],\"highlights\":\"Tàu đáy kính Vịnh Vĩnh Hy, Hang Rái Ninh Thuận, Vịnh Nha Trang\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(46, 'Tour Phan Thiết 3N2Đ: Đảo Phú Quý - Thiên Đường Biển Xanh', 'Chinh phục đảo ngọc Phú Quý hoang sơ tại Bình Thuận, check-in Dốc Phượt, Cột cờ Chủ Quyền, Vịnh Triều Dương và hồ bơi vô cực tự nhiên Bãi Nhỏ.', 'Phan Thiết', 3, 3708000.00, '/uploads/18935_TOUR_PHAN_THIẾT_3N2Đ_ĐẢO_PHÚ_QUÝ_-_THIÊN_ĐƯỜNG_BIỂN_XANH.jpg', 'Pending', 1, 3090000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"11\",\"end_destination_id\":\"11\",\"route_title\":\"Mũi Né - Tuyệt tác thiên nhiên\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành từ TP.HCM ra Cảng Phan Thiết\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tàu cao tốc 2.5 tiếng ra Đảo Phú Quý - Check-in Dốc Phượt & Đột Lỗ\",\"price\":400000}],\"accommodation\":{\"service_id\":69,\"name\":\"Phú Quý Island Hotel 3★\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"11\",\"end_destination_id\":\"11\",\"route_title\":\"Mũi Né - Tuyệt tác thiên nhiên\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi ca no nhỏ sang Hòn Tranh tắm biển lặn ngắm san hô\",\"price\":250000},{\"type\":\"Tham quan\",\"name\":\"Check-in Vịnh Triều Dương & Ngọn Hải Đăng Cấm ngắm toàn đảo\",\"price\":50000}],\"accommodation\":{\"service_id\":69,\"name\":\"Phú Quý Island Hotel 3★\",\"price\":\"900000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"11\",\"end_destination_id\":\"11\",\"route_title\":\"Mũi Né - Tuyệt tác thiên nhiên\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Check-in Khe Sung Sướng & Hồ vô cực Gành Hang Phú Quý\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Tàu cao tốc về lại bờ - Mua nước mắm Phan Thiết & Thanh Long - Tiễn đoàn\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":3600000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":4,\"service_name\":\"Xe Du lịch 16 chỗ (Ford Transit / Solati Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786238675096-710880483.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1200000\",\"selling_price\":\"1300000\",\"capacity\":16,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Xe 16 chỗ\",\"seat_capacity\":16},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"},\"transportLocations\":{\"startD\":\"TP. Hồ Chí MInh\",\"endD\":\"\",\"startR\":\"\",\"endR\":\"TP. Hồ Chí Minh\"}},\"computed\":{\"netCost\":3090000,\"sellingPrice\":3708000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":0,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":700000,\"breakEvenPax\":6,\"totalFixed\":5100000,\"totalVariable\":2750000},\"categories\":[\"Biển đảo\",\"Khám phá\",\"Cực hot\"],\"highlights\":\"Đảo Phú Quý, Hòn Tranh, Gành Hang, Cột mốc chủ quyền biển đảo\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(47, 'Tour Hồ Tràm 2N1Đ: Tận Hưởng Biển Xanh - Nghỉ Dưỡng Cao Cấp', 'Trải nghiệm nghỉ dưỡng tuyệt vời tại Hồ Tràm', 'Vũng Tàu', 2, 4140000.00, '/uploads/1790585049625-796693861.jpg', 'Active', 1, 3450000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"14\",\"route_title\":\"TP.HCM - Bà Rịa - Hồ Tràm\",\"activities\":[{\"type\":\"Di chuyển\",\"name\":\"Xe đón đoàn tại điểm hẹn ở TP.HCM, khởi hành đi Bà Rịa - Vũng Tàu. Dừng chân dùng điểm tâm sáng trên đường. Tham quan Đồi Cừu Suối Nghệ để chụp ảnh trước khi đến Hồ Tràm.\",\"price\":0},{\"type\":\"Ăn trưa\",\"name\":\"Dùng bữa trưa tại nhà hàng địa phương. Di chuyển về Resort/Khách sạn làm thủ tục nhận phòng.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Thời gian tự do tắm biển, thư giãn tại hồ bơi của resort. Đoàn có thể dạo bước tham quan phố thương mại ven biển và Cầu ngắm biển Hamptons.\",\"price\":400000},{\"type\":\"Ăn tối\",\"name\":\"Dùng bữa tối với thực đơn hải sản. Tự do dạo biển về đêm hoặc trải nghiệm các tiện ích giải trí tại khu nghỉ dưỡng.\",\"price\":250000},{\"type\":\"Ăn tối\",\"name\":\"Dùng bữa tối tại nhà hàng\",\"price\":0}],\"accommodation\":{\"service_id\":59,\"name\":\"The Grand Ho Tram Resort 5★ (hoặc tương đương)\",\"price\":\"3200000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":\"hotel\"},\"isTitleEdited\":true},{\"dayIndex\":2,\"start_destination_id\":\"14\",\"end_destination_id\":\"18\",\"route_title\":\"Hồ Tràm - TP.HCM\",\"activities\":[{\"type\":\"Ăn sáng\",\"name\":\"Dùng điểm tâm sáng buffet tại resort. Tự do tắm biển, ngắm bình minh. Du khách cũng có thể tự túc di chuyển trải nghiệm tắm bùn khoáng tại Suối nước nóng Minera Bình Châu (cách đó không xa).\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Làm thủ tục trả phòng. Đoàn dùng bữa trưa tại nhà hàng.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Lên xe khởi hành về lại TP.HCM. Trên đường đi, xe dừng tại trạm dừng chân (khu vực Bò sữa Long Thành) để quý khách mua sắm đặc sản làm quà. Về đến điểm đón ban đầu, kết thúc chương trình.\",\"price\":0}],\"isTitleEdited\":true,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":\"external\"}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":5000000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":0,\"lunch\":\"500000\",\"dinner\":0,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"preset\":\"road\",\"child\":{\"percent\":50,\"fixed_surcharge\":0},\"toddler\":{\"percent\":0,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0}},\"selectedTransport\":{\"service_id\":25,\"service_name\":\"Xe Du lịch 45 chỗ (Hyundai Universe Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Dòng xe 45 chỗ cao cấp nhất, bầu hơi êm ái, chuyên chạy tour ghép đoàn lớn.\",\"image_url\":\"/uploads/1787459109242-530366681.jpeg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"2500000\",\"selling_price\":\"2600000\",\"capacity\":45,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Xe 45 chỗ\",\"seat_capacity\":45},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":3450000,\"sellingPrice\":4140000,\"totalDays\":2,\"totalNights\":1,\"totalMeals\":{\"breakfast\":0,\"lunch\":2,\"dinner\":0},\"autoTicketsCost\":400000,\"breakEvenPax\":6,\"totalFixed\":6000000,\"totalVariable\":3050000},\"categories\":[],\"highlights\":\"Hành trình 2 Ngày 1 Đêm đưa du khách rời xa những ồn ào vội vã, đến với biển xanh, cát trắng và nắng vàng tại Hồ Tràm. Tận hưởng trọn vẹn kỳ nghỉ dưỡng cao cấp với các tiện ích chuẩn 4 sao, hít thở không khí trong lành và khám phá ẩm thực phong phú.\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(48, 'Tour Tây Nguyên 3N3Đ: Măng Đen - Pleiku - Buôn Ma Thuột', 'Hành trình huyền thoại đại ngàn Tây Nguyên khám phá Măng Đen được mệnh danh Đà Lạt thứ 2, Đôi mắt Pleiku Biển Hồ T Nưng và Thác Dray Nur kỳ vĩ.', 'Đắk Lắk', 3, 3950000.00, '/uploads/19580_TOUR_BUÔN_MA_THUỘT_MÙA_HÈ_3N3Đ_MĂNG_ĐEN_-_PLEIKU_-_BUÔN_MA_THUỘT.jpg', 'Active', 1, 3291666.67, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"21\",\"end_destination_id\":\"21\",\"route_title\":\"Đón Khách Kon Tum - Thị Trấn Sương Mù Măng Đen - Thác Pa Sỹ\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón đoàn tại Kon Tum khởi hành đi Măng Đen\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Thác Pa Sỹ nguyên sơ & Chiêm bái Tượng Đức Mẹ Măng Đen\",\"price\":50000}],\"accommodation\":{\"service_id\":63,\"name\":\"Khách sạn 3★ Pleiku Hotel\",\"price\":\"850000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"21\",\"end_destination_id\":\"21\",\"route_title\":\"Pleiku - Biển Hồ Tơ Nưng - Hàng Cây Trăm Tuổi - Buôn Ma Thuột\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Check-in Biển Hồ Tơ Nưng - Đôi mắt Pleiku mơ màng\",\"price\":30000},{\"type\":\"Tham quan\",\"name\":\"Dạo bước Hàng cây thông trăm tuổi & Đồi trà Biển Hồ\",\"price\":0}],\"accommodation\":{\"service_id\":26,\"name\":\"Khách sạn 4★ Saigon Ban Me\",\"price\":\"1200000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"21\",\"end_destination_id\":\"21\",\"route_title\":\"Bảo Tàng Thế Giới Cà Phê - Buôn Đôn - Tiễn Đoàn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Tham quan Bảo tàng Thế giới Cà phê kiến trúc nhà dài Tây Nguyên\",\"price\":150000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Thưởng thức Cà phê Trung Nguyên chính hiệu & Tiễn sân bay Buôn Ma Thuột\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1800000.00\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"capacity\":29,\"seat_capacity\":29,\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"partner_id\":null,\"partner_name\":null},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":3291667,\"sellingPrice\":3950000,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":2,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":1200000},\"categories\":[\"Tây Nguyên\",\"Vùng cao\",\"Khám phá\"],\"highlights\":\"Măng Đen sương mù, Biển Hồ Tơ Nưng Pleiku, Bảo tàng Cà phê Buôn Ma Thuột\"}', NULL, 0, 5.00, 0),
+(49, 'Tour Miền Tây 3N2Đ: Mỹ Tho - Cần Thơ - Sóc Trăng - Bạc Liêu - Cà Mau', 'Hành trình khám phá trọn vẹn 6 tỉnh Miền Tây Nam Bộ: Sông nước Cù lao Thới Sơn, Chợ nổi Cái Răng, Chùa Dơi Sóc Trăng, Nhà Công tử Bạc Liêu và Đất Mũi Cà Mau.', 'Cần Thơ', 3, 5438400.00, '/uploads/18924_TOUR_MIỀN_TÂY_3N2Đ_MỸ_THO_-_BẾN_TRE_-_CẦN_THƠ_-_SÓC_TRĂNG_-_BẠC_LIÊU_-_CÀ_MAU.jpg', 'Active', 1, 4532000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"18\",\"end_destination_id\":\"12\",\"route_title\":\"TP.HCM - Mỹ Tho - Bến Tre - Cần Thơ\",\"activities\":[{\"type\":\"Di chuyển\",\"name\":\"Khởi hành từ TP.HCM\",\"price\":0},{\"type\":\"Ăn trưa\",\"name\":\"Đi xuồng máy tham quan Cồn Phụng, cơ sở làm kẹo dừa, nghe Đờn ca tài tử. Dùng bữa trưa tại nhà hàng miệt vườn\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Di chuyển về Cần Thơ. Nhận phòng Khách sạn 4 sao TTC Cần Thơ.\",\"price\":0},{\"type\":\"Ăn tối\",\"name\":\"Dùng bữa tối. Tự do khám phá Bến Ninh Kiều.\",\"price\":0}],\"accommodation\":{\"service_id\":27,\"name\":\"Khách sạn 4★ TTC Cần Thơ\",\"price\":\"1200000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true},\"isTitleEdited\":true},{\"dayIndex\":2,\"start_destination_id\":\"12\",\"end_destination_id\":\"22\",\"route_title\":\"Cần Thơ - Sóc Trăng - Bạc Liêu - Cà Mau\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trải nghiệm Chợ nổi Cái Răng. Về lại khách sạn dùng điểm tâm sáng và trả phòng\",\"price\":100000},{\"type\":\"Tham quan\",\"name\":\"Di chuyển đi Sóc Trăng. Tham quan Chùa Dơi Sóc Trăng\",\"price\":100000},{\"type\":\"Ăn trưa\",\"name\":\"Dùng bữa trưa tại Sóc Trăng hoặc Bạc Liêu.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Nhà Công tử Bạc Liêu & Cánh đồng điện gió trên biển. Tiếp tục hành trình về Cà Mau.\",\"price\":\"0.00\",\"place_id\":65},{\"type\":\"Nghỉ ngơi\",\"name\":\"Nhận phòng khách sạn 3 sao Cà Mau. Dùng bữa tối\",\"price\":0}],\"accommodation\":{\"service_id\":28,\"name\":\"Khách sạn 3★ Mũi Cà Mau\",\"price\":\"800000.00\"},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":\"hotel\"},\"isTitleEdited\":true},{\"dayIndex\":3,\"start_destination_id\":\"22\",\"end_destination_id\":\"18\",\"route_title\":\"Cà Mau - Đất Mũi - Trở Về TP.HCM\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Dùng điểm tâm sáng tại khách sạn. Khởi hành đi Đất Mũi. Chụp ảnh Cột mốc tọa độ Quốc gia GPS 0001 tại Đất Mũi Cà Mau.\",\"price\":50000},{\"type\":\"Ăn trưa\",\"name\":\"Thưởng thức Cua Cà Mau hấp sả & Xe đưa đoàn về lại TP.HCM\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false},\"isTitleEdited\":true}],\"costConfig\":{\"minimumPax\":\"25\",\"margin\":20,\"fixed\":{\"transport\":\"6500000\",\"guidePerDay\":\"600000\",\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":\"200000\",\"lunch\":\"500000\",\"dinner\":\"500000\",\"tickets\":0,\"insurance\":50000,\"countBreakfast\":\"2\",\"countLunch\":\"3\",\"countDinner\":\"2\"},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"\",\"image_url\":\"/uploads/1786210745118-332571067.jpg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"capacity\":29,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":\"1800000.00\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"seat_capacity\":29},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":4532000,\"sellingPrice\":5438400,\"totalDays\":3,\"totalNights\":2,\"totalMeals\":{\"breakfast\":2,\"lunch\":3,\"dinner\":2},\"autoTicketsCost\":250000,\"breakEvenPax\":7,\"totalFixed\":8300000,\"totalVariable\":4200000},\"categories\":[\"Sông nước\",\"Miền Tây\",\"Văn hóa\"],\"highlights\":\"Chợ nổi Cái Răng, Cồn Phụng Bến Tre, Đất Mũi Cà Mau Cực Nam Tổ Quốc\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(50, 'Tour Đồng Tháp - Làng Hoa Sa Đéc - Cần Thơ 2N1Đ', 'Chuyến du ngoạn về Xứ hoa kiểng Miền Tây Sa Đéc Đồng Tháp trăm năm tuổi, check-in KDL sinh thái Xẻo Quýt và du thuyền Cần Thơ trên sông Hậu.', 'Đồng Tháp', 2, 1950000.00, '/uploads/19245_TOUR_ĐỒNG_THÁP_-_LÀNG_HOA_SA_ĐÉC_-_CẦN_THƠ_2N1Đ_Về_Xứ_Hoa_Kiểng_Miền_Tây.jpg', 'Active', 1, 1625000.00, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"12\",\"end_destination_id\":\"12\",\"route_title\":\"TP.HCM - Làng Hoa Sa Đéc Đồng Tháp - Cần Thơ\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Khởi hành từ TP.HCM đi Đồng Tháp Mười\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Làng hoa kiểng Sa Đéc rực rỡ & Nhà cổ Huỳnh Thủy Lê\",\"price\":120000}],\"accommodation\":{\"service_id\":29,\"name\":\"Khách sạn 3★ Ninh Kiều Cần Thơ\",\"price\":\"850000.00\"},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"25\",\"end_destination_id\":\"25\",\"route_title\":\"Chợ Nổi Cái Răng - Vườn Trái Cây Phong Điền - Trở Về TP.HCM\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Đi tàu chèo khám phá Chợ nổi Cái Răng & Thưởng thức hủ tiếu trên sông\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Thăm vườn trái cây Phong Điền hái chôm chôm, nhãn - Trở về TP.HCM\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":20,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":200000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":24,\"service_name\":\"Xe Du lịch 29 chỗ (Thaco Town / County Nội bộ) / Ngày\",\"unit\":\"Xe/Ngày\",\"price\":\"1800000.00\",\"service_type\":\"Xe vận chuyển\",\"vehicle_detail_type\":\"Xe 29 chỗ\",\"capacity\":29,\"seat_capacity\":29,\"base_cost\":\"1600000\",\"selling_price\":\"1700000\",\"partner_id\":null,\"partner_name\":null},\"transportTimes\":{\"startD\":\"06:00\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"18:00\"}},\"computed\":{\"netCost\":1625000,\"sellingPrice\":1950000,\"totalDays\":2,\"totalNights\":1,\"totalMeals\":{\"breakfast\":1,\"lunch\":2,\"dinner\":1},\"autoTicketsCost\":1200000},\"categories\":[\"Miền Tây\",\"Làng hoa\",\"Sông nước\"],\"highlights\":\"Làng hoa Sa Đéc Đồng Tháp, Nhà cổ Huỳnh Thủy Lê, Chợ nổi Cái Răng\"}', NULL, 0, 5.00, 0);
+INSERT INTO `tours` (`tour_id`, `tour_name`, `description`, `destination`, `duration_days`, `base_price`, `image_url`, `status`, `created_by`, `base_cost`, `markup_percent`, `design_data`, `rejection_reason`, `is_custom`, `average_rating`, `review_count`) VALUES
+(51, 'Tour Tây Ninh 1N: Núi Bà Đen - Đỉnh Vân Sơn - Buffet Năm Châu', 'Hành trình 1 ngày hành hương tâm linh Sun World Núi Bà Đen Tây Ninh, chiêm bái Tượng Phật Bà Tây Bổ Đà Sơn bằng đồng cao nhất Châu Á và thưởng thức Buffet 80+ món.', 'Tây Ninh', 1, 2000.00, '/uploads/18921_TOUR_TÂY_NINH_1N_NÚI_BÀ_-_ĐỈNH_VÂN_SƠN_-_BUFFET_NĂM_CHÂU.jpg', 'Active', 1, 1219767.44, 20, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"23\",\"end_destination_id\":\"23\",\"route_title\":\"TP.HCM - Tòa Thánh Tây Ninh - Sun World Núi Bà Đen - Đỉnh Vân Sơn\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"06:00 đón khách tại TP.HCM đi Tây Ninh theo QL22\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Viếng Tòa Thánh Tây Ninh - Công trình kiến trúc Cao Đài độc đáo\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Đi Cáp treo Sun World lên Đỉnh Vân Sơn 986m & Chiêm bái Tượng Phật Bà Đồng 72m\",\"price\":400000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Thưởng thức đại tiệc Buffet Năm Châu 80+ món ngon & Xe tiễn về TP.HCM lúc 17:00\",\"price\":250000}],\"accommodation\":null,\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":\"43\",\"margin\":20,\"fixed\":{\"transport\":2500000,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":0,\"accommPerNight\":0,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":\"700000\",\"dinner\":250000,\"tickets\":0,\"insurance\":50000},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":25,\"service_name\":\"Xe Du lịch 45 chỗ (Hyundai Universe Nội bộ) / Ngày\",\"service_type\":\"Xe vận chuyển\",\"description\":\"Dòng xe 45 chỗ cao cấp nhất, bầu hơi êm ái, chuyên chạy tour ghép đoàn lớn.\",\"image_url\":\"/uploads/1787459109242-530366681.jpeg\",\"status\":\"Active\",\"partner_id\":null,\"destination_id\":null,\"unit\":\"Xe/Ngày\",\"base_cost\":\"2500000\",\"selling_price\":\"2600000\",\"capacity\":45,\"attributes\":\"{}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":null,\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Xe 45 chỗ\",\"seat_capacity\":45},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":1219767.441860465,\"sellingPrice\":1463720.9302325582,\"totalDays\":1,\"totalNights\":0,\"totalMeals\":{\"breakfast\":0,\"lunch\":1,\"dinner\":0},\"autoTicketsCost\":400000,\"breakEvenPax\":10,\"totalFixed\":3000000,\"totalVariable\":1150000},\"categories\":[\"Tâm linh\",\"Cáp treo\",\"Buffet\"],\"highlights\":\"Cáp treo Núi Bà Đen, Đỉnh Vân Sơn 986m, Tòa Thánh Tây Ninh, Đại tiệc Buffet Năm Châu\",\"dayImages\":{}}', NULL, 0, 5.00, 0),
+(52, 'Tour Xuyên Việt 8N7Đ: Phú Yên - Quy Nhơn - Đà Nẵng - Huế - Quảng Bình', 'Hành trình du lịch Xuyên Việt dọc dải đất di sản Miền Trung qua Phú Yên, Quy Nhơn, Phố cổ Hội An, Đà Nẵng, Cố đô Huế và Động Thiên Đường Quảng Bình.', 'Phú Yên', 8, 14796667.00, '/uploads/19587_TOUR_XUYÊN_VIỆT_8N7Đ_PHÚ_YÊN_-_QUY_NHƠN_-_ĐÀ_NẴNG_-_HUẾ_-_QUẢNG_BÌNH.jpg', 'Active', 1, 12866667.00, 15, '{\"days\":[{\"dayIndex\":1,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Đón khách Phú Yên - Gành Đá Đĩa\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Đón khách tại Sân bay Tuy Hòa (Phú Yên). Di chuyển về trung tâm thành phố.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan thắng cảnh quốc gia Gành Đá Đĩa, nhà thờ Mằng Lăng.\",\"price\":100000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Nhận phòng khách sạn tại Phú Yên, ăn tối và tự do thưởng thức hải sản Xứ Nẫu.\",\"price\":0}],\"accommodation\":{\"service_id\":30,\"name\":\"Khách sạn 4★ Sala Phú Yên Beach\",\"price\":1200000},\"meals\":{\"breakfast\":false,\"lunch\":true,\"dinner\":true}},{\"dayIndex\":2,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Phú Yên - Kỳ Co - Quy Nhơn\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trả phòng, di chuyển đi Quy Nhơn. Bắt đầu hành trình cano ra đảo khám phá Kỳ Co.\",\"price\":450000},{\"type\":\"Tham quan\",\"name\":\"Tham quan danh thắng Eo Gió, viếng Tịnh Xá Ngọc Hòa.\",\"price\":50000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Nhận phòng khách sạn tại Quy Nhơn, ăn tối và tự do dạo biển.\",\"price\":0}],\"accommodation\":{\"service_id\":31,\"name\":\"Khách sạn 4★ Sunset Beach Quy Nhơn\",\"price\":1300000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":3,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Quy Nhơn - Phố Cổ Hội An\",\"activities\":[{\"type\":\"Nghỉ ngơi\",\"name\":\"Trả phòng. Lên xe di chuyển chặng dài từ Quy Nhơn ra Quảng Nam.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến Hội An, nhận phòng khách sạn nghỉ ngơi.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tản bộ tham quan Phố Cổ Hội An, Chùa Cầu, đi thuyền thả hoa đăng trên sông Hoài.\",\"price\":150000}],\"accommodation\":{\"service_id\":32,\"name\":\"Khách sạn 4★ Phố Cổ Hội An\",\"price\":1300000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":4,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Hội An - Bà Nà Hills - Đà Nẵng\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trả phòng, khởi hành đi Sun World Bà Nà Hills. Trải nghiệm cáp treo, check-in Cầu Vàng, Làng Pháp.\",\"price\":900000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Rời Bà Nà, di chuyển về trung tâm Đà Nẵng nhận phòng khách sạn.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Ăn tối, tự do ngắm Cầu Rồng, dạo bờ sông Hàn.\",\"price\":0}],\"accommodation\":{\"service_id\":454,\"name\":\"Khách sạn 4★ Sala Đà Nẵng Beach\",\"price\":1200000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":5,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Đà Nẵng - Vịnh Lăng Cô - Cố đồ Huế\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trả phòng. Xe đưa đoàn qua đèo Hải Vân ngắm Vịnh Lăng Cô.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Tham quan Đại Nội Huế (Hoàng Cung của 13 vị vua triều Nguyễn) và viếng Chùa Thiên Mụ.\",\"price\":200000},{\"type\":\"Tham quan\",\"name\":\"Nhận phòng tại Huế. Trải nghiệm ngồi thuyền rồng nghe Ca Huế trên sông Hương.\",\"price\":100000}],\"accommodation\":{\"service_id\":38,\"name\":\"Khách sạn 4★ Century Riverside Huế\",\"price\":1200000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":6,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Huế - Thánh Địa La Vang - Đồng Hới\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Trả phòng, di chuyển ra Quảng Bình. Dừng chân viếng Thánh Địa La Vang.\",\"price\":0},{\"type\":\"Tham quan\",\"name\":\"Đi ngang Vĩ tuyến 17 - Cầu Hiền Lương, Sông Bến Hải.\",\"price\":50000},{\"type\":\"Nghỉ ngơi\",\"name\":\"Đến Đồng Hới (Quảng Bình), nhận phòng khách sạn và nghỉ ngơi.\",\"price\":0}],\"accommodation\":{\"service_id\":41,\"name\":\"Khách sạn 4★ Mường Thanh Quảng Bình\",\"price\":1250000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":7,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Khám phá Động Thiên Đường\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Khởi hành tham quan Động Thiên Đường với hệ thống thạch nhũ tráng lệ.\",\"price\":250000},{\"type\":\"Tham quan\",\"name\":\"Tự do tắm biển Nhật Lệ hoặc tham quan Đồi Cát Quang Phú.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Ăn tối Gala Dinner tổng kết hành trình xuyên Việt tại nhà hàng.\",\"price\":0}],\"accommodation\":{\"service_id\":41,\"name\":\"Khách sạn 4★ Mường Thanh Quảng Bình\",\"price\":1250000},\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":true}},{\"dayIndex\":8,\"start_destination_id\":\"\",\"end_destination_id\":\"\",\"route_title\":\"Mua sắm đặc sản - Tiễn Sân bay Đồng Hới\",\"activities\":[{\"type\":\"Tham quan\",\"name\":\"Dùng điểm tâm, tự do đi chợ mua sắm đặc sản Quảng Bình.\",\"price\":0},{\"type\":\"Nghỉ ngơi\",\"name\":\"Làm thủ tục trả phòng. Xe đưa đoàn ra Sân bay Đồng Hới. Kết thúc hành trình 8N7Đ.\",\"price\":0}],\"accommodation\":null,\"meals\":{\"breakfast\":\"hotel\",\"lunch\":true,\"dinner\":false}}],\"costConfig\":{\"minimumPax\":15,\"margin\":15,\"fixed\":{\"transport\":0,\"guidePerDay\":500000,\"otherFixed\":0},\"variable\":{\"transportTicket\":2200000,\"accommPerNight\":942857,\"singleSupplement\":0,\"breakfast\":150000,\"lunch\":250000,\"dinner\":250000,\"tickets\":0,\"insurance\":50000,\"accommTotal\":6600000,\"countBreakfast\":0,\"countLunch\":8,\"countDinner\":7,\"otherVariable\":0},\"ageMultiplier\":{\"child\":{\"percent\":75,\"fixed_surcharge\":0},\"toddler\":{\"percent\":50,\"fixed_surcharge\":0},\"infant\":{\"percent\":0,\"fixed_surcharge\":0},\"preset\":\"flight\"},\"selectedTransport\":{\"service_id\":1,\"service_name\":\"Vé máy bay Khứ hồi - Phổ thông\",\"service_type\":\"Vé máy bay\",\"description\":null,\"image_url\":null,\"status\":\"Active\",\"partner_id\":1,\"destination_id\":null,\"unit\":\"Vé\",\"base_cost\":\"2200000.00\",\"selling_price\":\"2200000.00\",\"capacity\":180,\"attributes\":\"{\\\"vehicle_type\\\": \\\"Máy bay\\\", \\\"brand\\\": \\\"Airbus A321\\\", \\\"has_baggage\\\": \\\"20kg Ký gửi\\\"}\",\"action_verb\":null,\"short_display_name\":null,\"partner_name\":\"Vietnam Airlines\",\"destination_name\":null,\"proposed_cost\":null,\"vehicle_detail_type\":\"Máy bay - Phổ thông\",\"seat_capacity\":180},\"transportTimes\":{\"startD\":\"05:30\",\"endD\":\"12:00\",\"startR\":\"12:00\",\"endR\":\"17:30\"}},\"computed\":{\"netCost\":12866667,\"sellingPrice\":14796667,\"totalDays\":8,\"totalNights\":7,\"totalMeals\":{\"breakfast\":0,\"lunch\":8,\"dinner\":7},\"autoTicketsCost\":0,\"breakEvenPax\":2,\"totalFixed\":4000000,\"totalVariable\":12600000},\"categories\":[\"Xuyên Việt\",\"Khám phá\",\"Di sản\"],\"highlights\":\"Gành Đá Đĩa Phú Yên, Kỳ Co Quy Nhơn, Phố cổ Hội An, Bà Nà Hills Cầu Vàng, Đại Nội Huế, Động Thiên Đường Quảng Bình\",\"dayImages\":{\"1\":\"/uploads/1787971116046-canh-dep-da-lat-1_1688379739.webp\",\"2\":\"/uploads/1787971116054-kinh-nghiem-du-lich-da-lat-tu-a-z-de-trai-nghiem-ve-dep-cuoc-song-1 (2).jpg\",\"3\":\"/uploads/1787971116058-tu-nha-trang-di-da-lat-bao-nhieu-km-banner.jpg\"}}', NULL, 0, 5.00, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tour_categories`
+--
+
+CREATE TABLE `tour_categories` (
+  `category_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `category_name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tour_categories`
+--
+
+INSERT INTO `tour_categories` (`category_id`, `category_name`) VALUES
+(1, 'Trong nước'),
+(2, 'Nước ngoài');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tour_category_map`
+--
+
+CREATE TABLE `tour_category_map` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `tour_id` int(11) DEFAULT NULL,
+  `category_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tour_category_map`
+--
+
+INSERT INTO `tour_category_map` (`id`, `tour_id`, `category_id`) VALUES
+(3, 32, 1),
+(4, 33, 1),
+(5, 34, 1),
+(6, 35, 1),
+(7, 36, 1),
+(8, 37, 1),
+(9, 38, 1),
+(10, 39, 1),
+(11, 40, 1),
+(12, 41, 1),
+(13, 42, 1),
+(14, 43, 1),
+(15, 44, 1),
+(16, 45, 1),
+(17, 46, 1),
+(18, 47, 1),
+(19, 48, 1),
+(20, 49, 1),
+(21, 50, 1),
+(22, 51, 1),
+(23, 52, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tour_vehicle_assignments`
+--
+
+CREATE TABLE `tour_vehicle_assignments` (
+  `assignment_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) NOT NULL,
+  `vehicle_id` int(11) NOT NULL,
+  `driver_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `status` enum('ASSIGNED','IN_PROGRESS','COMPLETED','CANCELLED') DEFAULT 'ASSIGNED',
+  `assigned_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tour_vehicle_assignments`
+--
+
+INSERT INTO `tour_vehicle_assignments` (`assignment_id`, `departure_id`, `vehicle_id`, `driver_id`, `start_date`, `end_date`, `status`, `assigned_at`) VALUES
+(3, 60, 35, 17, '2026-12-28', '2026-12-31', 'ASSIGNED', '2026-10-16 08:30:31');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `trip_reports`
+--
+
+CREATE TABLE `trip_reports` (
+  `report_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `departure_id` int(11) NOT NULL,
+  `guide_id` int(11) NOT NULL,
+  `total_passengers` int(11) DEFAULT 0,
+  `checked_in_passengers` int(11) DEFAULT 0,
+  `incident_count` int(11) DEFAULT 0,
+  `vehicle_feedback` text DEFAULT NULL,
+  `hotel_feedback` text DEFAULT NULL,
+  `restaurant_feedback` text DEFAULT NULL,
+  `guide_notes` text NOT NULL,
+  `overall_rating` varchar(50) DEFAULT 'Xuất sắc',
+  `status` enum('Submitted','Approved') NOT NULL DEFAULT 'Submitted',
+  `admin_note` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `trip_reports`
+--
+
+INSERT INTO `trip_reports` (`report_id`, `departure_id`, `guide_id`, `total_passengers`, `checked_in_passengers`, `incident_count`, `vehicle_feedback`, `hotel_feedback`, `restaurant_feedback`, `guide_notes`, `overall_rating`, `status`, `admin_note`, `created_at`, `updated_at`) VALUES
+(1, 3, 1, 0, 0, 0, 'Xe 45 chỗ đời mới, lái xe nhiệt tình, đi an toàn.', 'Khách sạn sạch đẹp, nhận phòng nhanh chóng, nhân viên hỗ trợ tốt.', 'Thức ăn ngon, vừa miệng đoàn, chuẩn bị đúng giờ.', 'Chuyến đi hoàn thành tốt đẹp, khách hàng hài lòng.', 'Xuất sắc', 'Submitted', NULL, '2026-09-01 01:35:10', '2026-09-01 01:35:10');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `role_id` int(11) NOT NULL,
+  `full_name` varchar(150) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `avatar` text DEFAULT NULL,
+  `gender` enum('Male','Female','Other') DEFAULT NULL,
+  `date_of_birth` date DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `status` enum('Active','Inactive','Blocked') DEFAULT 'Active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `partner_group` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`user_id`, `role_id`, `full_name`, `email`, `password_hash`, `phone`, `avatar`, `gender`, `date_of_birth`, `address`, `status`, `created_at`, `updated_at`, `partner_group`) VALUES
+(1, 1, 'Admin', 'admin@gmail.com', '$2b$10$x1TcT7jDDa0T2/k73QqzB.uB5Tczgmfou83MQ0jMRvzW/gs4E6RLq', '0900000001', NULL, 'Male', '1990-01-01', NULL, 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:26', NULL),
+(2, 2, 'HR Manager', 'hr@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000002', NULL, 'Female', '1991-02-02', NULL, 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:34', NULL),
+(3, 3, 'Tour Manager', 'manager@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000003', NULL, 'Male', '1989-03-03', NULL, 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:40', NULL),
+(4, 4, 'Office Staff', 'staff@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000004', NULL, 'Female', '1995-04-04', NULL, 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:45', NULL),
+(5, 5, 'Guide One', 'guide1@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000005', NULL, 'Male', '1992-05-05', NULL, 'Active', '2026-06-20 17:53:17', '2026-06-27 05:48:52', NULL),
+(6, 5, 'Guide Two', 'guide2@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000006', '/uploads/avatar_6_1785853247689.jpg', 'Female', '1993-06-06', NULL, 'Active', '2026-06-20 17:53:17', '2026-08-04 14:20:47', NULL),
+(7, 6, 'Nguyễn Văn Hoàng', 'nguyenvanhoang@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000007', NULL, 'Male', '2000-01-01', NULL, 'Active', '2026-06-20 17:53:17', '2026-09-19 02:33:44', NULL),
+(8, 6, 'Trần Kiến Quốc', 'trankienquoc@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000008', NULL, 'Female', '2001-01-01', NULL, 'Active', '2026-06-20 17:53:17', '2026-06-28 07:10:12', NULL),
+(9, 7, 'Nha xe Đức Mai', 'ducmai@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0326753674', NULL, 'Male', NULL, NULL, 'Active', '2026-06-27 09:59:12', '2026-06-28 06:58:12', NULL),
+(10, 4, 'tdoan', 'doanthitramyt2004@gmail.com', '$2b$10$Gpa90D0cbSaicPW3deTo/uxfKC2ehntZ02hC2qeWs8rM02MjXBJLi', '0347853897', NULL, 'Female', '2001-02-06', NULL, 'Active', '2026-08-03 13:03:03', '2026-08-03 13:03:03', NULL),
+(11, 7, 'Partner', 'partner.muongthanh@travel.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0900000055', NULL, NULL, NULL, NULL, 'Active', '2026-08-08 10:23:29', '2026-08-08 10:25:08', NULL),
+(12, 7, 'KS Mường Thanh Đà Nẵng', 'muongthanh_dn@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0901234567', NULL, NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:03', NULL),
+(13, 7, 'Vinpearl Nha Trang', 'vinpearl_nt@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0902345678', NULL, NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:51', NULL),
+(14, 7, 'Nhà Xe Hoàng Long', 'hoanglong_trans@gmail.com', '$2b$10$J0IzVGhTsyb3WvtoUBrMz.I61x086a5wbbH4bZLkZ3nZMAvj7weru', '0903456789', NULL, NULL, NULL, NULL, 'Active', '2026-08-08 14:38:24', '2026-08-08 14:46:11', NULL),
+(16, 8, 'Nguyễn Văn Tài (Tài xế)', 'taixe@travelvn.com', '$2b$10$bFBYZisZ961NKc/L3hsDNO5dpSkrEeVDH5BzoNuQIB/dNCSPlVdVK', '0912345678', NULL, NULL, NULL, NULL, 'Active', '2026-09-22 02:30:12', '2026-09-22 02:30:12', NULL),
+(17, 8, 'Trần Văn Lái (Tài xế Cao Cấp)', 'tranvanlai@travelvn.com', '$2b$10$bFBYZisZ961NKc/L3hsDNO5dpSkrEeVDH5BzoNuQIB/dNCSPlVdVK', '0987654321', NULL, NULL, NULL, NULL, 'Active', '2026-09-22 02:30:12', '2026-09-22 02:30:12', NULL),
+(18, 7, 'Đối tác Khách sạn', 'partner_hotel@example.com', '$2b$10$87T5aMWepgDqYTt/gepgdODR6DIThz0df38lRTSM/2n0ZiLIIAz/q', NULL, NULL, NULL, NULL, NULL, 'Active', '2026-10-03 08:24:27', '2026-10-03 08:24:27', 'HOTEL'),
+(19, 7, 'Đối tác Nhà hàng', 'partner_restaurant@example.com', '$2b$10$87T5aMWepgDqYTt/gepgdODR6DIThz0df38lRTSM/2n0ZiLIIAz/q', NULL, NULL, NULL, NULL, NULL, 'Active', '2026-10-03 08:24:27', '2026-10-03 08:24:27', 'RESTAURANT'),
+(20, 6, 'aaa', 'aaa@gmail.com', '$2b$10$81pEFEfMfrs0HLYsAuSUoOlYceJ9vjm9/diuzEUrpHqJKOSp/vWOy', '', '', 'Male', NULL, NULL, 'Active', '2026-10-15 14:03:03', '2026-10-16 05:49:23', NULL),
+(21, 6, 'ss', 'doan4@gmail.com', '$2b$10$IkTH8PCmN7xgdxelHSJmveXbjY4otQeFzplrmI32E5nRUlKkFI94y', NULL, NULL, NULL, NULL, NULL, 'Active', '2026-10-21 00:54:24', '2026-10-21 00:54:24', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vehicles`
+--
+
+CREATE TABLE `vehicles` (
+  `vehicle_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `service_id` int(11) DEFAULT NULL,
+  `vehicle_code` varchar(50) DEFAULT NULL,
+  `vehicle_name` varchar(255) DEFAULT NULL,
+  `license_plate` varchar(50) NOT NULL,
+  `seat_capacity` int(11) NOT NULL,
+  `base_cost` decimal(15,2) DEFAULT 0.00,
+  `selling_price` decimal(15,2) DEFAULT 0.00,
+  `price` decimal(15,2) DEFAULT 0.00,
+  `vehicle_type` varchar(100) NOT NULL,
+  `brand_model` varchar(150) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `color` varchar(50) DEFAULT NULL,
+  `status` enum('AVAILABLE','IN_TOUR','MAINTENANCE','REPAIR','INACTIVE') DEFAULT 'AVAILABLE',
+  `notes` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `vehicles`
+--
+
+INSERT INTO `vehicles` (`vehicle_id`, `service_id`, `vehicle_code`, `vehicle_name`, `license_plate`, `seat_capacity`, `base_cost`, `selling_price`, `price`, `vehicle_type`, `brand_model`, `image_url`, `color`, `status`, `notes`, `created_at`) VALUES
+(7, 466, 'XE-4C-01', 'Toyota Camry 2.5Q (2024)', '51K-123.45', 4, 800000.00, 850000.00, 800000.00, 'Xe 4 chỗ', 'Toyota Camry 2.5Q (2024)', '/uploads/1791430601915-990841517.jpg', 'Đen sang trọng', 'AVAILABLE', 'Dịch vụ đưa đón VIP, nội thất da cao cấp, wifi tốc độ cao.', '2026-10-05 01:40:21'),
+(8, 466, 'XE-4C-02', 'Mercedes-Benz E200 Exclusive', '51K-678.90', 4, 800000.00, 850000.00, 800000.00, 'Xe 4 chỗ', 'Mercedes-Benz E200 Exclusive', '/uploads/1791430522521-907711151.jpg', 'Trắng Ngọc Trai', 'AVAILABLE', 'Xe đón đoàn ngoại giao, phục vụ lãnh đạo và chuyên gia.', '2026-10-05 01:40:21'),
+(9, 466, 'XE-4C-03', 'Honda Accord 1.5 Turbo (2023)', '29A-888.66', 4, 800000.00, 850000.00, 800000.00, 'Xe 4 chỗ', 'Honda Accord 1.5 Turbo (2023)', '/uploads/1791430483149-25926188.jpg', 'Xám Titan', 'IN_TOUR', 'Đang phục vụ khách hàng tour thương mại Hà Nội - Ninh Bình.', '2026-10-05 01:40:21'),
+(10, 466, 'XE-4C-04', 'Mazda 6 2.0 Premium (2023)', '43A-555.22', 4, 800000.00, 850000.00, 800000.00, 'Xe 4 chỗ', 'Mazda 6 2.0 Premium (2023)', '/uploads/1791430447142-919044344.jpg', 'Đỏ Pha Lê', 'AVAILABLE', 'Nội thất sang trọng, trang bị cửa sổ trời, dàn âm thanh Bose.', '2026-10-05 01:40:21'),
+(11, 466, 'XE-4C-05', 'Hyundai Elantra N-Line (2024)', '79A-345.67', 4, 800000.00, 850000.00, 800000.00, 'Xe 4 chỗ', 'Hyundai Elantra N-Line (2024)', '/uploads/1791430422403-302005423.jpg', 'Xanh Dương', 'AVAILABLE', 'Đưa đón sân bay Cam Ranh - Nha Trang, vận hành mượt mà.', '2026-10-05 01:40:21'),
+(12, 466, 'XE-4C-06', 'VinFast Lux A2.0 Turbo', '49A-999.11', 4, 800000.00, 850000.00, 800000.00, 'Xe 4 chỗ', 'VinFast Lux A2.0 Turbo', '/uploads/1791430335667-103250547.jpg', 'Bạc', 'MAINTENANCE', 'Bảo dưỡng định kỳ 20.000km tại VinFast Đà Lạt.', '2026-10-05 01:40:21'),
+(13, 22, 'XE-7C-01', 'Toyota Fortuner Legender 2023', '43A-123.45', 7, 900000.00, 950000.00, 900000.00, 'Xe 7 chỗ', 'Toyota Fortuner Legender 2023', '/uploads/1791430309252-300596267.jpg', 'Trắng', 'AVAILABLE', 'Gầm cao máy khỏe, 2 cầu phù hợp tour Tây Nguyên & Tây Bắc.', '2026-10-05 01:40:21'),
+(14, 22, 'XE-7C-02', 'Toyota Innova Cross Hybrid (2024)', '43A-999.88', 7, 900000.00, 950000.00, 900000.00, 'Xe 7 chỗ', 'Toyota Innova Cross Hybrid (2024)', '/uploads/1791430285843-44780344.jpg', 'Đen', 'AVAILABLE', 'Xe siêu tiết kiệm nhiên liệu, cửa sổ trời toàn cảnh panorama.', '2026-10-05 01:40:21'),
+(15, 22, 'XE-7C-03', 'Ford Everest Titanium+ 4x4 (2023)', '51H-888.99', 7, 900000.00, 950000.00, 900000.00, 'Xe 7 chỗ', 'Ford Everest Titanium+ 4x4 (2023)', '/uploads/1791430259447-29752537.jpg', 'Nâu Đồng', 'IN_TOUR', 'Đang hành trình tour TP.HCM - Phan Thiết 3N2Đ.', '2026-10-05 01:40:21'),
+(16, 22, 'XE-7C-04', 'Kia Carnival Royal 7 chỗ (2024)', '29B-777.33', 7, 900000.00, 950000.00, 900000.00, 'Xe 7 chỗ', 'Kia Carnival Royal 7 chỗ (2024)', '/uploads/1791430238595-800339780.jpg', 'Trắng Ngọc', 'AVAILABLE', 'Ghế thương gia nâng chân, màn hình giải trí Android 15.6 inch.', '2026-10-05 01:40:21'),
+(17, 22, 'XE-7C-05', 'Mitsubishi Xpander Cross 2024', '79A-666.22', 7, 900000.00, 950000.00, 900000.00, 'Xe 7 chỗ', 'Mitsubishi Xpander Cross 2024', '/uploads/1791430186927-583556587.jpg', 'Cam Đen', 'AVAILABLE', 'Khoang hành lý rộng rãi, điều hòa lạnh sâu phù hợp tour biển.', '2026-10-05 01:40:21'),
+(18, 22, 'XE-7C-06', 'Hyundai SantaFe Hybrid (2024)', '65A-333.11', 7, 900000.00, 950000.00, 900000.00, 'Xe 7 chỗ', 'Hyundai SantaFe Hybrid (2024)', '/uploads/1791430156067-954498110.webp', 'Xám Lông Chuột', 'MAINTENANCE', 'Kiểm tra hệ thống cảm biến va chạm và thay dầu động cơ.', '2026-10-05 01:40:21'),
+(19, 5, 'XE-LIMO-01', 'Dcar Limousine President (2023)', '51B-999.01', 9, 2000000.00, 2100000.00, 2000000.00, 'Xe Limousine 9 chỗ', 'Dcar Limousine President (2023)', '/uploads/1791430031325-788172631.jpg', 'Đen Bạc VIP', 'AVAILABLE', 'Ghế massage 8 chế độ, tủ lạnh âm, cổng sạc USB Type-C cho mỗi ghế.', '2026-10-05 01:40:21'),
+(20, 5, 'XE-LIMO-02', 'AutoKingdom Limousine VIP (2024)', '51B-999.02', 9, 2000000.00, 2100000.00, 2000000.00, 'Xe Limousine 9 chỗ', 'AutoKingdom Limousine VIP (2024)', '/uploads/1791430017187-915086357.jpg', 'Trắng Ánh Kim', 'IN_TOUR', 'Phục vụ đoàn khách cao cấp Đà Lạt Săn Mây.', '2026-10-05 01:40:21'),
+(21, 23, 'XE-LIMO-03', 'Hyundai Solati Dcar Hạng Thương Gia', '29B-888.09', 11, 2200000.00, 2300000.00, 2200000.00, 'Xe Limousine 11 chỗ', 'Hyundai Solati Dcar Hạng Thương Gia', '/uploads/1791430119669-73230061.jpg', 'Nâu Vàng', 'AVAILABLE', 'Trần bầu trời sao Rolls-Royce, dàn loa Sony High-Res.', '2026-10-05 01:40:21'),
+(22, 5, 'XE-LIMO-04', 'Ford Transit Dcar VIP Lounge', '43B-777.09', 9, 2000000.00, 2100000.00, 2000000.00, 'Xe Limousine 9 chỗ', 'Ford Transit Dcar VIP Lounge', '/uploads/1791429978589-122512141.jpg', 'Đen Mờ', 'AVAILABLE', 'Cửa lùa tự động chống kẹt, kính dán phim cách nhiệt 3M.', '2026-10-05 01:40:21'),
+(23, 23, 'XE-LIMO-05', 'Solati Skybus Pro VIP (2024)', '79B-555.09', 11, 2200000.00, 2300000.00, 2200000.00, 'Xe Limousine 11 chỗ', 'Solati Skybus Pro VIP (2024)', '/uploads/1791430086100-614345401.jpg', 'Đỏ Đô', 'AVAILABLE', 'Tivi 32 inch 4K gập trần, kết nối Apple CarPlay không dây.', '2026-10-05 01:40:21'),
+(24, 5, 'XE-LIMO-06', 'Dcar VIP Business (2023)', '49B-333.09', 9, 2000000.00, 2100000.00, 2000000.00, 'Xe Limousine 9 chỗ', 'Dcar VIP Business (2023)', '/uploads/1791429948564-286974761.jpg', 'Bạc Titan', 'MAINTENANCE', 'Bảo dưỡng bọc lại da ghế massage số 3 và 4.', '2026-10-05 01:40:21'),
+(25, 4, 'XE-16C-01', 'Ford Transit Luxury 2023', '43B-777.99', 16, 1200000.00, 1300000.00, 1200000.00, 'Xe 16 chỗ', 'Ford Transit Luxury 2023', '/uploads/1791429909308-21477970.jpg', 'Trắng', 'AVAILABLE', 'Ghế da ngả thoải mái, điều hòa 2 dàn lạnh độc lập.', '2026-10-05 01:40:22'),
+(26, 4, 'XE-16C-02', 'Hyundai Solati DLX (2024)', '51B-123.16', 16, 1200000.00, 1300000.00, 1200000.00, 'Xe 16 chỗ', 'Hyundai Solati DLX (2024)', '/uploads/1791429868722-542559564.jpg', 'Bạc', 'AVAILABLE', 'Trần xe cao 1m9 đứng thoải mái, hầm hành lý siêu rộng.', '2026-10-05 01:40:22'),
+(27, 4, 'XE-16C-03', 'Ford Transit Premium (2024)', '29B-456.16', 16, 1200000.00, 1300000.00, 1200000.00, 'Xe 16 chỗ', 'Ford Transit Premium (2024)', '/uploads/1791429841862-794494639.webp', 'Đen', 'IN_TOUR', 'Đang chạy tour Hạ Long 2N1Đ.', '2026-10-05 01:40:22'),
+(28, 4, 'XE-16C-04', 'Hyundai Solati Executive 2023', '79B-789.16', 16, 1200000.00, 1300000.00, 1200000.00, 'Xe 16 chỗ', 'Hyundai Solati Executive 2023', '/uploads/1791429819031-245277582.jpg', 'Trắng', 'AVAILABLE', 'Đầy đủ trang thiết bị an toàn, búa thoát hiểm, bình chữa cháy.', '2026-10-05 01:40:22'),
+(29, 4, 'XE-16C-05', 'Ford Transit SVP 2023', '49B-111.16', 16, 1200000.00, 1300000.00, 1200000.00, 'Xe 16 chỗ', 'Ford Transit SVP 2023', '/uploads/1791429780754-876064892.jpg', 'Ghi Vàng', 'AVAILABLE', 'Chuyên leo đèo Mimosa & Prenn Đà Lạt êm ái.', '2026-10-05 01:40:22'),
+(30, 4, 'XE-16C-06', 'Mercedes-Benz Sprinter Executive', '72B-222.16', 16, 1200000.00, 1300000.00, 1200000.00, 'Xe 16 chỗ', 'Mercedes-Benz Sprinter Executive', '/uploads/1791429632900-637200679.webp', 'Xám', 'AVAILABLE', 'Bảo dưỡng định kỳ ga máy lạnh tại gara Vũng Tàu.', '2026-10-05 01:40:22'),
+(31, 24, 'XE-29C-01', 'Thaco Town TB79S (2023)', '43B-012.34', 29, 1600000.00, 1700000.00, 1600000.00, 'Xe 29 chỗ', 'Thaco Town TB79S (2023)', '/uploads/1791429505017-709194872.jpg', 'Trắng - Xanh', 'AVAILABLE', 'Trang bị wifi, tủ lạnh mini, Micro không dây, loa Karaoke.', '2026-10-05 01:40:22'),
+(32, 24, 'XE-29C-02', 'Hyundai County Premium 2023', '43B-055.66', 29, 1600000.00, 1700000.00, 1600000.00, 'Xe 29 chỗ', 'Hyundai County Premium 2023', '/uploads/1791429363902-628731481.jpg', 'Bạc', 'AVAILABLE', 'Đội xe du lịch chất lượng cao, lốp hơi béo êm ái.', '2026-10-05 01:40:22'),
+(33, 24, 'XE-29C-03', 'Thaco Garden 79S (2024)', '51B-888.29', 29, 1600000.00, 1700000.00, 1600000.00, 'Xe 29 chỗ', 'Thaco Garden 79S (2024)', '/uploads/1791429326176-821531808.webp', 'Đỏ - Trắng', 'IN_TOUR', 'Đang hành trình tour Miền Tây 4N3Đ.', '2026-10-05 01:40:22'),
+(34, 24, 'XE-29C-04', 'Samco Felix (2023)', '29B-999.29', 29, 1600000.00, 1700000.00, 1600000.00, 'Xe 29 chỗ', 'Samco Felix (2023)', '/uploads/1791429281008-612213344.jpg', 'Xanh Lá - Trắng', 'AVAILABLE', 'Động cơ Isuzu Nhật Bản êm ái, trang bị hệ thống phanh ABS.', '2026-10-05 01:40:22'),
+(35, 24, 'XE-29C-05', 'Thaco Meadow TB85S (2024)', '79B-333.29', 29, 1600000.00, 1700000.00, 1600000.00, 'Xe 29 chỗ', 'Thaco Meadow TB85S (2024)', '/uploads/1791429235456-10542822.jpg', 'Vàng - Trắng', 'AVAILABLE', 'Ghế ngồi bọc da Châu Âu, có cổng sạc riêng cho từng hàng ghế.', '2026-10-05 01:40:22'),
+(36, 24, 'XE-29C-06', 'Isuzu Samco Growin (2023)', '49B-777.29', 29, 1600000.00, 1700000.00, 1600000.00, 'Xe 29 chỗ', 'Isuzu Samco Growin (2023)', '/uploads/1791429183979-771084738.jpg', 'Trắng - Xanh Dương', 'MAINTENANCE', 'Kiểm tra bảo dưỡng định kỳ hệ thống điều hòa bóng hơi.', '2026-10-05 01:40:22'),
+(37, 25, 'XE-45C-01', 'Hyundai Universe Express Noble', '43B-888.11', 45, 2500000.00, 2600000.00, 2500000.00, 'Xe 45 chỗ', 'Hyundai Universe Express Noble', '/uploads/1791259263111-353021071.jpg', 'Đỏ - Trắng', 'REPAIR', 'Hầm hàng rộng 3 khoang chứa 50 vali, dàn loa âm thanh hát Karaoke chuyên nghiệp.', '2026-10-05 01:40:22'),
+(38, 25, 'XE-45C-02', 'Thaco Bluesky 120S (2024)', '51B-123.45', 45, 2500000.00, 2600000.00, 2500000.00, 'Xe 45 chỗ', 'Thaco Bluesky 120S (2024)', '/uploads/1791259233201-686078549.jpg', 'Xanh Ngọc - Trắng', 'AVAILABLE', 'Bầu hơi 6 túi êm ái vượt mọi địa hình, màn hình LCD 32 inch.', '2026-10-05 01:40:22'),
+(39, 25, 'XE-45C-03', 'Hyundai Universe Advanced (2023)', '29B-666.45', 45, 2500000.00, 2600000.00, 2500000.00, 'Xe 45 chỗ', 'Hyundai Universe Advanced (2023)', '/uploads/1791259180017-580423483.jpg', 'Trắng - Xanh', 'IN_TOUR', 'Đang chở đoàn Teambuilding Hà Nội - Sầm Sơn.', '2026-10-05 01:40:22'),
+(40, 25, 'XE-45C-04', 'Kia Granbird Silkroad (2024)', '79B-999.45', 45, 2500000.00, 2600000.00, 2500000.00, 'Xe 45 chỗ', 'Kia Granbird Silkroad (2024)', '/uploads/1791258901449-226810808.jpg', 'Đen - Bạc', 'AVAILABLE', 'Xe siêu sang nhập khẩu, trang bị tủ lạnh lớn 50 lít, nước uống đóng chai miễn phí.', '2026-10-05 01:40:22'),
+(41, 25, 'XE-45C-05', 'Thaco Mobihome Universe (2023)', '49B-555.45', 45, 2500000.00, 2600000.00, 2500000.00, 'Xe 45 chỗ', 'Thaco Mobihome Universe (2023)', '/uploads/1791258670701-742084716.webp', 'Vàng - Kim', 'AVAILABLE', 'Chuyên chạy tuyến tour liên tỉnh xuyên Việt.', '2026-10-05 01:40:22'),
+(42, 25, 'XE-45C-06', 'King Long Euro 5 (2024)', '65B-444.45', 45, 2500000.00, 2600000.00, 2500000.00, 'Xe 45 chỗ', 'King Long Euro 5 (2024)', '/uploads/1791258321018-937765111.jpg', 'Trắng', 'MAINTENANCE', 'Bảo dưỡng thay dầu hộp số và rà soát hệ thống lốp xe.', '2026-10-05 01:40:22');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vehicle_maintenances`
+--
+
+CREATE TABLE `vehicle_maintenances` (
+  `maintenance_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `vehicle_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `reason` varchar(255) DEFAULT NULL,
+  `status` enum('SCHEDULED','IN_PROGRESS','COMPLETED') DEFAULT 'IN_PROGRESS',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `vehicle_maintenances`
+--
+
+INSERT INTO `vehicle_maintenances` (`maintenance_id`, `vehicle_id`, `start_date`, `end_date`, `reason`, `status`, `created_at`) VALUES
+(1, 37, '2026-10-16', '2026-10-16', 'kk', 'IN_PROGRESS', '2026-10-16 05:57:36');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vehicle_service_details`
+--
+
+CREATE TABLE `vehicle_service_details` (
+  `vehicle_service_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `service_id` int(11) NOT NULL,
+  `vehicle_type` varchar(100) DEFAULT NULL,
+  `vehicle_model` varchar(100) DEFAULT NULL,
+  `seat_capacity` int(11) DEFAULT NULL,
+  `total_quantity` int(11) DEFAULT 0,
+  `license_plate` varchar(20) DEFAULT NULL,
+  `driver_required` tinyint(1) DEFAULT 1,
+  `vehicle_status` varchar(50) DEFAULT 'AVAILABLE',
+  `driver_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `vehicle_service_details`
+--
+
+INSERT INTO `vehicle_service_details` (`vehicle_service_id`, `service_id`, `vehicle_type`, `vehicle_model`, `seat_capacity`, `total_quantity`, `license_plate`, `driver_required`, `vehicle_status`, `driver_id`) VALUES
+(8, 23, 'Xe Limousine 11 chỗ', 'Hyundai Solati DCar Hạng Thượng Đỉnh 11 chỗ', 11, 2, NULL, 1, 'AVAILABLE', NULL),
+(16, 1, 'Máy bay - Phổ thông', 'Máy bay hạng phổ thông', 180, 0, NULL, 0, 'AVAILABLE', NULL),
+(17, 2, 'Máy bay - Thương gia', 'Máy bay hạng thương gia', 250, 0, NULL, 0, 'AVAILABLE', NULL),
+(19, 466, 'Xe 4 chỗ', 'Toyota Camry / Mercedes E200 / Honda Accord', 4, 6, NULL, 1, 'AVAILABLE', NULL),
+(20, 22, 'Xe 7 chỗ', 'Toyota Fortuner / Innova Cross / Kia Carnival', 7, 6, NULL, 1, 'AVAILABLE', NULL),
+(21, 5, 'Xe Limousine 9 chỗ', 'Dcar President / Ford Transit Dcar VIP Lounge', 9, 4, NULL, 1, 'AVAILABLE', NULL),
+(23, 4, 'Xe 16 chỗ', 'Ford Transit Luxury / Hyundai Solati DLX', 16, 6, NULL, 1, 'AVAILABLE', NULL),
+(25, 25, 'Xe 45 chỗ', 'Hyundai Universe Express Noble / Thaco Bluesky 120S', 45, 6, NULL, 1, 'AVAILABLE', NULL),
+(26, 24, 'Xe 29 chỗ', 'Thaco Town TB79S / Samco Felix', 29, 6, NULL, 1, 'AVAILABLE', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vehicle_status_history`
+--
+
+CREATE TABLE `vehicle_status_history` (
+  `history_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `vehicle_id` int(11) NOT NULL,
+  `old_status` varchar(50) DEFAULT NULL,
+  `new_status` varchar(50) DEFAULT NULL,
+  `reason` text DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `vehicle_status_history`
+--
+
+INSERT INTO `vehicle_status_history` (`history_id`, `vehicle_id`, `old_status`, `new_status`, `reason`, `updated_by`, `created_at`) VALUES
+(1, 30, 'MAINTENANCE', 'AVAILABLE', '', 4, '2026-10-08 10:22:25'),
+(2, 37, 'AVAILABLE', 'REPAIR', 'kk', 4, '2026-10-16 05:57:36');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `bookings`
+--
+ALTER TABLE `bookings`
+
+  ADD KEY `customer_id` (`customer_id`),
+  ADD KEY `departure_id` (`departure_id`),
+  ADD KEY `fk_bookings_custom_quotes` (`quote_id`);
+
+--
+-- Indexes for table `booking_change_requests`
+--
+ALTER TABLE `booking_change_requests`
+
+  ADD KEY `booking_id` (`booking_id`),
+  ADD KEY `processed_by` (`processed_by`);
+
+--
+-- Indexes for table `booking_passengers`
+--
+ALTER TABLE `booking_passengers`
+
+  ADD KEY `booking_id` (`booking_id`);
+
+--
+-- Indexes for table `chat_conversations`
+--
+ALTER TABLE `chat_conversations`
+
+  ADD KEY `idx_customer` (`customer_id`),
+  ADD KEY `idx_guest` (`guest_id`),
+  ADD KEY `idx_staff` (`staff_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_last_message_at` (`last_message_at`);
+
+--
+-- Indexes for table `chat_messages`
+--
+ALTER TABLE `chat_messages`
+
+  ADD KEY `idx_conversation` (`conversation_id`),
+  ADD KEY `idx_created` (`created_at`);
+
+--
+-- Indexes for table `consultation_requests`
+--
+ALTER TABLE `consultation_requests`
+
+  ADD KEY `handled_by` (`handled_by`);
+
+--
+-- Indexes for table `customer_behavior_logs`
+--
+ALTER TABLE `customer_behavior_logs`
+
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `event_type` (`event_type`),
+  ADD KEY `tour_id` (`tour_id`);
+
+--
+-- Indexes for table `customer_travel_preferences`
+--
+ALTER TABLE `customer_travel_preferences`
+
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `session_id` (`session_id`);
+
+--
+-- Indexes for table `custom_tour_quotes`
+--
+ALTER TABLE `custom_tour_quotes`
+
+  ADD KEY `request_id` (`request_id`),
+  ADD KEY `staff_id` (`staff_id`),
+  ADD KEY `manager_id` (`manager_id`);
+
+--
+-- Indexes for table `custom_tour_requests`
+--
+ALTER TABLE `custom_tour_requests`
+
+  ADD KEY `customer_id` (`customer_id`);
+
+--
+-- Indexes for table `departures`
+--
+ALTER TABLE `departures`
+
+  ADD KEY `tour_id` (`tour_id`);
+
+--
+-- Indexes for table `departure_updates`
+--
+ALTER TABLE `departure_updates`
+
+  ADD KEY `departure_id` (`departure_id`);
+
+--
+-- Indexes for table `destinations`
+--
+
+
+--
+-- Indexes for table `driver_expenses`
+--
+ALTER TABLE `driver_expenses`
+
+  ADD KEY `departure_id` (`departure_id`),
+  ADD KEY `driver_id` (`driver_id`);
+
+--
+-- Indexes for table `driver_incidents`
+--
+ALTER TABLE `driver_incidents`
+
+  ADD KEY `driver_id` (`driver_id`);
+
+--
+-- Indexes for table `guides`
+--
+ALTER TABLE `guides`
+
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `guide_assignments`
+--
+ALTER TABLE `guide_assignments`
+
+  ADD KEY `departure_id` (`departure_id`),
+  ADD KEY `guide_id` (`guide_id`);
+
+--
+-- Indexes for table `holidays`
+--
+
+
+--
+-- Indexes for table `hotel_service_details`
+--
+ALTER TABLE `hotel_service_details`
+
+  ADD UNIQUE KEY `service_id` (`service_id`);
+
+--
+-- Indexes for table `incident_reports`
+--
+ALTER TABLE `incident_reports`
+
+  ADD KEY `guide_id` (`guide_id`),
+  ADD KEY `departure_id` (`departure_id`);
+
+--
+-- Indexes for table `itineraries`
+--
+ALTER TABLE `itineraries`
+
+  ADD KEY `tour_id` (`tour_id`);
+
+--
+-- Indexes for table `itinerary_activities`
+--
+ALTER TABLE `itinerary_activities`
+
+  ADD KEY `itinerary_id` (`itinerary_id`);
+
+--
+-- Indexes for table `itinerary_places`
+--
+ALTER TABLE `itinerary_places`
+
+  ADD KEY `itinerary_id` (`itinerary_id`),
+  ADD KEY `place_id` (`place_id`);
+
+--
+-- Indexes for table `leave_requests`
+--
+ALTER TABLE `leave_requests`
+
+  ADD KEY `employee_id` (`employee_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `partners`
+--
+ALTER TABLE `partners`
+
+  ADD KEY `fk_partners_destinations` (`destination_id`);
+
+--
+-- Indexes for table `payments`
+--
+ALTER TABLE `payments`
+
+  ADD KEY `booking_id` (`booking_id`);
+
+--
+-- Indexes for table `payroll`
+--
+ALTER TABLE `payroll`
+
+  ADD UNIQUE KEY `unique_emp_month` (`employee_id`,`salary_month`);
+
+--
+-- Indexes for table `performance_reviews`
+--
+ALTER TABLE `performance_reviews`
+
+  ADD KEY `employee_id` (`employee_id`),
+  ADD KEY `reviewer_id` (`reviewer_id`);
+
+--
+-- Indexes for table `personal_work_tasks`
+--
+ALTER TABLE `personal_work_tasks`
+
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `places`
+--
+ALTER TABLE `places`
+
+  ADD KEY `fk_places_partner` (`partner_id`);
+
+--
+-- Indexes for table `reviews`
+--
+ALTER TABLE `reviews`
+
+  ADD KEY `customer_id` (`customer_id`),
+  ADD KEY `tour_id` (`tour_id`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+
+  ADD UNIQUE KEY `role_name` (`role_name`);
+
+--
+-- Indexes for table `services`
+--
+ALTER TABLE `services`
+
+  ADD KEY `fk_services_partner` (`partner_id`);
+
+--
+-- Indexes for table `service_bookings`
+--
+
+
+--
+-- Indexes for table `service_migration_backup`
+--
+
+
+--
+-- Indexes for table `service_requests`
+--
+ALTER TABLE `service_requests`
+
+  ADD KEY `departure_id` (`departure_id`),
+  ADD KEY `partner_id` (`partner_id`),
+  ADD KEY `requested_by` (`requested_by`);
+
+--
+-- Indexes for table `service_request_groups`
+--
+
+
+--
+-- Indexes for table `timekeeping`
+--
+ALTER TABLE `timekeeping`
+
+  ADD UNIQUE KEY `unique_emp_date` (`employee_id`,`work_date`);
+
+--
+-- Indexes for table `tours`
+--
+
+
+--
+-- Indexes for table `tour_categories`
+--
+
+
+--
+-- Indexes for table `tour_category_map`
+--
+ALTER TABLE `tour_category_map`
+
+  ADD KEY `tour_id` (`tour_id`),
+  ADD KEY `category_id` (`category_id`);
+
+--
+-- Indexes for table `tour_vehicle_assignments`
+--
+ALTER TABLE `tour_vehicle_assignments`
+
+  ADD KEY `vehicle_id` (`vehicle_id`);
+
+--
+-- Indexes for table `trip_reports`
+--
+ALTER TABLE `trip_reports`
+
+  ADD KEY `departure_id` (`departure_id`),
+  ADD KEY `guide_id` (`guide_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `role_id` (`role_id`);
+
+--
+-- Indexes for table `vehicles`
+--
+ALTER TABLE `vehicles`
+
+  ADD UNIQUE KEY `license_plate` (`license_plate`),
+  ADD KEY `idx_vehicles_service_id` (`service_id`);
+
+--
+-- Indexes for table `vehicle_maintenances`
+--
+ALTER TABLE `vehicle_maintenances`
+
+  ADD KEY `vehicle_id` (`vehicle_id`);
+
+--
+-- Indexes for table `vehicle_service_details`
+--
+ALTER TABLE `vehicle_service_details`
+
+  ADD UNIQUE KEY `service_id` (`service_id`),
+  ADD KEY `driver_id` (`driver_id`);
+
+--
+-- Indexes for table `vehicle_status_history`
+--
+
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `bookings`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `booking_change_requests`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `booking_passengers`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `chat_conversations`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `chat_messages`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `consultation_requests`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `customer_behavior_logs`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `customer_travel_preferences`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `custom_tour_quotes`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `custom_tour_requests`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `departures`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `departure_updates`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `destinations`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `driver_expenses`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `driver_incidents`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `guides`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `guide_assignments`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `holidays`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `hotel_service_details`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `incident_reports`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `itineraries`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `itinerary_activities`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `itinerary_places`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `leave_requests`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `partners`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `payments`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `payroll`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `performance_reviews`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `personal_work_tasks`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `places`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `reviews`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `services`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `service_bookings`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `service_migration_backup`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `service_requests`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `service_request_groups`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `timekeeping`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `tours`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `tour_categories`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `tour_category_map`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `tour_vehicle_assignments`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `trip_reports`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `vehicles`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `vehicle_maintenances`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `vehicle_service_details`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- AUTO_INCREMENT for table `vehicle_status_history`
+--
+-- [Removed MODIFY AUTO_INCREMENT for TiDB]
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `bookings`
+--
+ALTER TABLE `bookings`
+  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`),
+  ADD CONSTRAINT `fk_bookings_custom_quotes` FOREIGN KEY (`quote_id`) REFERENCES `custom_tour_quotes` (`quote_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `booking_change_requests`
+--
+ALTER TABLE `booking_change_requests`
+  ADD CONSTRAINT `booking_change_requests_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`),
+  ADD CONSTRAINT `booking_change_requests_ibfk_2` FOREIGN KEY (`processed_by`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `booking_passengers`
+--
+ALTER TABLE `booking_passengers`
+  ADD CONSTRAINT `booking_passengers_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`);
+
+--
+-- Constraints for table `chat_messages`
+--
+ALTER TABLE `chat_messages`
+  ADD CONSTRAINT `fk_chat_conv` FOREIGN KEY (`conversation_id`) REFERENCES `chat_conversations` (`conversation_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `consultation_requests`
+--
+ALTER TABLE `consultation_requests`
+  ADD CONSTRAINT `consultation_requests_ibfk_1` FOREIGN KEY (`handled_by`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `custom_tour_quotes`
+--
+ALTER TABLE `custom_tour_quotes`
+  ADD CONSTRAINT `custom_tour_quotes_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `custom_tour_requests` (`request_id`),
+  ADD CONSTRAINT `custom_tour_quotes_ibfk_2` FOREIGN KEY (`staff_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `custom_tour_quotes_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `custom_tour_requests`
+--
+ALTER TABLE `custom_tour_requests`
+  ADD CONSTRAINT `custom_tour_requests_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `departures`
+--
+ALTER TABLE `departures`
+  ADD CONSTRAINT `departures_ibfk_1` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
+
+--
+-- Constraints for table `departure_updates`
+--
+ALTER TABLE `departure_updates`
+  ADD CONSTRAINT `departure_updates_ibfk_1` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `guides`
+--
+ALTER TABLE `guides`
+  ADD CONSTRAINT `guides_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `guide_assignments`
+--
+ALTER TABLE `guide_assignments`
+  ADD CONSTRAINT `guide_assignments_ibfk_1` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`),
+  ADD CONSTRAINT `guide_assignments_ibfk_2` FOREIGN KEY (`guide_id`) REFERENCES `guides` (`guide_id`);
+
+--
+-- Constraints for table `hotel_service_details`
+--
+ALTER TABLE `hotel_service_details`
+  ADD CONSTRAINT `hotel_service_details_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `incident_reports`
+--
+ALTER TABLE `incident_reports`
+  ADD CONSTRAINT `incident_reports_ibfk_1` FOREIGN KEY (`guide_id`) REFERENCES `guides` (`guide_id`),
+  ADD CONSTRAINT `incident_reports_ibfk_2` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`);
+
+--
+-- Constraints for table `itineraries`
+--
+ALTER TABLE `itineraries`
+  ADD CONSTRAINT `itineraries_ibfk_1` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
+
+--
+-- Constraints for table `itinerary_activities`
+--
+ALTER TABLE `itinerary_activities`
+  ADD CONSTRAINT `itinerary_activities_ibfk_1` FOREIGN KEY (`itinerary_id`) REFERENCES `itineraries` (`itinerary_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `itinerary_places`
+--
+ALTER TABLE `itinerary_places`
+  ADD CONSTRAINT `fk_itinerary_places_itinerary` FOREIGN KEY (`itinerary_id`) REFERENCES `itineraries` (`itinerary_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_itinerary_places_place` FOREIGN KEY (`place_id`) REFERENCES `places` (`place_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `leave_requests`
+--
+ALTER TABLE `leave_requests`
+  ADD CONSTRAINT `leave_requests_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `partners`
+--
+ALTER TABLE `partners`
+  ADD CONSTRAINT `fk_partners_destinations` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`destination_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `payments`
+--
+ALTER TABLE `payments`
+  ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`);
+
+--
+-- Constraints for table `payroll`
+--
+ALTER TABLE `payroll`
+  ADD CONSTRAINT `payroll_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `performance_reviews`
+--
+ALTER TABLE `performance_reviews`
+  ADD CONSTRAINT `performance_reviews_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `performance_reviews_ibfk_2` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `personal_work_tasks`
+--
+ALTER TABLE `personal_work_tasks`
+  ADD CONSTRAINT `personal_work_tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `places`
+--
+ALTER TABLE `places`
+  ADD CONSTRAINT `fk_places_partner` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`);
+
+--
+-- Constraints for table `services`
+--
+ALTER TABLE `services`
+  ADD CONSTRAINT `fk_services_partner` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `service_requests`
+--
+ALTER TABLE `service_requests`
+  ADD CONSTRAINT `service_requests_ibfk_1` FOREIGN KEY (`departure_id`) REFERENCES `departures` (`departure_id`),
+  ADD CONSTRAINT `service_requests_ibfk_2` FOREIGN KEY (`partner_id`) REFERENCES `partners` (`partner_id`),
+  ADD CONSTRAINT `service_requests_ibfk_3` FOREIGN KEY (`requested_by`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `timekeeping`
+--
+ALTER TABLE `timekeeping`
+  ADD CONSTRAINT `timekeeping_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `tour_category_map`
+--
+ALTER TABLE `tour_category_map`
+  ADD CONSTRAINT `tour_category_map_ibfk_1` FOREIGN KEY (`tour_id`) REFERENCES `tours` (`tour_id`),
+  ADD CONSTRAINT `tour_category_map_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `tour_categories` (`category_id`);
+
+--
+-- Constraints for table `tour_vehicle_assignments`
+--
+ALTER TABLE `tour_vehicle_assignments`
+  ADD CONSTRAINT `tour_vehicle_assignments_ibfk_1` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`);
+
+--
+-- Constraints for table `vehicles`
+--
+ALTER TABLE `vehicles`
+  ADD CONSTRAINT `fk_vehicles_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `vehicle_maintenances`
+--
+ALTER TABLE `vehicle_maintenances`
+  ADD CONSTRAINT `vehicle_maintenances_ibfk_1` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `vehicle_service_details`
+--
+ALTER TABLE `vehicle_service_details`
+  ADD CONSTRAINT `vehicle_service_details_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `vehicle_service_details_ibfk_2` FOREIGN KEY (`driver_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

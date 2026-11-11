@@ -102,13 +102,14 @@ Ma trận RACI chuẩn hóa phân định quyền hạn giữa các vai trò tro
 
 #### 3.5. UC-TM-05: Phê duyệt thiết kế tour
 - **Thẩm định cấu trúc tài chính và tính khả thi:**
-  - Tour riêng do Office Staff xây dựng được bóc tách thành Định phí (xe, HDV), Biến phí (phòng, ăn, vé, bảo hiểm) và Biên lợi nhuận (Margin %).
+  - Tour riêng do Office Staff xây dựng được bóc tách thành Định phí (xe nguyên chuyến từ đội xe nội bộ, công tác phí HDV, phí cố định khác), Biến phí (phòng lưu trú theo tỷ lệ chia phòng, suất ăn, vé tham quan, bảo hiểm) và Biên lợi nhuận (Margin %).
+  - Hiển thị trực quan Tổng giá tour toàn đoàn đối chiếu với ngân sách dự kiến của khách hàng để bảo đảm tính cạnh tranh và tỷ suất sinh lời của doanh nghiệp.
 - **Quy tắc phê duyệt và phản hồi:**
-  - Nếu bản thiết kế đạt yêu cầu: Quản lý nhấn Phê duyệt (`Approve`), hàm `managerReview` cập nhật `custom_tour_quotes.approval_status = 'Approved'`, cập nhật `custom_tour_requests.status = 'Manager_Approved'`.
-  - Nếu bản thiết kế chưa tối ưu: Quản lý nhấn Từ chối (`Reject`) và có thể nhập lý do góp ý (`manager_note`). Hàm `managerReview` cập nhật `custom_tour_quotes.approval_status = 'Rejected'`, lưu `manager_note`, cập nhật `custom_tour_requests.status = 'Manager_Rejected'`.
+  - Nếu bản thiết kế đạt yêu cầu: Quản lý nhấn Phê duyệt (`Approve`), hàm `managerReview` cập nhật `custom_tour_quotes.approval_status = 'Approved'`, cập nhật `custom_tour_requests.status = 'Manager_Approved'`, dọn sạch ghi chú yêu cầu sửa cũ (`customer_note = NULL`). Hồ sơ xuất hiện tại danh sách 'Thiết kế tour đã báo giá' để Nhân viên văn phòng gửi bản thiết kế và báo giá chính thức cho khách (`UC-OS-07`).
+  - Nếu bản thiết kế chưa tối ưu: Quản lý nhấn Từ chối (`Reject`) và bắt buộc nhập lý do góp ý (`manager_note`). Hàm `managerReview` cập nhật `custom_tour_quotes.approval_status = 'Rejected'`, lưu `manager_note`, cập nhật `custom_tour_requests.status = 'Manager_Rejected'`. Hồ sơ được tự động chuyển thẳng vào phân hệ **'Chỉnh sửa thiết kế' (`tour_requests_revision` / `UC-OS-08`)** của Nhân viên văn phòng để nhân viên mở phòng thiết kế sửa lại theo chỉ đạo.
   - **Giới hạn kỹ thuật:** Hàm `managerReview` chỉ cập nhật dữ liệu vào cơ sở dữ liệu, không có lệnh tạo thông báo tự động (notification/email) gửi cho nhân viên. Nhân viên theo dõi tiến độ qua danh sách yêu cầu tại giao diện làm việc.
 - **Phê duyệt tour cố định:**
-  - Đối với tour cố định thiết kế mới đang ở trạng thái `Pending`, Quản lý Tour duyệt mở bán bằng cách chuyển trạng thái sang `Active`.
+  - Đối với tour trọn gói cố định do Nhân viên văn phòng tạo (`UC-OS-03`) đang ở trạng thái Chờ duyệt (`Draft`/`Inactive`), Quản lý Tour kiểm tra lịch trình, phương tiện di chuyển được gán từ danh mục Đội xe nội bộ thực tế, điểm hòa vốn và biểu giá niêm yết trước khi chuyển trạng thái sang `Active` để mở bán công khai.
 
 #### 3.6. UC-TM-06: Xử lý sự cố tour
 - **Tiếp nhận sự cố thực địa:**
@@ -153,15 +154,18 @@ Ma trận RACI chuẩn hóa phân định quyền hạn giữa các vai trò tro
 
 ### 4. Biểu đồ trạng thái dữ liệu (State Diagrams)
 
-#### 4.1. Vòng đời Phê duyệt Báo giá Tour riêng (UC-TM-05)
+#### 4.1. Vòng đời Phê duyệt Thiết kế Tour riêng (UC-TM-05)
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending_Approval: Office Staff gửi duyệt (submitToManager)
+    [*] --> Pending_Approval: Office Staff hoàn thiện thiết kế & nộp duyệt (UC-OS-02)
     Pending_Approval --> Manager_Approved: Tour Manager chấp thuận (action: approve)
     Pending_Approval --> Manager_Rejected: Tour Manager từ chối (action: reject kèm manager_note)
-    Manager_Rejected --> Pending_Approval: Office Staff chỉnh sửa & nộp lại
-    Manager_Approved --> Quote_Sent: Office Staff gửi báo giá cho khách hàng
-    Quote_Sent --> [*]
+    Manager_Rejected --> Pending_Approval: Office Staff chỉnh sửa tại UC-OS-08 & nộp duyệt lại
+    Manager_Approved --> Sent_To_Customer: Office Staff gửi bản thiết kế cho khách hàng (UC-OS-07)
+    Sent_To_Customer --> Customer_Accepted: Khách hàng đồng ý chốt tour
+    Sent_To_Customer --> Customer_Revision: Khách hàng yêu cầu chỉnh sửa thiết kế sau khi duyệt
+    Customer_Revision --> Pending_Approval: Office Staff chỉnh sửa tại UC-OS-08 & nộp duyệt lại
+    Customer_Accepted --> [*]
 ```
 
 #### 4.2. Vòng đời Điều hành Đợt khởi hành (UC-TM-07 & UC-TM-08)

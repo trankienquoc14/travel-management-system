@@ -150,29 +150,28 @@ Tài liệu đặc tả này xác lập chi tiết các yêu cầu chức năng,
 | Quản lý tour | System |
 | :--- | :--- |
 | **– Tên use case: Phê duyệt thiết kế tour** | |
-| **– Mô tả sơ lược:** Use case này cho phép Quản lý tour thẩm định tính khả thi kỹ thuật và cơ cấu tài chính (định phí xe/HDV, biến phí phòng/ăn/vé, tỷ lệ lợi nhuận margin %) của các bản thiết kế tour riêng do Nhân viên văn phòng trình lên để ra quyết định phê duyệt hoặc từ chối kèm góp ý sửa đổi; đồng thời phê duyệt các sản phẩm tour cố định mới được tạo ở trạng thái chờ duyệt sang trạng thái mở bán chính thức. | |
+| **– Mô tả sơ lược:** Use case này cho phép Quản lý tour thẩm định tính khả thi kỹ thuật và cơ cấu tài chính (định phí xe nguyên chuyến từ đội xe nội bộ/HDV, biến phí phòng/ăn/vé, tỷ lệ lợi nhuận margin %) của các bản thiết kế tour riêng do Nhân viên văn phòng trình lên để ra quyết định phê duyệt (`Approve`) hoặc từ chối kèm góp ý sửa đổi (`Reject`), tự động chuyển hồ sơ về phân hệ “Chỉnh sửa thiết kế” (`UC-OS-08`) của Nhân viên văn phòng; đồng thời thẩm định và phê duyệt các sản phẩm tour trọn gói cố định mới được tạo ở trạng thái chờ duyệt sang trạng thái mở bán chính thức (`Active`). | |
 | **– Actor chính:** Quản lý tour | |
 | **– Actor phụ:** Nhân viên văn phòng | |
-| **– Tiền điều kiện (Pre-condition):** Quản lý tour đã đăng nhập vào hệ thống. Có bản thiết kế tour riêng ở trạng thái Chờ phê duyệt hoặc tour cố định mới ở trạng thái Chờ duyệt. | |
-| **– Hậu điều kiện (Post-condition):** Bản ghi báo giá tour riêng được chuyển sang trạng thái Đã duyệt (hoặc Bị từ chối kèm góp ý) và yêu cầu tour riêng chuyển trạng thái tương ứng. Tour cố định mới chuyển sang trạng thái Đang mở bán. | |
-| **– Luồng sự kiện chính (main flow):** | |
-| 1. Chọn chức năng “Phê duyệt Thiết kế” trên thanh điều hướng. | 2. Hệ thống hiển thị danh sách các yêu cầu tour riêng đang chờ phê duyệt (tab Tour Riêng) và danh sách tour cố định mới đang chờ duyệt mở bán (tab Tour Cố Định). |
-| 3. Quản lý chọn một bản thiết kế tour riêng cần thẩm định từ tab Tour Riêng. | 4. Hệ thống hiển thị chi tiết hồ sơ thiết kế: Hành trình từng ngày, danh mục điểm đến, cơ cấu Định phí (xe, HDV), Biến phí (khách sạn, suất ăn, vé tham quan, bảo hiểm), Giá vốn bình quân trên khách, Tỷ lệ margin (%) và Giá bán đề xuất cho người lớn và trẻ em. |
-| 5. Quản lý kiểm tra tính hợp lý của chi phí và tỷ suất sinh lời, sau đó nhấn nút “Phê duyệt (Approve)”. | 6. Hệ thống hiển thị hộp thoại xác nhận phê duyệt. |
-| 7. Quản lý xác nhận đồng ý. | 8. Hệ thống kiểm tra dữ liệu vừa duyệt. |
-| | 9. Hệ thống cập nhật bản thiết kế sang trạng thái Đã duyệt (`Approved`), cập nhật yêu cầu tour riêng sang trạng thái Quản lý đã duyệt (`Manager_Approved`), ghi nhận mã Quản lý duyệt và hiển thị thông báo “Đã duyệt bản thiết kế”. |
+| **– Tiền điều kiện (Pre-condition):** Quản lý tour đã đăng nhập vào hệ thống với quyền hạn hợp lệ. Có bản thiết kế tour riêng ở trạng thái Chờ phê duyệt (`Pending_Manager_Approval`) hoặc sản phẩm tour trọn gói cố định mới ở trạng thái Chờ duyệt (`Draft`/`Inactive`). | |
+| **– Hậu điều kiện (Post-condition):** Bản thiết kế tour riêng được chuyển sang trạng thái Đã duyệt (`Approved`) kèm cập nhật yêu cầu sang `Manager_Approved` (hoặc Bị từ chối `Rejected` kèm cập nhật yêu cầu sang `Manager_Rejected` và đẩy vào phân hệ Chỉnh sửa thiết kế của nhân viên). Tour cố định mới chuyển sang trạng thái Đang mở bán (`Active`). | |
+| **– Luồng sự kiện chính (main flow - Thẩm định và phê duyệt bản thiết kế tour riêng):** | |
+| 1. Chọn chức năng “Phê duyệt Thiết kế” trên thanh điều hướng. | 2. Hệ thống hiển thị danh sách các yêu cầu tour riêng đang chờ phê duyệt (tab Tour Riêng) kèm bộ lọc trạng thái và danh sách tour cố định mới đang chờ duyệt mở bán (tab Tour Cố Định). |
+| 3. Quản lý chọn một bản thiết kế tour riêng cần thẩm định từ tab Tour Riêng. | 4. Hệ thống hiển thị chi tiết toàn diện hồ sơ thiết kế: Hành trình từng ngày (hình ảnh đại diện, danh mục điểm tham quan, lưu trú, bữa ăn), thông tin phương tiện vận chuyển chính từ Đội xe nội bộ (loại xe, biển số, giờ đón/trả), Bảng kê Tài chính & Dịch vụ minh bạch:<br>• **Định phí:** Tiền xe nguyên chuyến theo ngày từ đội xe, Tiền Hướng dẫn viên, Phí cố định khác (chia bình quân theo số lượng khách).<br>• **Biến phí:** Tiền phòng lưu trú (tính theo tỷ lệ phòng), Suất ăn trọn gói, Vé tham quan & chi phí khác, Bảo hiểm du lịch.<br>• **Tổng hợp tài chính:** Giá vốn cơ bản / khách (`base_cost`), Tỷ lệ lợi nhuận (`markup_percent`), Giá bán đề xuất / khách (`quote_price`), và **Tổng giá tour toàn đoàn** đối chiếu trực quan với ngân sách dự kiến của khách. |
+| 5. Quản lý kiểm tra tính hợp lý của lịch trình, chi phí và tỷ suất sinh lời, sau đó nhấn nút “Phê duyệt”. | 6. Hệ thống hiển thị hộp thoại xác nhận: “Bạn có chắc chắn muốn phê duyệt bản thiết kế này?”. |
+| 7. Quản lý xác nhận đồng ý. | 8. Hệ thống kiểm tra dữ liệu và quyền hạn duyệt. |
+| | 9. Hệ thống cập nhật bản thiết kế sang trạng thái Đã duyệt (`Approved`), cập nhật trạng thái yêu cầu tour riêng sang Quản lý đã duyệt (`Manager_Approved`), dọn sạch ghi chú yêu cầu sửa cũ (`customer_note = NULL`), ghi nhận mã Quản lý duyệt (`manager_id`) và hiển thị thông báo: “Đã phê duyệt tour thành công!”. Hồ sơ sẵn sàng để Nhân viên văn phòng gửi bản thiết kế và báo giá chính thức cho khách hàng (`UC-OS-07`). |
 | **– Luồng sự kiện thay thế (alternate flow):** | |
-| 5.1. Quản lý nhận thấy tỷ lệ lợi nhuận quá thấp hoặc chi phí chưa hợp lý, nhấn nút “Từ chối (Reject)”. | 5.2. Hệ thống hiển thị hộp thoại yêu cầu nhập nội dung góp ý chỉnh sửa. |
-| 5.3. Quản lý nhập lý do góp ý (ví dụ: “Cần tính toán lại chi phí xe và tăng số khách hòa vốn lên 15 khách”) và nhấn “Xác nhận từ chối”. | 5.4. Hệ thống kiểm tra nội dung góp ý. |
-| | 5.5. Hệ thống cập nhật bản thiết kế sang trạng thái Bị từ chối (`Rejected`), lưu nội dung góp ý, chuyển yêu cầu tour riêng về trạng thái Đang thiết kế (`Designing`), và hiển thị thông báo “Đã từ chối bản thiết kế”. Nhân viên văn phòng sẽ mở lại hồ sơ để điều chỉnh. |
-| 3.1. Quản lý chuyển sang tab “Tour Cố Định Chờ Duyệt”, chọn một sản phẩm tour đang ở trạng thái Chờ duyệt. | 3.2. Hệ thống hiển thị thông tin giới thiệu, lịch trình tiêu chuẩn và biểu giá niêm yết của tour. |
-| 3.3. Quản lý nhấn “Phê duyệt mở bán”. | 3.4. Hệ thống chuyển trạng thái tour sang Đang mở bán (`Active`) và hiển thị thông báo “Đã cập nhật trạng thái thành Active”. |
+| 5.1. Quản lý nhận thấy tỷ lệ lợi nhuận chưa hợp lý, chi phí xe/khách sạn chưa tối ưu hoặc lịch trình cần điều chỉnh, nhấn nút “Từ chối”. | 5.2. Hệ thống hiển thị hộp thoại yêu cầu nhập nội dung góp ý chỉnh sửa cho nhân viên: “Nhập lý do / yêu cầu chỉnh sửa cho nhân viên:”. |
+| 5.3. Quản lý nhập lý do góp ý cụ thể (ví dụ: “Cần cân đối lại định phí xe, đổi khách sạn ngày 2 sang tiêu chuẩn 4 sao theo yêu cầu của khách”) và nhấn “Xác nhận Gửi yêu cầu”. | 5.4. Hệ thống kiểm tra: Nội dung góp ý không được để trống. |
+| | 5.5. Hệ thống cập nhật bản thiết kế sang trạng thái Bị từ chối (`approval_status = 'Rejected'`), lưu nội dung góp ý (`manager_note`), cập nhật trạng thái yêu cầu tour riêng sang **`Manager_Rejected`** (Sếp bắt sửa) và hiển thị thông báo: “Đã gửi yêu cầu chỉnh sửa lại cho nhân viên!”.<br>**Hồ sơ được tự động chuyển thẳng vào phân hệ “Chỉnh sửa thiết kế” (`tour_requests_revision` / `UC-OS-08`)** của Nhân viên văn phòng với nhãn cảnh báo đỏ nổi bật để nhân viên mở phòng thiết kế sửa lại theo chỉ đạo. |
+| 3.1. Quản lý chuyển sang tab “Tour Cố Định Chờ Duyệt”, chọn một sản phẩm tour trọn gói cố định do Nhân viên văn phòng tạo (`UC-OS-03`). | 3.2. Hệ thống hiển thị thông tin giới thiệu, lịch trình tiêu chuẩn, phương tiện di chuyển được gán từ danh mục Đội xe nội bộ thực tế, điểm hòa vốn, giá vốn và biểu giá niêm yết của tour. |
+| 3.3. Quản lý nhấn “Phê duyệt mở bán”. | 3.4. Hệ thống chuyển trạng thái tour sang Đang mở bán (`Active`) và hiển thị thông báo: “Đã cập nhật trạng thái thành Active”. |
 | **– Luồng sự kiện ngoại lệ (exception flow):** | |
-| | 8.1. Lỗi máy chủ khi cập nhật trạng thái.<br>Hệ thống hiển thị thông báo: “Lỗi máy chủ khi xử lý phê duyệt, vui lòng thử lại sau!”. |
+| | 5.4.1. Bỏ trống nội dung góp ý khi từ chối.<br>Hệ thống cảnh báo: “Vui lòng nhập lý do / yêu cầu chỉnh sửa cho nhân viên!”. |
+| | 8.1. Lỗi kết nối máy chủ hoặc lỗi cơ sở dữ liệu khi phê duyệt.<br>Hệ thống thông báo: “Có lỗi xảy ra khi phê duyệt, vui lòng thử lại sau!”. |
 | **– Quy tắc nghiệp vụ:** | |
-| • Quyền phê duyệt bản thiết kế thuộc thẩm quyền của Quản lý tour và Quản trị viên; Nhân viên văn phòng không có quyền tự phê duyệt bản thiết kế do mình tạo ra.<br>• Khi phê duyệt hoặc từ chối, hệ thống cập nhật trạng thái trong cơ sở dữ liệu; Nhân viên văn phòng theo dõi kết quả thông qua danh sách phân hệ trên giao diện làm việc. | |
-
----
+| • **Phân quyền thẩm quyền:** Quyền phê duyệt bản thiết kế thuộc thẩm quyền của Quản lý tour (`role_id = 3`) và Quản trị viên; Nhân viên văn phòng không có quyền tự phê duyệt bản thiết kế do mình tạo ra.<br>• **Tách biệt quy trình Báo giá và Thiết kế:** Quản lý tour không tham gia phê duyệt báo giá sơ bộ ban đầu (do nhân viên gửi thẳng khách để định hướng ngân sách). Quản lý tour chỉ thẩm định và phê duyệt **Bản thiết kế tour chi tiết** (đã có lịch trình ngày/đêm và bảng bóc tách định phí/biến phí).<br>• **Khép kín vòng lặp phản hồi (Feedback loop):** Khi từ chối, bản thiết kế chuyển sang trạng thái `Manager_Rejected` và được đẩy tự động sang phân hệ “Chỉnh sửa thiết kế” (`UC-OS-08`) của Nhân viên văn phòng; khi phê duyệt, hồ sơ chuyển sang trạng thái `Manager_Approved` để nhân viên kích hoạt lệnh gửi khách hàng tại phân hệ “Thiết kế tour đã báo giá” (`UC-OS-07`). | |
 
 #### BẢNG ĐẶC TẢ USE CASE UC-TM-06: XỬ LÝ SỰ CỐ TOUR
 
@@ -264,32 +263,35 @@ Tài liệu đặc tả này xác lập chi tiết các yêu cầu chức năng,
 
 ---
 
-#### BẢNG ĐẶC TẢ USE CASE UC-TM-09: XEM BÁO CÁO THỐNG KÊ
+#### BẢNG ĐẶC TẢ USE CASE UC-TM-09: TỔNG QUAN VÀ BÁO CÁO THỐNG KÊ
 
 | Quản lý tour | System |
 | :--- | :--- |
-| **– Tên use case: Xem báo cáo thống kê** | |
+| **– Tên use case: Tổng quan và báo cáo thống kê** | |
 | **– Mã use case:** `UC-TM-09` | |
-| **– Mục tiêu:** Cho phép Quản lý tour theo dõi các chỉ tiêu tổng hợp về hoạt động kinh doanh lữ hành, tiến độ hoàn thành các chuyến đi của Hướng dẫn viên, duyệt báo cáo kết thúc tour của HDV, thống kê sự cố toàn hệ thống, theo dõi nhân sự nghỉ phép và xuất báo cáo doanh thu ra định dạng tệp PDF. | |
-| **– Mô tả sơ lược:** Quản lý tour truy cập trung tâm báo cáo điều hành tại giao diện `GeneralOverview.jsx`, xem xét 5 phân hệ báo cáo chuyên đề, thực hiện duyệt báo cáo chuyến đi của Hướng dẫn viên và xuất tệp báo cáo PDF. | |
+| **– Phân hệ nghiệp vụ:** Báo cáo & Thống kê điều hành | |
+| **– Mục tiêu:** Cho phép Quản lý tour theo dõi toàn cảnh các chỉ số hiệu suất kinh doanh (KPIs), phân tích chuyên sâu hiệu quả khai thác các tuyến tour, đánh giá chất lượng đội ngũ Hướng dẫn viên và Tài xế, kiểm soát mức độ đáp ứng của đối tác dịch vụ, giám sát rủi ro sự cố phát sinh trên toàn hệ thống và xuất báo cáo tài chính doanh thu ra tệp PDF phục vụ công tác điều hành chiến lược. | |
+| **– Mô tả sơ lược:** Quản lý tour truy cập trung tâm điều hành tại giao diện “Tổng quan & Báo cáo” (`GeneralOverview.jsx`), theo dõi 7 phân hệ chuyên đề: (1) Tổng quan BI (Charts Hub), (2) Phân tích Tuyến Tour, (3) Phân tích Hướng dẫn viên (kèm phê duyệt báo cáo chuyến đi), (4) Phân tích Đội ngũ Tài xế, (5) Báo cáo Doanh thu & Xuất tệp PDF, (6) Đánh giá Chất lượng Đối tác, và (7) Giám sát Nhân sự & Sự cố toàn hệ thống. | |
 | **– Actor chính:** Quản lý tour | |
-| **– Actor phụ:** Hướng dẫn viên, Admin | |
-| **– Tiền điều kiện (Pre-condition):** Quản lý tour đã đăng nhập vào hệ thống với vai trò Quản lý tour hoặc Quản trị viên. | |
-| **– Hậu điều kiện (Post-condition):** Báo cáo chuyến đi của Hướng dẫn viên được cập nhật trạng thái đã duyệt trong hệ thống. Tệp báo cáo PDF được kết xuất về máy của người dùng. | |
-| **– Luồng sự kiện chính (main flow):** | |
-| 1. Chọn chức năng “Tổng quan & Báo cáo” trên thanh điều hướng. | 2. Hệ thống hiển thị bảng điều khiển trung tâm với 5 chuyên đề báo cáo: Báo cáo chuyến đi HDV, Doanh thu & Bán vé, Thống kê nhân sự, Sự cố, và Chất lượng đối tác. |
-| 3. Mặc định hệ thống mở chuyên đề Báo cáo chuyến đi HDV, hiển thị các chỉ số: Tổng số tour đã hoàn thành, Điểm đánh giá trung bình và danh sách báo cáo chuyến đi nộp về từ Hướng dẫn viên. | 4. Quản lý kiểm tra báo cáo chuyến đi của một Hướng dẫn viên và nhấn “Phê duyệt hoàn tất chuyến đi”. |
-| 5. Quản lý xác nhận phê duyệt. | 6. Hệ thống cập nhật trạng thái báo cáo chuyến đi sang Đã duyệt và hiển thị thông báo “Đã phê duyệt hoàn tất chuyến đi!”. |
-| **– Luồng sự kiện thay thế (alternate flow):** | |
-| 2.1. Quản lý chuyển sang chuyên đề “Doanh Thu & Bán Vé (Xuất PDF)”. | 2.2. Hệ thống hiển thị bảng điều khiển doanh thu với tổng doanh thu thực tế, số vé đã bán và biểu đồ tăng trưởng. |
-| 2.3. Quản lý nhấn nút “Tải File PDF”. | 2.4. Hệ thống chuyển đổi vùng nội dung báo cáo thành tệp tài liệu PDF và tự động tải xuống máy tính của người dùng. |
-| 2.5. Quản lý chuyển sang chuyên đề Thống kê nhân sự hoặc Thống kê sự cố. | 2.6. Hệ thống hiển thị danh sách đơn nghỉ phép của nhân sự hoặc danh sách tổng hợp các sự cố phát sinh trên toàn hệ thống. |
+| **– Actor phụ:** Hướng dẫn viên, Quản trị viên (Admin) | |
+| **– Tiền điều kiện (Pre-condition):** Quản lý tour đã đăng nhập thành công vào hệ thống với vai trò Quản lý tour (`role_id = 3`) hoặc Quản trị viên (`role_id = 1`). | |
+| **– Hậu điều kiện (Post-condition):** Dữ liệu thống kê được tổng hợp thời gian thực; các báo cáo kết thúc tour của Hướng dẫn viên được phê duyệt; tệp báo cáo doanh thu PDF được tải về máy của người dùng. | |
+| **– Luồng sự kiện chính (main flow - Khai thác Trung tâm Tổng quan BI):** | |
+| 1. Chọn chức năng “Tổng quan & Báo cáo” (`overview`) trên thanh điều hướng bên trái. | 2. Hệ thống tải dữ liệu tổng hợp từ các phân hệ Tour, Booking, Nhân sự, Đội xe và hiển thị màn hình **Tổng quan BI (`charts_hub`)** gồm 4 thẻ chỉ số KPI tổng quát: Doanh thu thực thu, Hiệu suất tuyến tour, Đội ngũ Hướng dẫn viên, Đội xe & Tài xế. |
+| 3. Quản lý theo dõi bảng phân tích cơ cấu tài chính: Biểu đồ tròn (Donut Chart) phân bổ trạng thái đơn đặt chỗ (Đã thanh toán, Chờ thanh toán, Đã hủy/hoàn tiền), tỷ lệ lấp đầy chỗ bình quân (`Occupancy Rate`), và biểu đồ doanh thu theo nhóm tour. | 4. Hệ thống trực quan hóa các tỷ lệ phần trăm, cho phép rê chuột xem chi tiết số lượng đơn và số tiền trên từng lát biểu đồ. |
+| 5. Quản lý tương tác với các thẻ KPI để mở nhanh các phân hệ chuyên đề tương ứng. | 6. Hệ thống chuyển đổi mượt mà sang phân hệ phân tích được chọn. |
+| **– Luồng sự kiện thay thế (alternate flow - Khai thác các chuyên đề phân tích chuyên sâu):** | |
+| 2.1. Quản lý chuyển sang tab **“Phân tích Tour”**: Theo dõi bảng so sánh hiệu suất giữa các tuyến tour (Doanh thu, Số lượt khởi hành, Số khách phục vụ, Tỷ lệ lấp đầy bình quân). | 2.2. Hệ thống hiển thị biểu đồ xếp hạng doanh thu theo tuyến điểm và danh sách chi tiết các tour có hiệu suất kinh doanh cao nhất. |
+| 2.3. Quản lý chuyển sang tab **“Phân tích HDV”**: Xem danh sách đội ngũ Hướng dẫn viên, số tour phụ trách, số ngày công tác, điểm đánh giá trung bình (Rating ⭐), và danh sách các Báo cáo kết thúc chuyến đi (`trip_reports`) nộp về sau tour. | 2.4. Quản lý kiểm tra nội dung tường trình chuyến đi của HDV và nhấn “Phê duyệt hoàn tất chuyến đi”; hệ thống cập nhật trạng thái báo cáo sang Đã duyệt (`Approved`) và hiển thị thông báo thành công. |
+| 2.5. Quản lý chuyển sang tab **“Phân tích Tài xế”**: Theo dõi danh sách tài xế, tổng số chuyến đi đã thực hiện, tổng số km vận hành an toàn và các báo cáo sự cố xe liên quan đã ghi nhận. | 2.6. Hệ thống hiển thị bảng thống kê chi tiết theo từng tài xế thuộc đội xe nội bộ. |
+| 2.7. Quản lý chuyển sang tab **“Báo cáo Doanh thu & Xuất PDF”**: Xem báo cáo tài chính bóc tách theo dòng tiền thực thu, doanh số dự kiến và biểu đồ tăng trưởng theo tháng/quý. | 2.8. Quản lý nhấn nút “Tải File PDF”; hệ thống tự động kết xuất giao diện báo cáo thành tệp tài liệu PDF chuẩn định dạng qua thư viện kết xuất và tải về máy tính của Quản lý. |
+| 2.9. Quản lý chuyển sang tab **“Chất lượng Đối tác”**: Xem thống kê các yêu cầu dịch vụ gửi tới từng đối tác (Khách sạn, Nhà hàng, Vận chuyển ngoài), tỷ lệ chấp thuận/từ chối và đánh giá chất lượng cung ứng. | 2.10. Hệ thống hiển thị biểu đồ và bảng xếp hạng độ tin cậy của các nhà cung cấp đối tác. |
+| 2.11. Quản lý chuyển sang tab **“Nhân sự & Sự cố”**: Xem tổng hợp toàn bộ các sự cố phát sinh trên đường tour và thống kê đơn nghỉ phép của nhân sự nội bộ. | 2.12. Hệ thống hiển thị danh sách sự cố theo mức độ nghiêm trọng và tình trạng phê duyệt đơn phép. |
 | **– Luồng sự kiện ngoại lệ (exception flow):** | |
-| | 2.4.1. Lỗi khi xuất tệp PDF.<br>Nếu quá trình tạo tệp PDF gặp lỗi, hệ thống tự động mở hộp thoại in của trình duyệt để người dùng in hoặc lưu tệp trực tiếp. |
+| | 2.8.1. Lỗi khi kết xuất tệp tài liệu PDF.<br>Nếu quá trình tạo tệp PDF gặp sự cố trình duyệt, hệ thống tự động kích hoạt hộp thoại in gốc của trình duyệt để người dùng có thể in trực tiếp hoặc chọn “Lưu dưới dạng PDF”. |
+| | 2.4.1. Báo cáo chuyến đi đã được duyệt trước đó.<br>Hệ thống hiển thị trạng thái “Đã phê duyệt” và khóa nút duyệt để tránh trùng lặp thao tác. |
 | **– Quy tắc nghiệp vụ:** | |
-| • Thao tác phê duyệt báo cáo chuyến đi của Hướng dẫn viên là một tác vụ hành chính được tích hợp chung trong màn hình báo cáo tổng quan.<br>• Chức năng xuất PDF được xử lý trực tiếp trên trình duyệt của người dùng để tải về tệp báo cáo nhanh chóng. | |
-
----
+| • **Phân quyền truy cập:** Màn hình Tổng quan và Báo cáo thống kê chuyên sâu dành riêng cho Quản lý tour (`role_id = 3`) và Quản trị viên (`role_id = 1`); Nhân viên văn phòng thông thường chỉ được xem báo cáo doanh số cá nhân tại bảng điều khiển cơ bản.<br>• **Tổng hợp đa chiều thời gian thực:** Toàn bộ dữ liệu số liệu trên các biểu đồ (BI Charts) được tổng hợp trực tiếp từ các bảng giao dịch thực tế (`bookings`, `departures`, `trip_reports`, `incident_reports`, `vehicles`), phản ánh chính xác tình trạng vận hành tại thời điểm truy vấn.<br>• **Tích hợp tác vụ hành chính:** Thao tác phê duyệt báo cáo chuyến đi của Hướng dẫn viên được tích hợp trực tiếp tại phân hệ Phân tích HDV nhằm hoàn tất khép kín chu trình điều hành đoàn tour mà không cần chuyển sang màn hình khác. | |
 
 ### PHẦN III. TỔNG KẾT VÀ KẾT LUẬN
 

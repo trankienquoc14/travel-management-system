@@ -71,7 +71,10 @@ Các chức năng dùng chung của hệ thống (như Đăng nhập, Đổi m�
    - Hỗ trợ lập phiếu bảo dưỡng (`vehicle_maintenances`) và theo dõi lịch sử xe (`vehicle_status_history`).
 5. **`UC-TM-05` (Phê duyệt thiết kế tour):**
    - Thẩm định tour riêng qua `managerReview` (`POST /api/custom-tours/quotes/:quoteId/manager-review`): Chấp thuận (`Manager_Approved`) hoặc Từ chối (`Manager_Rejected` kèm `manager_note`).
-   - **Xác minh giới hạn:** Hàm `managerReview` chỉ cập nhật DB bảng `custom_tour_quotes` và `custom_tour_requests`, không có lệnh tạo bản ghi thông báo tự động cho nhân viên; nhân viên theo dõi kết quả qua danh sách yêu cầu.
+   - Khi chấp thuận (`Manager_Approved`): Bản thiết kế chuyển sang trạng thái đã duyệt, đồng thời dọn sạch ghi chú sửa cũ (`customer_note = NULL`), đưa hồ sơ sang trạng thái 'Sếp đã duyệt - Chờ gửi khách' tại phân hệ Thiết kế tour đã báo giá (`tour_requests`) để Nhân viên văn phòng gửi bản thiết kế và báo giá chính thức cho khách (`UC-OS-07`).
+   - Khi từ chối (`Manager_Rejected` kèm `manager_note`): Bản thiết kế được hệ thống tự động phân luồng chuyển thẳng vào phân hệ **'Chỉnh sửa thiết kế' (`tour_requests_revision` / `UC-OS-08`)** của Nhân viên văn phòng với nhãn cảnh báo đỏ nổi bật để nhân viên mở phòng thiết kế sửa lại theo chỉ đạo.
+   - Thẩm định tour trọn gói cố định do Nhân viên văn phòng tạo (`UC-OS-03`): Kiểm tra lịch trình, phương tiện di chuyển đội xe thực tế, điểm hòa vốn, giá vốn, giá niêm yết và kích hoạt mở bán (`Active`).
+   - **Xác minh giới hạn:** Hàm `managerReview` chỉ cập nhật DB bảng `custom_tour_quotes` và `custom_tour_requests`, không có lệnh tạo bản ghi thông báo tự động cho nhân viên; nhân viên theo dõi kết quả qua danh sách phân hệ trên giao diện làm việc.
 6. **`UC-TM-06` (Xử lý sự cố tour):**
    - Tiếp nhận sự cố từ HDV gửi lên từ tour (`incident_reports`). Hỗ trợ chuyển trạng thái `Open` $\rightarrow$ `Resolved` kèm `resolution_notes`, và hỗ trợ mở lại (`Reopen`).
    - **Xác minh giới hạn:** Bảng `incident_reports` chỉ lưu `status` và `resolution_notes`, không có trường chi phí bồi thường hay quy trình bồi thường tự động.
@@ -87,4 +90,15 @@ Các chức năng dùng chung của hệ thống (như Đăng nhập, Đổi m�
    - Màn hình `GeneralOverview.jsx` tích hợp 5 phân hệ báo cáo: duyệt báo cáo kết thúc chuyến đi của HDV, xem doanh thu và xuất file PDF qua thư viện `html2pdf.js`, xem thống kê nghỉ phép HR, danh sách sự cố và chất lượng đối tác.
 
 ---
+
+
+---
+
+### 5. Mối quan hệ tương hỗ giữa UC-TM-05 và các Use Case của Nhân viên văn phòng
+- `UC-OS-02 (Thiết kế tour riêng):` Nhân viên văn phòng sau khi khách hàng đồng ý mức giá sơ bộ (`Initial_Accepted`) sẽ tiến hành thiết kế lịch trình chi tiết ngày/đêm trên phòng thiết kế Timeline Builder, bóc tách định phí/biến phí và nộp duyệt lên Quản lý Tour (`Pending_Manager_Approval`).
+- `UC-TM-05 (Phê duyệt thiết kế tour):` Quản lý Tour thẩm định toàn bộ lịch trình, phương tiện đội xe, tài chính và ra quyết định:
+  + Nếu phê duyệt (`Manager_Approved`): Hồ sơ chuyển sang `UC-OS-07 (Gửi báo giá thiết kế tour riêng - Mốc 2)` để nhân viên gửi bản thiết kế và báo giá chính thức cho khách hàng.
+  + Nếu từ chối (`Manager_Rejected` kèm `manager_note`): Hệ thống tự động chuyển hồ sơ sang `UC-OS-08 (Chỉnh sửa thiết kế tour)` của nhân viên để chỉnh sửa lại.
+- `UC-OS-08 (Chỉnh sửa thiết kế tour):` Nhân viên văn phòng tiếp nhận các bản thiết kế bị Quản lý từ chối hoặc khách hàng yêu cầu sửa đổi sau khi duyệt, mở phòng thiết kế sửa lại và nộp duyệt lại Quản lý (`Pending_Manager_Approval`), khép kín vòng lặp phản hồi.
+
 *Tài liệu được kết xuất từ mã nguồn TravelVN ERP phục vụ Báo cáo Khóa luận Tốt nghiệp ngành Hệ thống Thông tin.*

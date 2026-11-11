@@ -49,7 +49,14 @@ app.use('/', createProxyMiddleware({
   }
 }));
 
-const PORT = process.env.API_GATEWAY_PORT || process.env.PORT || 5000;
+// Proxy WebSocket for Socket.IO realtime chat
+app.use('/socket.io', createProxyMiddleware({
+  target: services.chat,
+  ws: true,
+  changeOrigin: true
+}));
+
+const PORT = process.env.PORT || process.env.API_GATEWAY_PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`API Gateway is running on http://localhost:${PORT}`);

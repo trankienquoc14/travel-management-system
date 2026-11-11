@@ -12,6 +12,12 @@ const sequelize = new Sequelize(
     port: Number(process.env.DB_PORT || 3306),
     dialect: 'mysql',
     logging: false, // Tắt log query cho đỡ rối console
+    dialectOptions: (process.env.DB_SSL === 'true' || (process.env.DB_HOST && process.env.DB_HOST !== '127.0.0.1' && process.env.DB_HOST !== 'localhost')) ? {
+      ssl: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true
+      }
+    } : {}
   }
 );
 

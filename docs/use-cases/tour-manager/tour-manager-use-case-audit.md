@@ -94,15 +94,17 @@ Tài liệu này ghi nhận kết quả rà soát, đối chiếu và kiểm ch�
 - **Trạng thái kiểm chứng:** **Đã xác minh qua mã nguồn**
 - **Bằng chứng kỹ thuật:**
   - *Frontend:*
-    - [`frontend/src/components/ManagerTourApproval.jsx`](file:///d:/KLTN/travel-management-system/frontend/src/components/ManagerTourApproval.jsx): Tab `approve_quotes`. Nạp danh sách yêu cầu tour riêng (`GET /api/custom-tours/requests`) và tour cố định chờ duyệt (`GET /api/staff/tours`).
+    - [`frontend/src/components/ManagerTourApproval.jsx`](file:///d:/KLTN/travel-management-system/frontend/src/components/ManagerTourApproval.jsx): Tab `approve_quotes`. Nạp danh sách yêu cầu tour riêng (`GET /api/custom-tours/requests`) và tour cố định chờ duyệt (`GET /api/staff/tours`). Modal hiển thị đầy đủ hình ảnh, lịch trình chi tiết ngày, phương tiện di chuyển đội xe, bảng kê định phí/biến phí, giá vốn, margin % và Tổng giá tour toàn đoàn.
   - *Backend Route & Controller:*
-    - Tuyến đường: [`microservices/tour-service/routes/customTourRoutes.js`](file:///d:/KLTN/travel-management-system/microservices/tour-service/routes/customTourRoutes.js) (dòng 58) và [`tourRoutes.js`](file:///d:/KLTN/travel-management-system/microservices/tour-service/routes/tourRoutes.js) (dòng 40).
+    - Tuyến đường: [`microservices/tour-service/routes/customTourRoutes.js`](file:///d:/KLTN/travel-management-system/microservices/tour-service/routes/customTourRoutes.js) (dòng 27: `POST /quotes/:quoteId/manager-review`) và [`tourRoutes.js`](file:///d:/KLTN/travel-management-system/microservices/tour-service/routes/tourRoutes.js).
     - Controller:
-      - Hàm `managerReview` trong [`customTourController.js#L640`](file:///d:/KLTN/travel-management-system/microservices/tour-service/controllers/customTourController.js#L640): Nếu `action === 'approve'`, cập nhật `custom_tour_quotes.approval_status = 'Approved'`, `custom_tour_requests.status = 'Manager_Approved'`. Nếu `action === 'reject'`, cập nhật `approval_status = 'Rejected'`, lưu `manager_note`, cập nhật `custom_tour_requests.status = 'Manager_Rejected'`.
-      - Hàm `updateTourStatus` trong [`tourController.js#L495`](file:///d:/KLTN/travel-management-system/microservices/tour-service/controllers/tourController.js#L495): Chuyển trạng thái tour cố định sang `Active`.
+      - Hàm `managerReview` trong [`customTourController.js#L774`](file:///d:/KLTN/travel-management-system/microservices/tour-service/controllers/customTourController.js#L774):
+        + Nếu `action === 'approve'`: Cập nhật `custom_tour_quotes.approval_status = 'Approved'`, `customer_note = NULL`, `manager_id = managerId`, cập nhật `custom_tour_requests.status = 'Manager_Approved'`. Hồ sơ chuyển sang trạng thái sẵn sàng để nhân viên gửi khách (`sendToCustomer` / `UC-OS-07`).
+        + Nếu `action === 'reject'`: Cập nhật `approval_status = 'Rejected'`, lưu `manager_note`, cập nhật `custom_tour_requests.status = 'Manager_Rejected'`. Hồ sơ tự động xuất hiện tại phân hệ **'Chỉnh sửa thiết kế' (`tour_requests_revision` / `UC-OS-08`)** của Nhân viên văn phòng để nhân viên mở phòng thiết kế sửa lại theo chỉ đạo.
+      - Hàm `updateTourStatus` trong [`tourController.js`](file:///d:/KLTN/travel-management-system/microservices/tour-service/controllers/tourController.js): Chuyển trạng thái tour cố định sang `Active`.
   - *Cơ sở dữ liệu:* Bảng `custom_tour_quotes`, `custom_tour_requests`, `tours`.
-- **Hành vi được xác minh:** Thẩm định chi phí định phí/biến phí/margin; duyệt hoặc từ chối kèm góp ý.
-- **Giới hạn thực tế:** Hàm `managerReview` không có câu lệnh tạo thông báo tự động (notification/email) gửi nhân viên văn phòng; nhân viên theo dõi kết quả qua giao diện làm việc.
+- **Hành vi được xác minh:** Thẩm định chi phí định phí (xe đội xe, HDV), biến phí (phòng, ăn, vé, bảo hiểm), margin %; duyệt (`Manager_Approved`) hoặc từ chối (`Manager_Rejected` kèm ghi chú góp ý).
+- **Giới hạn thực tế:** Hàm `managerReview` chỉ cập nhật DB bảng `custom_tour_quotes` và `custom_tour_requests`, không có câu lệnh tạo thông báo tự động (notification/email) gửi nhân viên văn phòng; nhân viên theo dõi kết quả qua danh sách phân hệ trên giao diện làm việc.
 
 ---
 
