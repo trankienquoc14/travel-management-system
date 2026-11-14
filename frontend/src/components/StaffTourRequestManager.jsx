@@ -611,17 +611,27 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
             setProposedPlan(normalizedProposal);
             setAdjHotelCost(normalizedProposal.hotel.pricePerNight);
             setAdjTransportCost(normalizedProposal.transport.pricePerDay);
-            if (savedProposal.meal?.prices) {
+            const isMealSelf = orig.meal ? (orig.meal.toLowerCase().includes('tự túc') || orig.meal.toLowerCase().includes('không')) : Boolean(savedProposal.meal?.enabled === false);
+            const isGuideSelf = orig.guide ? (orig.guide.toLowerCase().includes('tự túc') || orig.guide.toLowerCase().includes('không')) : Boolean(savedProposal.guide?.enabled === false);
+
+            if (isMealSelf) {
+                setMealPrices({ breakfast: 0, lunch: 0, dinner: 0 });
+            } else if (savedProposal.meal?.prices) {
                 setMealPrices(savedProposal.meal.prices);
             } else {
                 setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
             }
-            setGuidePricePerDay(savedProposal.guide?.pricePerDay ?? 500000);
+
+            if (isGuideSelf) {
+                setGuidePricePerDay(0);
+            } else {
+                setGuidePricePerDay(savedProposal.guide?.pricePerDay ?? 500000);
+            }
         } else {
             const isTransportSelf = (orig.transportName || orig.transport || '').toLowerCase().includes('tự túc');
             const isHotelSelf = (orig.hotelName || orig.hotel || '').toLowerCase().includes('tự túc');
-            const isMealSelf = orig.meal ? orig.meal.toLowerCase().includes('tự túc') : false;
-            const isGuideSelf = orig.guide ? orig.guide.toLowerCase().includes('tự túc') : false;
+            const isMealSelf = orig.meal ? (orig.meal.toLowerCase().includes('tự túc') || orig.meal.toLowerCase().includes('không')) : false;
+            const isGuideSelf = orig.guide ? (orig.guide.toLowerCase().includes('tự túc') || orig.guide.toLowerCase().includes('không')) : false;
 
             const initialPlan = {
                 pickup: {
@@ -650,15 +660,15 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                 },
                 meal: {
                     enabled: !isMealSelf,
-                    name: orig.meal || 'Trọn gói (Sáng, Trưa, Tối)',
+                    name: orig.meal || (isMealSelf ? 'Khách tự túc ăn uống' : 'Trọn gói (Sáng, Trưa, Tối)'),
                     isCustomized: false,
-                    prices: { breakfast: 200000, lunch: 200000, dinner: 200000 },
+                    prices: isMealSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 },
                     reason: ''
                 },
                 guide: {
                     enabled: !isGuideSelf,
-                    name: orig.guide || 'Có hướng dẫn viên suốt tuyến',
-                    pricePerDay: 500000,
+                    name: orig.guide || (isGuideSelf ? 'Khách tự túc' : 'Có hướng dẫn viên suốt tuyến'),
+                    pricePerDay: isGuideSelf ? 0 : 500000,
                     isCustomized: false,
                     reason: ''
                 },
@@ -675,8 +685,8 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
             setProposedPlan(initialPlan);
             setAdjHotelCost(defaultHotelCost);
             setAdjTransportCost(defaultTransportCost);
-            setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
-            setGuidePricePerDay(500000);
+            setMealPrices(isMealSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 });
+            setGuidePricePerDay(isGuideSelf ? 0 : 500000);
         }
 
         // Khôi phục chính sách giá trẻ em từ price_breakdown nếu itinerary chưa có
@@ -1320,18 +1330,18 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     };
 
     const handleResetMeal = () => {
-        const isSelf = originalPreferences?.meal ? originalPreferences.meal.toLowerCase().includes('tự túc') : false;
+        const isSelf = originalPreferences?.meal ? (originalPreferences.meal.toLowerCase().includes('tự túc') || originalPreferences.meal.toLowerCase().includes('không')) : false;
         setProposedPlan(prev => ({
             ...prev,
             meal: {
                 enabled: !isSelf,
-                name: originalPreferences?.meal || 'Trọn gói (Sáng, Trưa, Tối)',
+                name: originalPreferences?.meal || (isSelf ? 'Khách tự túc ăn uống' : 'Trọn gói (Sáng, Trưa, Tối)'),
                 isCustomized: false,
-                prices: { breakfast: 200000, lunch: 200000, dinner: 200000 },
+                prices: isSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 },
                 reason: ''
             }
         }));
-        setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
+        setMealPrices(isSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 });
     };
 
     // Hướng dẫn viên
@@ -1348,18 +1358,18 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     };
 
     const handleResetGuide = () => {
-        const isSelf = originalPreferences?.guide ? originalPreferences.guide.toLowerCase().includes('tự túc') : false;
+        const isSelf = originalPreferences?.guide ? (originalPreferences.guide.toLowerCase().includes('tự túc') || originalPreferences.guide.toLowerCase().includes('không')) : false;
         setProposedPlan(prev => ({
             ...prev,
             guide: {
                 enabled: !isSelf,
-                name: originalPreferences?.guide || 'Có hướng dẫn viên suốt tuyến',
-                pricePerDay: 500000,
+                name: originalPreferences?.guide || (isSelf ? 'Khách tự túc' : 'Có hướng dẫn viên suốt tuyến'),
+                pricePerDay: isSelf ? 0 : 500000,
                 isCustomized: false,
                 reason: ''
             }
         }));
-        setGuidePricePerDay(500000);
+        setGuidePricePerDay(isSelf ? 0 : 500000);
     };
 
     // Điểm tham quan

@@ -73,12 +73,59 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
     const [tourName, setTourName] = useState('');
     const [tourDescription, setTourDescription] = useState('');
 
+    // Phân tích mong muốn của khách hàng về HDV và Ăn uống
+    const clientPrefs = (() => {
+        if (!requestData?.preferences) return {};
+        if (typeof requestData.preferences === 'string') {
+            try { return JSON.parse(requestData.preferences); } catch(e){ return {}; }
+        }
+        return typeof requestData.preferences === 'object' ? requestData.preferences : {};
+    })();
+
+    const rawPropInit = requestData?.proposed_itinerary || requestData?.itinerary || requestData?.proposed_plan;
+    const parsedPropInit = (() => {
+        if (!rawPropInit) return {};
+        if (typeof rawPropInit === 'string') {
+            try { return JSON.parse(rawPropInit); } catch(e){ return {}; }
+        }
+        return typeof rawPropInit === 'object' ? rawPropInit : {};
+    })();
+    const propServicesInit = parsedPropInit?.proposedServices || parsedPropInit || {};
+
+        const guideText = (clientPrefs.guide || requestData?.guide || propServicesInit.guide?.name || '').toLowerCase();
+    const isGuideSelf = Boolean(
+        guideText.includes('tự túc') || 
+        guideText.includes('không') || 
+        guideText.includes('ko cần') ||
+        clientPrefs.guideMode === 'self' ||
+        (propServicesInit.guide !== undefined && propServicesInit.guide !== null && !propServicesInit.guide.enabled)
+    );
+
+    const mealText = (clientPrefs.meal || requestData?.meal || propServicesInit.meal?.name || '').toLowerCase();
+    const isMealSelf = Boolean(
+        mealText.includes('tự túc') || 
+        mealText.includes('không') || 
+        mealText.includes('ko cần') ||
+        clientPrefs.mealMode === 'self' ||
+        (propServicesInit.meal !== undefined && propServicesInit.meal !== null && !propServicesInit.meal.enabled)
+    );
+
     // Costing State (simplified for Custom Tours)
     const [costConfig, setCostConfig] = useState({
         minimumPax: requestData?.people_count || 1,
         margin: requestData?.markup_percent || 20,
-        fixed: { transport: 0, guidePerDay: 500000, otherFixed: 0 },
-        variable: { accommPerNight: 0, breakfast: 200000, lunch: 200000, dinner: 200000, tickets: 0, insurance: 0 },
+        fixed: { transport: 0, guidePerDay: isGuideSelf ? 0 : 500000, otherFixed: 0 },
+        variable: { 
+            accommPerNight: 0, 
+            breakfast: isMealSelf ? 0 : 50000, 
+            lunch: isMealSelf ? 0 : 150000, 
+            dinner: isMealSelf ? 0 : 150000, 
+            countBreakfast: isMealSelf ? 0 : undefined,
+            countLunch: isMealSelf ? 0 : undefined,
+            countDinner: isMealSelf ? 0 : undefined,
+            tickets: 0, 
+            insurance: 0 
+        },
         selectedTransport: null,
         transportTimes: { startD: '05:30', endD: '12:00', startR: '12:00', endR: '17:30' },
         transportLocations: { startD: '', endD: '', startR: '', endR: '' },
@@ -158,14 +205,28 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         const quotedHotel = proposedServices.hotel || null;
         const quotedAdjTransportCost = parsedProposal?.adjTransportCost ?? requestData.adjTransportCost ?? quotedTransport?.pricePerDay;
         const quotedAdjHotelCost = parsedProposal?.adjHotelCost ?? requestData.adjHotelCost ?? quotedHotel?.pricePerNight;
-        const quotedGuidePrice = parsedProposal?.guidePricePerDay ?? requestData.guidePricePerDay ?? 500000;
+        const quotedGuidePrice = isGuideSelf ? 0 : (parsedProposal?.guidePricePerDay ?? requestData.guidePricePerDay ?? 500000);
         const quotedMealPrices = parsedProposal?.mealPrices || {};
 
         if (parsedProposal && parsedProposal.days) {
             setDays(parsedProposal.days);
-            if (parsedProposal.costConfig) {
+                        if (parsedProposal.costConfig) {
                 setCostConfig(prev => {
                     const merged = { ...prev, ...parsedProposal.costConfig };
+                    if (isGuideSelf) {
+                        merged.fixed = { ...(merged.fixed || {}), guidePerDay: 0 };
+                    }
+                    if (isMealSelf) {
+                        merged.variable = {
+                            ...(merged.variable || {}),
+                            breakfast: 0,
+                            lunch: 0,
+                            dinner: 0,
+                            countBreakfast: 0,
+                            countLunch: 0,
+                            countDinner: 0
+                        };
+                    }
                     const currentName = merged.selectedTransport?.service_name || '';
                     if (quotedTransport && (currentName.includes('[Dự kiến') || currentName.includes('Xe tiêu chuẩn'))) {
                         const rawTName = quotedTransport.name || quotedTransport.assignedVehicle?.vehicle_name || quotedTransport.assignedVehicle?.service_name;
@@ -229,7 +290,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 route_title: '',
                 activities: [],
                 accommodation: accommodation,
-                meals: { breakfast: true, lunch: true, dinner: true }
+                meals: isMealSelf ? { breakfast: false, lunch: false, dinner: false } : { breakfast: true, lunch: true, dinner: true }
             });
         }
         setDays(initialDays);
@@ -297,14 +358,14 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
             fixed: {
                 ...prev.fixed,
                 transport: transportFixedCost,
-                guidePerDay: Number(quotedGuidePrice)
+                guidePerDay: isGuideSelf ? 0 : Number(quotedGuidePrice)
             },
             variable: {
                 ...prev.variable,
                 tickets: transportTicketsCost,
-                breakfast: Number(quotedMealPrices.breakfast ?? prev.variable?.breakfast ?? 50000),
-                lunch: Number(quotedMealPrices.lunch ?? prev.variable?.lunch ?? 150000),
-                dinner: Number(quotedMealPrices.dinner ?? prev.variable?.dinner ?? 150000)
+                breakfast: isMealSelf ? 0 : Number(quotedMealPrices.breakfast ?? prev.variable?.breakfast ?? 50000),
+                lunch: isMealSelf ? 0 : Number(quotedMealPrices.lunch ?? prev.variable?.lunch ?? 150000),
+                dinner: isMealSelf ? 0 : Number(quotedMealPrices.dinner ?? prev.variable?.dinner ?? 150000)
             }
         }));
 
@@ -410,9 +471,9 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
         }
     });
 
-    const defaultBreakfast = includedBreakfast;
-    const defaultLunch = includedLunch;
-    const defaultDinner = includedDinner;
+    const defaultBreakfast = isMealSelf ? 0 : includedBreakfast;
+    const defaultLunch = isMealSelf ? 0 : includedLunch;
+    const defaultDinner = isMealSelf ? 0 : includedDinner;
 
     const handleTransportChange = (e) => {
         const sId = e.target.value;
@@ -461,9 +522,9 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
     const totalFixed = Number(costConfig.fixed.transport) + (Number(costConfig.fixed.guidePerDay) * totalDays) + Number(costConfig.fixed.otherFixed);
     const fixedPerPax = pax > 0 ? totalFixed / pax : 0;
     
-    const countBreakfast = costConfig.variable.countBreakfast !== undefined ? Number(costConfig.variable.countBreakfast) : includedBreakfast;
-    const countLunch = costConfig.variable.countLunch !== undefined ? Number(costConfig.variable.countLunch) : includedLunch;
-    const countDinner = costConfig.variable.countDinner !== undefined ? Number(costConfig.variable.countDinner) : includedDinner;
+    const countBreakfast = isMealSelf ? 0 : (costConfig.variable.countBreakfast !== undefined ? Number(costConfig.variable.countBreakfast) : includedBreakfast);
+    const countLunch = isMealSelf ? 0 : (costConfig.variable.countLunch !== undefined ? Number(costConfig.variable.countLunch) : includedLunch);
+    const countDinner = isMealSelf ? 0 : (costConfig.variable.countDinner !== undefined ? Number(costConfig.variable.countDinner) : includedDinner);
 
     const totalVariable = (autoAccommodationCost / 2) 
         + autoTicketsCost
@@ -566,15 +627,15 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                 reason: ''
             },
             guide: {
-                enabled: Number(costConfig.fixed?.guidePerDay || 0) > 0,
-                pricePerDay: Number(costConfig.fixed?.guidePerDay || 500000)
+                enabled: !isGuideSelf && Number(costConfig.fixed?.guidePerDay || 0) > 0,
+                pricePerDay: isGuideSelf ? 0 : Number(costConfig.fixed?.guidePerDay ?? 500000)
             },
             meal: {
-                enabled: true,
+                enabled: !isMealSelf && (Number(costConfig.variable?.breakfast || 0) > 0 || Number(costConfig.variable?.lunch || 0) > 0 || Number(costConfig.variable?.dinner || 0) > 0),
                 prices: {
-                    breakfast: Number(costConfig.variable?.breakfast || 50000),
-                    lunch: Number(costConfig.variable?.lunch || 150000),
-                    dinner: Number(costConfig.variable?.dinner || 150000)
+                    breakfast: isMealSelf ? 0 : Number(costConfig.variable?.breakfast ?? 50000),
+                    lunch: isMealSelf ? 0 : Number(costConfig.variable?.lunch ?? 150000),
+                    dinner: isMealSelf ? 0 : Number(costConfig.variable?.dinner ?? 150000)
                 }
             }
         };
@@ -588,11 +649,11 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
             proposedServices: proposedServicesData,
             adjTransportCost: vehicleDailyRate,
             adjHotelCost: Number(firstAcc?.price || 0),
-            guidePricePerDay: Number(costConfig.fixed?.guidePerDay || 500000),
+            guidePricePerDay: isGuideSelf ? 0 : Number(costConfig.fixed?.guidePerDay ?? 500000),
             mealPrices: {
-                breakfast: Number(costConfig.variable?.breakfast || 50000),
-                lunch: Number(costConfig.variable?.lunch || 150000),
-                dinner: Number(costConfig.variable?.dinner || 150000)
+                breakfast: isMealSelf ? 0 : Number(costConfig.variable?.breakfast ?? 50000),
+                lunch: isMealSelf ? 0 : Number(costConfig.variable?.lunch ?? 150000),
+                dinner: isMealSelf ? 0 : Number(costConfig.variable?.dinner ?? 150000)
             }
         });
 
@@ -812,7 +873,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                 </div>
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Đơn giá HDV / Ngày</label>
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Đơn giá HDV / Ngày {isGuideSelf && <span style={{ color: '#059669', fontSize: '11px', fontWeight: 'bold' }}>(Khách tự túc)</span>}</label>
                                 <div style={{ position: 'relative' }}>
                                     <input type="text" value={Number(costConfig.fixed.guidePerDay || 0).toLocaleString('vi-VN')} onChange={e => setCostConfig({...costConfig, fixed: {...costConfig.fixed, guidePerDay: e.target.value.replace(/\D/g, '')}})} style={{ width: '100%', padding: '8px', paddingRight: '25px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
                                     <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '13px' }}>đ</span>
@@ -846,7 +907,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                             <div style={{ gridColumn: 'span 2' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa sáng (Số lượng / Đơn giá)</label>
+                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa sáng (Số lượng / Đơn giá) {isMealSelf && <span style={{ color: '#059669', fontSize: '11px', fontWeight: 'bold' }}>(Khách tự túc)</span>}</label>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                             <input type="number" placeholder={`Tự động: ${defaultBreakfast}`} value={costConfig.variable.countBreakfast !== undefined ? costConfig.variable.countBreakfast : ''} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, countBreakfast: e.target.value}})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Số bữa sáng" />
                                             <div style={{ position: 'relative' }}>
@@ -856,7 +917,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa trưa (Số lượng / Đơn giá)</label>
+                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa trưa (Số lượng / Đơn giá) {isMealSelf && <span style={{ color: '#059669', fontSize: '11px', fontWeight: 'bold' }}>(Khách tự túc)</span>}</label>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                             <input type="number" placeholder={`Tự động: ${defaultLunch}`} value={costConfig.variable.countLunch !== undefined ? costConfig.variable.countLunch : ''} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, countLunch: e.target.value}})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Số bữa trưa" />
                                             <div style={{ position: 'relative' }}>
@@ -866,7 +927,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa tối (Số lượng / Đơn giá)</label>
+                                        <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Bữa tối (Số lượng / Đơn giá) {isMealSelf && <span style={{ color: '#059669', fontSize: '11px', fontWeight: 'bold' }}>(Khách tự túc)</span>}</label>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                             <input type="number" placeholder={`Tự động: ${defaultDinner}`} value={costConfig.variable.countDinner !== undefined ? costConfig.variable.countDinner : ''} onChange={e => setCostConfig({...costConfig, variable: {...costConfig.variable, countDinner: e.target.value}})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} title="Số bữa tối" />
                                             <div style={{ position: 'relative' }}>
