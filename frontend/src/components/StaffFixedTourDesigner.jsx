@@ -269,9 +269,34 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
     };
 
     const handleSave = async () => {
-        if (!formData.tour_name) return alert("Vui lòng nhập tên Tour!");
+        // --- RÀNG BUỘC KIỂM TRA DỮ LIỆU NHẬP ---
+        // 1. Ràng buộc Tên Tour
+        if (!formData.tour_name || formData.tour_name.trim().length < 5) {
+            return alert("⚠️ Vui lòng nhập Tên Tour (tối thiểu 5 ký tự)!");
+        }
+
+        // 2. Ràng buộc Lịch trình các ngày
+        if (!days || days.length === 0) {
+            return alert("⚠️ Lịch trình tour phải có ít nhất 1 ngày!");
+        }
+
+        // 3. Ràng buộc Số khách hòa vốn
         if (Number(costConfig.minimumPax || 0) < 1) {
             return alert("⚠️ Số khách tối thiểu (Điểm hòa vốn) phải từ 1 khách trở lên!");
+        }
+
+        // 4. Ràng buộc Giá bán người lớn
+        const finalSellingPrice = Number(sellingPrice);
+        if (isNaN(finalSellingPrice) || finalSellingPrice <= 0) {
+            return alert("⚠️ Giá bán dự kiến (người lớn) phải lớn hơn 0 đ!");
+        }
+
+        // 5. Cảnh báo bán dưới giá vốn (Cảnh báo lỗ)
+        if (finalSellingPrice < netCost) {
+            const confirmBelowCost = window.confirm(
+                `⚠️ Cảnh báo: Giá bán đề xuất (${Math.round(finalSellingPrice).toLocaleString('vi-VN')} đ) thấp hơn Giá vốn (${Math.round(netCost).toLocaleString('vi-VN')} đ).\nBán dưới giá vốn có thể gây lỗ. Bạn có chắc chắn muốn tiếp tục lưu và gửi Quản lý phê duyệt không?`
+            );
+            if (!confirmBelowCost) return;
         }
         setLoading(true);
         try {
@@ -1840,14 +1865,17 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                     <input 
                                                         type="number" 
+                                                        min="0"
+                                                        max="100"
                                                         value={currentSetting.percent}
                                                         disabled={!isCustom}
                                                         onChange={e => {
+                                                            const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
                                                             setCostConfig({
                                                                 ...costConfig,
                                                                 ageMultiplier: {
                                                                     ...costConfig.ageMultiplier,
-                                                                    [group.key]: { ...currentSetting, percent: Number(e.target.value) }
+                                                                    [group.key]: { ...currentSetting, percent: val }
                                                                 }
                                                             })
                                                         }}

@@ -523,6 +523,20 @@ exports.saveFixedTourDesign = async (req, res) => {
         description = description || '';
         destination = destination || 'Chưa phân loại';
 
+        // --- BACKEND VALIDATION FOR FIXED TOUR DESIGN ---
+        if (!tour_name || tour_name.trim().length < 5) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, message: 'Tên tour phải có tối thiểu 5 ký tự' });
+        }
+        if (Number(base_price) <= 0) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, message: 'Giá bán cơ bản của tour phải lớn hơn 0 đ' });
+        }
+        if (Number(duration_days) < 1) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, message: 'Thời lượng tour phải có ít nhất 1 ngày' });
+        }
+
         if (destination && !isNaN(Number(destination))) {
             const [destRows] = await sequelize.query(`SELECT destination_name FROM destinations WHERE destination_id = ?`, { replacements: [Number(destination)], transaction });
             if (destRows.length > 0) {
