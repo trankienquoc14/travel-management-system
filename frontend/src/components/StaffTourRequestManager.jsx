@@ -1146,6 +1146,10 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
 
     // Đón khách
     const handleSavePickup = (location, time, reason) => {
+        if (!location || !location.trim()) {
+            alert('⚠️ Vui lòng nhập địa điểm đón khách!');
+            return;
+        }
         setProposedPlan(prev => ({
             ...prev,
             pickup: {
@@ -1523,6 +1527,33 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     // Gửi báo giá cho khách
     const handleSendInitialQuote = async () => {
         if (!selectedReq) return;
+
+        // --- RÀNG BUỘC DỮ LIỆU BÁO GIÁ ---
+        if (!suggestedPrice || Number(suggestedPrice) <= 0 || isNaN(Number(suggestedPrice))) {
+            alert('⚠️ Giá báo khách (người lớn) phải lớn hơn 0 đ!');
+            return;
+        }
+        if (!grandTotalPrice || Number(grandTotalPrice) <= 0 || isNaN(Number(grandTotalPrice))) {
+            alert('⚠️ Tổng giá báo khách của cả đoàn phải lớn hơn 0 đ!');
+            return;
+        }
+        if (Number(suggestedPrice) < Number(totalCost)) {
+            const confirmLoss = window.confirm(
+                '⚠️ CẢNH BÁO LỢI NHUẬN ÂM / DƯỚI GIÁ VỐN:\n\n' +
+                '• Giá báo khách: ' + formatMoney(suggestedPrice) + ' đ/người\n' +
+                '• Chi phí vốn gốc: ' + formatMoney(totalCost) + ' đ/người\n\n' +
+                'Giá báo khách đang THẤP HƠN chi phí gốc. Bạn có chắc chắn muốn gửi phương án báo giá này cho khách hàng không?'
+            );
+            if (!confirmLoss) return;
+        }
+        const cPct = Number(childPolicy?.child?.percent || 0);
+        const tPct = Number(childPolicy?.toddler?.percent || 0);
+        const iPct = Number(childPolicy?.infant?.percent || 0);
+        if (cPct < 0 || cPct > 100 || tPct < 0 || tPct > 100 || iPct < 0 || iPct > 100) {
+            alert('⚠️ Tỷ lệ % giá người lớn cho trẻ em / trẻ nhỏ / em bé phải nằm trong khoảng từ 0% đến 100%!');
+            return;
+        }
+
         try {
             const token = localStorage.getItem('token');
             const breakdown = {
@@ -3891,7 +3922,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input type="text" value={childPolicy.child.percent} onChange={(e) => {
                                             let val = e.target.value.replace(/\D/g, '');
-                                            updatePolicy('child', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                            updatePolicy('child', 'percent', val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10))));
                                         }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
                                         <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
                                     </div>
@@ -3917,7 +3948,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input type="text" value={childPolicy.toddler.percent} onChange={(e) => {
                                             let val = e.target.value.replace(/\D/g, '');
-                                            updatePolicy('toddler', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                            updatePolicy('toddler', 'percent', val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10))));
                                         }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
                                         <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
                                     </div>
@@ -3943,7 +3974,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input type="text" value={childPolicy.infant.percent} onChange={(e) => {
                                             let val = e.target.value.replace(/\D/g, '');
-                                            updatePolicy('infant', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                            updatePolicy('infant', 'percent', val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10))));
                                         }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
                                         <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
                                     </div>

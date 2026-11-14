@@ -478,6 +478,52 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
     const sellingPrice = manualSellingPrice !== null && manualSellingPrice !== '' ? manualSellingPrice : (manualSellingPrice === '' ? '' : calculatedSellingPrice);
 
     const handleSubmitToManager = async () => {
+        // --- VALIDATION RÀNG BUỘC DỮ LIỆU ---
+        // 1. Ràng buộc Tên Tour
+        if (!tourName || tourName.trim().length < 5) {
+            alert('⚠️ Vui lòng nhập Tên Tour đề xuất (tối thiểu 5 ký tự)!');
+            return;
+        }
+
+        // 2. Ràng buộc Lịch trình các ngày
+        if (!days || days.length === 0) {
+            alert('⚠️ Lịch trình tour phải có ít nhất 1 ngày!');
+            return;
+        }
+
+        // 3. Ràng buộc Số khách hòa vốn
+        if (!costConfig.minimumPax || Number(costConfig.minimumPax) < 1) {
+            alert('⚠️ Số khách tối thiểu (điểm hòa vốn) phải là số nguyên lớn hơn hoặc bằng 1!');
+            return;
+        }
+
+        // 4. Ràng buộc Giá bán người lớn
+        const finalSellingPrice = Number(sellingPrice);
+        if (isNaN(finalSellingPrice) || finalSellingPrice <= 0) {
+            alert('⚠️ Giá bán dự kiến (người lớn) phải lớn hơn 0 đ!');
+            return;
+        }
+
+        // 5. Cảnh báo bán dưới giá vốn
+        if (finalSellingPrice < Number(netCost)) {
+            const confirmLoss = window.confirm(
+                `⚠️ CẢNH BÁO LỖ VỐN / LỢI NHUẬN ÂM:\n\n` +
+                `• Giá bán dự kiến: ${formatMoneyLocal(finalSellingPrice)} đ/người\n` +
+                `• Chi phí vốn gốc: ${formatMoneyLocal(netCost)} đ/người\n\n` +
+                `Giá bán đang THẤP HƠN chi phí vốn thực tế. Bạn có chắc chắn muốn tiếp tục gửi phương án này lên Quản lý phê duyệt không?`
+            );
+            if (!confirmLoss) return;
+        }
+
+        // 6. Ràng buộc Tỷ lệ % giá trẻ em (0% - 100%)
+        const childPct = Number(costConfig.ageMultiplier?.child?.percent || 0);
+        const toddlerPct = Number(costConfig.ageMultiplier?.toddler?.percent || 0);
+        const infantPct = Number(costConfig.ageMultiplier?.infant?.percent || 0);
+        if (childPct < 0 || childPct > 100 || toddlerPct < 0 || toddlerPct > 100 || infantPct < 0 || infantPct > 100) {
+            alert('⚠️ Tỷ lệ % giá người lớn cho trẻ em / trẻ nhỏ / em bé phải nằm trong khoảng từ 0% đến 100%!');
+            return;
+        }
+
         const durationDays = days.length || 1;
         const assignedVehicle = costConfig.selectedTransport;
         const vehicleName = assignedVehicle ? formatVehicleDisplayName(assignedVehicle) : '';
@@ -705,8 +751,17 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Điểm hòa vốn</label>
-                                <input type="number" value={costConfig.minimumPax} onChange={e => setCostConfig({...costConfig, minimumPax: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Điểm hòa vốn (Số khách tối thiểu)</label>
+                                <input 
+                                    type="number" 
+                                    min="1" 
+                                    value={costConfig.minimumPax} 
+                                    onChange={e => {
+                                        const v = parseInt(e.target.value, 10);
+                                        setCostConfig({...costConfig, minimumPax: isNaN(v) ? '' : Math.max(1, v)});
+                                    }} 
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} 
+                                />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Chi phí Xe / Phương tiện</label>
@@ -904,6 +959,8 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                     <input 
                                                         type="number" 
+                                                        min="0"
+                                                        max="100"
                                                         value={Number(currentSetting.percent).toString()}
                                                         disabled={!isCustom}
                                                         onChange={e => {
@@ -911,6 +968,7 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                                             if (val === '') val = 0;
                                                             else val = parseInt(val, 10);
                                                             if (isNaN(val)) val = 0;
+                                                            val = Math.min(100, Math.max(0, val));
                                                             
                                                             setCostConfig({
                                                                 ...costConfig,
