@@ -4748,6 +4748,18 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                                         <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#334155' }}>
                                                             {hotelReq && <li><strong>Khách sạn:</strong> {cleanHotelDisplayName(hotelReq)}</li>}
                                                             {transportReq && <li><strong>Di chuyển:</strong> {formatVehicleDisplayName(transportReq)}</li>}
+                                                            <li>
+                                                                <strong>Hướng dẫn viên:</strong>{' '}
+                                                                <span style={{ fontWeight: '600', color: (prefs.guide && (prefs.guide.includes('tự túc') || prefs.guide.includes('Không'))) ? '#64748b' : '#0284c7' }}>
+                                                                    {prefs.guide || (prefs.guideMode === 'company' ? 'Cần Hướng dẫn viên' : (prefs.guideMode === 'self' ? 'Khách tự túc' : 'Theo thỏa thuận'))}
+                                                                </span>
+                                                            </li>
+                                                            <li>
+                                                                <strong>Ăn uống:</strong>{' '}
+                                                                <span style={{ fontWeight: '600', color: (prefs.meal && (prefs.meal.includes('tự túc') || prefs.meal.includes('Không'))) ? '#64748b' : '#059669' }}>
+                                                                    {prefs.meal || (prefs.mealMode === 'company' ? 'Công ty tự sắp xếp' : (prefs.mealMode === 'self' ? 'Khách tự túc' : 'Theo thỏa thuận'))}
+                                                                </span>
+                                                            </li>
                                                             {noteReq && <li><strong>Ghi chú:</strong> {noteReq}</li>}
                                                         </ul>
                                                     </div>

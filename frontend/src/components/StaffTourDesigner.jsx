@@ -710,6 +710,29 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                             || prefs.transportName;
                                         const displayHotel = cleanHotelDisplayName(propServ.hotel?.name || prefs.hotelName);
 
+                                        const displayGuide = (() => {
+                                            if (prefs.guide) return prefs.guide;
+                                            if (prefs.guideMode === 'company') return 'Cần Hướng dẫn viên';
+                                            if (prefs.guideMode === 'self') return 'Khách tự túc';
+                                            if (propServ.guide !== undefined && propServ.guide !== null) {
+                                                return propServ.guide.enabled ? 'Cần Hướng dẫn viên' : 'Khách tự túc';
+                                            }
+                                            return 'Theo thỏa thuận';
+                                        })();
+
+                                        const displayMeal = (() => {
+                                            if (prefs.meal) return prefs.meal;
+                                            if (prefs.mealMode === 'company') return 'Công ty tự sắp xếp';
+                                            if (prefs.mealMode === 'self') return 'Khách tự túc';
+                                            if (propServ.meal !== undefined && propServ.meal !== null) {
+                                                return propServ.meal.enabled ? 'Công ty tự sắp xếp' : 'Khách tự túc';
+                                            }
+                                            return 'Theo thỏa thuận';
+                                        })();
+
+                                        const isGuideSelf = displayGuide.toLowerCase().includes('tự túc') || displayGuide.toLowerCase().includes('không');
+                                        const isMealSelf = displayMeal.toLowerCase().includes('tự túc') || displayMeal.toLowerCase().includes('không');
+
                                         return (
                                             <>
                                                 <div>
@@ -717,6 +740,24 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                                 </div>
                                                 <div>
                                                     <strong style={{ color: '#0f172a' }}>Lưu trú:</strong> {displayHotel || 'Không rõ'}
+                                                </div>
+                                                <div>
+                                                    <strong style={{ color: '#0f172a' }}>Hướng dẫn viên:</strong>{' '}
+                                                    <span style={{ 
+                                                        fontWeight: '700', 
+                                                        color: isGuideSelf ? '#64748b' : '#0284c7' 
+                                                    }}>
+                                                        {displayGuide}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <strong style={{ color: '#0f172a' }}>Nhu cầu ăn uống:</strong>{' '}
+                                                    <span style={{ 
+                                                        fontWeight: '700', 
+                                                        color: isMealSelf ? '#64748b' : '#059669' 
+                                                    }}>
+                                                        {displayMeal}
+                                                    </span>
                                                 </div>
                                             </>
                                         );
