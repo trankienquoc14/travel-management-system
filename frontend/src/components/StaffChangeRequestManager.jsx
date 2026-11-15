@@ -557,6 +557,14 @@ const StaffChangeRequestManager = () => {
                                     d.status === 'Open'
                                   );
                                   setReviewDepartures(deps);
+
+                                  // Tự động gán đợt khởi hành mới vào ô chọn
+                                  if (r.new_departure_id) {
+                                    setSelectedNewDepForReview(String(r.new_departure_id));
+                                  } else if (r.requested_departure_date) {
+                                    const match = deps.find(d => d.departure_date && d.departure_date.substring(0, 10) === r.requested_departure_date.substring(0, 10));
+                                    if (match) setSelectedNewDepForReview(String(match.departure_id));
+                                  }
                                 }
                               } else {
                                 setReviewDepartures([]);
@@ -1239,10 +1247,22 @@ const StaffChangeRequestManager = () => {
                   </div>
 
                   {selectedReq.request_type === 'Reschedule' && (() => {
-                    const reqSlots = Number(selectedReq.requested_available_slots || 0);
+                    // Lấy thông tin đợt từ reviewDepartures (được fetch live từ Tour Service)
+                    const matchedDep = reviewDepartures.find(d => 
+                      String(d.departure_id) === String(selectedNewDepForReview || selectedReq.new_departure_id) ||
+                      (selectedReq.requested_departure_date && d.departure_date && d.departure_date.substring(0, 10) === selectedReq.requested_departure_date.substring(0, 10))
+                    );
+
                     const numPax = Number(selectedReq.num_people || 1);
-                    const isProposedEnough = reqSlots >= numPax;
-                    const selectedDepObj = reviewDepartures.find(d => String(d.departure_id) === String(selectedNewDepForReview));
+                    const reqSlots = matchedDep 
+                      ? Number(matchedDep.available_slots || 0) 
+                      : (selectedReq.requested_available_slots != null ? Number(selectedReq.requested_available_slots) : null);
+                    const maxSlots = matchedDep 
+                      ? Number(matchedDep.max_slots || 0) 
+                      : (selectedReq.requested_max_slots != null ? Number(selectedReq.requested_max_slots) : null);
+                    
+                    const isKnown = reqSlots !== null;
+                    const isProposedEnough = isKnown ? (reqSlots >= numPax) : true;
 
                     return (
                       <div style={{ background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px', marginBottom: '12px' }}>
@@ -1256,7 +1276,7 @@ const StaffChangeRequestManager = () => {
                               border: `1px solid ${isProposedEnough ? '#a7f3d0' : '#fecaca'}`
                             }}>
                               {isProposedEnough 
-                                ? `✅ ĐỦ CHỖ (Còn ${reqSlots} chỗ / đơn ${numPax} khách)` 
+                                ? `✅ ĐỦ CHỖ (Còn ${isKnown ? reqSlots : '...'} chỗ / đơn ${numPax} khách)` 
                                 : `⚠️ THIẾU CHỖ (Chỉ còn ${reqSlots} chỗ / đơn ${numPax} khách)`}
                             </span>
                           )}
@@ -1272,7 +1292,7 @@ const StaffChangeRequestManager = () => {
                           <div>
                             <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Số chỗ khả dụng lúc check:</span>
                             <strong style={{ fontSize: '14px', color: isProposedEnough ? '#15803d' : '#b91c1c' }}>
-                              {selectedReq.requested_departure_date ? `Còn ${reqSlots} / ${selectedReq.requested_max_slots || 0} chỗ` : 'Chưa chọn đợt'}
+                              {isKnown ? `Còn ${reqSlots} / ${maxSlots || 0} chỗ` : 'Đang đồng bộ...'}
                             </strong>
                           </div>
                           <div>
@@ -1281,8 +1301,8 @@ const StaffChangeRequestManager = () => {
                           </div>
                         </div>
 
-                        {/* CẢNH BÁO NẾU ĐỢT KHÁCH CHỌN ĐÃ HẾT HOẶC THIẾU CHỖ */}
-                        {selectedReq.requested_departure_date && !isProposedEnough && (
+                        {/* CẢNH BÁO NẾU ĐỢT KHÁCH CHỌN THỰC SỰ THIẾU CHỖ */}
+                        {selectedReq.requested_departure_date && isKnown && !isProposedEnough && (
                           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12.5px', color: '#b91c1c', marginBottom: '12px', lineHeight: 1.5 }}>
                             <strong>⚠️ Cảnh báo nghiệp vụ:</strong> Đợt khởi hành ngày {new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN')} tại thời điểm nhân viên kiểm tra chỉ còn <strong>{reqSlots}</strong> chỗ trống, không đủ chỗ cho đơn <strong>{numPax}</strong> khách. Vui lòng chọn một đợt khởi hành khác còn đủ chỗ bên dưới hoặc nhấn <strong>"Từ chối yêu cầu"</strong>.
                           </div>
