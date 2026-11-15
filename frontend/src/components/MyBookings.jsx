@@ -532,13 +532,13 @@ const MyBookings = () => {
 
     useEffect(() => {
         fetchMyBookings();
-        fetchMyServices();
+        // fetchMyServices(); // Đã ẩn phần Dịch vụ riêng theo yêu cầu
 
         const params = new URLSearchParams(location.search);
         const payId = params.get('pay');
         const payType = params.get('type') === 'service' ? 'service' : 'tour';
         if (payId) {
-            if (payType === 'service') setViewMode('Service');
+            // if (payType === 'service') setViewMode('Service'); // Đã ẩn Dịch vụ riêng
             setSepayModalData({ bookingId: Number(payId), type: payType });
             // Xóa query param trên URL để khi F5 không tự bật lại nếu đã đóng
             navigate('/my-bookings', { replace: true });
@@ -842,11 +842,6 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                             </button>
                         ))}
                     </div>
-
-                    <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '12px', padding: '4px' }}>
-                        <button onClick={() => setViewMode('Tour')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: viewMode === 'Tour' ? '#fff' : 'transparent', color: viewMode === 'Tour' ? '#0f172a' : '#64748b', fontWeight: '700', cursor: 'pointer', boxShadow: viewMode === 'Tour' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none' }}>📦 Đơn Tour</button>
-                        <button onClick={() => setViewMode('Service')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: viewMode === 'Service' ? '#fff' : 'transparent', color: viewMode === 'Service' ? '#0f172a' : '#64748b', fontWeight: '700', cursor: 'pointer', boxShadow: viewMode === 'Service' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none' }}>🛎️ Dịch vụ riêng</button>
-                    </div>
                 </div>
 
                 {/* 3. Bookings List Cards */}
@@ -854,19 +849,19 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                     <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '20px', fontSize: '16px', color: '#0194f3', fontWeight: '700' }}>
                         ⏳ Đang tải thông tin đơn hàng...
                     </div>
-                ) : (viewMode === 'Tour' ? filteredBookings : filteredServiceBookings).length === 0 ? (
+                ) : filteredBookings.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
                         <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏝️</div>
                         <h3 style={{ fontSize: '20px', color: '#0f172a', fontWeight: '800', margin: '0 0 8px 0' }}>Chưa tìm thấy đơn hàng nào</h3>
-                        <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>Bạn chưa có đơn đặt {viewMode === 'Tour' ? 'tour' : 'dịch vụ'} trong danh mục này.</p>
+                        <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>Bạn chưa có đơn đặt tour trong danh mục này.</p>
                         <button onClick={() => window.location.href = '/home'} style={{ padding: '12px 24px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
                             ✨ Khám phá các dịch vụ hấp dẫn
                         </button>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {viewMode === 'Tour' ? (
-                            filteredBookings.map((booking) => {
+                        
+                            {filteredBookings.map((booking) => {
                                 const isCustom = Boolean(booking.quote_id);
                                 const isTransfer = isBankTransferBooking(booking);
                                 const remainingPaySec = getRemainingPaymentSeconds(booking, fetchedAtMs, nowMs);
@@ -1064,77 +1059,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                         </div>
                                     </div>
                                 );
-                            })
-                        ) : (
-                            filteredServiceBookings.map((sb) => (
-                                <div key={sb.booking_id} className="my-booking-item-card" style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
-                                    
-                                    <div className="my-booking-cover-img" style={{ width: '280px', minHeight: '200px', backgroundImage: `url(${getImageUrl(sb.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-                                        <div style={{ position: 'absolute', top: '14px', left: '14px', background: '#f59e0b', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                                            🛎️ Dịch Vụ
-                                        </div>
-                                    </div>
-
-                                    <div className="my-booking-content-info" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: '300px' }}>
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
-                                                <div>
-                                                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', letterSpacing: '0.5px' }}>
-                                                        MÃ ĐƠN: #SRV-{sb.booking_id.toString().padStart(4, '0')}
-                                                    </span>
-                                                    <h3 style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4' }}>
-                                                        {sb.service_name}
-                                                    </h3>
-                                                    <span style={{ fontSize: '13px', color: '#0194f3', fontWeight: '600' }}>{sb.service_type}</span>
-                                                </div>
-
-                                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                                    {renderStatusBadge(sb.status)}
-                                                    {renderPaymentBadge(sb.payment_status)}
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '16px', margin: '16px 0', border: '1px solid #f1f5f9', fontSize: '14px' }}>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📅 NGÀY SỬ DỤNG</span>
-                                                    <strong style={{ color: '#0f172a' }}>{formatDate(sb.usage_date)}</strong>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', display: 'block', fontSize: '12px', fontWeight: '600' }}>📦 SỐ LƯỢNG YÊU CẦU</span>
-                                                    <strong style={{ color: '#0f172a' }}>{sb.quantity} {sb.unit}</strong>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
-                                            <div>
-                                                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Tổng thanh toán: </span>
-                                                <span style={{ fontSize: '22px', fontWeight: '800', color: '#059669', marginLeft: '6px' }}>
-                                                    {formatCurrency(sb.total_amount)}
-                                                </span>
-                                            </div>
-
-                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                                <button
-                                                    onClick={() => setDetailBooking({...sb, isService: true})}
-                                                    style={{ padding: '10px 18px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)', transition: 'all 0.2s' }}
-                                                >
-                                                    👁️ Xem Chi Tiết Dịch Vụ
-                                                </button>
-                                                {sb.payment_status === 'Unpaid' && sb.status !== 'Cancelled' && sb.status !== 'Rejected' && (
-                                                    <button 
-                                                        onClick={() => setSepayModalData({ bookingId: sb.booking_id, type: 'service' })}
-                                                        style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                    >
-                                                        <span>📱 Thanh Toán Qua QR</span>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                            })}
                     </div>
                 )}
             </div>
