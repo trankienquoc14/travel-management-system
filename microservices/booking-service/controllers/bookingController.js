@@ -929,6 +929,7 @@ exports.getAllChangeRequests = async (req, res) => {
         b.num_people, b.total_amount, b.booking_status, b.payment_status, b.booking_date,
         u.full_name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
         COALESCE(t.tour_name, CONCAT('Tour thiết kế: ', ctr.destination)) AS tour_name,
+        d.tour_id,
         d.departure_date AS current_departure_date,
         nd.departure_date AS requested_departure_date
       FROM booking_change_requests cr
@@ -956,7 +957,7 @@ exports.processChangeRequest = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params; // change_id
-    const { status, staff_note } = req.body; // 'Approved' hoặc 'Rejected'
+    const { status, staff_note, new_departure_id } = req.body; // 'Approved' hoặc 'Rejected'
     const staff_id = req.user?.id || req.user?.user_id || req.user?.userId;
 
     if (!['Approved', 'Rejected'].includes(status)) {
@@ -1014,11 +1015,42 @@ exports.processChangeRequest = async (req, res) => {
             UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
           `, { replacements: [bk[0].num_people || 1, bk[0].departure_id], transaction });
         }
-      } else if (request.request_type === 'Reschedule' && request.new_departure_id) {
-        // Đổi sang ngày mới
+      } else if (request.request_type === 'Reschedule') {
+        // Đổi sang ngày khởi hành mới (lấy từ req.body hoặc từ yêu cầu ban đầu)
+        const finalNewDepartureId = new_departure_id || request.new_departure_id;
+        if (!finalNewDepartureId) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Vui lòng chọn đợt khởi hành mới để chuyển lịch trình đơn hàng!' });
+        }
+
+        // Lấy thông tin đợt cũ và số khách
+        const [bk] = await sequelize.query(`SELECT departure_id, num_people FROM bookings WHERE booking_id = ?`, { replacements: [request.booking_id], transaction });
+        const oldDepId = bk[0]?.departure_id;
+        const numPeople = bk[0]?.num_people || 1;
+
+        // Cập nhật booking sang đợt khởi hành mới
         await sequelize.query(`
           UPDATE bookings SET departure_id = ? WHERE booking_id = ?
-        `, { replacements: [request.new_departure_id, request.booking_id], transaction });
+        `, { replacements: [finalNewDepartureId, request.booking_id], transaction });
+
+        // Cập nhật new_departure_id trong bảng booking_change_requests
+        await sequelize.query(`
+          UPDATE booking_change_requests SET new_departure_id = ? WHERE change_id = ?
+        `, { replacements: [finalNewDepartureId, id], transaction });
+
+        // Hoàn trả chỗ cho đợt khởi hành cũ
+        if (oldDepId && String(oldDepId) !== String(finalNewDepartureId)) {
+          await sequelize.query(`
+            UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
+          `, { replacements: [numPeople, oldDepId], transaction });
+        }
+
+        // Trừ bớt chỗ của đợt khởi hành mới
+        if (String(oldDepId) !== String(finalNewDepartureId)) {
+          await sequelize.query(`
+            UPDATE departures SET available_slots = GREATEST(0, available_slots - ?) WHERE departure_id = ?
+          `, { replacements: [numPeople, finalNewDepartureId], transaction });
+        }
       }
     }
 

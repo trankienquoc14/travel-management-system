@@ -44,6 +44,11 @@ const StaffChangeRequestManager = () => {
   const [counterStaffNote, setCounterStaffNote] = useState('');
   const [isSubmittingCounter, setIsSubmittingCounter] = useState(false);
 
+  // STATE ĐỔI LỊCH CHO REVIEW MODAL
+  const [reviewDepartures, setReviewDepartures] = useState([]);
+  const [selectedNewDepForReview, setSelectedNewDepForReview] = useState('');
+  const [loadingReviewDeps, setLoadingReviewDeps] = useState(false);
+
   useEffect(() => {
     fetchRequests();
   }, []);
@@ -260,14 +265,22 @@ const StaffChangeRequestManager = () => {
     }
   };
 
-  const handleProcess = async (status, customNote) => {
+  const handleProcess = async (status, customNote, customNewDepId) => {
     if (!selectedReq) return;
+    const depIdToUse = customNewDepId || selectedNewDepForReview || selectedReq.new_departure_id;
+    if (status === 'Approved' && selectedReq.request_type === 'Reschedule') {
+      if (!depIdToUse) {
+        alert("Vui lòng chọn đợt khởi hành mới để chuyển lịch trình!");
+        return;
+      }
+    }
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       const res = await axios.put(`${GATEWAY_URL}/api/bookings/admin/change-requests/${selectedReq.change_id}/process`, {
         status,
-        staff_note: customNote !== undefined ? customNote : staffNote
+        staff_note: customNote !== undefined ? customNote : staffNote,
+        new_departure_id: selectedReq.request_type === 'Reschedule' ? depIdToUse : undefined
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -524,6 +537,24 @@ const StaffChangeRequestManager = () => {
                         onClick={() => {
                           setSelectedReq(r);
                           setCopySuccess(false);
+                          setSelectedNewDepForReview(r.new_departure_id ? String(r.new_departure_id) : '');
+                          if (r.request_type === 'Reschedule' && r.tour_id) {
+                            setLoadingReviewDeps(true);
+                            axios.get(`${GATEWAY_URL}/api/tours/${r.tour_id}`, {
+                              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                            }).then(res => {
+                              if (res.data?.success && res.data.data?.departures) {
+                                const deps = res.data.data.departures.filter(d => 
+                                  String(d.departure_id) !== String(r.old_departure_id || r.current_departure_id) &&
+                                  d.status === 'Open'
+                                );
+                                setReviewDepartures(deps);
+                              }
+                            }).catch(err => console.error("Lỗi tải departures review:", err))
+                              .finally(() => setLoadingReviewDeps(false));
+                          } else {
+                            setReviewDepartures([]);
+                          }
                           if (r.staff_note) {
                             setStaffNote(r.staff_note);
                           } else if (r.status === 'Pending') {
@@ -1192,12 +1223,45 @@ const StaffChangeRequestManager = () => {
                     </div>
                   </div>
 
-                  {selectedReq.request_type === 'Reschedule' && selectedReq.requested_departure_date && (
-                    <div style={{ 
-                      padding: '8px 12px', background: '#eff6ff', borderRadius: '6px', fontSize: '13px', 
-                      color: '#1d4ed8', border: '1px solid #dbeafe', marginBottom: '10px' 
-                    }}>
-                      Ngày khách hàng đề xuất chuyển sang: <strong>{new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN')}</strong>
+                  {selectedReq.request_type === 'Reschedule' && (
+                    <div style={{ background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', padding: '14px 16px', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e40af', marginBottom: '6px' }}>
+                        📅 Lịch Trình Khởi Hành Xác Nhận Chuyển Sang:
+                      </div>
+                      {selectedReq.requested_departure_date && (
+                        <div style={{ fontSize: '12.5px', color: '#1d4ed8', marginBottom: '8px' }}>
+                          Khách hàng đề xuất: <strong>{new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN')}</strong>
+                        </div>
+                      )}
+                      {isPending ? (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                            Đợt khởi hành xác nhận chuyển sang: *
+                          </label>
+                          {loadingReviewDeps ? (
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>Đang tải danh sách đợt khởi hành...</div>
+                          ) : reviewDepartures.length === 0 ? (
+                            <div style={{ fontSize: '12px', color: '#b91c1c' }}>Tour này hiện chưa có đợt khởi hành mở bán khác còn đủ chỗ.</div>
+                          ) : (
+                            <select
+                              value={selectedNewDepForReview}
+                              onChange={(e) => setSelectedNewDepForReview(e.target.value)}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                            >
+                              <option value="">-- Chọn đợt khởi hành mới --</option>
+                              {reviewDepartures.map(d => (
+                                <option key={d.departure_id} value={d.departure_id}>
+                                  {new Date(d.departure_date).toLocaleDateString('vi-VN')} - Về: {d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {d.available_slots} chỗ trống)
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '13px', color: '#0f172a' }}>
+                          Đợt khởi hành mới: <strong>{selectedReq.requested_departure_date ? new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN') : 'N/A'}</strong>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1436,11 +1500,15 @@ const StaffChangeRequestManager = () => {
                     <button
                       type="button"
                       onClick={() => {
+                        if (!isCancel && !selectedNewDepForReview && !selectedReq.new_departure_id) {
+                          alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang trước khi phê duyệt!");
+                          return;
+                        }
                         const confirmMsg = isCancel
                           ? `Xác nhận phê duyệt hủy đơn hàng #${selectedReq.booking_id} và hoàn trả ${Number(selectedReq.refund_amount || 0).toLocaleString('vi-VN')} ₫ cho khách hàng ${selectedReq.customer_name}?`
-                          : `Xác nhận phê duyệt đổi lịch đơn hàng #${selectedReq.booking_id}?`;
+                          : `Xác nhận phê duyệt đổi lịch đơn hàng #${selectedReq.booking_id} sang đợt khởi hành mới?`;
                         if (window.confirm(confirmMsg)) {
-                          handleProcess('Approved');
+                          handleProcess('Approved', undefined, selectedNewDepForReview);
                         }
                       }}
                       disabled={isSubmitting}
