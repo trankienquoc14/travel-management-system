@@ -96,55 +96,120 @@ const renderPaxSummary = (b) => {
     }
     return `${b.num_people || 1} Khách`;
 };
-const getPassengerName = (b, idx) => {
+const parseBookingPassengers = (b) => {
+    if (!b) return [];
+    let parsedBreakdown = null;
     try {
-        if (b.passengers_list) {
-            if (typeof b.passengers_list === 'string') {
-                if (b.passengers_list.includes('||')) {
-                    const list = b.passengers_list.split('||');
-                    if (list[idx]) return list[idx];
-                } else if (b.passengers_list.startsWith('[')) {
-                    const list = JSON.parse(b.passengers_list);
-                    if (list && list[idx]) {
-                        if (list[idx].name) return list[idx].name;
-                        if (list[idx].full_name) return list[idx].full_name;
-                    }
-                }
-            } else if (Array.isArray(b.passengers_list)) {
-                if (b.passengers_list[idx]) {
-                    if (b.passengers_list[idx].name) return b.passengers_list[idx].name;
-                    if (b.passengers_list[idx].full_name) return b.passengers_list[idx].full_name;
-                }
-            }
-        }
         if (b.breakdown) {
-            const parsed = typeof b.breakdown === 'string' ? JSON.parse(b.breakdown) : b.breakdown;
-            if (parsed && parsed.passengers && parsed.passengers[idx]) {
-                if (parsed.passengers[idx].full_name) return parsed.passengers[idx].full_name;
-                if (parsed.passengers[idx].name) return parsed.passengers[idx].name;
-            }
+            parsedBreakdown = typeof b.breakdown === 'string' ? JSON.parse(b.breakdown) : b.breakdown;
         }
-        if (b.requirements) {
-            const req = typeof b.requirements === 'string' ? JSON.parse(b.requirements) : b.requirements;
-            if (req && req.passengers && req.passengers[idx]) {
-                if (req.passengers[idx].full_name) return req.passengers[idx].full_name;
-                if (req.passengers[idx].name) return req.passengers[idx].name;
-            }
+    } catch (e) {}
+
+    const formatBirthDate = (raw) => {
+        if (!raw) return 'Chưa cập nhật';
+        const s = String(raw).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+            const [y, m, d] = s.substring(0, 10).split('-');
+            return `${d}/${m}/${y}`;
         }
-        if (b.design_data) {
-            const d = typeof b.design_data === 'string' ? JSON.parse(b.design_data) : b.design_data;
-            if (d && d.passengers && d.passengers[idx]) {
-                if (d.passengers[idx].full_name) return d.passengers[idx].full_name;
-                if (d.passengers[idx].name) return d.passengers[idx].name;
-            }
-        }
-    } catch(e) {}
-    
-    // If no specific names found, use customer name + index
-    if (b.num_people > 1) {
-        return idx === 0 ? `${b.customer_name || 'Khách hàng'} (Đại diện)` : `${b.customer_name || 'Khách hàng'} (Khách ${idx + 1})`;
+        return s;
+    };
+
+    const mapGenderLabel = (g) => {
+        const low = String(g || '').toLowerCase();
+        if (low === 'male' || low === 'nam') return 'Nam';
+        if (low === 'female' || low === 'nữ' || low === 'nu') return 'Nữ';
+        return 'Khác';
+    };
+
+    const mapTypeLabel = (t) => {
+        const up = String(t || 'ADULT').toUpperCase();
+        if (up === 'CHILD') return 'Trẻ em (5–11 tuổi)';
+        if (up === 'TODDLER') return 'Trẻ nhỏ (2–4 tuổi)';
+        if (up === 'INFANT') return 'Em bé (< 2 tuổi)';
+        return 'Người lớn';
+    };
+
+    // 1. Ưu tiên đọc từ parsedBreakdown.passengers nếu có đầy đủ thông tin
+    if (parsedBreakdown && Array.isArray(parsedBreakdown.passengers) && parsedBreakdown.passengers.length > 0) {
+        return parsedBreakdown.passengers.map((p, idx) => ({
+            index: idx + 1,
+            full_name: p.full_name || p.name || `Hành khách #${idx + 1}`,
+            genderLabel: mapGenderLabel(p.gender),
+            birthDateLabel: formatBirthDate(p.birth_date),
+            phone: p.identity_number || p.phone || '',
+            typeLabel: mapTypeLabel(p.passenger_type),
+            singleRoom: !!p.single_room
+        }));
     }
-    return b.customer_name || 'Khách hàng';
+
+    // 2. Đọc từ chuỗi passengers_list của SQL (full_name::gender::birth_date::identity_number::passenger_type::single_room)
+    if (b.passengers_list && typeof b.passengers_list === 'string') {
+        if (b.passengers_list.startsWith('[')) {
+            try {
+                const arr = JSON.parse(b.passengers_list);
+                return arr.map((p, idx) => ({
+                    index: idx + 1,
+                    full_name: p.full_name || p.name || `Hành khách #${idx + 1}`,
+                    genderLabel: mapGenderLabel(p.gender),
+                    birthDateLabel: formatBirthDate(p.birth_date),
+                    phone: p.identity_number || p.phone || '',
+                    typeLabel: mapTypeLabel(p.passenger_type),
+                    singleRoom: !!p.single_room
+                }));
+            } catch (e) {}
+        }
+        const rawItems = b.passengers_list.split('||').filter(Boolean);
+        if (rawItems.length > 0) {
+            return rawItems.map((item, idx) => {
+                const parts = item.split('::');
+                return {
+                    index: idx + 1,
+                    full_name: parts[0] || `Hành khách #${idx + 1}`,
+                    genderLabel: mapGenderLabel(parts[1]),
+                    birthDateLabel: formatBirthDate(parts[2]),
+                    phone: parts[3] || '',
+                    typeLabel: mapTypeLabel(parts[4] || 'ADULT'),
+                    singleRoom: parts[5] === '1' || parts[5] === 'true'
+                };
+            });
+        }
+    }
+
+    return [];
+};
+
+const getBookingContactInfo = (b) => {
+    if (!b) return { fullName: 'Khách hàng', phone: 'Chưa cập nhật', email: 'Chưa cập nhật', address: '' };
+    let parsedBreakdown = null;
+    try {
+        if (b.breakdown) {
+            parsedBreakdown = typeof b.breakdown === 'string' ? JSON.parse(b.breakdown) : b.breakdown;
+        }
+    } catch (e) {}
+
+    const cInfo = parsedBreakdown?.contact_info || {};
+    const paxList = parseBookingPassengers(b);
+    const firstPaxPhone = paxList.find(p => p.phone)?.phone || '';
+
+    return {
+        fullName: b.contact_name || cInfo.fullName || b.customer_name || paxList[0]?.full_name || 'Khách hàng',
+        phone: b.contact_phone || cInfo.phone || b.customer_phone || firstPaxPhone || 'Chưa cập nhật',
+        email: b.contact_email || cInfo.email || b.customer_email || 'Chưa cập nhật',
+        address: b.contact_address || cInfo.address || ''
+    };
+};
+
+const getPassengerName = (b, idx) => {
+    const paxList = parseBookingPassengers(b);
+    if (paxList[idx]?.full_name) {
+        return paxList[idx].full_name;
+    }
+    const contact = getBookingContactInfo(b);
+    if (b.num_people > 1) {
+        return idx === 0 ? `${contact.fullName} (Đại diện)` : `${contact.fullName} (Khách ${idx + 1})`;
+    }
+    return contact.fullName;
 };
 
 const calculatePolicyDetails = (booking, reqType) => {
@@ -1210,13 +1275,21 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                             const sC = itConfig.ageMultiplier?.child || { percent: 75, fixed_surcharge: 0 };
                                             const sT = itConfig.ageMultiplier?.toddler || { percent: 50, fixed_surcharge: 0 };
                                             const sI = itConfig.ageMultiplier?.infant || { percent: 0, fixed_surcharge: 0 };
+                                            const singleSupp = Number(itConfig.variable?.singleSupplement || 0);
+                                            const parsedPaxForRooms = parseBookingPassengers(detailBooking);
+                                            const singleRoomCount = Number(
+                                                detailBooking.single_room_count ??
+                                                p?.singleRoomsCount ??
+                                                parsedPaxForRooms.filter(px => px.singleRoom).length ??
+                                                0
+                                            );
 
                                             adultPrice = basePr;
                                             childPrice = (basePr * (sC.percent !== undefined ? sC.percent : 75) / 100) + Number(sC.fixed_surcharge || 0);
                                             toddlerPrice = (basePr * (sT.percent !== undefined ? sT.percent : 50) / 100) + Number(sT.fixed_surcharge || 0);
                                             infantPrice = (basePr * (sI.percent !== undefined ? sI.percent : 0) / 100) + Number(sI.fixed_surcharge || 0);
 
-                                            const totalCalc = (adults * adultPrice) + (children * childPrice) + (toddlers * toddlerPrice) + (infants * infantPrice);
+                                            const totalCalc = (adults * adultPrice) + (children * childPrice) + (toddlers * toddlerPrice) + (infants * infantPrice) + (singleRoomCount * singleSupp);
                                             let discount = detailBooking.discount_amount || 0;
                                             
                                             if (!detailBooking.discount_amount && totalCalc > detailBooking.total_amount) {
@@ -1258,6 +1331,15 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                                                                 <span>{infants} × {formatCurrency(infantPrice)}</span>
                                                                 <strong style={{ color: '#0f172a' }}>{formatCurrency(infants * infantPrice)}</strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {singleRoomCount > 0 && (
+                                                        <div style={{ marginBottom: '16px' }}>
+                                                            <div style={{ marginBottom: '4px', fontWeight: '700', color: '#0f172a' }}>Phụ thu phòng đơn</div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                                                                <span>{singleRoomCount} × {formatCurrency(singleSupp)}</span>
+                                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(singleRoomCount * singleSupp)}</strong>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1306,26 +1388,103 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                 </div>
                             </div>
 
-                            {/* Thông Tin Hành Khách Design */}
-                            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                <h4 style={{ margin: 0, fontSize: '18px', color: '#1e293b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
-                                    <span style={{ fontSize: '20px', color: '#312e81' }}>👤</span> Thông Tin Hành Khách
-                                </h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                                    <div>
-                                        <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>HỌ VÀ TÊN</div>
-                                        <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{detailBooking.customer_name || 'Khách hàng'}</div>
+                            {/* Thông Tin Liên Lạc & Danh Sách Hành Khách Đi Đoàn (Nhất quán với BookingForm) */}
+                            {(() => {
+                                const contact = getBookingContactInfo(detailBooking);
+                                const paxList = parseBookingPassengers(detailBooking);
+
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        {/* 1. Thông tin liên lạc (Người đặt tour) */}
+                                        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                                            <h4 style={{ margin: 0, fontSize: '18px', color: '#1e293b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
+                                                <span style={{ fontSize: '20px', color: '#2563eb' }}>📞</span> Thông Tin Liên Lạc (Người Đặt Tour)
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '18px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>HỌ VÀ TÊN</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>{contact.fullName}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>SỐ ĐIỆN THOẠI</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>{contact.phone}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>EMAIL LIÊN HỆ</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700', wordBreak: 'break-word' }}>{contact.email}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>ĐỊA CHỈ</div>
+                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{contact.address || 'Chưa cập nhật'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 2. Danh sách thông tin từng hành khách */}
+                                        {!detailBooking.isService && (
+                                            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                                                    <h4 style={{ margin: 0, fontSize: '18px', color: '#1e293b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <span style={{ fontSize: '20px', color: '#312e81' }}>👤</span> Thông Tin Hành Khách ({paxList.length || detailBooking.num_people || 1} khách)
+                                                    </h4>
+                                                    <span style={{ fontSize: '12.5px', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '4px 12px', borderRadius: '12px' }}>
+                                                        {renderPaxSummary(detailBooking)}
+                                                    </span>
+                                                </div>
+
+                                                {paxList.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        {paxList.map((px) => (
+                                                            <div
+                                                                key={px.index}
+                                                                style={{
+                                                                    background: '#f8fafc',
+                                                                    border: '1px solid #e2e8f0',
+                                                                    borderRadius: '14px',
+                                                                    padding: '14px 18px',
+                                                                    display: 'grid',
+                                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))',
+                                                                    gap: '12px',
+                                                                    alignItems: 'center'
+                                                                }}
+                                                            >
+                                                                <div>
+                                                                    <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                                                        HÀNH KHÁCH #{px.index} • {px.typeLabel}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '700' }}>{px.full_name}</div>
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>NGÀY SINH</div>
+                                                                    <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>{px.birthDateLabel}</div>
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>GIỚI TÍNH</div>
+                                                                    <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>{px.genderLabel}</div>
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>SỐ ĐIỆN THOẠI</div>
+                                                                    <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>{px.phone || '—'}</div>
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '11.5px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>LOẠI PHÒNG</div>
+                                                                    <div style={{ fontSize: '13px', fontWeight: '700', color: px.singleRoom ? '#0284c7' : '#475569' }}>
+                                                                        {px.singleRoom ? '🏨 Phòng đơn riêng' : 'Phòng tiêu chuẩn'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '14px', color: '#64748b' }}>
+                                                        Hành khách đại diện: <strong style={{ color: '#0f172a' }}>{contact.fullName}</strong>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div>
-                                        <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>SỐ ĐIỆN THOẠI</div>
-                                        <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{detailBooking.customer_phone || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>EMAIL LIÊN HỆ</div>
-                                        <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{detailBooking.customer_email || 'N/A'}</div>
-                                    </div>
-                                </div>
-                            </div>
+                                );
+                            })()}
 
                         </div>
 

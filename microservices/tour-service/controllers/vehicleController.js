@@ -348,46 +348,91 @@ exports.dispatchVehicle = async (req, res) => {
   }
 };
 
-// 7. DÀNH CHO TÀI XẾ: XEM CHI TIẾT XE ĐƯỢC PHÂN CÔNG
+// 7. DÀNH CHO TÀI XẾ: XEM CHI TIẾT XE & TOUR ĐƯỢC PHÂN CÔNG
 exports.getDriverAssignedTours = async (req, res) => {
   try {
-    const driver_id = req.user.user_id || req.user.id;
+    const userId = req.user.user_id || req.user.id;
+    const userRole = req.user.role_id || req.user.role;
+    const requestedDriverId = req.query.driver_id;
+
+    const isAdminOrManager = [1, 2, 3, 4, '1', '2', '3', '4'].includes(userRole);
+    let whereClause = 'WHERE (tva.driver_id = :driverId OR (tva.driver_id IS NULL AND d.driver_id = :driverId))';
+    let targetDriverId = userId;
+
+    if (isAdminOrManager) {
+      if (requestedDriverId && requestedDriverId !== 'all') {
+        targetDriverId = requestedDriverId;
+      } else {
+        whereClause = 'WHERE (tva.driver_id IS NOT NULL OR d.driver_id IS NOT NULL)';
+      }
+    }
 
     const [assignments] = await sequelize.query(`
       SELECT 
-        tva.assignment_id,
-        tva.departure_id,
-        tva.start_date,
-        tva.end_date,
-        tva.status AS assignment_status,
-        v.vehicle_id,
-        v.license_plate,
-        v.seat_capacity,
-        v.vehicle_type,
-        v.brand_model,
-        v.color,
-        v.notes AS vehicle_notes,
+        COALESCE(MAX(tva.assignment_id), d.departure_id) AS assignment_id,
+        d.departure_id,
+        COALESCE(MAX(tva.start_date), d.departure_date) AS start_date,
+        COALESCE(MAX(tva.end_date), d.return_date) AS end_date,
+        COALESCE(MAX(tva.status), CASE WHEN d.status = 'Completed' THEN 'COMPLETED' WHEN d.status = 'Closed' THEN 'IN_PROGRESS' ELSE 'ASSIGNED' END) AS assignment_status,
+        MAX(v.vehicle_id) AS vehicle_id,
+        COALESCE(MAX(v.license_plate), d.vehicle_number) AS license_plate,
+        COALESCE(MAX(v.license_plate), d.vehicle_number) AS vehicle_number,
+        MAX(v.seat_capacity) AS seat_capacity,
+        MAX(v.vehicle_type) AS vehicle_type,
+        MAX(v.brand_model) AS brand_model,
+        MAX(v.color) AS color,
+        MAX(v.notes) AS vehicle_notes,
         d.departure_date,
+        d.return_date,
+        d.max_slots,
+        d.status AS departure_status,
         d.tour_id,
         t.tour_name,
+        CONCAT('TOUR-', t.tour_id) AS tour_code,
         t.destination,
-        COALESCE(gu.full_name, g_user.full_name, g_alt.full_name) AS guide_name,
-        COALESCE(gu.phone, g_user.phone, g_alt.phone) AS guide_phone
-      FROM tour_vehicle_assignments tva
-      JOIN vehicles v ON tva.vehicle_id = v.vehicle_id
-      JOIN departures d ON tva.departure_id = d.departure_id
+        t.duration_days,
+        t.design_data,
+        MAX(COALESCE(tva.driver_id, d.driver_id)) AS driver_id,
+        MAX(drv.full_name) AS driver_name,
+        MAX(drv.phone) AS driver_phone,
+        MAX(drv.email) AS driver_email,
+        MAX(COALESCE(gu.full_name, g_user.full_name, g_alt.full_name)) AS guide_name,
+        MAX(COALESCE(gu.phone, g_user.phone, g_alt.phone)) AS guide_phone,
+        MAX(COALESCE(gu.email, g_user.email, g_alt.email)) AS guide_email,
+        (
+          SELECT COALESCE(SUM(b2.num_people), 0)
+          FROM bookings b2
+          WHERE b2.departure_id = d.departure_id
+            AND b2.booking_status != 'Cancelled'
+        ) AS actual_booked
+      FROM departures d
       JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN tour_vehicle_assignments tva ON d.departure_id = tva.departure_id AND tva.status != 'CANCELLED'
+      LEFT JOIN vehicles v ON tva.vehicle_id = v.vehicle_id
+      LEFT JOIN users drv ON COALESCE(tva.driver_id, d.driver_id) = drv.user_id
       LEFT JOIN users gu ON d.guide_id = gu.user_id
       LEFT JOIN guides g_table ON d.guide_id = g_table.guide_id
       LEFT JOIN users g_user ON g_table.user_id = g_user.user_id
       LEFT JOIN guide_assignments ga ON ga.departure_id = d.departure_id
       LEFT JOIN guides g ON ga.guide_id = g.guide_id
       LEFT JOIN users g_alt ON g.user_id = g_alt.user_id
-      WHERE tva.driver_id = ?
-      ORDER BY tva.start_date DESC
-    `, { replacements: [driver_id] });
+      ${whereClause}
+      GROUP BY d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status, d.vehicle_number,
+               d.tour_id, t.tour_name, t.destination, t.duration_days, t.design_data
+      ORDER BY d.departure_date DESC
+    `, { replacements: { driverId: targetDriverId } });
 
-    res.json({ success: true, data: assignments });
+    const enriched = assignments.map(a => {
+      const actualBooked = Number(a.actual_booked || 0);
+      const maxSlots = Number(a.max_slots || 0);
+      return {
+        ...a,
+        actual_booked: actualBooked,
+        available_slots: Math.max(0, maxSlots - actualBooked)
+      };
+    });
+
+    res.json({ success: true, data: enriched });
   } catch (error) {
     console.error("Lỗi getDriverAssignedTours:", error);
     res.status(500).json({ success: false, message: error.message });

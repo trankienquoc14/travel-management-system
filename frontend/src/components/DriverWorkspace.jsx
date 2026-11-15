@@ -18,9 +18,14 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
   const [singleDateFilter, setSingleDateFilter] = useState('');
 
   // Form states - Chi phí
+  const getTodayDateStr = () => new Date().toISOString().split('T')[0];
   const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ category: 'Fuel', amount: '', description: '' });
+  const [expenseForm, setExpenseForm] = useState({ category: '', amount: '', expense_date: getTodayDateStr(), description: '' });
   const [expenseFile, setExpenseFile] = useState(null);
+  const [expensePreviewUrl, setExpensePreviewUrl] = useState(null);
+  const [expenseErrors, setExpenseErrors] = useState({});
+  const [expenseSuccessBanner, setExpenseSuccessBanner] = useState(null);
+  const [previewReceiptModalUrl, setPreviewReceiptModalUrl] = useState(null);
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
 
   // Form states - Sự cố
@@ -188,19 +193,94 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
     }
   };
 
+  const resetExpenseForm = () => {
+    setExpenseForm({ category: '', amount: '', expense_date: getTodayDateStr(), description: '' });
+    if (expensePreviewUrl) URL.revokeObjectURL(expensePreviewUrl);
+    setExpenseFile(null);
+    setExpensePreviewUrl(null);
+    setExpenseErrors({});
+  };
+
+  const handleOpenExpenseModal = () => {
+    resetExpenseForm();
+    setShowExpenseModal(true);
+  };
+
+  const handleExpenseFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      setExpenseFile(null);
+      if (expensePreviewUrl) URL.revokeObjectURL(expensePreviewUrl);
+      setExpensePreviewUrl(null);
+      e.target.value = '';
+      setExpenseErrors(prev => ({
+        ...prev,
+        receipt_image: `Kích thước ảnh hóa đơn tối đa 5MB (file bạn chọn nặng ${sizeMb}MB)`
+      }));
+      return;
+    }
+
+    if (expensePreviewUrl) URL.revokeObjectURL(expensePreviewUrl);
+    setExpenseFile(file);
+    setExpensePreviewUrl(URL.createObjectURL(file));
+    setExpenseErrors(prev => {
+      const next = { ...prev };
+      delete next.receipt_image;
+      delete next.general;
+      return next;
+    });
+  };
+
   const handleAddExpense = async (e) => {
     e.preventDefault();
-    if (!selectedDeparture) return alert('Vui lòng chọn chuyến xe kê khai!');
-    if (!expenseForm.amount || parseFloat(expenseForm.amount) <= 0) return alert('Vui lòng nhập số tiền hợp lệ!');
+    const errors = {};
+
+    if (!selectedDeparture) {
+      errors.general = 'Vui lòng chọn chuyến xe cần kê khai chi phí!';
+    }
+    if (!expenseForm.category) {
+      errors.category = 'Vui lòng chọn loại chi phí phát sinh';
+    }
+
+    const rawAmount = String(expenseForm.amount ?? '').trim();
+    if (rawAmount === '') {
+      errors.amount = 'Vui lòng nhập số tiền chi phí';
+    } else {
+      const numAmount = Number(rawAmount);
+      if (isNaN(numAmount) || numAmount <= 0) {
+        errors.amount = 'Số tiền chi phí phải lớn hơn 0 VNĐ';
+      }
+    }
+
+    if (!expenseForm.expense_date) {
+      errors.expense_date = 'Vui lòng chọn ngày chi phát sinh';
+    }
+
+    if (!expenseFile) {
+      errors.receipt_image = 'Vui lòng chụp ảnh hóa đơn/chứng từ để được kế toán phê duyệt hoàn tiền';
+    } else if (expenseFile.size > 5 * 1024 * 1024) {
+      errors.receipt_image = 'Kích thước ảnh hóa đơn tối đa 5MB';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setExpenseErrors(errors);
+      return;
+    }
 
     setIsSubmittingExpense(true);
+    setExpenseErrors({});
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('departure_id', selectedDeparture.departure_id);
       formData.append('category', expenseForm.category);
       formData.append('amount', expenseForm.amount);
-      formData.append('description', expenseForm.description);
+      formData.append('expense_date', expenseForm.expense_date);
+      formData.append('description', expenseForm.description || '');
       if (expenseFile) formData.append('receipt_image', expenseFile);
 
       const res = await axios.post('http://localhost:5000/api/driver/expenses', formData, {
@@ -208,14 +288,26 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
       });
 
       if (res.data.success) {
-        alert(res.data.message);
+        const submittedAmount = Number(expenseForm.amount);
         setShowExpenseModal(false);
-        setExpenseForm({ category: 'Fuel', amount: '', description: '' });
-        setExpenseFile(null);
-        fetchExpenses(selectedDeparture.departure_id);
+        resetExpenseForm();
+        await fetchExpenses(selectedDeparture.departure_id);
+        setExpenseSuccessBanner({
+          title: 'Kê khai chi phí thành công!',
+          detail: `Đã ghi nhận khoản chi ${new Intl.NumberFormat('vi-VN').format(submittedAmount)} VNĐ ở trạng thái "Chờ duyệt" và tự động cộng dồn vào tổng chi phí chuyến xe.`
+        });
+        setTimeout(() => setExpenseSuccessBanner(null), 6000);
       }
     } catch (err) {
-      alert('Lỗi gửi kê khai chi phí: ' + (err.response?.data?.message || err.message));
+      const errData = err.response?.data || {};
+      const errMsg = errData.message || err.message || 'Không thể gửi kê khai chi phí';
+      if (errData.field) {
+        setExpenseErrors({ [errData.field]: errMsg });
+      } else if (errData.error_code === 'FILE_TOO_LARGE' || errMsg.includes('5MB')) {
+        setExpenseErrors({ receipt_image: 'Kích thước ảnh hóa đơn tối đa 5MB' });
+      } else {
+        setExpenseErrors({ general: errMsg });
+      }
     } finally {
       setIsSubmittingExpense(false);
     }
@@ -801,76 +893,210 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
             )}
 
             {/* TAB: KÊ KHAI CHI PHÍ CHUYẾN ĐI */}
-            {activeTab === 'driver_expenses' && (
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+            {activeTab === 'driver_expenses' && (() => {
+              const totalExpenseAmount = expenses.reduce((sum, item) => sum + (item.status !== 'Rejected' ? Number(item.amount || 0) : 0), 0);
+              const pendingExpenses = expenses.filter(item => item.status === 'Pending' || !item.status);
+              const approvedExpenses = expenses.filter(item => item.status === 'Approved');
+              const pendingAmount = pendingExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+              const approvedAmount = approvedExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+              const getCategoryLabel = (cat) => {
+                switch (cat) {
+                  case 'Fuel': return '⛽ Tiền xăng dầu';
+                  case 'Toll': return '🛣️ Vé cầu đường / BOT';
+                  case 'Parking': return '🅿️ Phí đỗ xe';
+                  case 'CarWash': return '🧼 Phụ phí rửa xe';
+                  case 'Repair': return '🔧 Sửa chữa nhỏ dọc đường';
+                  default: return '📦 Chi phí khác';
+                }
+              };
+
+              return (
+              <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                {/* HEADER */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      QUYẾT TOÁN CÔNG TÁC PHÍ • CHUYẾN XE #{selectedDeparture.departure_id}
+                    </div>
+                    <h4 style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '800', color: '#0f172a' }}>
                       ⛽ Kê khai Chi phí Chuyến đi
                     </h4>
                     <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>
-                      Nhập tiền xăng dầu, vé cầu đường, phí đỗ xe phát sinh thực tế.
+                      Ghi nhận các khoản chi thực tế (xăng dầu, BOT, đỗ xe, rửa xe, sửa chữa nhỏ...) kèm hóa đơn để quyết toán.
                     </p>
                   </div>
                   <button
-                    onClick={() => setShowExpenseModal(true)}
-                    style={{ padding: '10px 18px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
+                    onClick={handleOpenExpenseModal}
+                    style={{
+                      padding: '11px 20px',
+                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.28)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
                   >
-                    ➕ Thêm Kê Khai Chi Phí
+                    <span>➕</span>
+                    <span>Kê khai chi phí chuyến đi (Thêm chi phí)</span>
                   </button>
                 </div>
 
-                {/* BẢNG CHI PHÍ */}
-                <div style={{ overflowX: 'auto' }}>
+                {/* THÔNG BÁO THÀNH CÔNG ĐẸP MẮT (LUỒNG CHÍNH BƯỚC 7) */}
+                {expenseSuccessBanner && (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                    border: '1px solid #6ee7b7',
+                    borderLeft: '5px solid #10b981',
+                    borderRadius: '12px',
+                    padding: '14px 18px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                        ✓
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '800', color: '#065f46', fontSize: '14px' }}>{expenseSuccessBanner.title}</div>
+                        <div style={{ fontSize: '13px', color: '#047857', marginTop: '2px' }}>{expenseSuccessBanner.detail}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setExpenseSuccessBanner(null)}
+                      style={{ background: 'transparent', border: 'none', color: '#047857', fontWeight: '800', fontSize: '16px', cursor: 'pointer', padding: '4px 8px' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* TỔNG HỢP CỘNG DỒN CHI PHÍ CHUYẾN XE */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px', marginBottom: '22px' }}>
+                  <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '14px 18px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase' }}>💰 Tổng chi phí chuyến xe</div>
+                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#1d4ed8', marginTop: '6px' }}>
+                      {new Intl.NumberFormat('vi-VN').format(totalExpenseAmount)} VNĐ
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px', fontWeight: '600' }}>
+                      {expenses.length} khoản chi đã kê khai
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 18px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase' }}>⏳ Đang chờ duyệt</div>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: '#d97706', marginTop: '6px' }}>
+                      {new Intl.NumberFormat('vi-VN').format(pendingAmount)} VNĐ
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#b45309', marginTop: '2px', fontWeight: '600' }}>
+                      {pendingExpenses.length} khoản chờ kế toán duyệt
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '14px 18px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>✅ Đã phê duyệt hoàn tiền</div>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: '#15803d', marginTop: '6px' }}>
+                      {new Intl.NumberFormat('vi-VN').format(approvedAmount)} VNĐ
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#15803d', marginTop: '2px', fontWeight: '600' }}>
+                      {approvedExpenses.length} khoản đã duyệt
+                    </div>
+                  </div>
+                </div>
+
+                {/* BẢNG DANH SÁCH CÁC KHOẢN CHI */}
+                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                        <th style={{ padding: '12px' }}>Loại chi phí</th>
-                        <th style={{ padding: '12px' }}>Số tiền (VND)</th>
-                        <th style={{ padding: '12px' }}>Mô tả</th>
-                        <th style={{ padding: '12px' }}>Hóa đơn / Ảnh</th>
-                        <th style={{ padding: '12px' }}>Trạng thái</th>
-                        <th style={{ padding: '12px' }}>Ngày kê khai</th>
+                        <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Loại chi phí</th>
+                        <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Số tiền (VNĐ)</th>
+                        <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Ngày chi</th>
+                        <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Diễn giải nội dung</th>
+                        <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Hóa đơn / Chứng từ</th>
+                        <th style={{ padding: '12px 14px', color: '#334155', fontWeight: '800' }}>Trạng thái</th>
                       </tr>
                     </thead>
                     <tbody>
                       {expenses.length === 0 ? (
                         <tr>
-                          <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Chưa có khoản chi phí nào được kê khai.</td>
+                          <td colSpan="6" style={{ padding: '36px 20px', textAlign: 'center', color: '#64748b' }}>
+                            <div style={{ fontSize: '28px', marginBottom: '6px' }}>🧾</div>
+                            <div style={{ fontWeight: '700', color: '#334155' }}>Chưa có khoản chi phí nào được kê khai cho chuyến xe này.</div>
+                            <div style={{ fontSize: '12px', marginTop: '4px' }}>Nhấn nút <strong>"Kê khai chi phí chuyến đi"</strong> ở góc trên để thêm khoản chi mới.</div>
+                          </td>
                         </tr>
                       ) : (
-                        expenses.map(e => (
-                          <tr key={e.expense_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '12px', fontWeight: '700' }}>
-                              {e.category === 'Fuel' ? '⛽ Xăng dầu' : e.category === 'Toll' ? '🛣️ Vé trạm Toll' : e.category === 'Parking' ? '🅿️ Phí bãi xe' : '📦 Chi phí khác'}
-                            </td>
-                            <td style={{ padding: '12px', fontWeight: '800', color: '#b91c1c' }}>
-                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(e.amount)}
-                            </td>
-                            <td style={{ padding: '12px' }}>{e.description || '—'}</td>
-                            <td style={{ padding: '12px' }}>
-                              {e.receipt_image ? (
-                                <a href={`http://localhost:5000${e.receipt_image}`} target="_blank" rel="noreferrer" style={{ color: '#0284c7', fontWeight: '600' }}>Xem ảnh hóa đơn</a>
-                              ) : 'Không có'}
-                            </td>
-                            <td style={{ padding: '12px' }}>
-                              <span style={{
-                                background: e.status === 'Approved' ? '#dcfce7' : e.status === 'Rejected' ? '#fee2e2' : '#fef3c7',
-                                color: e.status === 'Approved' ? '#15803d' : e.status === 'Rejected' ? '#b91c1c' : '#d97706',
-                                padding: '4px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '11px'
-                              }}>
-                                {e.status === 'Approved' ? 'Đã phê duyệt' : e.status === 'Rejected' ? 'Từ chối' : 'Chờ duyệt'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px', color: '#64748b' }}>{new Date(e.created_at).toLocaleDateString('vi-VN')}</td>
-                          </tr>
-                        ))
+                        expenses.map(e => {
+                          const displayDate = e.expense_date || e.created_at;
+                          return (
+                            <tr key={e.expense_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0f172a' }}>
+                                {getCategoryLabel(e.category)}
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: '800', color: '#b91c1c' }}>
+                                {new Intl.NumberFormat('vi-VN').format(e.amount)} VNĐ
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#334155', fontWeight: '600' }}>
+                                📅 {displayDate ? new Date(displayDate).toLocaleDateString('vi-VN') : '—'}
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#475569', maxWidth: '260px' }}>{e.description || '—'}</td>
+                              <td style={{ padding: '12px 14px' }}>
+                                {e.receipt_image ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewReceiptModalUrl(`http://localhost:5000${e.receipt_image}`)}
+                                    style={{
+                                      background: '#eff6ff',
+                                      color: '#0284c7',
+                                      border: '1px solid #bfdbfe',
+                                      padding: '5px 10px',
+                                      borderRadius: '6px',
+                                      fontWeight: '700',
+                                      fontSize: '12px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    🖼️ Xem hóa đơn
+                                  </button>
+                                ) : (
+                                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>Chưa đính kèm</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <span style={{
+                                  background: e.status === 'Approved' ? '#dcfce7' : e.status === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                                  color: e.status === 'Approved' ? '#15803d' : e.status === 'Rejected' ? '#b91c1c' : '#d97706',
+                                  border: `1px solid ${e.status === 'Approved' ? '#bbf7d0' : e.status === 'Rejected' ? '#fecaca' : '#fde68a'}`,
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  fontWeight: '700',
+                                  fontSize: '11px',
+                                  display: 'inline-block'
+                                }}>
+                                  {e.status === 'Approved' ? '✅ Đã phê duyệt' : e.status === 'Rejected' ? '❌ Từ chối' : '⏳ Chờ duyệt'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* TAB: BÁO CÁO SỰ CỐ XE */}
             {activeTab === 'driver_incidents' && (
@@ -930,62 +1156,309 @@ const DriverWorkspace = ({ activeTab, selectedDeparture, setSelectedDeparture, s
 
       {/* MODAL KÊ KHAI CHI PHÍ */}
       {showExpenseModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', width: '90%', maxWidth: '480px' }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', fontSize: '18px', fontWeight: '800' }}>
-              ⛽ Kê Khai Chi Phí Chuyến Đi
-            </h3>
-            <form onSubmit={handleAddExpense}>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Loại chi phí *</label>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '540px', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)', border: '1px solid #e2e8f0' }}>
+            {/* MODAL HEADER */}
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)', padding: '18px 24px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Chuyến xe #{selectedDeparture?.departure_id} • {selectedDeparture?.vehicle_number || 'Xe đoàn'}
+                </div>
+                <h3 style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: '800' }}>
+                  ⛽ Kê Khai Chi Phí Chuyến Đi
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowExpenseModal(false); resetExpenseForm(); }}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', fontSize: '16px', cursor: 'pointer', fontWeight: '700' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddExpense} noValidate style={{ padding: '22px 24px' }}>
+              {/* BANNER CẢNH BÁO TỔNG HỢP ĐẸP MẮT KHI CÓ LỖI */}
+              {Object.keys(expenseErrors).length > 0 && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)',
+                  border: '1px solid #fecaca',
+                  borderLeft: '5px solid #ef4444',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
+                  marginBottom: '18px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)'
+                }}>
+                  <span style={{ fontSize: '18px', lineHeight: 1.2 }}>⚠️</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#991b1b' }}>
+                      Vui lòng kiểm tra lại thông tin kê khai:
+                    </div>
+                    <ul style={{ margin: '4px 0 0 16px', padding: 0, fontSize: '12.5px', color: '#b91c1c', lineHeight: 1.5 }}>
+                      {Object.values(expenseErrors).map((msg, idx) => (
+                        <li key={idx} style={{ fontWeight: '600' }}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* 1. LOẠI CHI PHÍ */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  Loại chi phí <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <select
                   value={expenseForm.category}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  onChange={(e) => {
+                    setExpenseForm({ ...expenseForm, category: e.target.value });
+                    if (expenseErrors.category) {
+                      setExpenseErrors(prev => { const n = { ...prev }; delete n.category; return n; });
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: expenseErrors.category ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                    background: expenseErrors.category ? '#fef2f2' : '#fff',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: expenseForm.category ? '#0f172a' : '#64748b',
+                    outline: 'none'
+                  }}
                 >
-                  <option value="Fuel">⛽ Xăng dầu</option>
-                  <option value="Toll">🛣️ Vé qua trạm Toll</option>
-                  <option value="Parking">🅿️ Phí đỗ xe / Bãi xe</option>
+                  <option value="">-- Chọn loại chi phí phát sinh --</option>
+                  <option value="Fuel">⛽ Tiền xăng dầu</option>
+                  <option value="Toll">🛣️ Vé cầu đường / BOT</option>
+                  <option value="Parking">🅿️ Phí đỗ xe</option>
+                  <option value="CarWash">🧼 Phụ phí rửa xe</option>
+                  <option value="Repair">🔧 Sửa chữa nhỏ dọc đường</option>
                   <option value="Other">📦 Chi phí khác</option>
                 </select>
+                {expenseErrors.category && (
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontSize: '12px', fontWeight: '700' }}>
+                    <span>⛔</span>
+                    <span>{expenseErrors.category}</span>
+                  </div>
+                )}
               </div>
 
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Số tiền (VND) *</label>
-                <input
-                  type="number"
-                  placeholder="Ví dụ: 500000"
-                  value={expenseForm.amount}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
+              {/* 2. SỐ TIỀN & NGÀY CHI */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Số tiền (VNĐ) <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ví dụ: 500000"
+                    value={expenseForm.amount}
+                    onChange={(e) => {
+                      setExpenseForm({ ...expenseForm, amount: e.target.value });
+                      if (expenseErrors.amount) {
+                        setExpenseErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: expenseErrors.amount ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      background: expenseErrors.amount ? '#fef2f2' : '#fff',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {expenseErrors.amount && (
+                    <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', color: '#dc2626', fontSize: '12px', fontWeight: '700' }}>
+                      <span>⛔</span>
+                      <span>{expenseErrors.amount}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Ngày chi (Ngày phát sinh) <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={expenseForm.expense_date}
+                    onChange={(e) => {
+                      setExpenseForm({ ...expenseForm, expense_date: e.target.value });
+                      if (expenseErrors.expense_date) {
+                        setExpenseErrors(prev => { const n = { ...prev }; delete n.expense_date; return n; });
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: expenseErrors.expense_date ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      background: expenseErrors.expense_date ? '#fef2f2' : '#fff',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {expenseErrors.expense_date && (
+                    <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', color: '#dc2626', fontSize: '12px', fontWeight: '700' }}>
+                      <span>⛔</span>
+                      <span>{expenseErrors.expense_date}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Ghi chú / Mô tả chi tiết</label>
+              {/* 3. DIỄN GIẢI NỘI DUNG */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  Diễn giải nội dung
+                </label>
                 <textarea
                   rows="3"
-                  placeholder="Nhập tên cây xăng, trạm thu phí..."
+                  placeholder="Nhập chi tiết: tên cây xăng, trạm thu phí BOT, bãi đỗ xe hoặc nội dung sửa chữa..."
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
                 />
               </div>
 
+              {/* 4. TẢI ẢNH HÓA ĐƠN / CHỨNG TỪ (TỐI ĐA 5MB) */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Ảnh đính kèm Hóa đơn / Biên nhận</label>
-                <input type="file" accept="image/*" onChange={(e) => setExpenseFile(e.target.files[0])} style={{ fontSize: '13px' }} />
+                <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  Ảnh hóa đơn / Chứng từ <span style={{ color: '#ef4444' }}>*</span> <span style={{ fontWeight: '500', color: '#64748b' }}>(Tối đa 5MB)</span>
+                </label>
+
+                <label
+                  htmlFor="driver-expense-receipt-input"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: expenseErrors.receipt_image
+                      ? '2px dashed #f59e0b'
+                      : expenseFile
+                        ? '2px solid #10b981'
+                        : '2px dashed #cbd5e1',
+                    background: expenseErrors.receipt_image
+                      ? '#fffbeb'
+                      : expenseFile
+                        ? '#f0fdf4'
+                        : '#f8fafc',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <input
+                    id="driver-expense-receipt-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleExpenseFileChange}
+                    style={{ display: 'none' }}
+                  />
+                  {expensePreviewUrl ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                      <img src={expensePreviewUrl} alt="Preview hóa đơn" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                      <div style={{ textAlign: 'left', flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#065f46' }}>✅ {expenseFile?.name}</div>
+                        <div style={{ fontSize: '11.5px', color: '#047857', marginTop: '2px' }}>
+                          Dung lượng: {((expenseFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB • Nhấn để chọn ảnh khác
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '26px', marginBottom: '4px' }}>📸</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
+                        Chụp hoặc chọn ảnh hóa đơn / biên lai
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                        Hỗ trợ JPG, PNG, WEBP • Dung lượng tối đa 5MB
+                      </div>
+                    </>
+                  )}
+                </label>
+
+                {expenseErrors.receipt_image && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: expenseErrors.receipt_image.includes('5MB') ? '#fef2f2' : '#fffbeb',
+                    border: `1px solid ${expenseErrors.receipt_image.includes('5MB') ? '#fca5a5' : '#fcd34d'}`,
+                    color: expenseErrors.receipt_image.includes('5MB') ? '#b91c1c' : '#92400e',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span>{expenseErrors.receipt_image.includes('5MB') ? '🚫' : '📸'}</span>
+                    <span>{expenseErrors.receipt_image}</span>
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setShowExpenseModal(false)} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontWeight: '700', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowExpenseModal(false); resetExpenseForm(); }}
+                  style={{ padding: '10px 18px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', color: '#475569', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                >
                   Hủy
                 </button>
-                <button type="submit" disabled={isSubmittingExpense} style={{ padding: '8px 16px', background: '#0284c7', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: '700', fontSize: '13px' }}>
-                  {isSubmittingExpense ? 'Đang gửi...' : 'Gửi Kê Khai'}
+                <button
+                  type="submit"
+                  disabled={isSubmittingExpense}
+                  style={{
+                    padding: '10px 22px',
+                    background: isSubmittingExpense ? '#94a3b8' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: isSubmittingExpense ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+                  }}
+                >
+                  {isSubmittingExpense ? '⏳ Đang gửi...' : '📤 Gửi kê khai'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* LIGHTBOX XEM ẢNH HÓA ĐƠN */}
+      {previewReceiptModalUrl && (
+        <div
+          onClick={() => setPreviewReceiptModalUrl(null)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, padding: '20px' }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', padding: '16px', maxWidth: '720px', width: '100%', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <strong style={{ fontSize: '15px', color: '#0f172a' }}>🧾 Ảnh Hóa Đơn / Chứng Từ Chi Phí</strong>
+              <button
+                onClick={() => setPreviewReceiptModalUrl(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}
+              >
+                ✕ Đóng
+              </button>
+            </div>
+            <img src={previewReceiptModalUrl} alt="Hóa đơn chi phí" style={{ maxWidth: '100%', maxHeight: '72vh', borderRadius: '10px', objectFit: 'contain' }} />
           </div>
         </div>
       )}

@@ -33,6 +33,84 @@ exports.getAllDriversList = async (req, res) => {
   }
 };
 
+// Hàm trích xuất danh sách điểm đón (Pickup Points) từ design_data / thông tin tour
+const extractPickupPoints = (designDataRaw, destination = '') => {
+  const points = [];
+  let startLoc = 'TP. Hồ Chí Minh';
+  let startTime = '06:00 AM';
+
+  if (designDataRaw) {
+    try {
+      const parsed = typeof designDataRaw === 'string' ? JSON.parse(designDataRaw) : designDataRaw;
+      if (parsed?.start_location_name) startLoc = parsed.start_location_name;
+      if (parsed?.pickup_time || parsed?.start_time) startTime = parsed.pickup_time || parsed.start_time;
+
+      if (Array.isArray(parsed?.pickup_points) && parsed.pickup_points.length > 0) {
+        parsed.pickup_points.forEach((pt, idx) => {
+          if (typeof pt === 'string') {
+            points.push({ order: idx + 1, time: startTime, name: pt, address: pt, note: 'Điểm đón cố định' });
+          } else if (pt && typeof pt === 'object') {
+            points.push({
+              order: idx + 1,
+              time: pt.time || startTime,
+              name: pt.name || pt.location || `Điểm đón #${idx + 1}`,
+              address: pt.address || pt.name || startLoc,
+              note: pt.note || 'Có mặt trước 15–30 phút'
+            });
+          }
+        });
+      }
+
+      if (points.length === 0 && Array.isArray(parsed?.days) && parsed.days.length > 0) {
+        const day1 = parsed.days[0];
+        if (day1?.route_title) {
+          points.push({
+            order: 1,
+            time: '05:30 - 06:00',
+            name: `Điểm tập trung xuất phát (${startLoc})`,
+            address: `Văn phòng TravelERP - ${startLoc} (${day1.route_title})`,
+            note: 'Đón đoàn tập trung và kiểm tra phương tiện khởi hành'
+          });
+        }
+        if (Array.isArray(day1?.activities)) {
+          day1.activities.slice(0, 2).forEach((act, idx) => {
+            if (act?.name) {
+              points.push({
+                order: points.length + 1,
+                time: idx === 0 ? '06:30' : '07:30',
+                name: act.name,
+                address: `${act.name} (${destination || startLoc})`,
+                note: act.type === 'Di chuyển' ? 'Điểm trung chuyển / đón khách dọc tuyến' : 'Điểm dừng chặng đầu'
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (points.length === 0) {
+    points.push(
+      {
+        order: 1,
+        time: '05:30 - 06:00',
+        name: `Điểm đón số 1: Trụ sở chính TravelERP (${startLoc})`,
+        address: `190 Pasteur, Quận 3, ${startLoc}`,
+        note: 'Điểm tập trung chính - Tài xế & HDV đón khách, sắp xếp hành lý lên xe'
+      },
+      {
+        order: 2,
+        time: '06:15 - 06:30',
+        name: `Điểm đón số 2: Nhà Văn hóa Thanh Niên / Sân bay Tân Sơn Nhất`,
+        address: `04 Phạm Ngọc Thạch, Quận 1, ${startLoc}`,
+        note: 'Đón khách đăng ký điểm hẹn trung tâm trước khi xuất phát đi ' + (destination || 'điểm đến')
+      }
+    );
+  }
+
+  return points;
+};
+
 // Lấy danh sách chuyến xe được phân công cho Tài xế
 exports.getAssignedTrips = async (req, res) => {
   try {
@@ -43,12 +121,12 @@ exports.getAssignedTrips = async (req, res) => {
 
     const isAdminOrManager = [1, 2, 3, 4, '1', '2', '3', '4'].includes(userRole);
 
-    let whereClause = `WHERE (tva.driver_id = :driverId OR (tva.driver_id IS NULL AND d.driver_id = :driverId AND d.vehicle_number IS NOT NULL AND d.vehicle_number != ''))`;
+    let whereClause = `WHERE (tva.driver_id = :driverId OR (tva.driver_id IS NULL AND d.driver_id = :driverId))`;
     let targetDriverId = userId;
 
     if (isAdminOrManager) {
       if (requestedDriverId === 'all' || !requestedDriverId) {
-        whereClause = `WHERE (tva.driver_id IS NOT NULL OR (d.driver_id IS NOT NULL AND d.vehicle_number IS NOT NULL AND d.vehicle_number != ''))`;
+        whereClause = `WHERE (tva.driver_id IS NOT NULL OR d.driver_id IS NOT NULL)`;
       } else {
         targetDriverId = requestedDriverId;
       }
@@ -61,22 +139,35 @@ exports.getAssignedTrips = async (req, res) => {
         d.departure_date,
         d.return_date,
         d.max_slots,
-        d.available_slots,
         d.status,
-        COALESCE(v.license_plate, d.vehicle_number) AS vehicle_number,
-        d.guide_id,
-        COALESCE(tva.driver_id, d.driver_id) AS driver_id,
+        MAX(COALESCE(v.license_plate, d.vehicle_number)) AS vehicle_number,
+        MAX(v.vehicle_type) AS vehicle_type,
+        MAX(v.brand_model) AS brand_model,
+        MAX(v.seat_capacity) AS seat_capacity,
+        MAX(d.guide_id) AS guide_id,
+        MAX(COALESCE(tva.driver_id, d.driver_id)) AS driver_id,
+        MAX(drv.full_name) AS driver_name,
+        MAX(drv.phone) AS driver_phone,
+        MAX(drv.email) AS driver_email,
         t.tour_name,
         CONCAT('TOUR-', t.tour_id) as tour_code,
         t.destination,
         t.duration_days,
-        COALESCE(gu.full_name, g_user.full_name, g_alt.full_name) as guide_name,
-        COALESCE(gu.phone, g_user.phone, g_alt.phone) as guide_phone,
-        COALESCE(gu.email, g_user.email, g_alt.email) as guide_email
+        t.design_data,
+        MAX(COALESCE(gu.full_name, g_user.full_name, g_alt.full_name)) as guide_name,
+        MAX(COALESCE(gu.phone, g_user.phone, g_alt.phone)) as guide_phone,
+        MAX(COALESCE(gu.email, g_user.email, g_alt.email)) as guide_email,
+        (
+          SELECT COALESCE(SUM(b2.num_people), 0)
+          FROM bookings b2
+          WHERE b2.departure_id = d.departure_id
+            AND b2.booking_status != 'Cancelled'
+        ) AS actual_booked
       FROM departures d
       JOIN tours t ON d.tour_id = t.tour_id
       LEFT JOIN tour_vehicle_assignments tva ON d.departure_id = tva.departure_id AND tva.status != 'CANCELLED'
       LEFT JOIN vehicles v ON tva.vehicle_id = v.vehicle_id
+      LEFT JOIN users drv ON COALESCE(tva.driver_id, d.driver_id) = drv.user_id
       LEFT JOIN users gu ON d.guide_id = gu.user_id
       LEFT JOIN guides g_table ON d.guide_id = g_table.guide_id
       LEFT JOIN users g_user ON g_table.user_id = g_user.user_id
@@ -84,18 +175,93 @@ exports.getAssignedTrips = async (req, res) => {
       LEFT JOIN guides g ON ga.guide_id = g.guide_id
       LEFT JOIN users g_alt ON g.user_id = g_alt.user_id
       ${whereClause}
+      GROUP BY d.departure_id, d.tour_id, d.departure_date, d.return_date, d.max_slots, d.status,
+               t.tour_name, t.destination, t.duration_days, t.design_data
       ORDER BY d.departure_date DESC;
     `, {
       replacements: { driverId: targetDriverId }
     });
 
+    const enrichedTrips = trips.map(t => {
+      const actualBooked = Number(t.actual_booked || 0);
+      const maxSlots = Number(t.max_slots || 0);
+      return {
+        ...t,
+        actual_booked: actualBooked,
+        available_slots: Math.max(0, maxSlots - actualBooked),
+        pickup_points: extractPickupPoints(t.design_data, t.destination)
+      };
+    });
+
     return res.status(200).json({
       success: true,
-      data: trips
+      data: enrichedTrips
     });
   } catch (error) {
     console.error('Lỗi lấy danh sách chuyến xe của tài xế:', error);
     return res.status(500).json({ success: false, message: 'Không thể lấy danh sách chuyến xe' });
+  }
+};
+
+// Lấy danh sách khách hàng & thông tin liên hệ của một đợt khởi hành cho Tài xế
+exports.getDeparturePassengers = async (req, res) => {
+  try {
+    const { departureId } = req.params;
+    const [passengers] = await sequelize.query(`
+      SELECT 
+        CAST(bp.passenger_id AS CHAR) AS passenger_id,
+        b.booking_id,
+        b.num_people,
+        b.booking_status,
+        b.payment_status,
+        bp.full_name,
+        bp.gender,
+        bp.birth_date,
+        bp.identity_number,
+        COALESCE(bp.is_checked_in, 0) AS is_checked_in,
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) AS booker_name,
+        COALESCE(NULLIF(b.contact_phone, ''), u.phone) AS booker_phone,
+        COALESCE(NULLIF(b.contact_email, ''), u.email) AS booker_email,
+        COALESCE(NULLIF(b.contact_address, ''), '') AS booker_address
+      FROM bookings b
+      JOIN users u ON b.customer_id = u.user_id
+      JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+      WHERE b.departure_id = ? AND b.booking_status IN ('Confirmed', 'Pending', 'Completed')
+
+      UNION ALL
+
+      SELECT 
+        CONCAT('b', b.booking_id) AS passenger_id,
+        b.booking_id,
+        b.num_people,
+        b.booking_status,
+        b.payment_status,
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) AS full_name,
+        u.gender,
+        u.date_of_birth AS birth_date,
+        '—' AS identity_number,
+        0 AS is_checked_in,
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) AS booker_name,
+        COALESCE(NULLIF(b.contact_phone, ''), u.phone) AS booker_phone,
+        COALESCE(NULLIF(b.contact_email, ''), u.email) AS booker_email,
+        COALESCE(NULLIF(b.contact_address, ''), '') AS booker_address
+      FROM bookings b
+      JOIN users u ON b.customer_id = u.user_id
+      WHERE b.departure_id = ?
+        AND b.booking_status IN ('Confirmed', 'Pending', 'Completed')
+        AND NOT EXISTS (
+          SELECT 1 FROM booking_passengers WHERE booking_id = b.booking_id
+        )
+      ORDER BY booking_id DESC, passenger_id ASC
+    `, { replacements: [departureId, departureId] });
+
+    return res.status(200).json({
+      success: true,
+      data: passengers
+    });
+  } catch (error) {
+    console.error('Lỗi lấy danh sách hành khách cho tài xế:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -253,9 +419,25 @@ exports.updateTripStatus = async (req, res) => {
   }
 };
 
-// Lấy danh sách chi phí chuyến đi (xăng dầu, cầu đường, đỗ xe)
+// Tự động đảm bảo cột expense_date tồn tại trong bảng driver_expenses
+let isExpenseSchemaChecked = false;
+const ensureDriverExpenseSchema = async () => {
+  if (isExpenseSchemaChecked) return;
+  try {
+    const [cols] = await sequelize.query(`SHOW COLUMNS FROM driver_expenses LIKE 'expense_date'`);
+    if (!cols || cols.length === 0) {
+      await sequelize.query(`ALTER TABLE driver_expenses ADD COLUMN expense_date DATE NULL DEFAULT NULL`);
+    }
+    isExpenseSchemaChecked = true;
+  } catch (err) {
+    console.error('Lỗi kiểm tra schema driver_expenses:', err.message);
+  }
+};
+
+// Lấy danh sách chi phí chuyến đi (xăng dầu, cầu đường, đỗ xe, rửa xe, sửa chữa...)
 exports.getTripExpenses = async (req, res) => {
   try {
+    await ensureDriverExpenseSchema();
     const { departureId } = req.params;
     const [expenses] = await sequelize.query(`
       SELECT 
@@ -264,6 +446,7 @@ exports.getTripExpenses = async (req, res) => {
         e.driver_id,
         e.category,
         e.amount,
+        e.expense_date,
         e.description,
         e.receipt_image,
         e.status,
@@ -272,7 +455,7 @@ exports.getTripExpenses = async (req, res) => {
       FROM driver_expenses e
       LEFT JOIN users u ON e.driver_id = u.user_id
       WHERE e.departure_id = :departureId
-      ORDER BY e.created_at DESC;
+      ORDER BY COALESCE(e.expense_date, DATE(e.created_at)) DESC, e.created_at DESC;
     `, {
       replacements: { departureId }
     });
@@ -290,27 +473,56 @@ exports.getTripExpenses = async (req, res) => {
 // Kê khai chi phí chuyến đi mới
 exports.createTripExpense = async (req, res) => {
   try {
+    await ensureDriverExpenseSchema();
     const driverId = req.user.id || req.user.user_id;
-    const { departure_id, category, amount, description } = req.body;
+    const { departure_id, category, amount, expense_date, description } = req.body;
 
-    if (!departure_id || !category || !amount) {
-      return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ chuyến xe, loại chi phí và số tiền!' });
+    if (!departure_id) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn chuyến xe cần kê khai chi phí!' });
     }
 
-    let receipt_image = null;
-    if (req.file) {
-      receipt_image = `/uploads/${req.file.filename}`;
+    if (!category || !String(category).trim()) {
+      return res.status(400).json({ success: false, field: 'category', message: 'Vui lòng chọn loại chi phí' });
     }
+
+    if (amount === undefined || amount === null || String(amount).trim() === '') {
+      return res.status(400).json({ success: false, field: 'amount', message: 'Vui lòng nhập số tiền chi phí' });
+    }
+
+    const parsedAmount = Number(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ success: false, field: 'amount', message: 'Số tiền chi phí phải lớn hơn 0 VNĐ' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        field: 'receipt_image',
+        message: 'Vui lòng chụp ảnh hóa đơn/chứng từ để được kế toán phê duyệt hoàn tiền'
+      });
+    }
+
+    if (req.file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        field: 'receipt_image',
+        message: 'Kích thước ảnh hóa đơn tối đa 5MB'
+      });
+    }
+
+    const receipt_image = `/uploads/${req.file.filename}`;
+    const validExpenseDate = expense_date && String(expense_date).trim() ? String(expense_date).trim() : new Date().toISOString().split('T')[0];
 
     const [result] = await sequelize.query(`
-      INSERT INTO driver_expenses (departure_id, driver_id, category, amount, description, receipt_image, status)
-      VALUES (:departure_id, :driverId, :category, :amount, :description, :receipt_image, 'Pending');
+      INSERT INTO driver_expenses (departure_id, driver_id, category, amount, expense_date, description, receipt_image, status)
+      VALUES (:departure_id, :driverId, :category, :amount, :expense_date, :description, :receipt_image, 'Pending');
     `, {
       replacements: {
         departure_id,
         driverId,
-        category,
-        amount: parseFloat(amount),
+        category: String(category).trim(),
+        amount: parsedAmount,
+        expense_date: validExpenseDate,
         description: description || '',
         receipt_image
       }
@@ -318,7 +530,7 @@ exports.createTripExpense = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Kê khai chi phí chuyến đi thành công! Đã gửi Ban quản lý phê duyệt.',
+      message: 'Kê khai chi phí thành công!',
       expense_id: result
     });
   } catch (error) {

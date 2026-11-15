@@ -15,17 +15,41 @@ const storage = multer.diskStorage({
     cb(null, 'driver-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // Tối đa 5MB theo đặc tả
+});
+
+// Middleware xử lý lỗi upload vượt quá 5MB
+const handleExpenseUpload = (req, res, next) => {
+  upload.single('receipt_image')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          error_code: 'FILE_TOO_LARGE',
+          message: 'Kích thước ảnh hóa đơn tối đa 5MB'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'Lỗi tải ảnh hóa đơn/chứng từ'
+      });
+    }
+    next();
+  });
+};
 
 // Tất cả các tuyến đường của Tài xế đều bảo vệ bằng JWT Token
 router.get('/all-drivers', protect, driverController.getAllDriversList);
 router.get('/work', protect, driverController.getAssignedTrips);
+router.get('/departures/:departureId/passengers', protect, driverController.getDeparturePassengers);
 router.get('/tours/:tourId/itinerary', protect, driverController.getTripItinerary);
 router.put('/departures/:departureId/status', protect, driverController.updateTripStatus);
 
-// Chi phí chuyến đi (xăng dầu, cầu đường, đỗ xe)
+// Chi phí chuyến đi (xăng dầu, cầu đường, đỗ xe, rửa xe, sửa chữa...)
 router.get('/departures/:departureId/expenses', protect, driverController.getTripExpenses);
-router.post('/expenses', protect, upload.single('receipt_image'), driverController.createTripExpense);
+router.post('/expenses', protect, handleExpenseUpload, driverController.createTripExpense);
 
 // Sự cố & bảo dưỡng xe
 router.get('/departures/:departureId/incidents', protect, driverController.getVehicleIncidents);

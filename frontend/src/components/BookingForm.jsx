@@ -79,9 +79,10 @@ const BookingFormInner = () => {
     const [showItineraryModal, setShowItineraryModal] = useState(false);
     const [passengerDetails, setPassengerDetails] = useState({});
     
-    // Notification & Success Modals
+    // Notification & Success Modals + Inline Field Errors
     const [successModal, setSuccessModal] = useState(null);
     const [alertModal, setAlertModal] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
     
     const [destinations, setDestinations] = useState([]);
     useEffect(() => {
@@ -318,15 +319,43 @@ const BookingFormInner = () => {
     }
 
     
+    const validatePhoneFormat = (val) => {
+        const cleaned = (val || '').trim().replace(/[\s.-]/g, '');
+        return /^(0|\+?84)[0-9]{8,10}$/.test(cleaned);
+    };
+
+    const validateEmailFormat = (val) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((val || '').trim());
+    };
+
     const updatePassenger = (type, idx, field, value) => {
         const key = `${type}_${idx}`;
-        setPassengerDetails(prev => ({
-            ...prev,
-            [key]: {
-                ...prev[key],
-                [field]: value
-            }
-        }));
+        setPassengerDetails(prev => {
+            const next = {
+                ...prev,
+                [key]: {
+                    ...prev[key],
+                    [field]: value
+                }
+            };
+            const pObj = next[key] || {};
+            setFieldErrors(prevErr => {
+                const updatedErr = { ...prevErr };
+                if (field === 'name') {
+                    if (value && value.trim()) delete updatedErr[`${key}_name`];
+                } else if (field === 'dobDay' || field === 'dobMonth' || field === 'dobYear') {
+                    if (pObj.dobDay && pObj.dobMonth && pObj.dobYear) delete updatedErr[`${key}_dob`];
+                } else if (field === 'phone') {
+                    if (!value || !value.trim() || validatePhoneFormat(value)) {
+                        delete updatedErr[`${key}_phone`];
+                    } else {
+                        updatedErr[`${key}_phone`] = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
+                    }
+                }
+                return updatedErr;
+            });
+            return next;
+        });
     };
     
     let singleRoomsCount = 0;
@@ -339,10 +368,52 @@ const BookingFormInner = () => {
     }
 
     const totalPax = pax.adults + pax.children + pax.toddlers + pax.infants;
+    const totalSeatsRequested = pax.adults + pax.children + pax.toddlers; // Em bé dưới 2 tuổi ngồi cùng người lớn
     const totalAmount = (pax.adults * adultPrice) + (pax.children * childPrice) + (pax.toddlers * toddlerPrice) + (pax.infants * infantPrice) + (singleRoomsCount * singleSupp);
 
+    // --- BƯỚC 6: XÁC ĐỊNH NHU CẦU PHÒNG & KIỂM TRA KHẢ NĂNG ĐÁP ỨNG LƯU TRÚ ---
+    const sharingAdults = Math.max(0, pax.adults - singleRoomsCount);
+    const sharedRooms = Math.ceil(sharingAdults / 2);
+    const totalRequiredRooms = singleRoomsCount + sharedRooms;
+    const singleOccupiedFromSharing = sharingAdults % 2;
+    const totalSingleOccupiedRooms = singleRoomsCount + singleOccupiedFromSharing;
+    const doubleOccupiedRooms = Math.floor(sharingAdults / 2);
+    const maxChildrenAllowed = (doubleOccupiedRooms * 1) + (totalSingleOccupiedRooms * 2);
+    const isRoomAllocationValid = pax.adults >= 1 && pax.children <= maxChildrenAllowed;
+    const roomAllocationMessage = isRoomAllocationValid
+        ? `Phân bổ hợp lệ: ${totalRequiredRooms} phòng (${doubleOccupiedRooms} phòng đôi ghép, ${totalSingleOccupiedRooms} phòng 1 người lớn${pax.children > 0 ? `, ${pax.children} trẻ em ngủ ghép` : ''}). Đáp ứng tiêu chuẩn lưu trú.`
+        : `Số lượng Trẻ em (${pax.children} bé) vượt quá tiêu chuẩn ngủ ghép tối đa (${maxChildrenAllowed} bé) cho ${totalRequiredRooms} phòng hiện tại. Vui lòng điều chỉnh số lượng hoặc chọn thêm phòng đơn.`;
+
+    const selectedDepObj = (!isCustom && tour?.departures && bookingData?.departureId)
+        ? tour.departures.find(d => String(d.departure_id) === String(bookingData.departureId))
+        : null;
+
     const handleInputChange = (e) => {
-        setContactInfo({ ...contactInfo, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setContactInfo({ ...contactInfo, [name]: value });
+        setFieldErrors(prev => {
+            const next = { ...prev };
+            if (name === 'fullName') {
+                if (value.trim()) delete next.contact_fullName;
+            } else if (name === 'phone') {
+                if (!value.trim()) {
+                    next.contact_phone = 'Vui lòng nhập số điện thoại liên hệ';
+                } else if (!validatePhoneFormat(value)) {
+                    next.contact_phone = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
+                } else {
+                    delete next.contact_phone;
+                }
+            } else if (name === 'email') {
+                if (!value.trim()) {
+                    next.contact_email = 'Vui lòng nhập địa chỉ Email liên hệ';
+                } else if (!validateEmailFormat(value)) {
+                    next.contact_email = 'Định dạng Email không hợp lệ (VD: example@mail.com)';
+                } else {
+                    delete next.contact_email;
+                }
+            }
+            return next;
+        });
     };
 
     const updatePax = (type, delta) => {
@@ -353,21 +424,25 @@ const BookingFormInner = () => {
             if (newVal < 0) return prev;
             if (type === 'adults' && newVal < 1) return prev;
             
-            // Validate against available seats
+            // Validate against available seats (Luồng sự kiện thay thế 5.1)
             if (delta > 0 && !isCustom && tour?.departures && bookingData?.departureId) {
-                const dep = tour.departures.find(d => d.departure_id === bookingData.departureId);
+                const dep = tour.departures.find(d => String(d.departure_id) === String(bookingData.departureId));
                 if (dep && dep.available_slots !== undefined) {
+                    const avail = Number(dep.available_slots);
                     // Đếm số chỗ thực tế (không tính em bé dưới 2 tuổi)
                     const currentTotal = prev.adults + prev.children + prev.toddlers;
                     const increment = (type === 'infants') ? 0 : 1; 
                     
-                    if (increment > 0 && currentTotal + increment > dep.available_slots) {
-                        setPaxWarning(`Rất tiếc! Số chỗ còn lại của chuyến này chỉ còn: ${dep.available_slots} chỗ.`);
+                    if (increment > 0 && currentTotal + increment > avail) {
+                        const msg51 = `Số lượng hành khách vượt quá số chỗ còn lại (còn ${avail} chỗ), vui lòng điều chỉnh số lượng khách`;
+                        setPaxWarning(msg51);
                         return prev; // Reject the increment
                     } else {
                         setPaxWarning(''); // Clear warning if valid
                     }
                 }
+            } else if (delta < 0) {
+                setPaxWarning('');
             }
 
             return { ...prev, [type]: newVal };
@@ -399,6 +474,28 @@ const BookingFormInner = () => {
 
     const submitBooking = async (e) => {
         e.preventDefault();
+
+        // Bước 2.1 & 2.2: Kiểm tra lại trạng thái tour, đợt khởi hành và số chỗ còn khả dụng
+        if (!isCustom) {
+            if (!tour || tour.status === 'Inactive' || tour.status === 'Closed' || !selectedDepObj || selectedDepObj.status === 'Closed' || selectedDepObj.status === 'Cancelled') {
+                setAlertModal({
+                    type: 'error',
+                    title: 'Tour không khả dụng',
+                    message: 'Tour hoặc đợt khởi hành hiện không khả dụng, vui lòng lựa chọn tour khác'
+                });
+                return;
+            }
+            if (Number(selectedDepObj.available_slots) <= 0) {
+                setAlertModal({
+                    type: 'error',
+                    title: 'Đợt khởi hành đã hết chỗ',
+                    message: 'Đợt khởi hành này đã hết chỗ, vui lòng lựa chọn đợt khởi hành khác'
+                });
+                return;
+            }
+        }
+
+        // Bước 2: Kiểm tra điều kiện đặt trước tối thiểu 30 ngày
         if (isBookingCutoffClosed) {
             setAlertModal({
                 type: 'warning',
@@ -407,48 +504,112 @@ const BookingFormInner = () => {
             });
             return;
         }
-        if (!isFormValid) {
-            setAlertModal({
-                type: 'warning',
-                title: 'Thiếu thông tin liên hệ',
-                message: 'Vui lòng nhập đầy đủ Họ tên, Email, Số điện thoại liên hệ và tích đồng ý với Chính sách bảo vệ dữ liệu cá nhân!'
-            });
+
+        // Luồng sự kiện thay thế 5.1: Số lượng hành khách vượt quá số chỗ khả dụng
+        if (!isCustom && selectedDepObj && selectedDepObj.available_slots !== undefined) {
+            const availSlots = Number(selectedDepObj.available_slots);
+            if (totalSeatsRequested > availSlots) {
+                setPaxWarning(`Số lượng hành khách vượt quá số chỗ còn lại (còn ${availSlots} chỗ), vui lòng điều chỉnh số lượng khách`);
+                setTimeout(() => {
+                    const el = document.getElementById('pax-quantity-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 50);
+                return;
+            }
+        }
+
+        // Luồng sự kiện thay thế 5.2 & 7.1: Kiểm tra tính hợp lệ và đầy đủ của từng trường -> Cảnh báo trực tiếp tại trường đó
+        const newErrors = {};
+        if (!contactInfo.fullName.trim()) {
+            newErrors.contact_fullName = 'Vui lòng nhập họ tên người đặt';
+        }
+        if (!contactInfo.phone.trim()) {
+            newErrors.contact_phone = 'Vui lòng nhập số điện thoại liên hệ';
+        } else if (!validatePhoneFormat(contactInfo.phone)) {
+            newErrors.contact_phone = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
+        }
+        if (!contactInfo.email.trim()) {
+            newErrors.contact_email = 'Vui lòng nhập địa chỉ Email liên hệ';
+        } else if (!validateEmailFormat(contactInfo.email)) {
+            newErrors.contact_email = 'Định dạng Email không hợp lệ (VD: example@mail.com)';
+        }
+
+        ['adults', 'children', 'toddlers', 'infants'].forEach(type => {
+            for (let i = 0; i < pax[type]; i++) {
+                const pKey = `${type}_${i}`;
+                const pObj = passengerDetails[pKey] || {};
+                if (!pObj.name || !pObj.name.trim()) {
+                    newErrors[`${pKey}_name`] = 'Vui lòng nhập họ tên hành khách';
+                }
+                if (!pObj.dobDay || !pObj.dobMonth || !pObj.dobYear) {
+                    newErrors[`${pKey}_dob`] = 'Vui lòng chọn đầy đủ Ngày / Tháng / Năm sinh';
+                }
+                if (pObj.phone && pObj.phone.trim() !== '' && !validatePhoneFormat(pObj.phone)) {
+                    newErrors[`${pKey}_phone`] = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
+                }
+            }
+        });
+
+        // Luồng sự kiện thay thế 7.1: Khách hàng chưa đồng ý điều khoản dịch vụ
+        if (!privacyConsent) {
+            newErrors.privacyConsent = 'Vui lòng xác nhận đồng ý với điều khoản trước khi tiếp tục đặt tour';
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setFieldErrors(newErrors);
+            setTimeout(() => {
+                const firstErrEl = document.querySelector('[data-error-active="true"]');
+                if (firstErrEl) {
+                    firstErrEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const inputEl = firstErrEl.querySelector('input, select');
+                    if (inputEl) inputEl.focus();
+                }
+            }, 60);
             return;
         }
+
+        // Bước 6: Kiểm tra phân bổ phòng & khả năng đáp ứng dịch vụ lưu trú
+        if (!isCustom && !isRoomAllocationValid) {
+            setTimeout(() => {
+                const roomEl = document.getElementById('room-allocation-section');
+                if (roomEl) roomEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+            return;
+        }
+
         setIsSubmitting(true);
         const token = localStorage.getItem('token');
 
         const passengersArray = [];
         ['adults', 'children', 'toddlers', 'infants'].forEach(type => {
             for (let i = 0; i < pax[type]; i++) {
-                const pObj = passengerDetails[`${type}_${i}`];
-                if (pObj && pObj.name && pObj.name.trim() !== '') {
-                    let mappedGender = 'Other';
-                    if (pObj.gender === 'Nam') mappedGender = 'Male';
-                    if (pObj.gender === 'Nữ') mappedGender = 'Female';
+                const pObj = passengerDetails[`${type}_${i}`] || {};
+                const pGender = pObj.gender || 'Nam';
+                let mappedGender = 'Other';
+                if (pGender === 'Nam') mappedGender = 'Male';
+                if (pGender === 'Nữ') mappedGender = 'Female';
 
-                    let birthDateStr = null;
-                    if (pObj.dobYear && pObj.dobMonth && pObj.dobDay) {
-                        const y = pObj.dobYear;
-                        const m = pObj.dobMonth.toString().padStart(2, '0');
-                        const d = pObj.dobDay.toString().padStart(2, '0');
-                        birthDateStr = `${y}-${m}-${d}`;
-                    }
-
-                    let passType = 'ADULT';
-                    if (type === 'children') passType = 'CHILD';
-                    if (type === 'toddlers') passType = 'TODDLER';
-                    if (type === 'infants') passType = 'INFANT';
-
-                    passengersArray.push({ 
-                        full_name: pObj.name.trim(),
-                        gender: mappedGender,
-                        birth_date: birthDateStr,
-                        identity_number: pObj.phone || null,
-                        passenger_type: passType,
-                        single_room: passType === 'ADULT' ? !!pObj.singleRoom : false
-                    });
+                let birthDateStr = null;
+                if (pObj.dobYear && pObj.dobMonth && pObj.dobDay) {
+                    const y = pObj.dobYear;
+                    const m = pObj.dobMonth.toString().padStart(2, '0');
+                    const d = pObj.dobDay.toString().padStart(2, '0');
+                    birthDateStr = `${y}-${m}-${d}`;
                 }
+
+                let passType = 'ADULT';
+                if (type === 'children') passType = 'CHILD';
+                if (type === 'toddlers') passType = 'TODDLER';
+                if (type === 'infants') passType = 'INFANT';
+
+                passengersArray.push({ 
+                    full_name: (pObj.name || '').trim(),
+                    gender: mappedGender,
+                    birth_date: birthDateStr,
+                    identity_number: pObj.phone || null,
+                    passenger_type: passType,
+                    single_room: passType === 'ADULT' ? !!pObj.singleRoom : false
+                });
             }
         });
 
@@ -474,6 +635,13 @@ const BookingFormInner = () => {
                     const createdId = response.data?.data?.booking_id || response.data?.booking_id;
                     setSuccessModal({
                         bookingId: createdId,
+                        bookingCode: `#BKG-${String(createdId).padStart(4, '0')}`,
+                        bookingStatus: 'Chờ thanh toán',
+                        holdExpiresSeconds: 600,
+                        requiredRooms: totalRequiredRooms,
+                        singleRoomsCount,
+                        totalPax,
+                        totalAmount,
                         email: contactInfo.email,
                         paymentMethod: paymentMethod,
                         isCustom: true
@@ -484,7 +652,13 @@ const BookingFormInner = () => {
                     departure_id: bookingData.departureId,
                     num_people: totalPax, // Gửi tổng số người xuống backend
                     total_amount: totalAmount,
-                    breakdown: pax,
+                    breakdown: {
+                        ...pax,
+                        singleRoomsCount,
+                        requiredRooms: totalRequiredRooms,
+                        contact_info: contactInfo,
+                        passengers: passengersArray
+                    },
                     payment_method: dbPaymentMethod,
                     notes: contactInfo.notes,
                     passengers: passengersArray,
@@ -499,6 +673,13 @@ const BookingFormInner = () => {
                     const createdId = response.data?.booking_id || response.data?.data?.booking_id;
                     setSuccessModal({
                         bookingId: createdId,
+                        bookingCode: response.data?.booking_code || `#BKG-${String(createdId).padStart(4, '0')}`,
+                        bookingStatus: response.data?.booking_status || 'Chờ thanh toán',
+                        holdExpiresSeconds: response.data?.hold_expires_seconds || 600,
+                        requiredRooms: response.data?.required_rooms || totalRequiredRooms,
+                        singleRoomsCount: response.data?.single_room_count ?? singleRoomsCount,
+                        totalPax,
+                        totalAmount,
                         email: contactInfo.email,
                         paymentMethod: paymentMethod,
                         isCustom: false
@@ -508,7 +689,7 @@ const BookingFormInner = () => {
         } catch (error) {
             setAlertModal({
                 type: 'error',
-                title: 'Không thể hoàn tất đặt tour',
+                title: error.response?.status === 409 ? 'Xung đột dữ liệu giữ chỗ' : 'Không thể hoàn tất đặt tour',
                 message: error.response?.data?.message || error.message || 'Đã có lỗi xảy ra trong quá trình xử lý đơn hàng.'
             });
         } finally {
@@ -555,17 +736,80 @@ const BookingFormInner = () => {
                         )}
 
                         <div className="booking-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            <div>
+                            <div data-error-active={!!fieldErrors.contact_fullName}>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Họ tên <span style={{color: '#dc2626'}}>*</span></label>
-                                <input type="text" name="fullName" value={contactInfo.fullName} onChange={handleInputChange} required style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none' }} placeholder="VD: Nguyễn Văn A" />
+                                <input
+                                    type="text"
+                                    name="fullName"
+                                    value={contactInfo.fullName}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 16px',
+                                        borderRadius: '8px',
+                                        border: fieldErrors.contact_fullName ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                        background: fieldErrors.contact_fullName ? '#fef2f2' : '#f8fafc',
+                                        fontSize: '15px',
+                                        outline: 'none'
+                                    }}
+                                    placeholder="VD: Nguyễn Văn A"
+                                />
+                                {fieldErrors.contact_fullName && (
+                                    <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span>⚠️</span> {fieldErrors.contact_fullName}
+                                    </div>
+                                )}
                             </div>
-                            <div>
+                            <div data-error-active={!!fieldErrors.contact_phone}>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Số điện thoại <span style={{color: '#dc2626'}}>*</span></label>
-                                <input type="tel" name="phone" value={contactInfo.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none' }} placeholder="VD: 0901234567" />
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={contactInfo.phone}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 16px',
+                                        borderRadius: '8px',
+                                        border: fieldErrors.contact_phone ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                        background: fieldErrors.contact_phone ? '#fef2f2' : '#f8fafc',
+                                        fontSize: '15px',
+                                        outline: 'none'
+                                    }}
+                                    placeholder="VD: 0901234567"
+                                />
+                                {fieldErrors.contact_phone && (
+                                    <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span>⚠️</span> {fieldErrors.contact_phone}
+                                    </div>
+                                )}
                             </div>
-                            <div>
+                            <div data-error-active={!!fieldErrors.contact_email}>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Email <span style={{color: '#dc2626'}}>*</span></label>
-                                <input type="email" name="email" value={contactInfo.email} onChange={handleInputChange} required style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none' }} placeholder="VD: example@mail.com" />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={contactInfo.email}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 16px',
+                                        borderRadius: '8px',
+                                        border: fieldErrors.contact_email ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                        background: fieldErrors.contact_email ? '#fef2f2' : '#f8fafc',
+                                        fontSize: '15px',
+                                        outline: 'none'
+                                    }}
+                                    placeholder="VD: example@mail.com"
+                                />
+                                {fieldErrors.contact_email && (
+                                    <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span>⚠️</span> {fieldErrors.contact_email}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Địa chỉ</label>
@@ -575,10 +819,10 @@ const BookingFormInner = () => {
                     </div>
 
                     {/* Khối Hành khách (Số lượng) */}
-                    <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div id="pax-quantity-section" style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: paxWarning ? '1.5px solid #ef4444' : 'none' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
                             <h2 style={{ fontSize: '20px', color: '#0f172a', margin: 0 }}>Hành khách</h2>
-                            {paxWarning && <span style={{ color: '#ef4444', fontSize: '14px', fontWeight: '500', background: '#fef2f2', padding: '6px 12px', borderRadius: '6px' }}>{paxWarning}</span>}
+                            {paxWarning && <span style={{ color: '#dc2626', fontSize: '13.5px', fontWeight: '600', background: '#fef2f2', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px' }}>⚠️ {paxWarning}</span>}
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             {/* Người lớn */}
@@ -643,42 +887,107 @@ const BookingFormInner = () => {
                             if (pax[type] === 0) return null;
                             const typeName = type === 'adults' ? 'Người lớn' : type === 'children' ? 'Trẻ em' : type === 'toddlers' ? 'Trẻ nhỏ' : 'Em bé';
                             const typeDesc = type === 'adults' ? 'Từ 12 tuổi trở lên' : type === 'children' ? 'Từ 5 - 11 tuổi' : type === 'toddlers' ? 'Từ 2 - 4 tuổi' : 'Dưới 2 tuổi';
-                            
+
                             return (
                                 <div key={type} style={{ marginBottom: '24px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                         <User size={18} color="#2563eb" />
-                                        <strong style={{ fontSize: '16px', color: '#1e40af' }}>{typeName} <span style={{fontSize: '13px', fontWeight: 'normal', color: '#64748b'}}>({typeDesc})</span></strong>
+                                        <strong style={{ fontSize: '16px', color: '#1e40af' }}>{typeName} <span style={{ fontSize: '13px', fontWeight: 'normal', color: '#64748b' }}>({typeDesc})</span></strong>
                                     </div>
-                                    
-                                    {Array.from({ length: pax[type] }).map((_, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                                            <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '500', width: '20px' }}>#{idx + 1}</span>
-                                            <div onClick={() => setShowPassengerModal(true)} style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '24px', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                                                <span style={{ fontSize: '14px', color: '#64748b' }}>{typeName} <span style={{color: '#dc2626'}}>*</span></span>
-                                                {passengerDetails[`${type}_${idx}`]?.name ? (
-                                                    <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{passengerDetails[`${type}_${idx}`].name}</span>
-                                                ) : (
-                                                    <span style={{ fontSize: '14px', color: '#dc2626', fontWeight: '500' }}>Nhập thông tin ➔</span>
+
+                                    {Array.from({ length: pax[type] }).map((_, idx) => {
+                                        const pKey = `${type}_${idx}`;
+                                        const pData = passengerDetails[pKey] || {};
+                                        const errName = fieldErrors[`${pKey}_name`];
+                                        const errDob = fieldErrors[`${pKey}_dob`];
+                                        const errPhone = fieldErrors[`${pKey}_phone`];
+                                        const rowErrors = [errName, errDob, errPhone].filter(Boolean);
+                                        const hasRowErr = rowErrors.length > 0;
+
+                                        return (
+                                            <div key={idx} data-error-active={hasRowErr} style={{ marginBottom: '16px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                    <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '500', width: '20px' }}>#{idx + 1}</span>
+                                                    <div
+                                                        onClick={() => setShowPassengerModal(true)}
+                                                        style={{
+                                                            flex: 1,
+                                                            border: hasRowErr ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                                            background: hasRowErr ? '#fef2f2' : '#fff',
+                                                            borderRadius: '24px',
+                                                            padding: '12px 20px',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        <span style={{ fontSize: '14px', color: '#64748b' }}>{typeName} <span style={{ color: '#dc2626' }}>*</span></span>
+                                                        {pData.name ? (
+                                                            <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>
+                                                                {pData.name}
+                                                                {pData.dobDay && pData.dobMonth && pData.dobYear ? ` • ${String(pData.dobDay).padStart(2, '0')}/${String(pData.dobMonth).padStart(2, '0')}/${pData.dobYear}` : ''}
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ fontSize: '14px', color: '#dc2626', fontWeight: '500' }}>Nhập thông tin ➔</span>
+                                                        )}
+                                                    </div>
+                                                    {type === 'adults' && (
+                                                        <div
+                                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                                                            onClick={() => updatePassenger(type, idx, 'singleRoom', !pData.singleRoom)}
+                                                            title="Phòng đơn: ở riêng, không ghép với hành khách khác."
+                                                        >
+                                                            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Phòng đơn</span>
+                                                            <div style={{ width: '40px', height: '20px', background: pData.singleRoom ? '#0ea5e9' : '#e2e8f0', borderRadius: '10px', position: 'relative', transition: 'background 0.3s' }}>
+                                                                <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: pData.singleRoom ? '22px' : '2px', transition: 'left 0.3s' }}></div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {hasRowErr && (
+                                                    <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px', paddingLeft: '36px' }}>
+                                                        ⚠️ {rowErrors.join(' • ')} (Nhấn vào dòng trên để chỉnh sửa)
+                                                    </div>
                                                 )}
                                             </div>
-                                            {type === 'adults' && (
-                                                <div 
-                                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-                                                    onClick={() => updatePassenger(type, idx, 'singleRoom', !passengerDetails[`${type}_${idx}`]?.singleRoom)}
-                                                    title="Phòng đơn: ở riêng, không ghép với hành khách khác."
-                                                >
-                                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Phòng đơn</span>
-                                                    <div style={{ width: '40px', height: '20px', background: passengerDetails[`${type}_${idx}`]?.singleRoom ? '#0ea5e9' : '#e2e8f0', borderRadius: '10px', position: 'relative', transition: 'background 0.3s' }}>
-                                                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: passengerDetails[`${type}_${idx}`]?.singleRoom ? '22px' : '2px', transition: 'left 0.3s' }}></div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             );
                         })}
+
+                        {/* BƯỚC 6: XÁC ĐỊNH NHU CẦU PHÒNG & PHÂN BỔ DỊCH VỤ LƯU TRÚ */}
+                        <div id="room-allocation-section" style={{
+                            marginTop: '12px',
+                            padding: '16px 20px',
+                            borderRadius: '14px',
+                            background: isRoomAllocationValid ? '#f0fdf4' : '#fef2f2',
+                            border: `1.5px solid ${isRoomAllocationValid ? '#bbf7d0' : '#ef4444'}`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                <strong style={{ fontSize: '15px', color: isRoomAllocationValid ? '#166534' : '#991b1b' }}>
+                                    🏨 Xác định nhu cầu phòng & Phân bổ dịch vụ lưu trú
+                                </strong>
+                                <span style={{
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    padding: '4px 10px',
+                                    borderRadius: '12px',
+                                    background: isRoomAllocationValid ? '#dcfce7' : '#fee2e2',
+                                    color: isRoomAllocationValid ? '#15803d' : '#b91c1c'
+                                }}>
+                                    {isRoomAllocationValid ? `Tổng ${totalRequiredRooms} phòng lưu trú` : 'Cần điều chỉnh xếp phòng'}
+                                </span>
+                            </div>
+                            <div style={{ fontSize: '13.5px', color: isRoomAllocationValid ? '#14532d' : '#7f1d1d', lineHeight: '1.5' }}>
+                                {roomAllocationMessage}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Khối Mã ưu đãi */}
@@ -833,6 +1142,10 @@ const BookingFormInner = () => {
                                         <span>Phụ thu phòng đơn</span>
                                         <span>{singleRoomsCount > 0 ? `${singleRoomsCount} x ${formatCurrency(singleSupp)}` : formatCurrency(singleSupp) + " / phòng"}</span>
                                     </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dotted #e2e8f0', color: '#0f172a', fontWeight: '600' }}>
+                                        <span>Số phòng lưu trú phân bổ</span>
+                                        <span>{totalRequiredRooms} phòng ({singleRoomsCount} phòng đơn)</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -845,18 +1158,40 @@ const BookingFormInner = () => {
                             <strong style={{ fontSize: '24px', color: '#dc2626' }}>{formatCurrency(totalAmount)}</strong>
                         </div>
 
-                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', marginBottom: '20px' }}>
-                            <div style={{ width: '20px', height: '20px', minWidth: '20px', border: privacyConsent ? 'none' : '1px solid #cbd5e1', borderRadius: '4px', background: privacyConsent ? '#2563eb' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-                                {privacyConsent && <Check size={14} color="#fff" />}
-                            </div>
-                            <input type="checkbox" checked={privacyConsent} onChange={(e) => setPrivacyConsent(e.target.checked)} style={{ display: 'none' }} />
-                            <span style={{ fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
-                                Tôi đồng ý với <strong style={{ color: '#2563eb' }}>Chính sách bảo vệ dữ liệu cá nhân</strong> và <strong style={{ color: '#2563eb' }}>Các điều khoản</strong>
-                            </span>
-                        </label>
+                        <div data-error-active={!!fieldErrors.privacyConsent} style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: fieldErrors.privacyConsent ? '10px 12px' : '0', borderRadius: '10px', border: fieldErrors.privacyConsent ? '1.5px solid #ef4444' : 'none', background: fieldErrors.privacyConsent ? '#fef2f2' : 'transparent' }}>
+                                <div style={{ width: '20px', height: '20px', minWidth: '20px', border: privacyConsent ? 'none' : (fieldErrors.privacyConsent ? '1.5px solid #ef4444' : '1px solid #cbd5e1'), borderRadius: '4px', background: privacyConsent ? '#2563eb' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                                    {privacyConsent && <Check size={14} color="#fff" />}
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={privacyConsent}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setPrivacyConsent(checked);
+                                        if (checked) {
+                                            setFieldErrors(prev => {
+                                                const next = { ...prev };
+                                                delete next.privacyConsent;
+                                                return next;
+                                            });
+                                        }
+                                    }}
+                                    style={{ display: 'none' }}
+                                />
+                                <span style={{ fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
+                                    Tôi đồng ý với <strong style={{ color: '#2563eb' }}>Chính sách bảo vệ dữ liệu cá nhân</strong> và <strong style={{ color: '#2563eb' }}>Điều khoản dịch vụ</strong>
+                                </span>
+                            </label>
+                            {fieldErrors.privacyConsent && (
+                                <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>⚠️</span> {fieldErrors.privacyConsent}
+                                </div>
+                            )}
+                        </div>
 
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button style={{ width: '48px', height: '48px', borderRadius: '24px', background: '#1d4ed8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>
+                            <button type="button" style={{ width: '48px', height: '48px', borderRadius: '24px', background: '#1d4ed8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>
                                 <Phone size={20} />
                             </button>
                             {isBookingCutoffClosed ? (
@@ -864,8 +1199,8 @@ const BookingFormInner = () => {
                                     🔒 Đã đóng nhận khách (Quá hạn 30 ngày)
                                 </button>
                             ) : (
-                                <button onClick={submitBooking} disabled={!isFormValid || isSubmitting} style={{ flex: 1, height: '48px', borderRadius: '24px', background: isFormValid ? '#dc2626' : '#f1f5f9', color: isFormValid ? '#fff' : '#94a3b8', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
-                                    {isSubmitting ? 'Đang xử lý...' : (isFormValid ? 'Xác Nhận Đặt Tour' : 'Chưa nhập đủ thông tin')}
+                                <button onClick={submitBooking} disabled={isSubmitting} style={{ flex: 1, height: '48px', borderRadius: '24px', background: '#dc2626', color: '#fff', border: 'none', fontSize: '15px', fontWeight: 'bold', cursor: isSubmitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)' }}>
+                                    {isSubmitting ? 'Đang kiểm tra & giữ chỗ...' : 'Xác Nhận Đặt Tour'}
                                 </button>
                             )}
                         </div>
@@ -905,6 +1240,9 @@ const BookingFormInner = () => {
                                         {Array.from({ length: pax[type] }).map((_, idx) => {
                                             const pKey = `${type}_${idx}`;
                                             const pData = passengerDetails[pKey] || {};
+                                            const errName = fieldErrors[`${pKey}_name`];
+                                            const errDob = fieldErrors[`${pKey}_dob`];
+                                            const errPhone = fieldErrors[`${pKey}_phone`];
                                             const daysList = Array.from({length: 31}, (_, i) => i + 1);
                                             const monthsList = Array.from({length: 12}, (_, i) => i + 1);
                                             const currentYear = new Date().getFullYear();
@@ -916,30 +1254,46 @@ const BookingFormInner = () => {
                                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                                     <div>
                                                         <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Họ tên <span style={{color: '#dc2626'}}>*</span></label>
-                                                        <input type="text" value={pData.name || ''} onChange={e => updatePassenger(type, idx, 'name', e.target.value)} placeholder="VD: Nguyễn Văn A" style={{ width: '100%', padding: '12px 16px', borderRadius: '24px', border: 'none', background: '#f8fafc', fontSize: '15px', outline: 'none' }} />
+                                                        <input
+                                                            type="text"
+                                                            value={pData.name || ''}
+                                                            onChange={e => updatePassenger(type, idx, 'name', e.target.value)}
+                                                            placeholder="VD: Nguyễn Văn A"
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '12px 16px',
+                                                                borderRadius: '24px',
+                                                                border: errName ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                                                background: errName ? '#fef2f2' : '#f8fafc',
+                                                                fontSize: '15px',
+                                                                outline: 'none'
+                                                            }}
+                                                        />
+                                                        {errName && <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px' }}>⚠️ {errName}</div>}
                                                     </div>
                                                     
                                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                                         <div>
                                                             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Ngày sinh <span style={{color: '#dc2626'}}>*</span></label>
                                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                                                                <select value={pData.dobDay || ''} onChange={e => updatePassenger(type, idx, 'dobDay', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
+                                                                <select value={pData.dobDay || ''} onChange={e => updatePassenger(type, idx, 'dobDay', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: (errDob && !pData.dobDay) ? '1.5px solid #ef4444' : '1px solid #e2e8f0', background: (errDob && !pData.dobDay) ? '#fef2f2' : '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
                                                                     <option value="">Ngày</option>
                                                                     {daysList.map(d => <option key={d} value={d}>{d}</option>)}
                                                                 </select>
-                                                                <select value={pData.dobMonth || ''} onChange={e => updatePassenger(type, idx, 'dobMonth', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
+                                                                <select value={pData.dobMonth || ''} onChange={e => updatePassenger(type, idx, 'dobMonth', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: (errDob && !pData.dobMonth) ? '1.5px solid #ef4444' : '1px solid #e2e8f0', background: (errDob && !pData.dobMonth) ? '#fef2f2' : '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
                                                                     <option value="">Tháng</option>
                                                                     {monthsList.map(m => <option key={m} value={m}>{m}</option>)}
                                                                 </select>
-                                                                <select value={pData.dobYear || ''} onChange={e => updatePassenger(type, idx, 'dobYear', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
+                                                                <select value={pData.dobYear || ''} onChange={e => updatePassenger(type, idx, 'dobYear', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: (errDob && !pData.dobYear) ? '1.5px solid #ef4444' : '1px solid #e2e8f0', background: (errDob && !pData.dobYear) ? '#fef2f2' : '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
                                                                     <option value="">Năm</option>
                                                                     {yearsList.map(y => <option key={y} value={y}>{y}</option>)}
                                                                 </select>
                                                             </div>
+                                                            {errDob && <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px' }}>⚠️ {errDob}</div>}
                                                         </div>
                                                         <div>
                                                             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Giới tính <span style={{color: '#dc2626'}}>*</span></label>
-                                                            <select value={pData.gender || 'Nam'} onChange={e => updatePassenger(type, idx, 'gender', e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '24px', border: 'none', background: '#f8fafc', fontSize: '15px', outline: 'none', appearance: 'none' }}>
+                                                            <select value={pData.gender || 'Nam'} onChange={e => updatePassenger(type, idx, 'gender', e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none', appearance: 'none' }}>
                                                                 <option value="Nam">Nam</option>
                                                                 <option value="Nữ">Nữ</option>
                                                             </select>
@@ -947,12 +1301,27 @@ const BookingFormInner = () => {
                                                     </div>
 
                                                     {type === 'adults' && (
-                                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                                                             <div style={{ flex: 1 }}>
                                                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Số điện thoại</label>
-                                                                <input type="tel" value={pData.phone || ''} onChange={e => updatePassenger(type, idx, 'phone', e.target.value)} placeholder="Ví dụ: 0901234567" style={{ width: '100%', padding: '12px 16px', borderRadius: '24px', border: 'none', background: '#f8fafc', fontSize: '15px', outline: 'none' }} />
+                                                                <input
+                                                                    type="tel"
+                                                                    value={pData.phone || ''}
+                                                                    onChange={e => updatePassenger(type, idx, 'phone', e.target.value)}
+                                                                    placeholder="Ví dụ: 0901234567"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '12px 16px',
+                                                                        borderRadius: '24px',
+                                                                        border: errPhone ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                                                        background: errPhone ? '#fef2f2' : '#f8fafc',
+                                                                        fontSize: '15px',
+                                                                        outline: 'none'
+                                                                    }}
+                                                                />
+                                                                {errPhone && <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px' }}>⚠️ {errPhone}</div>}
                                                             </div>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '8px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4px' }}>
                                                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Phòng đơn</label>
                                                                 <div onClick={() => updatePassenger(type, idx, 'singleRoom', !pData.singleRoom)} style={{ width: '44px', height: '24px', background: pData.singleRoom ? '#3b82f6' : '#cbd5e1', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }}>
                                                                     <div style={{ width: '20px', height: '20px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: pData.singleRoom ? '22px' : '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', transition: 'left 0.2s' }}></div>
@@ -971,7 +1340,42 @@ const BookingFormInner = () => {
 
                         {/* Modal Footer */}
                         <div style={{ background: '#fff', padding: '16px 24px', display: 'flex', justifyContent: 'center', gap: '16px', borderTop: '1px solid #e2e8f0' }}>
-                            <button onClick={() => setShowPassengerModal(false)} style={{ padding: '12px 32px', borderRadius: '24px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', minWidth: '160px' }}>Xác nhận</button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const paxErrors = {};
+                                    ['adults', 'children', 'toddlers', 'infants'].forEach(type => {
+                                        for (let i = 0; i < pax[type]; i++) {
+                                            const pKey = `${type}_${i}`;
+                                            const pObj = passengerDetails[pKey] || {};
+                                            if (!pObj.name || !pObj.name.trim()) {
+                                                paxErrors[`${pKey}_name`] = 'Vui lòng nhập họ tên hành khách';
+                                            }
+                                            if (!pObj.dobDay || !pObj.dobMonth || !pObj.dobYear) {
+                                                paxErrors[`${pKey}_dob`] = 'Vui lòng chọn đầy đủ Ngày / Tháng / Năm sinh';
+                                            }
+                                            if (pObj.phone && pObj.phone.trim() !== '' && !validatePhoneFormat(pObj.phone)) {
+                                                paxErrors[`${pKey}_phone`] = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
+                                            }
+                                        }
+                                    });
+                                    setFieldErrors(prev => {
+                                        const cleaned = { ...prev };
+                                        Object.keys(cleaned).forEach(k => {
+                                            if (k.startsWith('adults_') || k.startsWith('children_') || k.startsWith('toddlers_') || k.startsWith('infants_')) {
+                                                delete cleaned[k];
+                                            }
+                                        });
+                                        return { ...cleaned, ...paxErrors };
+                                    });
+                                    if (Object.keys(paxErrors).length === 0) {
+                                        setShowPassengerModal(false);
+                                    }
+                                }}
+                                style={{ padding: '12px 32px', borderRadius: '24px', border: '1px solid #2563eb', background: '#2563eb', color: '#fff', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', minWidth: '160px' }}
+                            >
+                                Xác nhận
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1156,15 +1560,52 @@ const BookingFormInner = () => {
                             <CheckCircle2 size={46} color="#16a34a" strokeWidth={2.5} />
                         </div>
 
-                        {/* Title & Booking Code */}
+                        {/* Title & Booking Code (Bước 10, 11, 12) */}
                         <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>
-                            Đặt Tour Thành Công!
+                            Khởi Tạo Đơn Đặt Tour & Giữ Chỗ Thành Công!
                         </h2>
                         {successModal.bookingId && (
-                            <div style={{ display: 'inline-block', background: '#f1f5f9', color: '#0284c7', padding: '4px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', marginBottom: '20px' }}>
-                                Mã Booking: #BKG-{String(successModal.bookingId).padStart(4, '0')}
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                <span style={{ background: '#f1f5f9', color: '#0284c7', padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' }}>
+                                    Mã Booking: {successModal.bookingCode || `#BKG-${String(successModal.bookingId).padStart(4, '0')}`}
+                                </span>
+                                <span style={{ background: '#fef3c7', color: '#b45309', padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' }}>
+                                    Trạng thái: {successModal.bookingStatus || 'Chờ thanh toán'}
+                                </span>
                             </div>
                         )}
+
+                        {/* Tóm tắt giữ chỗ & thông tin đơn đặt tour */}
+                        <div style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '16px',
+                            padding: '14px 16px',
+                            marginBottom: '16px',
+                            textAlign: 'left',
+                            fontSize: '13.5px',
+                            color: '#334155',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#64748b' }}>⏱️ Thời hạn giữ chỗ tạm thời:</span>
+                                <strong style={{ color: '#dc2626' }}>10 phút ({Math.round((successModal.holdExpiresSeconds || 600) / 60)} phút)</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#64748b' }}>👥 Số lượng hành khách:</span>
+                                <strong>{successModal.totalPax || totalPax} hành khách</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#64748b' }}>🏨 Phân bổ phòng lưu trú:</span>
+                                <strong>{successModal.requiredRooms || totalRequiredRooms} phòng ({successModal.singleRoomsCount ?? singleRoomsCount} phòng đơn)</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '8px' }}>
+                                <span style={{ color: '#0f172a', fontWeight: '700' }}>💰 Tổng tiền thanh toán:</span>
+                                <strong style={{ color: '#dc2626', fontSize: '15px' }}>{formatCurrency(successModal.totalAmount || totalAmount)}</strong>
+                            </div>
+                        </div>
 
                         {/* Email Notification Card */}
                         <div style={{
@@ -1193,7 +1634,7 @@ const BookingFormInner = () => {
                             </div>
                             <div style={{ overflow: 'hidden' }}>
                                 <div style={{ fontSize: '12px', fontWeight: '600', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
-                                    Thông tin vé đã gửi về email:
+                                    Thông tin đơn hàng đã gửi về email:
                                 </div>
                                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#14532d', wordBreak: 'break-all' }}>
                                     {successModal.email}
@@ -1235,12 +1676,12 @@ const BookingFormInner = () => {
                                 <div style={{ fontSize: '22px', lineHeight: 1 }}>💳</div>
                                 <div style={{ fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
                                     <strong style={{ display: 'block', marginBottom: '2px', color: '#1e3a8a' }}>Thanh toán Chuyển khoản / VietQR:</strong>
-                                    Hệ thống đã chuẩn bị mã QR thanh toán tự động, bạn có thể quét mã ngay để giữ chỗ tức thì.
+                                    Hệ thống đã giữ chỗ tạm thời cho đơn đặt tour của bạn. Nhấn xác nhận bên dưới để chuyển sang bước thanh toán.
                                 </div>
                             </div>
                         )}
 
-                        {/* Action Buttons */}
+                        {/* Action Buttons (Bước 11 & Bước 12) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <button
                                 type="button"
@@ -1268,7 +1709,7 @@ const BookingFormInner = () => {
                                     gap: '8px'
                                 }}
                             >
-                                <span>{successModal.paymentMethod === 'Cash' ? 'Xem Đơn Hàng Của Tôi' : 'Tiến Hành Thanh Toán QR Ngay'}</span>
+                                <span>Xác nhận tiếp tục thanh toán</span>
                                 <ArrowRight size={18} />
                             </button>
 

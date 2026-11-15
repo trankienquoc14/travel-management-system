@@ -1,7 +1,51 @@
 const https = require('https');
 const { calculateRooms } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
-const { sendBookingConfirmationEmail, sendPaymentSuccessEmail } = require('../utils/emailService');
+const { sendBookingConfirmationEmail, sendPaymentSuccessEmail, sendBookingCancelledUnpaidEmail } = require('../utils/emailService');
+
+// Tự động kiểm tra và bổ sung các cột cần thiết trong bảng bookings & booking_passengers
+let isBookingSchemaEnsured = false;
+let schemaEnsurePromise = null;
+const ensureBookingSchema = async () => {
+  if (isBookingSchemaEnsured) return;
+  if (schemaEnsurePromise) return schemaEnsurePromise;
+  schemaEnsurePromise = (async () => {
+    let allOk = true;
+    const requiredColumns = [
+      ['bookings', 'breakdown', 'TEXT NULL'],
+      ['bookings', 'required_rooms', 'INT DEFAULT 0'],
+      ['bookings', 'single_room_count', 'INT DEFAULT 0'],
+      ['bookings', 'contact_name', 'VARCHAR(255) NULL'],
+      ['bookings', 'contact_email', 'VARCHAR(255) NULL'],
+      ['bookings', 'contact_phone', 'VARCHAR(50) NULL'],
+      ['bookings', 'contact_address', 'TEXT NULL'],
+      ['booking_passengers', 'passenger_type', "VARCHAR(50) DEFAULT 'ADULT'"],
+      ['booking_passengers', 'single_room', 'TINYINT(1) DEFAULT 0']
+    ];
+    for (const [tableName, colName, colDef] of requiredColumns) {
+      try {
+        const [existing] = await sequelize.query(
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+          { replacements: [tableName, colName] }
+        );
+        if (!existing || existing.length === 0) {
+          await sequelize.query(`ALTER TABLE ${tableName} ADD COLUMN ${colName} ${colDef}`);
+          console.log(`✅ [BookingSchema] Đã tự động thêm cột ${tableName}.${colName}`);
+        }
+      } catch (err) {
+        if (!String(err.message || '').includes('Duplicate column')) {
+          allOk = false;
+          console.warn(`⚠️ [BookingSchema] Không thể kiểm tra/thêm cột ${tableName}.${colName}:`, err.message);
+        }
+      }
+    }
+    if (allOk) isBookingSchemaEnsured = true;
+    schemaEnsurePromise = null;
+  })();
+  return schemaEnsurePromise;
+};
+ensureBookingSchema().catch(() => {});
+exports.ensureBookingSchema = ensureBookingSchema;
 
 // =========================================================================
 // CẤU HÌNH SEPAY & VIETQR REALTIME (TPBANK - DOAN THI TRAM - 00000419627)
@@ -55,8 +99,13 @@ const autoCancelExpiredTransferBookings = async (customerId = null) => {
     const replacements = customerId ? [PAYMENT_DEADLINE_SECONDS, customerId] : [PAYMENT_DEADLINE_SECONDS];
 
     const [expiredBookings] = await sequelize.query(`
-      SELECT b.booking_id, b.departure_id, b.num_people
+      SELECT b.booking_id, b.customer_id, b.departure_id, b.num_people,
+             COALESCE(t.tour_name, CONCAT('Tour thiết kế riêng: ', cr.destination), 'Tour du lịch') AS tour_name
       FROM bookings b
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
       LEFT JOIN (
         SELECT booking_id, MAX(payment_method) AS payment_method
         FROM payments
@@ -72,6 +121,19 @@ const autoCancelExpiredTransferBookings = async (customerId = null) => {
     for (const exp of expiredBookings) {
       const tx = await sequelize.transaction();
       try {
+        // Khóa dòng để tránh hủy trùng lặp và gửi trùng email khi nhiều tiến trình chạy đồng thời
+        const [lockedRows] = await sequelize.query(`
+          SELECT booking_id, customer_id, departure_id, num_people, booking_status, payment_status
+          FROM bookings
+          WHERE booking_id = ? AND payment_status = 'Unpaid' AND booking_status NOT IN ('Cancelled', 'Completed', 'Confirmed')
+          FOR UPDATE
+        `, { replacements: [exp.booking_id], transaction: tx });
+
+        if (!lockedRows || lockedRows.length === 0) {
+          await tx.rollback();
+          continue;
+        }
+
         await sequelize.query(`
           UPDATE bookings
           SET booking_status = 'Cancelled',
@@ -97,8 +159,31 @@ const autoCancelExpiredTransferBookings = async (customerId = null) => {
           WHERE booking_id = ? AND payment_status = 'Pending'
         `, { replacements: [exp.booking_id], transaction: tx });
 
+        if (exp.customer_id) {
+          const orderCode = `#BKG-${String(exp.booking_id).padStart(4, '0')}`;
+          await sequelize.query(`
+            INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
+            VALUES (?, ?, ?, 'BOOKING_CANCELLED_UNPAID', 'CUSTOMER', 0, '/my-bookings', NOW())
+          `, {
+            replacements: [
+              exp.customer_id,
+              `⚠️ Đơn đặt tour ${orderCode} đã bị hủy do quá hạn thanh toán`,
+              `Đơn đặt tour ${orderCode} (${exp.tour_name || 'Tour du lịch'}) đã tự động hủy do chưa hoàn tất thanh toán trong thời gian giữ chỗ 10 phút. Số chỗ tạm giữ đã được hoàn lại hệ thống.`
+            ],
+            transaction: tx
+          });
+        }
+
         await tx.commit();
         console.log(`⏱️ [Auto-Cancel] Đã tự động hủy đơn tour CK #${exp.booking_id} do quá hạn thanh toán 10 phút.`);
+
+        // Gửi email thông báo hủy đơn do chưa thanh toán bất đồng bộ
+        sendBookingCancelledUnpaidEmail(
+          exp.booking_id,
+          'Đơn đặt tour quá thời hạn giữ chỗ thanh toán chuyển khoản (10 phút)'
+        ).catch(mailErr => {
+          console.error(`❌ [EmailService] Lỗi gửi email tự động hủy đơn #${exp.booking_id}:`, mailErr);
+        });
       } catch (innerErr) {
         await tx.rollback();
         console.error(`Lỗi auto-cancel đơn #${exp.booking_id}:`, innerErr.message);
@@ -108,6 +193,14 @@ const autoCancelExpiredTransferBookings = async (customerId = null) => {
     console.error('Lỗi autoCancelExpiredTransferBookings:', err.message);
   }
 };
+
+// Tự động quét định kỳ mỗi 30 giây để hủy đơn quá hạn thanh toán và gửi email thông báo ngay cả khi khách đóng trình duyệt
+const autoCancelInterval = setInterval(() => {
+  autoCancelExpiredTransferBookings().catch(() => {});
+}, 30 * 1000);
+if (typeof autoCancelInterval.unref === 'function') {
+  autoCancelInterval.unref();
+}
 
 // 2. Lấy danh sách đơn hàng của khách hàng (HỖ TRỢ CẢ TOUR TRỌN GÓI VÀ TOUR THIẾT KẾ RIÊNG)
 exports.getMyBookings = async (req, res) => {
@@ -133,9 +226,15 @@ exports.getMyBookings = async (req, res) => {
         GREATEST(0, TIMESTAMPDIFF(SECOND, b.booking_date, NOW())) AS elapsed_seconds,
         b.notes,
         b.breakdown,
+        b.required_rooms,
+        b.single_room_count,
+        b.contact_name,
+        b.contact_phone,
+        b.contact_email,
+        b.contact_address,
         b.quote_id,
         b.departure_id,
-        (SELECT GROUP_CONCAT(CONCAT(p.full_name, '::', IFNULL(p.gender, ''), '::', IFNULL(p.birth_date, ''), '::', IFNULL(p.identity_number, '')) SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
+        (SELECT GROUP_CONCAT(CONCAT(p.full_name, '::', IFNULL(p.gender, ''), '::', IFNULL(p.birth_date, ''), '::', IFNULL(p.identity_number, ''), '::', IFNULL(p.passenger_type, 'ADULT'), '::', IFNULL(p.single_room, 0)) SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
         (SELECT status FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_status,
         (SELECT request_type FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_type,
         (SELECT fee_percentage FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_fee_percentage,
@@ -159,9 +258,9 @@ exports.getMyBookings = async (req, res) => {
         t.design_data,
         cr.requirements,
         
-        u.full_name AS customer_name,
-        u.phone AS customer_phone,
-        u.email AS customer_email,
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) AS customer_name,
+        COALESCE(NULLIF(b.contact_phone, ''), u.phone) AS customer_phone,
+        COALESCE(NULLIF(b.contact_email, ''), u.email) AS customer_email,
         COALESCE(p_method.payment_method, 'VNPAY_QR') AS payment_method
 
       FROM bookings b
@@ -184,6 +283,7 @@ exports.getMyBookings = async (req, res) => {
   }
 };
 exports.createBooking = async (req, res) => {
+  await ensureBookingSchema();
   const transaction = await sequelize.transaction();
   try {
     const { departure_id, num_people, total_amount, notes, payment_method = 'VNPAY_QR' } = req.body;
@@ -201,12 +301,22 @@ let requiredRooms = 0; let singleRoomCount = 0;
     const amount = total_amount || req.body.total_price || 0;
 
     if (departure_id) {
+      // Khóa bản ghi đợt khởi hành (FOR UPDATE) để kiểm soát đồng thời, tránh nhiều khách cùng đặt chỗ cuối cùng
       const [depRows] = await sequelize.query(`
-        SELECT d.departure_id, d.departure_date, d.return_date, d.available_slots, d.status, t.design_data 
+        SELECT d.departure_id, d.departure_date, d.return_date, d.available_slots, d.status, t.design_data
         FROM departures d
         JOIN tours t ON d.tour_id = t.tour_id
         WHERE d.departure_id = ?
+        FOR UPDATE
       `, { replacements: [departure_id], transaction });
+
+      if (depRows.length === 0) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Tour hoặc đợt khởi hành hiện không khả dụng, vui lòng lựa chọn tour khác'
+        });
+      }
 
       if (depRows.length > 0) {
         const dep = depRows[0];
@@ -260,7 +370,16 @@ let requiredRooms = 0; let singleRoomCount = 0;
         const todayStr = new Date().toISOString().split('T')[0];
         const isPast = dep.return_date ? String(dep.return_date).substring(0, 10) < todayStr : false;
 
-        // 🔒 CHẶN ĐẶT TOUR NẾU CÒN DƯỚI 30 NGÀY SO VỚI NGÀY KHỞI HÀNH (ĐỂ ĐÓNG TOUR GỬI NHÀ CUNG CẤP)
+        // 2.1. Kiểm tra trạng thái kinh doanh của tour và đợt khởi hành
+        if (dep.status === 'Closed' || dep.status === 'Completed' || dep.status === 'Cancelled' || isPast) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'Tour hoặc đợt khởi hành hiện không khả dụng, vui lòng lựa chọn tour khác'
+          });
+        }
+
+        // 🔒 Kiểm tra điều kiện đặt trước tối thiểu 30 ngày
         if (dep.departure_date) {
           const depDate = new Date(dep.departure_date);
           const now = new Date();
@@ -279,13 +398,26 @@ let requiredRooms = 0; let singleRoomCount = 0;
           }
         }
 
-        if (dep.status === 'Closed' || dep.status === 'Completed' || isPast) {
+        // 2.2. Đợt khởi hành đã hết chỗ
+        if (Number(dep.available_slots) <= 0) {
           await transaction.rollback();
-          return res.status(400).json({ success: false, message: 'Đợt khởi hành này đã kết thúc hoặc ở trạng thái KHÓA (CLOSED). Không thể đặt vé!' });
+          return res.status(400).json({
+            success: false,
+            message: 'Đợt khởi hành này đã hết chỗ, vui lòng lựa chọn đợt khởi hành khác'
+          });
         }
-        if (dep.available_slots < count) {
+
+        // 5.1. Số lượng hành khách vượt quá số chỗ khả dụng (không tính em bé dưới 2 tuổi vào số ghế nếu có breakdown)
+        const breakdownObj = req.body.breakdown;
+        const seatsRequested = breakdownObj
+          ? Number(breakdownObj.adults || 0) + Number(breakdownObj.children || 0) + Number(breakdownObj.toddlers || 0)
+          : count;
+        if (Number(dep.available_slots) < seatsRequested) {
           await transaction.rollback();
-          return res.status(400).json({ success: false, message: 'Số lượng chỗ trống không đủ!' });
+          return res.status(400).json({
+            success: false,
+            message: `Số lượng hành khách vượt quá số chỗ còn lại (còn ${dep.available_slots} chỗ), vui lòng điều chỉnh số lượng khách`
+          });
         }
       }
     }
@@ -295,12 +427,34 @@ let requiredRooms = 0; let singleRoomCount = 0;
     const contact_phone = req.body.contact_phone || req.body.contact_info?.phone || null;
     const contact_address = req.body.contact_address || req.body.contact_info?.address || null;
 
+    if (contact_phone) {
+      await sequelize.query(
+        `UPDATE users SET phone = ? WHERE user_id = ? AND (phone IS NULL OR phone = '')`,
+        { replacements: [contact_phone, customer_id], transaction }
+      );
+    }
+
+    const enrichedBreakdown = req.body.breakdown
+      ? {
+          ...(typeof req.body.breakdown === 'string' ? JSON.parse(req.body.breakdown) : req.body.breakdown),
+          singleRoomsCount: singleRoomCount,
+          requiredRooms: requiredRooms,
+          contact_info: {
+            fullName: contact_name,
+            email: contact_email,
+            phone: contact_phone,
+            address: contact_address
+          },
+          passengers: Array.isArray(req.body.passengers) ? req.body.passengers : []
+        }
+      : null;
+
     // 1. Tạo đơn đặt hàng (Dùng dấu ? an toàn chống SQL Injection)
     const [result] = await sequelize.query(`
       INSERT INTO bookings (customer_id, departure_id, quote_id, num_people, booking_date, total_amount, booking_status, payment_status, notes, breakdown, required_rooms, single_room_count, contact_name, contact_email, contact_phone, contact_address)
       VALUES (?, ?, NULL, ?, NOW(), ?, 'Pending', 'Unpaid', ?, ?, ?, ?, ?, ?, ?, ?)
     `, {
-      replacements: [customer_id, departure_id, count, amount, notes || null, req.body.breakdown ? JSON.stringify(req.body.breakdown) : null, requiredRooms, singleRoomCount, contact_name, contact_email, contact_phone, contact_address],
+      replacements: [customer_id, departure_id, count, amount, notes || null, enrichedBreakdown ? JSON.stringify(enrichedBreakdown) : null, requiredRooms, singleRoomCount, contact_name, contact_email, contact_phone, contact_address],
       transaction
     });
 
@@ -349,10 +503,26 @@ let requiredRooms = 0; let singleRoomCount = 0;
       }
     }
 
-    // 2. Trừ số lượng chỗ trống
-    await sequelize.query(`
-      UPDATE departures SET available_slots = GREATEST(0, available_slots - ?) WHERE departure_id = ?
-    `, { replacements: [count, departure_id], transaction });
+    // 2. Giữ chỗ có kiểm soát đồng thời (chỉ trừ khi available_slots >= seatsToDeduct)
+    const breakdownForSeats = req.body.breakdown;
+    const seatsToDeduct = breakdownForSeats
+      ? Number(breakdownForSeats.adults || 0) + Number(breakdownForSeats.children || 0) + Number(breakdownForSeats.toddlers || 0)
+      : count;
+
+    const [, updateMeta] = await sequelize.query(`
+      UPDATE departures
+      SET available_slots = available_slots - ?
+      WHERE departure_id = ? AND available_slots >= ?
+    `, { replacements: [seatsToDeduct, departure_id, seatsToDeduct], transaction });
+
+    const affectedRows = updateMeta && typeof updateMeta.affectedRows === 'number' ? updateMeta.affectedRows : 1;
+    if (affectedRows === 0) {
+      await transaction.rollback();
+      return res.status(409).json({
+        success: false,
+        message: 'Số chỗ vừa được khách khác đặt trước, vui lòng thử lại'
+      });
+    }
 
     // 3. Ghi nhận phương thức thanh toán vào bảng payments
     const txnCode = payment_method === 'VNPAY_QR' ? `THANHTOAN${newBookingId}` : ('TXN_' + Date.now());
@@ -408,10 +578,27 @@ let requiredRooms = 0; let singleRoomCount = 0;
       console.error('❌ [EmailService] Lỗi gửi email xác nhận đặt tour createBooking:', mailErr);
     });
 
-    res.status(200).json({ success: true, message: 'Đặt tour thành công!', booking_id: newBookingId, transfer_content: txnCode });
+    res.status(200).json({
+      success: true,
+      message: 'Đặt tour thành công!',
+      booking_id: newBookingId,
+      booking_code: `#BKG-${String(newBookingId).padStart(4, '0')}`,
+      booking_status: 'Chờ thanh toán',
+      hold_expires_seconds: PAYMENT_DEADLINE_SECONDS,
+      required_rooms: requiredRooms,
+      single_room_count: singleRoomCount,
+      transfer_content: txnCode
+    });
   } catch (error) {
     await transaction.rollback();
     console.error("Lỗi createBooking:", error);
+    const errMsg = String(error.message || '');
+    if (errMsg.includes('Deadlock') || errMsg.includes('Lock wait timeout')) {
+      return res.status(409).json({
+        success: false,
+        message: 'Số chỗ vừa được khách khác đặt trước, vui lòng thử lại'
+      });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -742,6 +929,13 @@ exports.createChangeRequest = async (req, res) => {
         VALUES (?, 'Cancel', ?, NULL, 'Approved', 'Đơn chưa thanh toán - Hệ thống tự động hủy theo yêu cầu khách hàng', 0, 0, 0, ?, NOW())
       `, {
         replacements: [booking_id, reason || 'Khách chủ động hủy đơn chưa thanh toán', daysBeforeDeparture]
+      });
+
+      sendBookingCancelledUnpaidEmail(
+        booking_id,
+        reason || 'Khách hàng hủy đơn khi chưa hoàn tất thanh toán'
+      ).catch(mailErr => {
+        console.error(`❌ [EmailService] Lỗi gửi email hủy đơn chưa thanh toán #${booking_id}:`, mailErr);
       });
 
       return res.status(200).json({
@@ -1168,6 +1362,16 @@ exports.updateBookingStatus = async (req, res) => {
       });
 
       await transaction.commit();
+
+      if (!isPaid) {
+        sendBookingCancelledUnpaidEmail(
+          bookingId,
+          reason || staff_note || 'Đơn đặt tour bị hủy do chưa hoàn tất thanh toán'
+        ).catch(mailErr => {
+          console.error(`❌ [EmailService] Lỗi gửi email hủy đơn chưa thanh toán #${bookingId}:`, mailErr);
+        });
+      }
+
       return res.status(200).json({
         success: true,
         message: `✅ Đã hủy đơn hàng thành công! Khấu trừ ${feePercentage}% (${feeAmount.toLocaleString('vi-VN')} ₫). Số tiền cần hoàn trả cho khách: ${refundAmount.toLocaleString('vi-VN')} ₫. Toàn bộ mã QR check-in đã bị vô hiệu hóa.`,
@@ -1940,8 +2144,15 @@ exports.cancelExpiredBooking = async (req, res) => {
             );
         } else {
             const [rows] = await sequelize.query(
-                `SELECT booking_id, departure_id, num_people, booking_status, payment_status 
-                 FROM bookings WHERE booking_id = ?`,
+                `SELECT b.booking_id, b.customer_id, b.departure_id, b.num_people, b.booking_status, b.payment_status,
+                        COALESCE(t.tour_name, CONCAT('Tour thiết kế riêng: ', cr.destination), 'Tour du lịch') AS tour_name
+                 FROM bookings b
+                 LEFT JOIN departures d ON b.departure_id = d.departure_id
+                 LEFT JOIN tours t ON d.tour_id = t.tour_id
+                 LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+                 LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+                 WHERE b.booking_id = ?
+                 FOR UPDATE`,
                 { replacements: [bookingId], transaction }
             );
             if (rows.length === 0) {
@@ -1953,28 +2164,68 @@ exports.cancelExpiredBooking = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Đơn hàng đã thanh toán thành công, không thể hủy!' });
             }
 
-            // Cập nhật trạng thái Cancelled do hết hạn thanh toán 10 phút
-            await sequelize.query(
-                `UPDATE bookings 
-                 SET booking_status = 'Cancelled', 
-                     notes = CONCAT(COALESCE(notes, ''), ' [Tự động hủy: Hết thời gian thanh toán 10 phút]')
-                 WHERE booking_id = ?`,
-                { replacements: [bookingId], transaction }
-            );
+            const wasAlreadyCancelled = rows[0].booking_status === 'Cancelled';
 
-            // Hoàn lại số slot trống vào departure
-            if (rows[0].departure_id && rows[0].num_people) {
+            if (!wasAlreadyCancelled) {
+                // Cập nhật trạng thái Cancelled do hết hạn thanh toán 10 phút
                 await sequelize.query(
-                    `UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?`,
-                    { replacements: [rows[0].num_people, rows[0].departure_id], transaction }
+                    `UPDATE bookings 
+                     SET booking_status = 'Cancelled', 
+                         notes = CASE
+                           WHEN notes IS NULL OR notes = '' THEN '[Tự động hủy: Hết thời gian thanh toán 10 phút]'
+                           WHEN notes LIKE '%[Tự động hủy:%' THEN notes
+                           ELSE CONCAT(notes, ' [Tự động hủy: Hết thời gian thanh toán 10 phút]')
+                         END
+                     WHERE booking_id = ?`,
+                    { replacements: [bookingId], transaction }
                 );
+
+                // Hoàn lại số slot trống vào departure
+                if (rows[0].departure_id && rows[0].num_people) {
+                    await sequelize.query(
+                        `UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?`,
+                        { replacements: [rows[0].num_people, rows[0].departure_id], transaction }
+                    );
+                }
+
+                // Đánh dấu payment pending thành Failed
+                await sequelize.query(
+                    `UPDATE payments SET payment_status = 'Failed' WHERE booking_id = ? AND payment_status = 'Pending'`,
+                    { replacements: [bookingId], transaction }
+                );
+
+                // Thông báo in-app cho khách hàng
+                if (rows[0].customer_id) {
+                    const orderCode = `#BKG-${String(bookingId).padStart(4, '0')}`;
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
+                        VALUES (?, ?, ?, 'BOOKING_CANCELLED_UNPAID', 'CUSTOMER', 0, '/my-bookings', NOW())
+                    `, {
+                        replacements: [
+                            rows[0].customer_id,
+                            `⚠️ Đơn đặt tour ${orderCode} đã bị hủy do quá hạn thanh toán`,
+                            `Đơn đặt tour ${orderCode} (${rows[0].tour_name || 'Tour du lịch'}) đã tự động hủy do chưa hoàn tất thanh toán trong thời gian giữ chỗ 10 phút. Số chỗ tạm giữ đã được hoàn lại hệ thống.`
+                        ],
+                        transaction
+                    });
+                }
             }
 
-            // Đánh dấu payment pending thành Failed
-            await sequelize.query(
-                `UPDATE payments SET payment_status = 'Failed' WHERE booking_id = ? AND payment_status = 'Pending'`,
-                { replacements: [bookingId], transaction }
-            );
+            await transaction.commit();
+
+            if (!wasAlreadyCancelled) {
+                console.log(`⏱️ [Auto-Cancel] Đã tự động hủy đơn TOUR #${bookingId} do hết hạn thanh toán 10 phút.`);
+                sendBookingCancelledUnpaidEmail(
+                    bookingId,
+                    'Đơn đặt tour quá thời hạn giữ chỗ thanh toán (10 phút)'
+                ).catch(mailErr => {
+                    console.error(`❌ [EmailService] Lỗi gửi email tự động hủy đơn #${bookingId}:`, mailErr);
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                message: 'Đã tự động hủy đơn hàng do quá 10 phút chưa nhận được thanh toán.'
+            });
         }
 
         await transaction.commit();

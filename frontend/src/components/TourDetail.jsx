@@ -209,23 +209,33 @@ const TourDetail = () => {
         return { isClosed, daysLeft };
     };
 
-    // Hàm chuyển hướng sang trang điền form Checkout
+    // Hàm chuyển hướng sang trang điền form Checkout (Bước 1 & Bước 2 của Use Case Đặt tour có sẵn)
     const handleGoToBooking = () => {
         if (!selectedDeparture) {
-            return alert('Vui lòng chọn ngày khởi hành!');
+            return alert('Vui lòng lựa chọn đợt khởi hành mong muốn!');
         }
 
         const selDep = tour.departures?.find(d => String(d.departure_id) === String(selectedDeparture));
-        if (selDep) {
-            const { isClosed, daysLeft } = checkDepartureCutoff(selDep.departure_date, selDep.status);
-            if (isClosed) {
-                return alert(`🔒 Đợt khởi hành này đã đóng nhận khách (chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với nhà cung cấp). Hiện chỉ còn ${daysLeft > 0 ? daysLeft : 0} ngày đến ngày đi. Vui lòng chọn ngày khởi hành khác!`);
-            }
+        // Luồng sự kiện thay thế 2.1: Tour hoặc đợt khởi hành không còn hoạt động kinh doanh
+        if (!tour || tour.status === 'Inactive' || tour.status === 'Closed' || !selDep || selDep.status === 'Closed' || selDep.status === 'Cancelled' || selDep.status === 'Inactive') {
+            return alert('Tour hoặc đợt khởi hành hiện không khả dụng, vui lòng lựa chọn tour khác');
         }
 
+        // Luồng sự kiện thay thế 2.2: Đợt khởi hành đã hết chỗ
+        if (Number(selDep.available_slots) <= 0) {
+            return alert('Đợt khởi hành này đã hết chỗ, vui lòng lựa chọn đợt khởi hành khác');
+        }
+
+        // Bước 2: Kiểm tra điều kiện đặt trước tối thiểu 30 ngày
+        const { isClosed, daysLeft } = checkDepartureCutoff(selDep.departure_date, selDep.status);
+        if (isClosed) {
+            return alert(`🔒 Đợt khởi hành này đã đóng nhận khách (chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với nhà cung cấp). Hiện chỉ còn ${daysLeft > 0 ? daysLeft : 0} ngày đến ngày đi. Vui lòng chọn ngày khởi hành khác!`);
+        }
+
+        // Tiền điều kiện: Khách hàng đã đăng nhập vào hệ thống
         const token = localStorage.getItem('token');
         if (!token) {
-            alert('Bạn cần đăng nhập để đặt tour!');
+            alert('Bạn cần đăng nhập vào hệ thống để đặt tour!');
             return navigate('/login');
         }
 
@@ -339,8 +349,7 @@ const TourDetail = () => {
                             const grouped = {};
                             const deps = (tour.departures || []).filter(dep => {
                                 const isFuture = new Date(dep.departure_date) > new Date();
-                                const hasSlots = dep.available_slots > 0;
-                                return isFuture && hasSlots && dep.status !== 'Cancelled';
+                                return isFuture && dep.status !== 'Cancelled';
                             });
                             deps.forEach(dep => {
                                 const d = new Date(dep.departure_date);
@@ -496,13 +505,17 @@ const TourDetail = () => {
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                                                             <span style={{ background: isClosed ? '#fee2e2' : '#f8fafc', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', color: isClosed ? '#b91c1c' : '#1e40af', fontSize: '15px' }}>{dayOfWeek}, {dateStr}</span>
                                                             <span style={{ color: '#475569', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>🎟️ {tour.tour_code || `${tour.tour_id}-DEP`}</span>
-                                                            {isClosed ? (
+                                                            {Number(dep.available_slots) <= 0 ? (
+                                                                <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    🔴 Đã hết chỗ (0 chỗ)
+                                                                </span>
+                                                            ) : isClosed ? (
                                                                 <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                                     🔒 Đã đóng đặt chỗ (Trước 30 ngày)
                                                                 </span>
                                                             ) : (
                                                                 <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    🟢 Đang mở nhận khách (Còn {daysLeft} ngày)
+                                                                    🟢 Đang mở nhận khách (Còn {dep.available_slots} chỗ • {daysLeft} ngày)
                                                                 </span>
                                                             )}
                                                         </div>
@@ -1108,31 +1121,26 @@ const TourDetail = () => {
                                         
                                         {(() => {
                                             const { isClosed: selIsClosed } = checkDepartureCutoff(selDep.departure_date, selDep.status);
-                                            if (selIsClosed) {
-                                                return (
-                                                    <button 
-                                                        disabled 
-                                                        style={{ 
-                                                            width: '100%', 
-                                                            background: '#94a3b8', 
-                                                            color: '#fff', 
-                                                            padding: '14px', 
-                                                            borderRadius: '24px', 
-                                                            fontSize: '15px', 
-                                                            fontWeight: 'bold', 
-                                                            border: 'none', 
-                                                            cursor: 'not-allowed', 
-                                                            marginTop: '8px'
-                                                        }}
-                                                        title="Đợt khởi hành này đã đóng nhận khách (trước 30 ngày)"
-                                                    >
-                                                        🔒 Đã khóa nhận khách (Quá hạn 30 ngày)
-                                                    </button>
-                                                );
-                                            }
+                                            const isSoldOut = Number(selDep.available_slots) <= 0;
                                             return (
-                                                <button onClick={handleGoToBooking} style={{ width: '100%', background: '#dc2626', color: '#fff', padding: '14px', borderRadius: '24px', fontSize: '16px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '16px', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)' }}>
-                                                    Đặt ngay
+                                                <button
+                                                    onClick={handleGoToBooking}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: (selIsClosed || isSoldOut) ? '#94a3b8' : '#dc2626',
+                                                        color: '#fff',
+                                                        padding: '14px',
+                                                        borderRadius: '24px',
+                                                        fontSize: '16px',
+                                                        fontWeight: 'bold',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        marginTop: '16px',
+                                                        boxShadow: (selIsClosed || isSoldOut) ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.3)'
+                                                    }}
+                                                    title={isSoldOut ? 'Đợt khởi hành này đã hết chỗ' : selIsClosed ? 'Đợt khởi hành này đã đóng nhận khách (trước 30 ngày)' : 'Đặt tour ngay'}
+                                                >
+                                                    Đặt tour ngay
                                                 </button>
                                             );
                                         })()}

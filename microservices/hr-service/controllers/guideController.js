@@ -39,25 +39,103 @@ const syncExpiredDeparturesStatus = async () => {
   }
 };
 
+// Hàm trích xuất danh sách điểm đón (Pickup Points) từ design_data / thông tin tour
+const extractPickupPoints = (designDataRaw, destination = '') => {
+  const points = [];
+  let startLoc = 'TP. Hồ Chí Minh';
+  let startTime = '06:00 AM';
+
+  if (designDataRaw) {
+    try {
+      const parsed = typeof designDataRaw === 'string' ? JSON.parse(designDataRaw) : designDataRaw;
+      if (parsed?.start_location_name) startLoc = parsed.start_location_name;
+      if (parsed?.pickup_time || parsed?.start_time) startTime = parsed.pickup_time || parsed.start_time;
+
+      if (Array.isArray(parsed?.pickup_points) && parsed.pickup_points.length > 0) {
+        parsed.pickup_points.forEach((pt, idx) => {
+          if (typeof pt === 'string') {
+            points.push({ order: idx + 1, time: startTime, name: pt, address: pt, note: 'Điểm đón cố định' });
+          } else if (pt && typeof pt === 'object') {
+            points.push({
+              order: idx + 1,
+              time: pt.time || startTime,
+              name: pt.name || pt.location || `Điểm đón #${idx + 1}`,
+              address: pt.address || pt.name || startLoc,
+              note: pt.note || 'Có mặt trước 15–30 phút'
+            });
+          }
+        });
+      }
+
+      if (points.length === 0 && Array.isArray(parsed?.days) && parsed.days.length > 0) {
+        const day1 = parsed.days[0];
+        if (day1?.route_title) {
+          points.push({
+            order: 1,
+            time: '05:30 - 06:00',
+            name: `Điểm tập trung xuất phát (${startLoc})`,
+            address: `Văn phòng TravelERP - ${startLoc} (${day1.route_title})`,
+            note: 'Đón đoàn tập trung và điểm danh khởi hành'
+          });
+        }
+        if (Array.isArray(day1?.activities)) {
+          day1.activities.slice(0, 2).forEach((act, idx) => {
+            if (act?.name) {
+              points.push({
+                order: points.length + 1,
+                time: idx === 0 ? '06:30' : '07:30',
+                name: act.name,
+                address: `${act.name} (${destination || startLoc})`,
+                note: act.type === 'Di chuyển' ? 'Điểm trung chuyển / đón khách dọc tuyến' : 'Điểm dừng chặng đầu'
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (points.length === 0) {
+    points.push(
+      {
+        order: 1,
+        time: '05:30 - 06:00',
+        name: `Điểm đón số 1: Trụ sở chính TravelERP (${startLoc})`,
+        address: `190 Pasteur, Quận 3, ${startLoc}`,
+        note: 'Điểm tập trung chính - HDV và Tài xế đón khách, kiểm tra hành lý & điểm danh QR'
+      },
+      {
+        order: 2,
+        time: '06:15 - 06:30',
+        name: `Điểm đón số 2: Nhà Văn hóa Thanh Niên / Sân bay Tân Sơn Nhất`,
+        address: `04 Phạm Ngọc Thạch, Quận 1, ${startLoc}`,
+        note: 'Đón khách đăng ký điểm hẹn trung tâm trước khi xuất phát đi ' + (destination || 'điểm đến')
+      }
+    );
+  }
+
+  return points;
+};
+
 // 1. Lấy danh sách công việc được phân công (Tours/Departures được gán cho HDV)
 exports.getAssignedWork = async (req, res) => {
   try {
     await syncExpiredDeparturesStatus();
-    const userId = req.user.user_id;
-    const userRole = req.user.role_id;
+    const userId = req.user.user_id || req.user.id;
+    const userRole = req.user.role_id || req.user.role;
     const { guide_id } = req.query;
 
     let whereClause = '';
-    let replacements = [];
+    let replacements = {};
 
     const isAdmin = [1, 2, 3, 4].includes(Number(userRole));
 
     if (isAdmin) {
       if (guide_id && guide_id !== 'all') {
-        whereClause = 'WHERE ga.guide_id = ?';
-        replacements.push(guide_id);
+        whereClause = 'WHERE (ga.guide_id = :targetGuideId OR d.guide_id = :targetGuideId)';
+        replacements.targetGuideId = guide_id;
       } else {
-        whereClause = '';
+        whereClause = 'WHERE (ga.guide_id IS NOT NULL OR d.guide_id IS NOT NULL)';
       }
     } else {
       const [guide] = await sequelize.query(
@@ -65,36 +143,75 @@ exports.getAssignedWork = async (req, res) => {
         { replacements: [userId] }
       );
 
-      if (guide.length === 0) {
-        return res.status(200).json({ success: true, data: [] });
-      }
-
-      whereClause = 'WHERE ga.guide_id = ?';
-      replacements.push(guide[0].guide_id);
+      const guideIdVal = guide.length > 0 ? guide[0].guide_id : -1;
+      whereClause = 'WHERE (ga.guide_id = :guideId OR d.guide_id = :guideId OR d.guide_id = :userId)';
+      replacements = { guideId: guideIdVal, userId };
     }
 
-    // Lấy danh sách phân công (Kèm tên Hướng dẫn viên phụ trách)
+    // Lấy danh sách phân công đầy đủ: Mã đoàn, Tên tour, Thời gian khởi hành/kết thúc, Số khách, Biển số xe, Tên tài xế, SĐT tài xế và Trạng thái
     const [works] = await sequelize.query(`
       SELECT 
-        d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status,
-        t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url,
-        gu.full_name AS assigned_guide_name, gu.email AS assigned_guide_email, gu.phone AS assigned_guide_phone, ga.guide_id,
-        COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0) AS actual_booked,
-        (d.max_slots - COALESCE(SUM(CASE WHEN b.booking_status != 'Cancelled' THEN b.num_people ELSE 0 END), 0)) AS available_slots
-      FROM guide_assignments ga
-      JOIN departures d ON ga.departure_id = d.departure_id
+        d.departure_id,
+        d.departure_date,
+        d.return_date,
+        d.max_slots,
+        d.status,
+        t.tour_id,
+        t.tour_name,
+        CONCAT('TOUR-', t.tour_id) AS tour_code,
+        t.description,
+        t.destination,
+        t.duration_days,
+        t.image_url,
+        t.design_data,
+        MAX(COALESCE(gu.full_name, gu_direct.full_name)) AS assigned_guide_name,
+        MAX(COALESCE(gu.email, gu_direct.email)) AS assigned_guide_email,
+        MAX(COALESCE(gu.phone, gu_direct.phone)) AS assigned_guide_phone,
+        MAX(COALESCE(ga.guide_id, g_direct.guide_id, d.guide_id)) AS guide_id,
+        MAX(COALESCE(v.license_plate, d.vehicle_number)) AS vehicle_number,
+        MAX(v.vehicle_type) AS vehicle_type,
+        MAX(v.brand_model) AS brand_model,
+        MAX(v.seat_capacity) AS seat_capacity,
+        MAX(COALESCE(tva.driver_id, d.driver_id)) AS driver_id,
+        MAX(drv.full_name) AS driver_name,
+        MAX(drv.phone) AS driver_phone,
+        MAX(drv.email) AS driver_email,
+        (
+          SELECT COALESCE(SUM(b2.num_people), 0)
+          FROM bookings b2
+          WHERE b2.departure_id = d.departure_id
+            AND b2.booking_status != 'Cancelled'
+        ) AS actual_booked
+      FROM departures d
       JOIN tours t ON d.tour_id = t.tour_id
-      JOIN guides g ON ga.guide_id = g.guide_id
-      JOIN users gu ON g.user_id = gu.user_id
-      LEFT JOIN bookings b ON d.departure_id = b.departure_id
+      LEFT JOIN guide_assignments ga ON d.departure_id = ga.departure_id
+      LEFT JOIN guides g ON ga.guide_id = g.guide_id
+      LEFT JOIN users gu ON g.user_id = gu.user_id
+      LEFT JOIN guides g_direct ON d.guide_id = g_direct.guide_id
+      LEFT JOIN users gu_direct ON COALESCE(g_direct.user_id, d.guide_id) = gu_direct.user_id
+      LEFT JOIN tour_vehicle_assignments tva ON d.departure_id = tva.departure_id AND tva.status != 'CANCELLED'
+      LEFT JOIN vehicles v ON tva.vehicle_id = v.vehicle_id
+      LEFT JOIN users drv ON COALESCE(tva.driver_id, d.driver_id) = drv.user_id
       ${whereClause}
-      GROUP BY d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status, t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url, gu.full_name, gu.email, gu.phone, ga.guide_id
+      GROUP BY d.departure_id, d.departure_date, d.return_date, d.max_slots, d.status,
+               t.tour_id, t.tour_name, t.description, t.destination, t.duration_days, t.image_url, t.design_data
       ORDER BY d.departure_date DESC
     `, { replacements });
 
+    const enrichedWorks = works.map(w => {
+      const actualBooked = Number(w.actual_booked || 0);
+      const maxSlots = Number(w.max_slots || 0);
+      return {
+        ...w,
+        actual_booked: actualBooked,
+        available_slots: Math.max(0, maxSlots - actualBooked),
+        pickup_points: extractPickupPoints(w.design_data, w.destination)
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: works
+      data: enrichedWorks
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -108,43 +225,50 @@ exports.getDeparturePassengers = async (req, res) => {
     await ensurePassengerCheckinSchema();
     const { departureId } = req.params;
 
-    // Truy vấn kết hợp: 
-    // Phần 1: Lấy các hành khách đã được khai báo chi tiết trong booking_passengers
-    // Phần 2: Đối với các booking chưa khai báo hành khách, lấy thông tin người đặt (users) làm đại diện
     const [passengers] = await sequelize.query(`
       SELECT 
         CAST(bp.passenger_id AS CHAR) as passenger_id, 
         b.booking_id, 
+        b.num_people,
+        b.booking_status,
+        b.payment_status,
         bp.full_name, 
         bp.gender, 
         bp.birth_date, 
         bp.identity_number, 
         COALESCE(bp.is_checked_in, 0) as is_checked_in,
         bp.checked_in_at,
-        u.full_name as booker_name, 
-        u.phone as booker_phone
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) as booker_name, 
+        COALESCE(NULLIF(b.contact_phone, ''), u.phone) as booker_phone,
+        COALESCE(NULLIF(b.contact_email, ''), u.email) as booker_email,
+        COALESCE(NULLIF(b.contact_address, ''), '') as booker_address
       FROM bookings b
       JOIN users u ON b.customer_id = u.user_id
       JOIN booking_passengers bp ON b.booking_id = bp.booking_id
-      WHERE b.departure_id = ? AND b.booking_status IN ('Confirmed', 'Pending')
+      WHERE b.departure_id = ? AND b.booking_status IN ('Confirmed', 'Pending', 'Completed')
 
       UNION ALL
 
       SELECT 
         CONCAT('b', b.booking_id) as passenger_id, 
         b.booking_id, 
-        u.full_name, 
+        b.num_people,
+        b.booking_status,
+        b.payment_status,
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) as full_name, 
         u.gender, 
         u.date_of_birth as birth_date, 
         '—' as identity_number, 
         0 as is_checked_in,
         NULL as checked_in_at,
-        u.full_name as booker_name, 
-        u.phone as booker_phone
+        COALESCE(NULLIF(b.contact_name, ''), u.full_name) as booker_name, 
+        COALESCE(NULLIF(b.contact_phone, ''), u.phone) as booker_phone,
+        COALESCE(NULLIF(b.contact_email, ''), u.email) as booker_email,
+        COALESCE(NULLIF(b.contact_address, ''), '') as booker_address
       FROM bookings b
       JOIN users u ON b.customer_id = u.user_id
       WHERE b.departure_id = ? 
-        AND b.booking_status IN ('Confirmed', 'Pending')
+        AND b.booking_status IN ('Confirmed', 'Pending', 'Completed')
         AND NOT EXISTS (
           SELECT 1 FROM booking_passengers WHERE booking_id = b.booking_id
         )

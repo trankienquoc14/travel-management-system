@@ -183,6 +183,18 @@ async function getBookingFullDetails(bookingId) {
   if (rows.length === 0) return null;
   const booking = rows[0];
 
+  // Fallback trích xuất thông tin người đặt từ breakdown.contact_info nếu cột contact_* đang trống
+  if (booking.breakdown) {
+    try {
+      const parsedBd = typeof booking.breakdown === 'string' ? JSON.parse(booking.breakdown) : booking.breakdown;
+      const ci = parsedBd?.contact_info || {};
+      if (!booking.contact_name && (ci.fullName || ci.contact_name)) booking.contact_name = ci.fullName || ci.contact_name;
+      if (!booking.contact_email && (ci.email || ci.contact_email)) booking.contact_email = ci.email || ci.contact_email;
+      if (!booking.contact_phone && (ci.phone || ci.contact_phone)) booking.contact_phone = ci.phone || ci.contact_phone;
+      if (!booking.contact_address && (ci.address || ci.contact_address)) booking.contact_address = ci.address || ci.contact_address;
+    } catch (e) {}
+  }
+
   // Lấy danh sách hành khách
   const [passengers] = await sequelize.query(`
     SELECT full_name, gender, birth_date, identity_number, passenger_type, single_room 
@@ -660,8 +672,181 @@ async function sendPaymentSuccessEmail(bookingId) {
   }
 }
 
+/**
+ * Gửi email thông báo HỦY ĐƠN ĐẶT TOUR DO CHƯA THANH TOÁN (quá thời hạn giữ chỗ 10 phút hoặc hủy đơn chưa thanh toán)
+ * @param {number|string} bookingId
+ * @param {string} cancelReason
+ */
+async function sendBookingCancelledUnpaidEmail(bookingId, cancelReason = 'Đơn đặt tour quá thời hạn giữ chỗ thanh toán (10 phút)') {
+  try {
+    const booking = await getBookingFullDetails(bookingId);
+    if (!booking) {
+      console.warn(`[EmailService] Không tìm thấy booking #${bookingId} để gửi email hủy đơn chưa thanh toán.`);
+      return { success: false, message: 'Booking not found' };
+    }
+
+    const recipientEmail = (booking.contact_email || booking.user_email || '').trim();
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      console.warn(`[EmailService] Booking #${bookingId} không có địa chỉ email hợp lệ để gửi thông báo hủy: "${recipientEmail}"`);
+      return { success: false, message: 'No valid recipient email' };
+    }
+
+    const recipientName = booking.contact_name || booking.user_full_name || 'Quý khách';
+    const recipientPhone = booking.contact_phone || booking.user_phone || 'Chưa cập nhật';
+
+    let parsedDesign = null;
+    try {
+      parsedDesign = typeof booking.design_data === 'string' ? JSON.parse(booking.design_data) : booking.design_data;
+    } catch (e) {}
+
+    const departurePlace = resolveDeparturePlace(booking, parsedDesign, booking.destinationsList);
+    const totalAmount = Number(booking.total_amount) || 0;
+    const orderCode = `#BKG-${String(booking.booking_id).padStart(4, '0')}`;
+    const finalReason = cancelReason || 'Đơn đặt tour quá thời hạn giữ chỗ thanh toán (10 phút)';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Thông báo hủy đơn đặt tour ${orderCode}</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+        <div style="max-width: 680px; margin: 24px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0;">
+          
+          <!-- HEADER -->
+          <div style="background: linear-gradient(135deg, #991b1b 0%, #dc2626 55%, #ef4444 100%); padding: 32px 28px; text-align: center; color: #ffffff;">
+            <div style="display: inline-block; background: rgba(255, 255, 255, 0.2); padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
+              TRAVEL ERP • THÔNG BÁO TRẠNG THÁI ĐƠN HÀNG
+            </div>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.3px;">
+              ⚠️ ĐƠN ĐẶT TOUR ĐÃ BỊ HỦY DO CHƯA THANH TOÁN
+            </h1>
+            <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.95;">
+              Kính gửi <strong>${recipientName}</strong>, đơn đặt tour <strong>${orderCode}</strong> của quý khách đã bị hủy do chưa hoàn tất thanh toán trong thời gian quy định.
+            </p>
+          </div>
+
+          <div style="padding: 28px;">
+            
+            <!-- BANNER TRẠNG THÁI -->
+            <div style="background: #fef2f2; border: 1px dashed #f87171; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <span style="font-size: 12px; color: #991b1b; font-weight: 700; text-transform: uppercase; display: block;">MÃ ĐƠN ĐẶT TOUR</span>
+                <strong style="font-size: 22px; color: #b91c1c; letter-spacing: 0.5px;">${orderCode}</strong>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 12px; color: #991b1b; font-weight: 700; text-transform: uppercase; display: block;">TRẠNG THÁI ĐƠN HÀNG</span>
+                <span style="display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;">
+                  ❌ Đã hủy (Chưa thanh toán)
+                </span>
+              </div>
+            </div>
+
+            <!-- LÝ DO HỦY & HOÀN CHỖ -->
+            <div style="background: #fff7ed; border-left: 4px solid #f97316; padding: 14px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 13.5px; color: #9a3412; line-height: 1.6;">
+              <strong>📌 Lý do hủy đơn:</strong> ${finalReason}.<br>
+              Số chỗ giữ tạm thời (<strong>${booking.num_people || 1} chỗ</strong>) của đơn hàng này đã được hệ thống tự động giải phóng để phục vụ các khách hàng khác.
+            </div>
+
+            <!-- 1. THÔNG TIN ĐƠN TOUR ĐÃ HỦY -->
+            <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 0; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+              1. Thông Tin Đơn Đặt Tour Đã Hủy
+            </h3>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
+              <h2 style="font-size: 18px; color: #1e3a8a; margin: 0 0 12px 0; font-weight: 700; line-height: 1.4;">
+                ${booking.tour_name}
+              </h2>
+              <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; width: 155px;">👤 Người đặt tour:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${recipientName} (${recipientPhone})</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">📍 Điểm khởi hành:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${departurePlace}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">🗓️ Ngày khởi hành:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${formatDateVN(booking.departure_date)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">🏁 Ngày kết thúc:</td>
+                  <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${formatDateVN(booking.return_date)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">👥 Số lượng hành khách:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${booking.num_people || 1} Hành khách</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">💰 Tổng tiền đơn hàng:</td>
+                  <td style="padding: 6px 0; font-weight: 800; color: #dc2626;">${formatVND(totalAmount)} (Chưa thanh toán)</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">🕒 Thời gian hủy:</td>
+                  <td style="padding: 6px 0; font-weight: 600; color: #475569;">${formatDateTimeVN(new Date())}</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- HƯỚNG DẪN ĐẶT LẠI -->
+            <div style="background: #f0f9ff; border-radius: 12px; padding: 16px 18px; border: 1px solid #bae6fd; font-size: 13.5px; color: #0c4a6e; line-height: 1.6;">
+              <strong style="display: block; margin-bottom: 4px;">💡 Quý khách vẫn muốn tham gia hành trình này?</strong>
+              • Nếu quý khách vẫn có nhu cầu đi tour, vui lòng truy cập lại website để thực hiện đặt tour mới và hoàn tất thanh toán trong thời gian giữ chỗ.<br>
+              • Nếu quý khách đã chuyển khoản nhưng hệ thống gửi thông báo này do độ trễ ngân hàng, vui lòng liên hệ ngay Hotline <strong>1900 1800</strong> kèm biên lai giao dịch để được hỗ trợ khôi phục đơn ngay lập tức.
+            </div>
+
+            <!-- CTA BUTTON -->
+            <div style="text-align: center; margin-top: 28px; margin-bottom: 12px;">
+              <a href="http://localhost:5173/my-bookings" 
+                 style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+                Xem Lại Đơn Hàng & Đặt Lại Tour
+              </a>
+            </div>
+
+          </div>
+
+          <!-- FOOTER -->
+          <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 28px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.6;">
+            <p style="margin: 0 0 6px 0; font-weight: 700; color: #334155;">CÔNG TY DU LỊCH & LỮ HÀNH TRAVEL ERP VIỆT NAM</p>
+            <p style="margin: 0 0 4px 0;">📍 Trụ sở chính: TP. Hồ Chí Minh • Hotline hỗ trợ 24/7: <strong>1900 1800</strong></p>
+            <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+              Đây là email tự động từ hệ thống quản lý đặt vé. Vui lòng lưu giữ mã đơn <strong>${orderCode}</strong> khi cần tra cứu.
+            </p>
+          </div>
+
+        </div>
+      </body>
+      </html>
+    `;
+
+    const transporter = await getTransporter();
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <no-reply@travelerp.vn>',
+      to: recipientEmail,
+      subject: `[TravelERP] ⚠️ Thông báo hủy đơn đặt tour ${orderCode} do chưa thanh toán - ${booking.tour_name}`,
+      text: `Kính chào ${recipientName},\n\nĐơn đặt tour ${orderCode} (${booking.tour_name}) của quý khách đã bị hủy do chưa hoàn tất thanh toán (${finalReason}).\nSố chỗ giữ tạm thời (${booking.num_people || 1} khách) đã được hoàn lại hệ thống.\n\nNếu quý khách vẫn có nhu cầu tham gia tour, vui lòng truy cập http://localhost:5173/my-bookings để đặt lại tour.\nHotline hỗ trợ: 1900 1800.`,
+      html: htmlContent
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    console.log(`✅ [EmailService] Đã gửi email thông báo hủy đơn chưa thanh toán ${orderCode} tới <${recipientEmail}> (MsgID: ${info.messageId})`);
+    if (previewUrl) {
+      console.log(`🔗 [EmailService] Xem trước Email Hủy Đơn (Ethereal Preview): ${previewUrl}`);
+    }
+
+    return { success: true, messageId: info.messageId, previewUrl, recipient: recipientEmail };
+  } catch (error) {
+    console.error(`❌ [EmailService] Lỗi khi gửi email hủy đơn chưa thanh toán #${bookingId}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   sendBookingConfirmationEmail,
   sendPaymentSuccessEmail,
+  sendBookingCancelledUnpaidEmail,
   getBookingFullDetails
 };
