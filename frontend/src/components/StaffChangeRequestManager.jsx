@@ -534,24 +534,39 @@ const StaffChangeRequestManager = () => {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           setSelectedReq(r);
                           setCopySuccess(false);
                           setSelectedNewDepForReview(r.new_departure_id ? String(r.new_departure_id) : '');
-                          if (r.request_type === 'Reschedule' && r.tour_id) {
+                          if (r.request_type === 'Reschedule') {
                             setLoadingReviewDeps(true);
-                            axios.get(`${GATEWAY_URL}/api/tours/${r.tour_id}`, {
-                              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                            }).then(res => {
-                              if (res.data?.success && res.data.data?.departures) {
-                                const deps = res.data.data.departures.filter(d => 
-                                  String(d.departure_id) !== String(r.old_departure_id || r.current_departure_id) &&
-                                  d.status === 'Open'
-                                );
-                                setReviewDepartures(deps);
+                            try {
+                              let tId = r.tour_id;
+                              if (!tId) {
+                                const tRes = await axios.get(`${GATEWAY_URL}/api/tours`);
+                                const matched = tRes.data?.data?.find(t => t.tour_name === r.tour_name);
+                                if (matched) tId = matched.tour_id;
                               }
-                            }).catch(err => console.error("Lỗi tải departures review:", err))
-                              .finally(() => setLoadingReviewDeps(false));
+                              if (tId) {
+                                const res = await axios.get(`${GATEWAY_URL}/api/tours/${tId}`, {
+                                  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                                });
+                                if (res.data?.success && res.data.data?.departures) {
+                                  const deps = res.data.data.departures.filter(d => 
+                                    String(d.departure_id) !== String(r.old_departure_id || r.current_departure_id) &&
+                                    d.status === 'Open'
+                                  );
+                                  setReviewDepartures(deps);
+                                }
+                              } else {
+                                setReviewDepartures([]);
+                              }
+                            } catch (err) {
+                              console.error("Lỗi tải departures review:", err);
+                              setReviewDepartures([]);
+                            } finally {
+                              setLoadingReviewDeps(false);
+                            }
                           } else {
                             setReviewDepartures([]);
                           }
@@ -1223,47 +1238,86 @@ const StaffChangeRequestManager = () => {
                     </div>
                   </div>
 
-                  {selectedReq.request_type === 'Reschedule' && (
-                    <div style={{ background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', padding: '14px 16px', marginBottom: '10px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e40af', marginBottom: '6px' }}>
-                        📅 Lịch Trình Khởi Hành Xác Nhận Chuyển Sang:
-                      </div>
-                      {selectedReq.requested_departure_date && (
-                        <div style={{ fontSize: '12.5px', color: '#1d4ed8', marginBottom: '8px' }}>
-                          Khách hàng đề xuất: <strong>{new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN')}</strong>
-                        </div>
-                      )}
-                      {isPending ? (
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                            Đợt khởi hành xác nhận chuyển sang: *
-                          </label>
-                          {loadingReviewDeps ? (
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>Đang tải danh sách đợt khởi hành...</div>
-                          ) : reviewDepartures.length === 0 ? (
-                            <div style={{ fontSize: '12px', color: '#b91c1c' }}>Tour này hiện chưa có đợt khởi hành mở bán khác còn đủ chỗ.</div>
-                          ) : (
-                            <select
-                              value={selectedNewDepForReview}
-                              onChange={(e) => setSelectedNewDepForReview(e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                            >
-                              <option value="">-- Chọn đợt khởi hành mới --</option>
-                              {reviewDepartures.map(d => (
-                                <option key={d.departure_id} value={d.departure_id}>
-                                  {new Date(d.departure_date).toLocaleDateString('vi-VN')} - Về: {d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {d.available_slots} chỗ trống)
-                                </option>
-                              ))}
-                            </select>
+                  {selectedReq.request_type === 'Reschedule' && (() => {
+                    const reqSlots = Number(selectedReq.requested_available_slots || 0);
+                    const numPax = Number(selectedReq.num_people || 1);
+                    const isProposedEnough = reqSlots >= numPax;
+                    const selectedDepObj = reviewDepartures.find(d => String(d.departure_id) === String(selectedNewDepForReview));
+
+                    return (
+                      <div style={{ background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px', marginBottom: '12px' }}>
+                        <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                          <span>📅 Kiểm Tra Số Chỗ Khả Dụng Thời Gian Thực</span>
+                          {selectedReq.requested_departure_date && (
+                            <span style={{
+                              fontSize: '11.5px', fontWeight: '700', padding: '3px 10px', borderRadius: '6px',
+                              backgroundColor: isProposedEnough ? '#ecfdf5' : '#fef2f2',
+                              color: isProposedEnough ? '#047857' : '#dc2626',
+                              border: `1px solid ${isProposedEnough ? '#a7f3d0' : '#fecaca'}`
+                            }}>
+                              {isProposedEnough 
+                                ? `✅ ĐỦ CHỖ (Còn ${reqSlots} chỗ / đơn ${numPax} khách)` 
+                                : `⚠️ THIẾU CHỖ (Chỉ còn ${reqSlots} chỗ / đơn ${numPax} khách)`}
+                            </span>
                           )}
                         </div>
-                      ) : (
-                        <div style={{ fontSize: '13px', color: '#0f172a' }}>
-                          Đợt khởi hành mới: <strong>{selectedReq.requested_departure_date ? new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN') : 'N/A'}</strong>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px', fontSize: '13px', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Đợt khách đề xuất:</span>
+                            <strong style={{ color: '#1d4ed8', fontSize: '14px' }}>
+                              {selectedReq.requested_departure_date ? new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN') : 'Khách ghi trong lý do'}
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Số chỗ khả dụng lúc check:</span>
+                            <strong style={{ fontSize: '14px', color: isProposedEnough ? '#15803d' : '#b91c1c' }}>
+                              {selectedReq.requested_departure_date ? `Còn ${reqSlots} / ${selectedReq.requested_max_slots || 0} chỗ` : 'Chưa chọn đợt'}
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Số lượng khách cần chuyển:</span>
+                            <strong style={{ color: '#0f172a', fontSize: '14px' }}>{numPax} người</strong>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
+
+                        {/* CẢNH BÁO NẾU ĐỢT KHÁCH CHỌN ĐÃ HẾT HOẶC THIẾU CHỖ */}
+                        {selectedReq.requested_departure_date && !isProposedEnough && (
+                          <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12.5px', color: '#b91c1c', marginBottom: '12px', lineHeight: 1.5 }}>
+                            <strong>⚠️ Cảnh báo nghiệp vụ:</strong> Đợt khởi hành ngày {new Date(selectedReq.requested_departure_date).toLocaleDateString('vi-VN')} tại thời điểm nhân viên kiểm tra chỉ còn <strong>{reqSlots}</strong> chỗ trống, không đủ chỗ cho đơn <strong>{numPax}</strong> khách. Vui lòng chọn một đợt khởi hành khác còn đủ chỗ bên dưới hoặc nhấn <strong>"Từ chối yêu cầu"</strong>.
+                          </div>
+                        )}
+
+                        {/* DROPDOWN CHỌN / ĐIỀU CHỈNH ĐỢT KHỞI HÀNH XÁC NHẬN */}
+                        {isPending && (
+                          <div style={{ paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
+                            <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                              Đợt khởi hành xác nhận chuyển sang: *
+                            </label>
+                            {loadingReviewDeps ? (
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>Đang tải danh sách lịch khởi hành...</div>
+                            ) : (
+                              <select
+                                value={selectedNewDepForReview}
+                                onChange={(e) => setSelectedNewDepForReview(e.target.value)}
+                                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                              >
+                                <option value="">-- Chọn đợt khởi hành chuyển sang --</option>
+                                {reviewDepartures.map(d => {
+                                  const isEnough = Number(d.available_slots) >= numPax;
+                                  return (
+                                    <option key={d.departure_id} value={d.departure_id}>
+                                      {new Date(d.departure_date).toLocaleDateString('vi-VN')} - Về: {d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {d.available_slots}/{d.max_slots} chỗ {isEnough ? '✅ Đủ chỗ' : '❌ Thiếu chỗ'})
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
                     <span style={{ color: '#64748b', fontWeight: '600' }}>Lý do của khách hàng: </span>
@@ -1500,9 +1554,21 @@ const StaffChangeRequestManager = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!isCancel && !selectedNewDepForReview && !selectedReq.new_departure_id) {
-                          alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang trước khi phê duyệt!");
-                          return;
+                        if (!isCancel) {
+                          const targetDepId = selectedNewDepForReview || selectedReq.new_departure_id;
+                          if (!targetDepId) {
+                            alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang trước khi phê duyệt!");
+                            return;
+                          }
+                          // Kiểm tra số chỗ khả dụng thời gian thực
+                          const matchedDep = reviewDepartures.find(d => String(d.departure_id) === String(targetDepId));
+                          const currentSlots = matchedDep ? Number(matchedDep.available_slots || 0) : Number(selectedReq.requested_available_slots || 0);
+                          const requiredSlots = Number(selectedReq.num_people || 1);
+
+                          if (currentSlots < requiredSlots) {
+                            alert(`Không thể phê duyệt đổi lịch!\nĐợt khởi hành đã chọn tại thời điểm kiểm tra chỉ còn ${currentSlots} chỗ trống, không đủ cho đơn ${requiredSlots} khách.\nVui lòng chọn đợt khởi hành khác còn đủ chỗ hoặc từ chối yêu cầu.`);
+                            return;
+                          }
                         }
                         const confirmMsg = isCancel
                           ? `Xác nhận phê duyệt hủy đơn hàng #${selectedReq.booking_id} và hoàn trả ${Number(selectedReq.refund_amount || 0).toLocaleString('vi-VN')} ₫ cho khách hàng ${selectedReq.customer_name}?`

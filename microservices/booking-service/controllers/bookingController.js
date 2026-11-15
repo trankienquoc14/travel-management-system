@@ -929,9 +929,13 @@ exports.getAllChangeRequests = async (req, res) => {
         b.num_people, b.total_amount, b.booking_status, b.payment_status, b.booking_date,
         u.full_name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
         COALESCE(t.tour_name, CONCAT('Tour thiết kế: ', ctr.destination)) AS tour_name,
-        d.tour_id,
+        COALESCE(d.tour_id, t.tour_id) AS tour_id,
+        b.departure_id AS old_departure_id,
         d.departure_date AS current_departure_date,
-        nd.departure_date AS requested_departure_date
+        nd.departure_date AS requested_departure_date,
+        nd.available_slots AS requested_available_slots,
+        nd.max_slots AS requested_max_slots,
+        nd.status AS requested_departure_status
       FROM booking_change_requests cr
       JOIN bookings b ON cr.booking_id = b.booking_id
       LEFT JOIN users u ON b.customer_id = u.user_id
@@ -1027,6 +1031,25 @@ exports.processChangeRequest = async (req, res) => {
         const [bk] = await sequelize.query(`SELECT departure_id, num_people FROM bookings WHERE booking_id = ?`, { replacements: [request.booking_id], transaction });
         const oldDepId = bk[0]?.departure_id;
         const numPeople = bk[0]?.num_people || 1;
+
+        // KIỂM TRA SỐ CHỖ KHẢ DỤNG TẠI THỜI ĐIỂM DUYỆT (REALTIME CAPACITY CHECK)
+        const [targetDep] = await sequelize.query(`
+          SELECT departure_id, departure_date, available_slots, max_slots, status 
+          FROM departures WHERE departure_id = ?
+        `, { replacements: [finalNewDepartureId], transaction });
+
+        if (targetDep.length === 0 || targetDep[0].status !== 'Open') {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Đợt khởi hành mới được chọn không tồn tại hoặc đã đóng bán!' });
+        }
+
+        if (Number(targetDep[0].available_slots || 0) < numPeople) {
+          await transaction.rollback();
+          return res.status(400).json({ 
+            success: false, 
+            message: `Không thể duyệt đổi lịch! Đợt khởi hành ngày ${new Date(targetDep[0].departure_date).toLocaleDateString('vi-VN')} tại thời điểm duyệt chỉ còn ${targetDep[0].available_slots} chỗ trống, không đủ cho đơn ${numPeople} khách!` 
+          });
+        }
 
         // Cập nhật booking sang đợt khởi hành mới
         await sequelize.query(`
