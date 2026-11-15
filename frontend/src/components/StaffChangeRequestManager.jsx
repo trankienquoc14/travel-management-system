@@ -28,6 +28,22 @@ const StaffChangeRequestManager = () => {
   const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // STATE TIẾP NHẬN TẠI QUẦY (COUNTER WORKFLOW)
+  const [showCounterModal, setShowCounterModal] = useState(false);
+  const [allBookings, setAllBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [counterSearch, setCounterSearch] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [counterRequestType, setCounterRequestType] = useState('Cancel');
+  const [counterReason, setCounterReason] = useState('');
+  const [counterRefundMethod, setCounterRefundMethod] = useState('Cash'); // 'Cash' | 'Bank'
+  const [counterBankInfo, setCounterBankInfo] = useState({ bankName: '', accountNumber: '', accountHolder: '' });
+  const [tourDepartures, setTourDepartures] = useState([]);
+  const [counterNewDepartureId, setCounterNewDepartureId] = useState('');
+  const [loadingDepartures, setLoadingDepartures] = useState(false);
+  const [counterStaffNote, setCounterStaffNote] = useState('');
+  const [isSubmittingCounter, setIsSubmittingCounter] = useState(false);
+
   useEffect(() => {
     fetchRequests();
   }, []);
@@ -47,6 +63,200 @@ const StaffChangeRequestManager = () => {
       setAlertMsg({ type: 'error', text: 'Không thể tải danh sách yêu cầu. Vui lòng thử lại!' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // TÍNH TOÁN BIỂU PHÍ HỦY / ĐỔI LỊCH THEO CHÍNH SÁCH 5 MỨC
+  const getPolicyDetails = (booking, reqType) => {
+    if (!booking) return { days: 0, feePercent: 0, feeAmt: 0, refundAmt: 0, isPaid: false };
+    let days = 0;
+    if (booking.departure_date) {
+      const depDate = new Date(booking.departure_date);
+      const today = new Date();
+      depDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      days = Math.ceil((depDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    const isPaid = booking.payment_status === 'Paid';
+    const totalAmount = Number(booking.total_amount || 0);
+
+    if (!isPaid) {
+      return { days, feePercent: 0, feeAmt: 0, refundAmt: 0, isPaid: false };
+    }
+
+    let feePercent = 0;
+    if (reqType === 'Cancel') {
+      if (days >= 30) feePercent = 10;
+      else if (days >= 15) feePercent = 30;
+      else if (days >= 7) feePercent = 50;
+      else if (days >= 3) feePercent = 75;
+      else feePercent = 100;
+      const feeAmt = Math.round(totalAmount * (feePercent / 100));
+      const refundAmt = Math.max(0, totalAmount - feeAmt);
+      return { days, feePercent, feeAmt, refundAmt, isPaid: true };
+    } else {
+      if (days >= 30) feePercent = 0;
+      else if (days >= 15) feePercent = 10;
+      else if (days >= 7) feePercent = 20;
+      else if (days >= 3) feePercent = 40;
+      else feePercent = 100; // Không áp dụng đổi lịch khi < 3 ngày
+      const feeAmt = Math.round(totalAmount * (feePercent / 100));
+      return { days, feePercent, feeAmt, refundAmt: 0, isPaid: true };
+    }
+  };
+
+  const handleOpenCounterModal = async () => {
+    setShowCounterModal(true);
+    setSelectedBooking(null);
+    setCounterRequestType('Cancel');
+    setCounterReason('');
+    setCounterRefundMethod('Cash');
+    setCounterBankInfo({ bankName: '', accountNumber: '', accountHolder: '' });
+    setCounterNewDepartureId('');
+    setTourDepartures([]);
+    setCounterStaffNote('');
+    setCounterSearch('');
+    
+    setLoadingBookings(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${GATEWAY_URL}/api/bookings/admin/all-bookings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.success) {
+        setAllBookings(res.data.data || []);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy danh sách booking cho quầy:", err);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const handleSelectBooking = async (booking) => {
+    setSelectedBooking(booking);
+    setCounterNewDepartureId('');
+    setTourDepartures([]);
+    
+    if (booking.tour_id) {
+      setLoadingDepartures(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${GATEWAY_URL}/api/tours/${booking.tour_id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data && res.data.success && res.data.data?.departures) {
+          const deps = res.data.data.departures.filter(d => 
+            String(d.departure_id) !== String(booking.departure_id) && 
+            d.status === 'Open' && 
+            Number(d.available_slots || 0) >= Number(booking.num_people || 1)
+          );
+          setTourDepartures(deps);
+        }
+      } catch (err) {
+        console.error("Lỗi tải departures của tour:", err);
+      } finally {
+        setLoadingDepartures(false);
+      }
+    }
+  };
+
+  const handleChangeCounterReqType = async (type) => {
+    setCounterRequestType(type);
+    if (type === 'Reschedule' && selectedBooking?.tour_id && tourDepartures.length === 0) {
+      setLoadingDepartures(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${GATEWAY_URL}/api/tours/${selectedBooking.tour_id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data && res.data.success && res.data.data?.departures) {
+          const deps = res.data.data.departures.filter(d => 
+            String(d.departure_id) !== String(selectedBooking.departure_id) && 
+            d.status === 'Open' && 
+            Number(d.available_slots || 0) >= Number(selectedBooking.num_people || 1)
+          );
+          setTourDepartures(deps);
+        }
+      } catch (err) {
+        console.error("Lỗi tải departures:", err);
+      } finally {
+        setLoadingDepartures(false);
+      }
+    }
+  };
+
+  const handleSubmitCounter = async (autoApprove) => {
+    if (!selectedBooking) {
+      alert("Vui lòng chọn đơn tour cần tiếp nhận xử lý!");
+      return;
+    }
+    if (!counterReason.trim()) {
+      alert("Vui lòng nhập lý do hủy hoặc đổi lịch của khách hàng!");
+      return;
+    }
+    if (counterRequestType === 'Reschedule' && !counterNewDepartureId) {
+      alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang!");
+      return;
+    }
+    if (counterRequestType === 'Cancel' && counterRefundMethod === 'Bank') {
+      if (!counterBankInfo.bankName || !counterBankInfo.accountNumber || !counterBankInfo.accountHolder) {
+        alert("Vui lòng nhập đầy đủ thông tin tài khoản ngân hàng để chuyển tiền hoàn!");
+        return;
+      }
+    }
+
+    const policy = getPolicyDetails(selectedBooking, counterRequestType);
+
+    if (counterRequestType === 'Reschedule' && policy.days < 3) {
+      alert("Ngày khởi hành còn dưới 3 ngày, quy định biểu phí không áp dụng đổi lịch!");
+      return;
+    }
+
+    const confirmText = autoApprove
+      ? (counterRequestType === 'Cancel'
+          ? `Xác nhận PHÊ DUYỆT & QUYẾT TOÁN HỦY ngay tại quầy cho đơn #${selectedBooking.booking_id}?\n- Phí khấu trừ: ${policy.feePercent}% (${policy.feeAmt.toLocaleString('vi-VN')} ₫)\n- Số tiền hoàn lại: ${policy.refundAmt.toLocaleString('vi-VN')} ₫`
+          : `Xác nhận PHÊ DUYỆT & ĐỔI LỊCH ngay tại quầy cho đơn #${selectedBooking.booking_id}?`)
+      : `Tạo yêu cầu ${counterRequestType === 'Cancel' ? 'Hủy' : 'Đổi lịch'} (chờ duyệt) cho đơn #${selectedBooking.booking_id}?`;
+
+    if (!window.confirm(confirmText)) return;
+
+    setIsSubmittingCounter(true);
+    try {
+      const token = localStorage.getItem('token');
+      let formattedReason = counterReason.trim();
+      if (counterRequestType === 'Cancel') {
+        if (counterRefundMethod === 'Bank') {
+          formattedReason += ` [Tài khoản nhận hoàn tiền: ${counterBankInfo.bankName} - STK: ${counterBankInfo.accountNumber} - Chủ TK: ${counterBankInfo.accountHolder}]`;
+        } else {
+          formattedReason += ` [Hình thức hoàn tiền: Tiền mặt trực tiếp tại quầy]`;
+        }
+      }
+
+      const res = await axios.post(`${GATEWAY_URL}/api/bookings/change-requests`, {
+        booking_id: selectedBooking.booking_id,
+        request_type: counterRequestType,
+        reason: formattedReason,
+        new_departure_id: counterRequestType === 'Reschedule' ? counterNewDepartureId : null,
+        auto_approve: autoApprove,
+        staff_note: counterStaffNote.trim() || undefined
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data && res.data.success) {
+        setAlertMsg({ type: 'success', text: res.data.message || 'Tiếp nhận yêu cầu tại quầy thành công!' });
+        setShowCounterModal(false);
+        setSelectedBooking(null);
+        fetchRequests();
+      } else {
+        setAlertMsg({ type: 'error', text: res.data?.message || 'Có lỗi xảy ra!' });
+      }
+    } catch (err) {
+      console.error("Lỗi tiếp nhận tại quầy:", err);
+      setAlertMsg({ type: 'error', text: err.response?.data?.message || 'Không thể thực hiện yêu cầu tiếp nhận tại quầy!' });
+    } finally {
+      setIsSubmittingCounter(false);
     }
   };
 
@@ -141,16 +351,29 @@ const StaffChangeRequestManager = () => {
             Hệ thống tiếp nhận, thẩm định chính sách và xử lý quyết toán hoàn tiền khách hàng
           </p>
         </div>
-        <button 
-          onClick={fetchRequests} 
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', 
-            backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', 
-            cursor: 'pointer', fontWeight: '600', fontSize: '13.5px', transition: 'all 0.2s ease'
-          }}
-        >
-          Làm mới
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            onClick={fetchRequests} 
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', 
+              backgroundColor: '#fff', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '8px', 
+              cursor: 'pointer', fontWeight: '600', fontSize: '13.5px', transition: 'all 0.2s ease'
+            }}
+          >
+            Làm mới
+          </button>
+          <button 
+            onClick={handleOpenCounterModal} 
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 18px', 
+              backgroundColor: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', 
+              cursor: 'pointer', fontWeight: '600', fontSize: '13.5px', transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)'
+            }}
+          >
+            + Tiếp nhận tại quầy
+          </button>
+        </div>
       </div>
 
       {/* ALERT NOTIFICATION */}
@@ -340,6 +563,531 @@ const StaffChangeRequestManager = () => {
           </table>
         )}
       </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL: TIẾP NHẬN HỦY / ĐỔI LỊCH TRỰC TIẾP TẠI QUẦY (COUNTER WORKFLOW)     */}
+      {/* ========================================================================= */}
+      {showCounterModal && (() => {
+        const policy = getPolicyDetails(selectedBooking, counterRequestType);
+        const filteredBookings = allBookings.filter(b => {
+          const isNotTerminated = b.booking_status !== 'Cancelled' && b.booking_status !== 'Completed';
+          if (!isNotTerminated) return false;
+          if (!counterSearch.trim()) return true;
+          const q = counterSearch.toLowerCase();
+          return (
+            (b.booking_id && b.booking_id.toString().includes(q)) ||
+            (b.customer_name && b.customer_name.toLowerCase().includes(q)) ||
+            (b.customer_phone && b.customer_phone.includes(q)) ||
+            (b.tour_name && b.tour_name.toLowerCase().includes(q))
+          );
+        });
+
+        return (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '16px'
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              width: '740px',
+              maxWidth: '100%',
+              maxHeight: '94vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden'
+            }}>
+              {/* MODAL HEADER */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                padding: '20px 24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+                      Tiếp Nhận & Xử Lý Hủy / Đổi Lịch Tại Quầy
+                    </h2>
+                    <span style={{
+                      fontSize: '11.5px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px',
+                      backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd'
+                    }}>
+                      TIẾP NHẬN TRỰC TIẾP
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                    Áp dụng cho khách hàng đến quầy giao dịch hoặc gọi điện thoại báo hủy / đổi tour
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCounterModal(false)}
+                  title="Đóng cửa sổ"
+                  style={{
+                    background: 'transparent', border: 'none', color: '#94a3b8',
+                    fontSize: '18px', cursor: 'pointer', padding: '4px', lineHeight: 1
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* MODAL BODY (SCROLLABLE) */}
+              <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* 1. TÌM KIẾM HOẶC THÔNG TIN ĐƠN BOOKING */}
+                <div>
+                  <div style={{
+                    fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase',
+                    letterSpacing: '0.6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
+                    <span>1. Thông Tin Đơn Đặt Tour</span>
+                    {selectedBooking && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBooking(null);
+                          setTourDepartures([]);
+                          setCounterNewDepartureId('');
+                        }}
+                        style={{
+                          background: 'transparent', border: 'none', color: '#0284c7',
+                          fontSize: '12px', fontWeight: '600', cursor: 'pointer'
+                        }}
+                      >
+                        Đổi đơn khác
+                      </button>
+                    )}
+                  </div>
+
+                  {!selectedBooking ? (
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Tìm theo Mã đơn, Họ tên khách, Số điện thoại hoặc Tên tour..."
+                        value={counterSearch}
+                        onChange={(e) => setCounterSearch(e.target.value)}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                          fontSize: '13.5px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px'
+                        }}
+                      />
+
+                      {loadingBookings ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                          Đang tải danh sách đơn đặt tour...
+                        </div>
+                      ) : filteredBookings.length === 0 ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                          Không tìm thấy đơn tour hợp lệ cần xử lý.
+                        </div>
+                      ) : (
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                          {filteredBookings.slice(0, 15).map((b) => (
+                            <div
+                              key={b.booking_id}
+                              onClick={() => handleSelectBooking(b)}
+                              style={{
+                                padding: '10px 14px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                transition: 'background 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                            >
+                              <div>
+                                <div style={{ fontSize: '13.5px', fontWeight: '600', color: '#0f172a' }}>
+                                  #{b.booking_id} &bull; {b.customer_name} ({b.customer_phone || 'N/A'})
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                                  {b.tour_name} &bull; Khởi hành: {b.departure_date ? new Date(b.departure_date).toLocaleDateString('vi-VN') : 'N/A'} ({b.num_people} khách)
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
+                                  {Number(b.total_amount || 0).toLocaleString('vi-VN')} ₫
+                                </div>
+                                <span style={{
+                                  fontSize: '11px', fontWeight: '600', padding: '2px 6px', borderRadius: '4px',
+                                  backgroundColor: b.payment_status === 'Paid' ? '#ecfdf5' : '#fef3c7',
+                                  color: b.payment_status === 'Paid' ? '#047857' : '#b45309'
+                                }}>
+                                  {b.payment_status === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{
+                      backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px 16px',
+                      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13px'
+                    }}>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Mã đơn & Khách hàng</span>
+                        <strong style={{ color: '#0f172a' }}>#{selectedBooking.booking_id} &bull; {selectedBooking.customer_name}</strong>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>{selectedBooking.customer_phone || 'Không có SĐT'}</div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Tour du lịch</span>
+                        <strong style={{ color: '#0f172a' }}>{selectedBooking.tour_name}</strong>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>Số lượng khách: {selectedBooking.num_people} người</div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Ngày khởi hành hiện tại</span>
+                        <strong style={{ color: '#0f172a' }}>
+                          {selectedBooking.departure_date ? new Date(selectedBooking.departure_date).toLocaleDateString('vi-VN') : 'N/A'}
+                        </strong>
+                        <div style={{ fontSize: '12px', color: policy.days >= 3 ? '#047857' : '#dc2626', fontWeight: '600' }}>
+                          Còn {policy.days} ngày trước khởi hành
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Tổng tiền & Thanh toán</span>
+                        <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                          {Number(selectedBooking.total_amount || 0).toLocaleString('vi-VN')} ₫
+                        </strong>
+                        <div>
+                          <span style={{
+                            fontSize: '11px', fontWeight: '600', padding: '2px 6px', borderRadius: '4px',
+                            backgroundColor: selectedBooking.payment_status === 'Paid' ? '#ecfdf5' : '#fef3c7',
+                            color: selectedBooking.payment_status === 'Paid' ? '#047857' : '#b45309'
+                          }}>
+                            {selectedBooking.payment_status === 'Paid' ? 'Đã thanh toán (Paid)' : 'Chưa thanh toán (Unpaid)'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {selectedBooking && (
+                  <>
+                    {/* 2. CHỌN LOẠI NGHIỆP VỤ */}
+                    <div>
+                      <div style={{
+                        fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase',
+                        letterSpacing: '0.6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9'
+                      }}>
+                        2. Chọn Loại Nghiệp Vụ Tại Quầy
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div
+                          onClick={() => handleChangeCounterReqType('Cancel')}
+                          style={{
+                            padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
+                            border: counterRequestType === 'Cancel' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                            backgroundColor: counterRequestType === 'Cancel' ? '#fef2f2' : '#ffffff',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ fontWeight: '700', fontSize: '14px', color: counterRequestType === 'Cancel' ? '#b91c1c' : '#334155' }}>
+                            Hủy Tour & Quyết Toán Hoàn Tiền
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                            Khách hàng yêu cầu hủy tour, hệ thống tính phí phạt và hoàn tiền theo quy định
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => handleChangeCounterReqType('Reschedule')}
+                          style={{
+                            padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
+                            border: counterRequestType === 'Reschedule' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                            backgroundColor: counterRequestType === 'Reschedule' ? '#eff6ff' : '#ffffff',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ fontWeight: '700', fontSize: '14px', color: counterRequestType === 'Reschedule' ? '#1d4ed8' : '#334155' }}>
+                            Đổi Ngày Khởi Hành (Reschedule)
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                            Khách hàng đổi sang đợt khởi hành khác cùng tour, áp dụng phí đổi lịch nếu có
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. CHI TIẾT TÍNH PHÍ & QUYẾT TOÁN TÀI CHÍNH */}
+                    <div>
+                      <div style={{
+                        fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase',
+                        letterSpacing: '0.6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9'
+                      }}>
+                        3. Quyết Toán Tài Chính Theo Biểu Phí Áp Dụng
+                      </div>
+
+                      <div style={{
+                        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px',
+                        background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px', marginBottom: '10px'
+                      }}>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Tổng giá trị đơn</span>
+                          <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                            {Number(selectedBooking.total_amount || 0).toLocaleString('vi-VN')} ₫
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Thời điểm tiếp nhận</span>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>
+                            Trước ngày đi {policy.days} ngày
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>
+                            {counterRequestType === 'Cancel' ? 'Tỷ lệ khấu trừ' : 'Phí đổi lịch'}
+                          </span>
+                          <strong style={{ fontSize: '13.5px', color: policy.feePercent > 0 ? '#dc2626' : '#16a34a' }}>
+                            {policy.feePercent}% ({policy.feeAmt.toLocaleString('vi-VN')} ₫)
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* KHỐI NỔI BẬT: SỐ TIỀN HOÀN LẠI / PHỤ THU */}
+                      <div style={{
+                        backgroundColor: counterRequestType === 'Cancel' ? '#f0fdf4' : '#eff6ff',
+                        border: `1px solid ${counterRequestType === 'Cancel' ? '#bbf7d0' : '#bfdbfe'}`,
+                        borderRadius: '8px',
+                        padding: '14px 18px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div>
+                          <span style={{
+                            fontSize: '12px', fontWeight: '700', color: counterRequestType === 'Cancel' ? '#166534' : '#1d4ed8',
+                            textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block'
+                          }}>
+                            {counterRequestType === 'Cancel' ? 'Số tiền hoàn lại cho khách hàng' : 'Phí phụ thu đổi lịch khởi hành'}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                            {counterRequestType === 'Cancel'
+                              ? (policy.isPaid ? 'Chi tiền mặt trực tiếp tại quầy hoặc thực hiện lệnh chuyển khoản' : 'Đơn chưa thanh toán - hủy miễn phí 0 ₫')
+                              : (policy.feeAmt > 0 ? 'Thu phí trực tiếp từ khách hàng khi xác nhận đổi lịch' : 'Miễn phí đổi lịch')}
+                          </span>
+                        </div>
+                        <div style={{
+                          fontSize: '22px', fontWeight: '700', color: counterRequestType === 'Cancel' ? '#15803d' : '#2563eb'
+                        }}>
+                          {counterRequestType === 'Cancel'
+                            ? `${policy.refundAmt.toLocaleString('vi-VN')} ₫`
+                            : (policy.feeAmt > 0 ? `${policy.feeAmt.toLocaleString('vi-VN')} ₫` : 'Miễn phí (0 ₫)')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 4. CHI TIẾT NGHIỆP VỤ (HÌNH THỨC HOÀN TIỀN HOẶC CHỌN ĐỢT MỚI) */}
+                    {counterRequestType === 'Cancel' ? (
+                      <div>
+                        <div style={{
+                          fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase',
+                          letterSpacing: '0.6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9'
+                        }}>
+                          4. Phương Thức Chi Tiền Hoàn Trả
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '20px', marginBottom: '12px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', cursor: 'pointer', fontWeight: '600', color: '#334155' }}>
+                            <input
+                              type="radio"
+                              name="refundMethod"
+                              checked={counterRefundMethod === 'Cash'}
+                              onChange={() => setCounterRefundMethod('Cash')}
+                            />
+                            Chi tiền mặt trực tiếp tại quầy
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', cursor: 'pointer', fontWeight: '600', color: '#334155' }}>
+                            <input
+                              type="radio"
+                              name="refundMethod"
+                              checked={counterRefundMethod === 'Bank'}
+                              onChange={() => setCounterRefundMethod('Bank')}
+                            />
+                            Chuyển khoản qua ngân hàng
+                          </label>
+                        </div>
+
+                        {counterRefundMethod === 'Bank' ? (
+                          <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
+                            background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0'
+                          }}>
+                            <div>
+                              <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Ngân hàng *</label>
+                              <input
+                                type="text"
+                                placeholder="VD: Vietcombank, MB Bank..."
+                                value={counterBankInfo.bankName}
+                                onChange={(e) => setCounterBankInfo({ ...counterBankInfo, bankName: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Số tài khoản *</label>
+                              <input
+                                type="text"
+                                placeholder="Nhập số tài khoản..."
+                                value={counterBankInfo.accountNumber}
+                                onChange={(e) => setCounterBankInfo({ ...counterBankInfo, accountNumber: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Chủ tài khoản *</label>
+                              <input
+                                type="text"
+                                placeholder="Họ và tên chủ thẻ..."
+                                value={counterBankInfo.accountHolder}
+                                onChange={(e) => setCounterBankInfo({ ...counterBankInfo, accountHolder: e.target.value })}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12.5px', color: '#475569' }}>
+                            Nhân viên chi trả trực tiếp {policy.refundAmt.toLocaleString('vi-VN')} ₫ tiền mặt cho khách hàng tại quầy và lưu phiếu thu chi vào sổ quỹ.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{
+                          fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase',
+                          letterSpacing: '0.6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9'
+                        }}>
+                          4. Chọn Đợt Khởi Hành Mới
+                        </div>
+
+                        {loadingDepartures ? (
+                          <div style={{ padding: '12px', fontSize: '13px', color: '#64748b' }}>Đang tải danh sách đợt khởi hành...</div>
+                        ) : tourDepartures.length === 0 ? (
+                          <div style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '13px', color: '#b91c1c' }}>
+                            Không tìm thấy đợt khởi hành nào khác còn đủ chỗ trống cho tour này. Vui lòng liên hệ bộ phận điều hành để bổ sung lịch khởi hành.
+                          </div>
+                        ) : (
+                          <div>
+                            <select
+                              value={counterNewDepartureId}
+                              onChange={(e) => setCounterNewDepartureId(e.target.value)}
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', outline: 'none' }}
+                            >
+                              <option value="">-- Chọn đợt khởi hành muốn chuyển sang --</option>
+                              {tourDepartures.map(d => (
+                                <option key={d.departure_id} value={d.departure_id}>
+                                  Khởi hành: {new Date(d.departure_date).toLocaleDateString('vi-VN')} - Trở về: {d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {d.available_slots} chỗ trống)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 5. LÝ DO & GHI CHÚ NHÂN VIÊN */}
+                    <div>
+                      <div style={{
+                        fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase',
+                        letterSpacing: '0.6px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9'
+                      }}>
+                        5. Lý Do Của Khách Hàng & Ghi Chú Tiếp Nhận
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '12.5px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                            Lý do hủy / đổi lịch của khách hàng *
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Nhập lý do khách báo (VD: Khách bận việc gia đình, đổi lịch công tác...)"
+                            value={counterReason}
+                            onChange={(e) => setCounterReason(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '12.5px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                            Ghi chú nội bộ / Kế toán (tùy chọn)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ghi chú thêm về chứng từ, phiếu chi hoặc chỉ đạo quản lý..."
+                            value={counterStaffNote}
+                            onChange={(e) => setCounterStaffNote(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                  </>
+                )}
+
+              </div>
+
+              {/* MODAL FOOTER BUTTONS */}
+              <div style={{
+                padding: '16px 24px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc',
+                display: 'flex', justifyContent: 'flex-end', gap: '10px', alignItems: 'center'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCounterModal(false)}
+                  style={{
+                    padding: '8px 18px', backgroundColor: '#ffffff', color: '#475569',
+                    border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer',
+                    fontWeight: '600', fontSize: '13.5px'
+                  }}
+                >
+                  Đóng
+                </button>
+
+                {selectedBooking && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={isSubmittingCounter}
+                      onClick={() => handleSubmitCounter(false)}
+                      style={{
+                        padding: '8px 18px', backgroundColor: '#ffffff', color: '#0f172a',
+                        border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer',
+                        fontWeight: '600', fontSize: '13.5px'
+                      }}
+                    >
+                      {isSubmittingCounter ? 'Đang lưu...' : 'Tạo yêu cầu (Chờ duyệt)'}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSubmittingCounter}
+                      onClick={() => handleSubmitCounter(true)}
+                      style={{
+                        padding: '8px 22px',
+                        backgroundColor: counterRequestType === 'Cancel' ? '#0f172a' : '#0284c7',
+                        color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                        fontWeight: '600', fontSize: '13.5px'
+                      }}
+                    >
+                      {isSubmittingCounter ? 'Đang xử lý...' : (counterRequestType === 'Cancel' ? 'Xác nhận & Quyết toán ngay' : 'Xác nhận & Đổi lịch ngay')}
+                    </button>
+                  </>
+                )}
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* FORM MODAL: XỬ LÝ YÊU CẦU QUYẾT TOÁN TÀI CHÍNH (CHUẨN ERP)               */}

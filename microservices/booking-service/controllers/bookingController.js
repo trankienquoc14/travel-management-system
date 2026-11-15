@@ -620,34 +620,48 @@ exports.confirmCashByStaff = async (req, res) => {
 // QUẢN LÝ YÊU CẦU HỦY / ĐỔI LỊCH (BOOKING CHANGE REQUESTS)
 // =========================================================================
 
-// 1. Khách hàng gửi yêu cầu Hủy hoặc Đổi Lịch
+// 1. Khách hàng gửi yêu cầu Hủy hoặc Đổi Lịch (hoặc Nhân viên tiếp nhận tại quầy)
 exports.createChangeRequest = async (req, res) => {
   try {
-    const { booking_id, request_type, reason, new_departure_id } = req.body;
-    const customer_id = req.user?.id || req.user?.user_id || req.user?.userId;
+    const { booking_id, request_type, reason, new_departure_id, auto_approve, staff_note } = req.body;
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isStaffOrAdmin = userRole === 'STAFF' || userRole === 'ADMIN' || userRole === 'MANAGER';
+    const currentUserId = req.user?.id || req.user?.user_id || req.user?.userId;
 
     if (!booking_id || !request_type) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã đơn hàng và loại yêu cầu!' });
     }
 
-    // Kiểm tra đơn hàng thuộc về khách hàng
-    const [bookingRows] = await sequelize.query(`
-      SELECT b.booking_id, b.booking_status, b.payment_status, b.departure_id, b.num_people, b.total_amount,
-             COALESCE(d.departure_date, cr.departure_date) AS departure_date
-      FROM bookings b
-      LEFT JOIN departures d ON b.departure_id = d.departure_id
-      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
-      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
-      WHERE b.booking_id = ? AND b.customer_id = ?
-    `, {
-      replacements: [booking_id, customer_id]
-    });
+    // Kiểm tra đơn hàng: khách hàng chỉ xem đơn của mình, Nhân viên/Admin được phép tiếp nhận tại quầy cho mọi đơn
+    const bookingQuery = isStaffOrAdmin
+      ? `SELECT b.booking_id, b.customer_id, b.booking_status, b.payment_status, b.departure_id, b.num_people, b.total_amount,
+               COALESCE(d.departure_date, cr.departure_date) AS departure_date,
+               COALESCE(t.tour_name, CONCAT('Tour ', cr.destination), 'Tour du lịch') AS tour_name
+         FROM bookings b
+         LEFT JOIN departures d ON b.departure_id = d.departure_id
+         LEFT JOIN tours t ON d.tour_id = t.tour_id
+         LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+         LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+         WHERE b.booking_id = ?`
+      : `SELECT b.booking_id, b.customer_id, b.booking_status, b.payment_status, b.departure_id, b.num_people, b.total_amount,
+               COALESCE(d.departure_date, cr.departure_date) AS departure_date,
+               COALESCE(t.tour_name, CONCAT('Tour ', cr.destination), 'Tour du lịch') AS tour_name
+         FROM bookings b
+         LEFT JOIN departures d ON b.departure_id = d.departure_id
+         LEFT JOIN tours t ON d.tour_id = t.tour_id
+         LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+         LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+         WHERE b.booking_id = ? AND b.customer_id = ?`;
+
+    const replacements = isStaffOrAdmin ? [booking_id] : [booking_id, currentUserId];
+    const [bookingRows] = await sequelize.query(bookingQuery, { replacements });
 
     if (bookingRows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng của bạn!' });
+      return res.status(404).json({ success: false, message: isStaffOrAdmin ? 'Không tìm thấy đơn hàng!' : 'Không tìm thấy đơn hàng của bạn!' });
     }
 
     const booking = bookingRows[0];
+    const targetCustomerId = booking.customer_id || currentUserId;
 
     if (booking.booking_status === 'Cancelled') {
       return res.status(400).json({ success: false, message: 'Đơn hàng này đã được hủy trước đó!' });
@@ -671,11 +685,19 @@ exports.createChangeRequest = async (req, res) => {
     const isPaid = booking.payment_status === 'Paid';
 
     // Chặn yêu cầu hủy / đổi lịch nếu đã hết thời gian hủy/đổi theo quy định (< 3 ngày trước ngày khởi hành hoặc đã khởi hành)
+    // Đối với nhân viên tại quầy: Vẫn cho phép tiếp nhận hủy (theo biểu phí 100%) nhưng chặn đổi lịch nếu < 3 ngày
     if (daysBeforeDeparture !== null && daysBeforeDeparture < 3) {
-      return res.status(400).json({
-        success: false,
-        message: 'Đơn tour này đã hết thời gian hỗ trợ hủy / đổi lịch (quy định: phải thực hiện trước ngày khởi hành tối thiểu 3 ngày)!'
-      });
+      if (!isStaffOrAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'Đơn tour này đã hết thời gian hỗ trợ hủy / đổi lịch trực tuyến (quy định: phải thực hiện trước ngày khởi hành tối thiểu 3 ngày)!'
+        });
+      } else if (request_type === 'Reschedule') {
+        return res.status(400).json({
+          success: false,
+          message: 'Không thể đổi lịch khi ngày khởi hành còn dưới 3 ngày (quy định biểu phí: không áp dụng đổi lịch)!'
+        });
+      }
     }
     const totalAmount = Number(booking.total_amount || 0);
 
@@ -759,7 +781,89 @@ exports.createChangeRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Đơn hàng này đã có yêu cầu đang chờ nhân viên xử lý!' });
     }
 
-    await sequelize.query(`
+    // THỰC HIỆN TIẾP NHẬN TẠI QUẦY & PHÊ DUYỆT / QUYẾT TOÁN NGAY (nếu auto_approve = true và do Nhân viên/Admin thực hiện)
+    if (isStaffOrAdmin && auto_approve) {
+      const finalStaffNote = staff_note || (request_type === 'Cancel'
+        ? `Nhân viên tiếp nhận và quyết toán hủy vé trực tiếp tại quầy. Mức phí khấu trừ: ${feePercentage}%. Hoàn tiền: ${refundAmount.toLocaleString('vi-VN')} ₫.`
+        : `Nhân viên tiếp nhận và phê duyệt đổi lịch trực tiếp tại quầy.`);
+
+      const [insertRes] = await sequelize.query(`
+        INSERT INTO booking_change_requests (booking_id, request_type, reason, new_departure_id, status, staff_note, fee_percentage, fee_amount, refund_amount, days_before_departure, processed_by, created_at)
+        VALUES (?, ?, ?, ?, 'Approved', ?, ?, ?, ?, ?, ?, NOW())
+      `, {
+        replacements: [booking_id, request_type, reason || 'Tiếp nhận trực tiếp tại quầy', new_departure_id || null, finalStaffNote, feePercentage, feeAmount, refundAmount, daysBeforeDeparture, currentUserId]
+      });
+
+      if (request_type === 'Cancel') {
+        // Hủy booking & Trả chỗ lại cho departure
+        const [bk] = await sequelize.query(`SELECT departure_id, num_people FROM bookings WHERE booking_id = ?`, { replacements: [booking_id] });
+        
+        await sequelize.query(`
+          UPDATE bookings SET booking_status = 'Cancelled' WHERE booking_id = ?
+        `, { replacements: [booking_id] });
+
+        // Vô hiệu hóa toàn bộ điểm danh và mã check-in của hành khách
+        await sequelize.query(`
+          UPDATE booking_passengers SET is_checked_in = 0 WHERE booking_id = ?
+        `, { replacements: [booking_id] });
+
+        // Cập nhật trạng thái thanh toán sang Refunded hoặc Failed
+        await sequelize.query(`
+          UPDATE payments SET payment_status = 'Refunded' WHERE booking_id = ? AND payment_status = 'Paid'
+        `, { replacements: [booking_id] });
+
+        await sequelize.query(`
+          UPDATE payments SET payment_status = 'Failed' WHERE booking_id = ? AND payment_status != 'Refunded'
+        `, { replacements: [booking_id] });
+
+        if (bk.length > 0 && bk[0].departure_id) {
+          await sequelize.query(`
+            UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
+          `, { replacements: [bk[0].num_people || 1, bk[0].departure_id] });
+        }
+      } else if (request_type === 'Reschedule' && new_departure_id) {
+        // Đổi sang ngày khởi hành mới
+        await sequelize.query(`
+          UPDATE bookings SET departure_id = ? WHERE booking_id = ?
+        `, { replacements: [new_departure_id, booking_id] });
+      }
+
+      // Thông báo cho khách hàng
+      try {
+        const notifTitle = request_type === 'Cancel' 
+          ? '✅ Đã quyết toán hủy tour tại quầy thành công' 
+          : '✅ Đã xác nhận đổi lịch tour tại quầy thành công';
+        const notifContent = request_type === 'Cancel'
+          ? `Đơn hàng #${booking_id} (${booking.tour_name}) đã được nhân viên quyết toán hủy trực tiếp tại quầy. Phí khấu trừ: ${feePercentage}%. Tiền hoàn lại: ${new Intl.NumberFormat('vi-VN').format(refundAmount)}đ.`
+          : `Đơn hàng #${booking_id} (${booking.tour_name}) đã được nhân viên chuyển sang ngày khởi hành mới thành công!`;
+
+        await sequelize.query(`
+          INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
+          VALUES (?, ?, ?, 'CHANGE_REQUEST_RESULT', 'CUSTOMER', 0, '/my-bookings', NOW())
+        `, {
+          replacements: [targetCustomerId, notifTitle, notifContent]
+        });
+      } catch (e) {
+        console.error('Lỗi gửi thông báo counter change request:', e);
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          change_id: insertRes,
+          fee_percentage: feePercentage,
+          fee_amount: feeAmount,
+          refund_amount: refundAmount,
+          days_before_departure: daysBeforeDeparture
+        },
+        message: request_type === 'Cancel'
+          ? `Đã tiếp nhận và quyết toán hủy tour tại quầy thành công! Phí khấu trừ: ${feePercentage}% (${feeAmount.toLocaleString('vi-VN')} ₫). Số tiền hoàn: ${refundAmount.toLocaleString('vi-VN')} ₫.`
+          : `Đã tiếp nhận và đổi ngày khởi hành thành công!`
+      });
+    }
+
+    // TẠO YÊU CẦU Ở TRẠNG THÁI PENDING (CHỜ DUYỆT)
+    const [insertResult] = await sequelize.query(`
       INSERT INTO booking_change_requests (booking_id, request_type, reason, new_departure_id, status, fee_percentage, fee_amount, refund_amount, days_before_departure, created_at)
       VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, NOW())
     `, {
@@ -778,7 +882,7 @@ exports.createChangeRequest = async (req, res) => {
         INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
         VALUES (?, ?, ?, 'CHANGE_REQUEST_SENT', 'CUSTOMER', 0, '/my-bookings', NOW())
       `, {
-        replacements: [customer_id, notifTitle, notifContent]
+        replacements: [targetCustomerId, notifTitle, notifContent]
       });
 
       // Bổ sung thông báo tức thì cho Nhân viên điều hành (STAFF)
@@ -798,6 +902,7 @@ exports.createChangeRequest = async (req, res) => {
     res.status(201).json({
       success: true,
       data: {
+        change_id: insertResult,
         fee_percentage: feePercentage,
         fee_amount: feeAmount,
         refund_amount: refundAmount,
@@ -993,7 +1098,7 @@ exports.getAllBookings = async (req, res) => {
         b.payment_status,
         b.booking_date,
         b.notes,
-        b.quote_id, b.departure_id, b.breakdown, (SELECT GROUP_CONCAT(CONCAT(p.full_name, '::', IFNULL(p.gender, ''), '::', IFNULL(p.birth_date, ''), '::', IFNULL(p.identity_number, '')) SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
+        b.quote_id, b.departure_id, d.tour_id, b.breakdown, (SELECT GROUP_CONCAT(CONCAT(p.full_name, '::', IFNULL(p.gender, ''), '::', IFNULL(p.birth_date, ''), '::', IFNULL(p.identity_number, '')) SEPARATOR '||') FROM booking_passengers p WHERE p.booking_id = b.booking_id) AS passengers_list,
         
         u.full_name AS customer_name,
         u.email AS customer_email,
