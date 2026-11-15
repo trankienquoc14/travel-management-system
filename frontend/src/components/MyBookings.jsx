@@ -437,6 +437,34 @@ const MyBookings = () => {
     const [agreePolicy, setAgreePolicy] = useState(false);
     const [showPolicyTable, setShowPolicyTable] = useState(false);
     const [refundBankInfo, setRefundBankInfo] = useState({ bankName: '', accountNumber: '', accountHolder: '' });
+    const [availableDepartures, setAvailableDepartures] = useState([]);
+    const [selectedNewDepartureId, setSelectedNewDepartureId] = useState('');
+    const [loadingDepartures, setLoadingDepartures] = useState(false);
+
+    const loadDeparturesForBooking = async (booking) => {
+        if (!booking || !booking.tour_id) return;
+        setLoadingDepartures(true);
+        setSelectedNewDepartureId('');
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${GATEWAY_URL}/api/tours/${booking.tour_id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data?.success && res.data.data?.departures) {
+                const deps = res.data.data.departures.filter(d => 
+                    String(d.departure_id) !== String(booking.departure_id) && 
+                    d.status === 'Open' && 
+                    new Date(d.departure_date) > new Date() &&
+                    Number(d.available_slots || 0) >= Number(booking.num_people || 1)
+                );
+                setAvailableDepartures(deps);
+            }
+        } catch (e) {
+            console.error("Lỗi tải departures cho đổi lịch:", e);
+        } finally {
+            setLoadingDepartures(false);
+        }
+    };
     const [submitting, setSubmitting] = useState(false);
     const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
     const [sepayModalData, setSepayModalData] = useState(null);
@@ -565,10 +593,19 @@ const MyBookings = () => {
             if (requestType === 'Cancel' && selectedBooking.payment_status === 'Paid' && refundBankInfo.accountNumber) {
                 fullReason += `\n[Tài khoản nhận hoàn tiền: ${refundBankInfo.bankName || 'Ngân hàng'} - STK: ${refundBankInfo.accountNumber} - Chủ TK: ${refundBankInfo.accountHolder || 'N/A'}]`;
             }
+            if (requestType === 'Reschedule') {
+                if (availableDepartures.length > 0 && !selectedNewDepartureId) {
+                    setAlertMsg({ type: 'error', text: 'Vui lòng chọn đợt khởi hành mới bạn muốn chuyển sang!' });
+                    setSubmitting(false);
+                    return;
+                }
+            }
+
             const payload = {
                 booking_id: selectedBooking.booking_id,
                 request_type: requestType,
-                reason: fullReason
+                reason: fullReason,
+                new_departure_id: requestType === 'Reschedule' ? selectedNewDepartureId : null
             };
             const res = await axios.post(`${GATEWAY_URL}/api/bookings/change-requests`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -580,6 +617,8 @@ const MyBookings = () => {
                 setReason('');
                 setAgreePolicy(false);
                 setRefundBankInfo({ bankName: '', accountNumber: '', accountHolder: '' });
+                setSelectedNewDepartureId('');
+                setAvailableDepartures([]);
                 fetchMyBookings();
             }
         } catch (error) {
@@ -1926,7 +1965,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => { setRequestType('Reschedule'); setAgreePolicy(false); }}
+                                    onClick={() => { setRequestType('Reschedule'); setAgreePolicy(false); loadDeparturesForBooking(selectedBooking); }}
                                     style={{
                                         flex: 1, padding: '12px', border: `2px solid ${requestType === 'Reschedule' ? '#2563eb' : '#e2e8f0'}`,
                                         borderRadius: '14px', cursor: 'pointer', textAlign: 'center', fontWeight: '800', fontSize: '14px',
@@ -2132,6 +2171,38 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
                                             />
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* LỰA CHỌN ĐỢT KHỞI HÀNH MỚI (DÀNH CHO ĐỔI LỊCH) */}
+                                {requestType === 'Reschedule' && (
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={{ display: 'block', fontWeight: '700', fontSize: '14px', color: '#1e293b', marginBottom: '8px' }}>
+                                            📅 Chọn Đợt Khởi Hành Mới Muốn Chuyển Sang: *
+                                        </label>
+                                        {loadingDepartures ? (
+                                            <div style={{ padding: '12px', fontSize: '13px', color: '#64748b', background: '#f8fafc', borderRadius: '10px' }}>
+                                                Đang tải danh sách lịch khởi hành mở bán...
+                                            </div>
+                                        ) : availableDepartures.length === 0 ? (
+                                            <div style={{ padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', fontSize: '13px', color: '#b91c1c' }}>
+                                                Hiện chưa có đợt khởi hành khác còn đủ chỗ ({selectedBooking.num_people} chỗ) cho tour này. Bạn có thể ghi rõ ngày mong muốn vào ô bên dưới để nhân viên kiểm tra lịch.
+                                            </div>
+                                        ) : (
+                                            <select
+                                                value={selectedNewDepartureId}
+                                                onChange={(e) => setSelectedNewDepartureId(e.target.value)}
+                                                style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                                                required={availableDepartures.length > 0}
+                                            >
+                                                <option value="">-- Nhấn để chọn ngày khởi hành mới --</option>
+                                                {availableDepartures.map(dep => (
+                                                    <option key={dep.departure_id} value={dep.departure_id}>
+                                                        Khởi hành: {new Date(dep.departure_date).toLocaleDateString('vi-VN')} - Về: {dep.return_date ? new Date(dep.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {dep.available_slots} chỗ trống)
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
                                     </div>
                                 )}
 

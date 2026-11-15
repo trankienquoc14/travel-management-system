@@ -611,17 +611,27 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
             setProposedPlan(normalizedProposal);
             setAdjHotelCost(normalizedProposal.hotel.pricePerNight);
             setAdjTransportCost(normalizedProposal.transport.pricePerDay);
-            if (savedProposal.meal?.prices) {
+            const isMealSelf = orig.meal ? (orig.meal.toLowerCase().includes('tự túc') || orig.meal.toLowerCase().includes('không')) : Boolean(savedProposal.meal?.enabled === false);
+            const isGuideSelf = orig.guide ? (orig.guide.toLowerCase().includes('tự túc') || orig.guide.toLowerCase().includes('không')) : Boolean(savedProposal.guide?.enabled === false);
+
+            if (isMealSelf) {
+                setMealPrices({ breakfast: 0, lunch: 0, dinner: 0 });
+            } else if (savedProposal.meal?.prices) {
                 setMealPrices(savedProposal.meal.prices);
             } else {
                 setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
             }
-            setGuidePricePerDay(savedProposal.guide?.pricePerDay ?? 500000);
+
+            if (isGuideSelf) {
+                setGuidePricePerDay(0);
+            } else {
+                setGuidePricePerDay(savedProposal.guide?.pricePerDay ?? 500000);
+            }
         } else {
             const isTransportSelf = (orig.transportName || orig.transport || '').toLowerCase().includes('tự túc');
             const isHotelSelf = (orig.hotelName || orig.hotel || '').toLowerCase().includes('tự túc');
-            const isMealSelf = orig.meal ? orig.meal.toLowerCase().includes('tự túc') : false;
-            const isGuideSelf = orig.guide ? orig.guide.toLowerCase().includes('tự túc') : false;
+            const isMealSelf = orig.meal ? (orig.meal.toLowerCase().includes('tự túc') || orig.meal.toLowerCase().includes('không')) : false;
+            const isGuideSelf = orig.guide ? (orig.guide.toLowerCase().includes('tự túc') || orig.guide.toLowerCase().includes('không')) : false;
 
             const initialPlan = {
                 pickup: {
@@ -650,15 +660,15 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                 },
                 meal: {
                     enabled: !isMealSelf,
-                    name: orig.meal || 'Trọn gói (Sáng, Trưa, Tối)',
+                    name: orig.meal || (isMealSelf ? 'Khách tự túc ăn uống' : 'Trọn gói (Sáng, Trưa, Tối)'),
                     isCustomized: false,
-                    prices: { breakfast: 200000, lunch: 200000, dinner: 200000 },
+                    prices: isMealSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 },
                     reason: ''
                 },
                 guide: {
                     enabled: !isGuideSelf,
-                    name: orig.guide || 'Có hướng dẫn viên suốt tuyến',
-                    pricePerDay: 500000,
+                    name: orig.guide || (isGuideSelf ? 'Khách tự túc' : 'Có hướng dẫn viên suốt tuyến'),
+                    pricePerDay: isGuideSelf ? 0 : 500000,
                     isCustomized: false,
                     reason: ''
                 },
@@ -675,8 +685,8 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
             setProposedPlan(initialPlan);
             setAdjHotelCost(defaultHotelCost);
             setAdjTransportCost(defaultTransportCost);
-            setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
-            setGuidePricePerDay(500000);
+            setMealPrices(isMealSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 });
+            setGuidePricePerDay(isGuideSelf ? 0 : 500000);
         }
 
         // Khôi phục chính sách giá trẻ em từ price_breakdown nếu itinerary chưa có
@@ -1146,6 +1156,10 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
 
     // Đón khách
     const handleSavePickup = (location, time, reason) => {
+        if (!location || !location.trim()) {
+            alert('⚠️ Vui lòng nhập địa điểm đón khách!');
+            return;
+        }
         setProposedPlan(prev => ({
             ...prev,
             pickup: {
@@ -1316,18 +1330,18 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     };
 
     const handleResetMeal = () => {
-        const isSelf = originalPreferences?.meal ? originalPreferences.meal.toLowerCase().includes('tự túc') : false;
+        const isSelf = originalPreferences?.meal ? (originalPreferences.meal.toLowerCase().includes('tự túc') || originalPreferences.meal.toLowerCase().includes('không')) : false;
         setProposedPlan(prev => ({
             ...prev,
             meal: {
                 enabled: !isSelf,
-                name: originalPreferences?.meal || 'Trọn gói (Sáng, Trưa, Tối)',
+                name: originalPreferences?.meal || (isSelf ? 'Khách tự túc ăn uống' : 'Trọn gói (Sáng, Trưa, Tối)'),
                 isCustomized: false,
-                prices: { breakfast: 200000, lunch: 200000, dinner: 200000 },
+                prices: isSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 },
                 reason: ''
             }
         }));
-        setMealPrices({ breakfast: 200000, lunch: 200000, dinner: 200000 });
+        setMealPrices(isSelf ? { breakfast: 0, lunch: 0, dinner: 0 } : { breakfast: 200000, lunch: 200000, dinner: 200000 });
     };
 
     // Hướng dẫn viên
@@ -1344,18 +1358,18 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     };
 
     const handleResetGuide = () => {
-        const isSelf = originalPreferences?.guide ? originalPreferences.guide.toLowerCase().includes('tự túc') : false;
+        const isSelf = originalPreferences?.guide ? (originalPreferences.guide.toLowerCase().includes('tự túc') || originalPreferences.guide.toLowerCase().includes('không')) : false;
         setProposedPlan(prev => ({
             ...prev,
             guide: {
                 enabled: !isSelf,
-                name: originalPreferences?.guide || 'Có hướng dẫn viên suốt tuyến',
-                pricePerDay: 500000,
+                name: originalPreferences?.guide || (isSelf ? 'Khách tự túc' : 'Có hướng dẫn viên suốt tuyến'),
+                pricePerDay: isSelf ? 0 : 500000,
                 isCustomized: false,
                 reason: ''
             }
         }));
-        setGuidePricePerDay(500000);
+        setGuidePricePerDay(isSelf ? 0 : 500000);
     };
 
     // Điểm tham quan
@@ -1523,6 +1537,33 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     // Gửi báo giá cho khách
     const handleSendInitialQuote = async () => {
         if (!selectedReq) return;
+
+        // --- RÀNG BUỘC DỮ LIỆU BÁO GIÁ ---
+        if (!suggestedPrice || Number(suggestedPrice) <= 0 || isNaN(Number(suggestedPrice))) {
+            alert('⚠️ Giá báo khách (người lớn) phải lớn hơn 0 đ!');
+            return;
+        }
+        if (!grandTotalPrice || Number(grandTotalPrice) <= 0 || isNaN(Number(grandTotalPrice))) {
+            alert('⚠️ Tổng giá báo khách của cả đoàn phải lớn hơn 0 đ!');
+            return;
+        }
+        if (Number(suggestedPrice) < Number(totalCost)) {
+            const confirmLoss = window.confirm(
+                '⚠️ CẢNH BÁO LỢI NHUẬN ÂM / DƯỚI GIÁ VỐN:\n\n' +
+                '• Giá báo khách: ' + formatMoney(suggestedPrice) + ' đ/người\n' +
+                '• Chi phí vốn gốc: ' + formatMoney(totalCost) + ' đ/người\n\n' +
+                'Giá báo khách đang THẤP HƠN chi phí gốc. Bạn có chắc chắn muốn gửi phương án báo giá này cho khách hàng không?'
+            );
+            if (!confirmLoss) return;
+        }
+        const cPct = Number(childPolicy?.child?.percent || 0);
+        const tPct = Number(childPolicy?.toddler?.percent || 0);
+        const iPct = Number(childPolicy?.infant?.percent || 0);
+        if (cPct < 0 || cPct > 100 || tPct < 0 || tPct > 100 || iPct < 0 || iPct > 100) {
+            alert('⚠️ Tỷ lệ % giá người lớn cho trẻ em / trẻ nhỏ / em bé phải nằm trong khoảng từ 0% đến 100%!');
+            return;
+        }
+
         try {
             const token = localStorage.getItem('token');
             const breakdown = {
@@ -3891,7 +3932,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input type="text" value={childPolicy.child.percent} onChange={(e) => {
                                             let val = e.target.value.replace(/\D/g, '');
-                                            updatePolicy('child', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                            updatePolicy('child', 'percent', val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10))));
                                         }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
                                         <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
                                     </div>
@@ -3917,7 +3958,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input type="text" value={childPolicy.toddler.percent} onChange={(e) => {
                                             let val = e.target.value.replace(/\D/g, '');
-                                            updatePolicy('toddler', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                            updatePolicy('toddler', 'percent', val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10))));
                                         }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
                                         <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
                                     </div>
@@ -3943,7 +3984,7 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input type="text" value={childPolicy.infant.percent} onChange={(e) => {
                                             let val = e.target.value.replace(/\D/g, '');
-                                            updatePolicy('infant', 'percent', val === '' ? 0 : parseInt(val, 10));
+                                            updatePolicy('infant', 'percent', val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10))));
                                         }} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }} />
                                         <span style={{ marginLeft: '8px', color: '#64748b' }}>%</span>
                                     </div>
@@ -4717,6 +4758,18 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                                                         <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#334155' }}>
                                                             {hotelReq && <li><strong>Khách sạn:</strong> {cleanHotelDisplayName(hotelReq)}</li>}
                                                             {transportReq && <li><strong>Di chuyển:</strong> {formatVehicleDisplayName(transportReq)}</li>}
+                                                            <li>
+                                                                <strong>Hướng dẫn viên:</strong>{' '}
+                                                                <span style={{ fontWeight: '600', color: (prefs.guide && (prefs.guide.includes('tự túc') || prefs.guide.includes('Không'))) ? '#64748b' : '#0284c7' }}>
+                                                                    {prefs.guide || (prefs.guideMode === 'company' ? 'Cần Hướng dẫn viên' : (prefs.guideMode === 'self' ? 'Khách tự túc' : 'Theo thỏa thuận'))}
+                                                                </span>
+                                                            </li>
+                                                            <li>
+                                                                <strong>Ăn uống:</strong>{' '}
+                                                                <span style={{ fontWeight: '600', color: (prefs.meal && (prefs.meal.includes('tự túc') || prefs.meal.includes('Không'))) ? '#64748b' : '#059669' }}>
+                                                                    {prefs.meal || (prefs.mealMode === 'company' ? 'Công ty tự sắp xếp' : (prefs.mealMode === 'self' ? 'Khách tự túc' : 'Theo thỏa thuận'))}
+                                                                </span>
+                                                            </li>
                                                             {noteReq && <li><strong>Ghi chú:</strong> {noteReq}</li>}
                                                         </ul>
                                                     </div>

@@ -622,6 +622,11 @@ exports.sendInitialQuote = async (req, res) => {
         } = req.body;
         const staffId = req.user?.id || req.user?.userId || req.user?.user_id;
 
+        // Ràng buộc giá bán khi gửi báo giá (không áp dụng khi lưu nháp)
+        if (!is_draft && (!quote_price || isNaN(Number(quote_price)) || Number(quote_price) <= 0)) {
+            return res.status(400).json({ success: false, message: 'Giá báo khách phải là số lớn hơn 0' });
+        }
+
         // Retrieve previous notes
         const [oldQuotes] = await sequelize.query(`
             SELECT customer_note, manager_note, itinerary, base_cost, markup_percent 
@@ -727,6 +732,18 @@ exports.submitToManager = async (req, res) => {
         }
         
         let parsedItinerary = typeof itinerary === 'string' ? JSON.parse(itinerary) : itinerary;
+
+        // Ràng buộc tính hợp lệ trước khi gửi Quản lý duyệt
+        if (!quote_price || isNaN(Number(quote_price)) || Number(quote_price) <= 0) {
+            return res.status(400).json({ success: false, message: 'Giá bán dự kiến phải là số lớn hơn 0' });
+        }
+        if (!parsedItinerary || !parsedItinerary.tourName || parsedItinerary.tourName.trim().length < 5) {
+            return res.status(400).json({ success: false, message: 'Tên tour đề xuất không được để trống (tối thiểu 5 ký tự)' });
+        }
+        if (!parsedItinerary.days || !Array.isArray(parsedItinerary.days) || parsedItinerary.days.length === 0) {
+            return res.status(400).json({ success: false, message: 'Lịch trình tour phải có ít nhất 1 ngày' });
+        }
+
         if (!parsedItinerary.dayImages) parsedItinerary.dayImages = {};
         
         try {
