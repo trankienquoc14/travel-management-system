@@ -1500,7 +1500,9 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                 adult: suggestedPrice,
                 child: childPrice,
                 toddler: toddlerPrice,
-                infant: infantPrice
+                infant: infantPrice,
+                childPolicy,
+                policyType
             };
             const payload = {
                 quote_price: grandTotalPrice,
@@ -1570,7 +1572,9 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
                 adult: suggestedPrice,
                 child: childPrice,
                 toddler: toddlerPrice,
-                infant: infantPrice
+                infant: infantPrice,
+                childPolicy,
+                policyType
             };
             const payload = {
                 quote_price: grandTotalPrice,
