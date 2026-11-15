@@ -822,10 +822,42 @@ exports.createChangeRequest = async (req, res) => {
           `, { replacements: [bk[0].num_people || 1, bk[0].departure_id] });
         }
       } else if (request_type === 'Reschedule' && new_departure_id) {
+        // Kiểm tra số chỗ khả dụng thời gian thực của đợt khởi hành mới
+        const [targetDep] = await sequelize.query(`
+          SELECT departure_id, departure_date, available_slots, max_slots, status 
+          FROM departures WHERE departure_id = ?
+        `, { replacements: [new_departure_id] });
+
+        if (targetDep.length === 0 || targetDep[0].status !== 'Open') {
+          return res.status(400).json({ success: false, message: 'Đợt khởi hành mới được chọn không tồn tại hoặc đã đóng bán!' });
+        }
+
+        const numPeople = Number(booking.num_people || 1);
+        if (Number(targetDep[0].available_slots || 0) < numPeople) {
+          return res.status(400).json({ 
+            success: false, 
+            message: `Không thể đổi lịch! Đợt khởi hành ngày ${new Date(targetDep[0].departure_date).toLocaleDateString('vi-VN')} tại thời điểm kiểm tra chỉ còn ${targetDep[0].available_slots} chỗ trống, không đủ cho đơn ${numPeople} khách!` 
+          });
+        }
+
         // Đổi sang ngày khởi hành mới
         await sequelize.query(`
           UPDATE bookings SET departure_id = ? WHERE booking_id = ?
         `, { replacements: [new_departure_id, booking_id] });
+
+        // Hoàn trả chỗ cho đợt cũ
+        if (booking.departure_id && String(booking.departure_id) !== String(new_departure_id)) {
+          await sequelize.query(`
+            UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
+          `, { replacements: [numPeople, booking.departure_id] });
+        }
+
+        // Trừ bớt chỗ của đợt mới
+        if (String(booking.departure_id) !== String(new_departure_id)) {
+          await sequelize.query(`
+            UPDATE departures SET available_slots = GREATEST(0, available_slots - ?) WHERE departure_id = ?
+          `, { replacements: [numPeople, new_departure_id] });
+        }
       }
 
       // Thông báo cho khách hàng

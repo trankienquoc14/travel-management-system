@@ -138,56 +138,52 @@ const StaffChangeRequestManager = () => {
     }
   };
 
-  const handleSelectBooking = async (booking) => {
-    setSelectedBooking(booking);
-    setCounterNewDepartureId('');
-    setTourDepartures([]);
-    
-    if (booking.tour_id) {
-      setLoadingDepartures(true);
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${GATEWAY_URL}/api/tours/${booking.tour_id}`, {
+  const fetchTourDeparturesForCounter = async (booking) => {
+    if (!booking) return [];
+    setLoadingDepartures(true);
+    try {
+      const token = localStorage.getItem('token');
+      let tId = booking.tour_id;
+      if (!tId) {
+        const tRes = await axios.get(`${GATEWAY_URL}/api/tours`);
+        const matched = tRes.data?.data?.find(t => t.tour_name === booking.tour_name);
+        if (matched) tId = matched.tour_id;
+      }
+      if (tId) {
+        const res = await axios.get(`${GATEWAY_URL}/api/tours/${tId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data && res.data.success && res.data.data?.departures) {
           const deps = res.data.data.departures.filter(d => 
             String(d.departure_id) !== String(booking.departure_id) && 
-            d.status === 'Open' && 
-            Number(d.available_slots || 0) >= Number(booking.num_people || 1)
+            d.status === 'Open'
           );
           setTourDepartures(deps);
+          return deps;
         }
-      } catch (err) {
-        console.error("Lỗi tải departures của tour:", err);
-      } finally {
-        setLoadingDepartures(false);
       }
+      setTourDepartures([]);
+      return [];
+    } catch (err) {
+      console.error("Lỗi tải departures của tour cho quầy:", err);
+      setTourDepartures([]);
+      return [];
+    } finally {
+      setLoadingDepartures(false);
     }
+  };
+
+  const handleSelectBooking = async (booking) => {
+    setSelectedBooking(booking);
+    setCounterNewDepartureId('');
+    setTourDepartures([]);
+    await fetchTourDeparturesForCounter(booking);
   };
 
   const handleChangeCounterReqType = async (type) => {
     setCounterRequestType(type);
-    if (type === 'Reschedule' && selectedBooking?.tour_id && tourDepartures.length === 0) {
-      setLoadingDepartures(true);
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${GATEWAY_URL}/api/tours/${selectedBooking.tour_id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.data && res.data.success && res.data.data?.departures) {
-          const deps = res.data.data.departures.filter(d => 
-            String(d.departure_id) !== String(selectedBooking.departure_id) && 
-            d.status === 'Open' && 
-            Number(d.available_slots || 0) >= Number(selectedBooking.num_people || 1)
-          );
-          setTourDepartures(deps);
-        }
-      } catch (err) {
-        console.error("Lỗi tải departures:", err);
-      } finally {
-        setLoadingDepartures(false);
-      }
+    if (type === 'Reschedule' && selectedBooking && tourDepartures.length === 0) {
+      await fetchTourDeparturesForCounter(selectedBooking);
     }
   };
 
@@ -200,9 +196,16 @@ const StaffChangeRequestManager = () => {
       alert("Vui lòng nhập lý do hủy hoặc đổi lịch của khách hàng!");
       return;
     }
-    if (counterRequestType === 'Reschedule' && !counterNewDepartureId) {
-      alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang!");
-      return;
+    if (counterRequestType === 'Reschedule') {
+      if (!counterNewDepartureId) {
+        alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang!");
+        return;
+      }
+      const chosenDep = tourDepartures.find(d => String(d.departure_id) === String(counterNewDepartureId));
+      if (chosenDep && Number(chosenDep.available_slots || 0) < Number(selectedBooking.num_people || 1)) {
+        alert(`Không thể đổi lịch!\nĐợt khởi hành đã chọn chỉ còn ${chosenDep.available_slots} chỗ trống, không đủ cho đơn ${selectedBooking.num_people} khách.\nVui lòng chọn đợt khởi hành khác còn đủ chỗ.`);
+        return;
+      }
     }
     if (counterRequestType === 'Cancel' && counterRefundMethod === 'Bank') {
       if (!counterBankInfo.bankName || !counterBankInfo.accountNumber || !counterBankInfo.accountHolder) {
@@ -1024,23 +1027,60 @@ const StaffChangeRequestManager = () => {
                         {loadingDepartures ? (
                           <div style={{ padding: '12px', fontSize: '13px', color: '#64748b' }}>Đang tải danh sách đợt khởi hành...</div>
                         ) : tourDepartures.length === 0 ? (
-                          <div style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '13px', color: '#b91c1c' }}>
-                            Không tìm thấy đợt khởi hành nào khác còn đủ chỗ trống cho tour này. Vui lòng liên hệ bộ phận điều hành để bổ sung lịch khởi hành.
+                          <div style={{ padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '13px', color: '#b91c1c' }}>
+                            Tour này hiện chưa có đợt khởi hành mở bán khác. Vui lòng liên hệ bộ phận điều hành để bổ sung lịch khởi hành.
                           </div>
                         ) : (
                           <div>
+                            <label style={{ fontSize: '12.5px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                              Đợt khởi hành xác nhận chuyển sang: *
+                            </label>
                             <select
                               value={counterNewDepartureId}
                               onChange={(e) => setCounterNewDepartureId(e.target.value)}
-                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', outline: 'none' }}
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', outline: 'none', marginBottom: '10px' }}
                             >
                               <option value="">-- Chọn đợt khởi hành muốn chuyển sang --</option>
-                              {tourDepartures.map(d => (
-                                <option key={d.departure_id} value={d.departure_id}>
-                                  Khởi hành: {new Date(d.departure_date).toLocaleDateString('vi-VN')} - Trở về: {d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {d.available_slots} chỗ trống)
-                                </option>
-                              ))}
+                              {tourDepartures.map(d => {
+                                const isEnough = Number(d.available_slots || 0) >= Number(selectedBooking.num_people || 1);
+                                return (
+                                  <option key={d.departure_id} value={d.departure_id}>
+                                    Khởi hành: {new Date(d.departure_date).toLocaleDateString('vi-VN')} - Trở về: {d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : 'N/A'} (Còn {d.available_slots}/{d.max_slots} chỗ {isEnough ? '✅ Đủ chỗ' : '❌ Thiếu chỗ'})
+                                  </option>
+                                );
+                              })}
                             </select>
+
+                            {/* HIỂN THỊ CHI TIẾT TÌNH TRẠNG CHỖ KHI ĐÃ CHỌN ĐỢT */}
+                            {counterNewDepartureId && (() => {
+                              const chosenDep = tourDepartures.find(d => String(d.departure_id) === String(counterNewDepartureId));
+                              if (!chosenDep) return null;
+                              const isEnough = Number(chosenDep.available_slots || 0) >= Number(selectedBooking.num_people || 1);
+
+                              return (
+                                <div style={{
+                                  padding: '12px 16px', borderRadius: '8px',
+                                  background: isEnough ? '#ecfdf5' : '#fef2f2',
+                                  border: `1px solid ${isEnough ? '#a7f3d0' : '#fecaca'}`,
+                                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                }}>
+                                  <div>
+                                    <div style={{ fontWeight: '700', fontSize: '13.5px', color: isEnough ? '#15803d' : '#b91c1c' }}>
+                                      {isEnough ? '✅ Đợt khởi hành này đủ chỗ phục vụ' : '⚠️ Đợt khởi hành này không đủ chỗ'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                                      Số chỗ còn lại: <strong>{chosenDep.available_slots} / {chosenDep.max_slots} chỗ</strong> &bull; Đơn cần: <strong>{selectedBooking.num_people} chỗ</strong>
+                                    </div>
+                                  </div>
+                                  <span style={{
+                                    padding: '4px 10px', borderRadius: '6px', fontWeight: '700', fontSize: '12px',
+                                    background: isEnough ? '#15803d' : '#b91c1c', color: '#ffffff'
+                                  }}>
+                                    {isEnough ? 'ĐỦ CHỖ' : 'THIẾU CHỖ'}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
