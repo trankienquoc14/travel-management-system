@@ -734,6 +734,24 @@ const StaffTourDesigner = ({ requestData, onBack }) => {
                                 <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span>📋</span> Chi tiết yêu cầu
                                 </h3>
+                                {(requestData?.manager_note || requestData?.customer_note) && (
+                                    <div style={{
+                                        background: '#fef2f2',
+                                        border: '1px solid #fecaca',
+                                        borderRadius: '8px',
+                                        padding: '12px 14px',
+                                        marginBottom: '12px',
+                                        color: '#991b1b'
+                                    }}>
+                                        <div style={{ fontWeight: '700', fontSize: '13.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>⚠️</span>
+                                            <span>{requestData.manager_note ? 'Quản lý yêu cầu chỉnh sửa:' : 'Khách hàng yêu cầu chỉnh sửa:'}</span>
+                                        </div>
+                                        <div style={{ fontSize: '13px', lineHeight: '1.45', whiteSpace: 'pre-wrap' }}>
+                                            {requestData.manager_note || requestData.customer_note}
+                                        </div>
+                                    </div>
+                                )}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#334155' }}>
                                     <div>
                                         <strong style={{ color: '#0f172a' }}>Điểm đến:</strong> <span style={{ fontWeight: '600', color: '#0369a1' }}>{requestData.destination}</span>
