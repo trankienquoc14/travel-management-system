@@ -1,0 +1,1 @@
+{"name":"chat-service","version":"1.0.0","private":true,"dependencies":{"@google/genai":"^3.3.0"}}

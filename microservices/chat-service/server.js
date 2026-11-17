@@ -6,7 +6,15 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const mysql = require('../node_modules/mysql2/promise');
-const { processAIQuery } = require('./aiBotEngine');
+const jwt = require('../node_modules/jsonwebtoken');
+const { askAI, askAIStream, isUsableGeminiKey } = require('./ai/geminiService');
+const {
+  validateQuestion,
+  checkRateLimit,
+  getCachedResponse,
+  setCachedResponse,
+  logAIChat
+} = require('./ai/aiSecurity');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
@@ -196,14 +204,14 @@ app.post('/api/chat/init', async (req, res) => {
 
       const convId = insertRes.insertId;
 
-      // Gửi tin nhắn chào mừng tự động từ BOT
+      // Gửi tin nhắn chào mừng tự động từ hệ thống
       await saveMessageToDb({
         conversation_id: convId,
         sender_type: 'bot',
         sender_id: null,
-        sender_name: 'Trợ lý Du lịch Travel (Bot)',
+        sender_name: 'Hệ thống hỗ trợ',
         message_type: 'text',
-        content: 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với Travel Management. Chúng tôi có thể giúp gì cho chuyến đi sắp tới của quý khách?'
+        content: 'Xin chào! 👋 Cảm ơn quý khách đã liên hệ với TravelVN. Nhân viên tư vấn đang tiếp nhận thông tin và sẽ phản hồi trong vài phút. Quý khách vui lòng để lại câu hỏi hoặc yêu cầu hỗ trợ nhé!'
       });
 
       const [newConv] = await pool.query(
@@ -389,25 +397,182 @@ app.post('/api/chat/messages', async (req, res) => {
   }
 });
 
-// 7. ROBOT CHAT AI - TRẢ LỜI DỰA VÀO CƠ SỞ DỮ LIỆU
-app.post('/api/chat/ai/ask', async (req, res) => {
+// 7. ROBOT CHAT AI - GEMINI RAG + FUNCTION CALLING + STREAMING
+function extractAuthUser(req) {
   try {
-    const { question, conversationHistory } = req.body;
-    if (!question || !question.trim()) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập câu hỏi' });
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.slice(7).trim();
+    if (!token) return null;
+    const secret = process.env.JWT_SECRET || 'travel_management_secret_key_2026';
+    return jwt.verify(token, secret);
+  } catch {
+    return null;
+  }
+}
+
+function getClientRateKey(req) {
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  const sessionId = req.body?.sessionId || req.headers['x-session-id'] || '';
+  return `${ip}:${sessionId}`;
+}
+
+app.get('/api/chat/ai/health', (req, res) => {
+  res.json({
+    success: true,
+    geminiConfigured: isUsableGeminiKey(),
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+  });
+});
+
+app.post('/api/chat/ai/ask', async (req, res) => {
+  const startedAt = Date.now();
+  const authUser = extractAuthUser(req);
+  const { question: rawQuestion, conversationHistory } = req.body || {};
+
+  const validation = validateQuestion(rawQuestion);
+  if (!validation.valid) {
+    return res.status(400).json({ success: false, message: validation.error });
+  }
+
+  const rate = checkRateLimit(getClientRateKey(req));
+  if (!rate.allowed) {
+    return res.status(429).json({
+      success: false,
+      message: `Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau ${rate.retryAfterSec} giây.`
+    });
+  }
+
+  try {
+    const question = validation.question;
+    const canUseCache = !authUser && (!Array.isArray(conversationHistory) || conversationHistory.length <= 1);
+    const cacheKey = question.toLowerCase();
+
+    if (canUseCache) {
+      const cached = getCachedResponse(cacheKey);
+      if (cached) {
+        logAIChat({
+          question,
+          responseTimeMs: Date.now() - startedAt,
+          mode: `${cached.mode}_cache`,
+          toolsUsed: cached.toolsUsed,
+          status: 'ok',
+          userId: authUser?.user_id || authUser?.id
+        });
+        return res.json({ success: true, data: cached });
+      }
     }
-    const result = await processAIQuery(question, conversationHistory);
+
+    const result = await askAI({
+      pool,
+      question,
+      conversationHistory,
+      authUser
+    });
+
+    if (canUseCache && result.mode !== 'guardrail') {
+      setCachedResponse(cacheKey, result);
+    }
+
+    logAIChat({
+      question,
+      responseTimeMs: Date.now() - startedAt,
+      mode: result.mode,
+      toolsUsed: result.toolsUsed,
+      status: 'ok',
+      userId: authUser?.user_id || authUser?.id
+    });
+
     res.json({
       success: true,
       data: result
     });
   } catch (error) {
+    logAIChat({
+      question: validation.question,
+      responseTimeMs: Date.now() - startedAt,
+      mode: 'error',
+      status: 'error',
+      userId: authUser?.user_id || authUser?.id
+    });
     console.error('Error in AI ask:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi xử lý câu hỏi AI',
       error: error.message
     });
+  }
+});
+
+app.post('/api/chat/ai/stream', async (req, res) => {
+  const startedAt = Date.now();
+  const authUser = extractAuthUser(req);
+  const { question: rawQuestion, conversationHistory } = req.body || {};
+
+  const validation = validateQuestion(rawQuestion);
+  if (!validation.valid) {
+    return res.status(400).json({ success: false, message: validation.error });
+  }
+
+  const rate = checkRateLimit(getClientRateKey(req));
+  if (!rate.allowed) {
+    return res.status(429).json({
+      success: false,
+      message: `Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau ${rate.retryAfterSec} giây.`
+    });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
+
+  const sendEvent = (event, payload) => {
+    if (res.writableEnded) return;
+    res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  try {
+    const result = await askAIStream({
+      pool,
+      question: validation.question,
+      conversationHistory,
+      authUser,
+      onChunk: (textDelta) => {
+        sendEvent('delta', { text: textDelta });
+      }
+    });
+
+    logAIChat({
+      question: validation.question,
+      responseTimeMs: Date.now() - startedAt,
+      mode: result.mode,
+      toolsUsed: result.toolsUsed,
+      status: 'ok',
+      userId: authUser?.user_id || authUser?.id
+    });
+
+    sendEvent('done', {
+      suggestions: result.suggestions || [],
+      handoffSuggested: Boolean(result.handoffSuggested),
+      mode: result.mode,
+      toolsUsed: result.toolsUsed || []
+    });
+    res.end();
+  } catch (error) {
+    logAIChat({
+      question: validation.question,
+      responseTimeMs: Date.now() - startedAt,
+      mode: 'stream_error',
+      status: 'error',
+      userId: authUser?.user_id || authUser?.id
+    });
+    console.error('Error in AI stream:', error);
+    sendEvent('error', { message: 'Không thể kết nối trợ lý AI lúc này. Vui lòng thử lại hoặc liên hệ nhân viên.' });
+    res.end();
   }
 });
 

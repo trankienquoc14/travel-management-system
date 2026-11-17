@@ -355,8 +355,8 @@ async function processAIQuery(question, conversationHistory = []) {
   // -------------------------------------------------------------
   if (qLower.includes('trẻ em') || qLower.includes('em bé') || qLower.includes('con nít') || (qLower.includes('tuổi') && (qLower.includes('giá') || qLower.includes('vé')))) {
     return {
-      reply: `👶 **CHÍNH SÁCH GIÁ VÉ TRẺ EM TẠI TRAVELVN:**\n\nTheo quy định vận hành tour của công ty:\n- 🍼 **Dưới 2 tuổi:** **Miễn phí 100%** giá tour (bố mẹ tự lo ăn uống và vé phát sinh nếu có).\n- 🧒 **Từ 2 đến dưới 5 tuổi:** Tính **50% giá tour người lớn** (có ghế ngồi riêng trên xe, ăn ngủ chung cùng bố mẹ).\n- 👦 **Từ 6 đến dưới 11 tuổi:** Tính **75% giá tour người lớn** (tiêu chuẩn suất ăn riêng, ghế riêng, ngủ chung phòng cùng bố mẹ).\n- 🧑 **Từ 12 tuổi trở lên:** Tính **100% như người lớn** (hưởng đầy đủ dịch vụ giường nằm, phòng riêng).\n\n💡 *Lưu ý: 2 người lớn chỉ được kèm 1 trẻ em diện miễn phí hoặc 50%, từ bé thứ 2 trở đi áp dụng phụ thu phòng đơn hoặc suất 75%.*`,
-      suggestions: ['Chính sách hoàn hủy tour', 'Phương thức thanh toán', 'Xem tour trọn gói']
+      reply: `👶 **CHÍNH SÁCH GIÁ VÉ THEO ĐỘ TUỔI TẠI TRAVELVN:**\n\nTheo quy định niêm yết chính thức của hệ thống:\n- 🍼 **Em bé (dưới 2 tuổi):** **Miễn phí 100%** vé tour (bố mẹ tự lo chi phí ăn uống/phát sinh nếu có).\n- 🧒 **Trẻ nhỏ (từ 2 đến 4 tuổi):** Tính **50% giá người lớn** (có ghế ngồi riêng trên xe, ngủ chung giường với người lớn).\n- 👦 **Trẻ em (từ 5 đến 11 tuổi):** Tính **70% giá người lớn** (có suất ăn riêng, ghế riêng trên xe, ngủ chung giường với người lớn).\n- 🧑 **Người lớn (từ 12 tuổi trở lên):** Tính **100% giá tour niêm yết**.\n- 🛏️ **Phụ thu phòng đơn:** Áp dụng khi khách từ 12 tuổi trở lên có nhu cầu ngủ riêng 1 phòng. Mức phụ thu hiển thị rõ ràng tại bảng tính tiền khi đặt tour.`,
+      suggestions: ['Chính sách hoàn hủy tour', 'Phương thức thanh toán VietQR', 'Xem tour trọn gói']
     };
   }
 
@@ -365,8 +365,8 @@ async function processAIQuery(question, conversationHistory = []) {
   // -------------------------------------------------------------
   if (qLower.includes('hủy tour') || qLower.includes('hoàn tiền') || qLower.includes('đổi lịch') || qLower.includes('đổi tour') || qLower.includes('hoàn vé')) {
     return {
-      reply: `🔄 **CHÍNH SÁCH HỦY TOUR & HOÀN TIỀN CỦA TRAVELVN:**\n\nHệ thống TravelVN áp dụng quy định bảo vệ quyền lợi khách hàng minh bạch như sau:\n\n1. **Quy định hoàn tiền khi hủy tour:**\n- 🟢 **Hủy trước 7 ngày khởi hành:** **Hoàn tiền 100%** giá trị tour đã thanh toán.\n- 🟡 **Hủy từ 3 đến 6 ngày trước khởi hành:** **Hoàn tiền 50%** (do công ty đã đặt cọc dịch vụ phòng và xe).\n- 🔴 **Hủy dưới 3 ngày trước khởi hành:** Không hoàn lại tiền.\n\n2. **Quy định đổi lịch khởi hành:**\n- 📅 Hỗ trợ đổi ngày khởi hành **miễn phí 1 lần** nếu thông báo trước ít nhất 5 ngày (tùy vào tình trạng còn chỗ của đoàn tiếp theo).\n\n3. **Thời gian nhận tiền hoàn:**\n- Tiền hoàn sẽ được chuyển khoản trực tiếp về tài khoản ngân hàng của Quý khách trong vòng **24 - 48 giờ** làm việc sau khi yêu cầu được duyệt!`,
-      suggestions: ['Các tour sắp khởi hành', 'Hình thức thanh toán', 'Tư vấn viên trực tiếp']
+      reply: `🔄 **CHÍNH SÁCH HỦY TOUR, ĐỔI LỊCH & HOÀN TIỀN CỦA TRAVELVN:**\n\n1. **Quy định hoàn tiền khi hủy tour:**\n- 🟢 **Hủy trước ngày khởi hành từ 15 ngày trở lên:** Hoàn **90%** tổng giá trị đơn hàng.\n- 🟡 **Hủy trước từ 7 đến 14 ngày:** Hoàn **70%** tổng giá trị đơn hàng.\n- 🟠 **Hủy trước từ 3 đến 6 ngày:** Hoàn **50%** tổng giá trị đơn hàng.\n- 🔴 **Hủy dưới 48 giờ trước giờ khởi hành:** Không hoàn tiền (0%).\n\n2. **Quy định đổi lịch khởi hành:**\n- 📅 Hỗ trợ đổi sang đợt khởi hành khác cùng tour hoặc tương đương nếu thông báo trước ít nhất 7 ngày và đợt mới còn chỗ.\n\n3. **Thời gian giữ chỗ thanh toán:**\n- Đối với đơn chọn chuyển khoản ngân hàng (VietQR / SePay), hệ thống giữ chỗ trong **10 phút**. Nếu quá 10 phút chưa thanh toán, đơn tự động hủy để nhả chỗ và hệ thống tự động gửi email thông báo hủy đến khách hàng.`,
+      suggestions: ['Các tour sắp khởi hành', 'Hình thức thanh toán VietQR', 'Liên hệ nhân viên']
     };
   }
 
@@ -375,8 +375,8 @@ async function processAIQuery(question, conversationHistory = []) {
   // -------------------------------------------------------------
   if (qLower.includes('thanh toán') || qLower.includes('chuyển khoản') || qLower.includes('sepay') || qLower.includes('ngân hàng') || qLower.includes('đặt cọc')) {
     return {
-      reply: `💳 **CÁC PHƯƠNG THỨC THANH TOÁN TẠI TRAVELVN:**\n\nQuý khách có thể lựa chọn các hình thức thanh toán tiện lợi và an toàn:\n\n1. ⚡ **Chuyển khoản VietQR Realtime (Tự động 24/7):**\n- Hệ thống tạo mã QR động tích hợp SePay. Quý khách chỉ cần mở ứng dụng ngân hàng quét mã QR, hệ thống sẽ tự động đối soát và kích hoạt đơn đặt tour thành công ngay lập tức (trong 3 giây).\n- Ngân hàng liên kết: **TPBank** (Số tài khoản: \`00000419627\` - DOAN THI TRAM).\n\n2. 🏢 **Thanh toán tiền mặt tại quầy:**\n- Quý khách có thể ghé trực tiếp quầy giao dịch TravelVN trước ngày khởi hành để nhận vé bản cứng và thanh toán tiền mặt.\n\n3. 🔒 **Chính sách giữ chỗ:**\n- Sau khi đặt đơn, vé được giữ chỗ tạm thời trong 24 giờ để Quý khách hoàn tất thanh toán.`,
-      suggestions: ['Xem các tour đang mở', 'Chính sách hoàn tiền', 'Tư vấn thiết kế tour']
+      reply: `💳 **CÁC PHƯƠNG THỨC THANH TOÁN TẠI TRAVELVN:**\n\n1. ⚡ **Chuyển khoản VietQR Realtime (Tự động đối soát):**\n- Ngay sau khi bấm đặt tour, hệ thống hiển thị mã VietQR kèm số tiền và nội dung tự động. Sau khi quét mã chuyển khoản, hệ thống SePay tự động đối soát trong 3 - 5 giây và xác nhận đơn ngay lập tức.\n- Ngân hàng liên kết: **TPBank** (Số tài khoản: \`00000419627\` - DOAN THI TRAM).\n- **Thời hạn giữ chỗ:** **10 phút**. Quá 10 phút đơn sẽ tự động hủy nhả chỗ.\n\n2. 🏢 **Thanh toán tiền mặt:**\n- Quý khách có thể thanh toán trực tiếp tại văn phòng TravelVN.\n\n3. 📋 **Tra cứu đơn hàng:**\n- Quý khách có thể xem mã đơn và trạng thái vé bất kỳ lúc nào tại mục **Đơn đặt tour của tôi** (/my-bookings).`,
+      suggestions: ['Xem các tour đang mở', 'Chính sách hoàn hủy tour', 'Liên hệ nhân viên']
     };
   }
 
@@ -507,7 +507,7 @@ async function processAIQuery(question, conversationHistory = []) {
           priceReply += `   • 💵 Giá trọn gói: **${formatVND(t.base_price)}**/khách\n\n`;
         });
         priceReply += `✨ **Giá đã bao gồm:** Xe du lịch đưa đón khứ hồi, khách sạn 3★ - 4★, toàn bộ các bữa ăn đặc sản, vé tham quan và bảo hiểm du lịch.\n`;
-        priceReply += `👶 **Trẻ em:** Dưới 2 tuổi miễn phí 100%, 2 - 5 tuổi 50%, 6 - 11 tuổi 75%.`;
+        priceReply += `👶 **Chính sách giá theo độ tuổi:** Dưới 2 tuổi miễn phí; 2 - 4 tuổi 50%; 5 - 11 tuổi 70%; từ 12 tuổi tính 100% giá người lớn.`;
         return {
           reply: priceReply,
           suggestions: [`Lịch khởi hành tour ${destName}`, `Lịch trình tour ${destName}`, 'Chính sách hoàn hủy']
@@ -658,7 +658,16 @@ async function processAIQuery(question, conversationHistory = []) {
   // -------------------------------------------------------------
   // 13. CÂU HỎI XEM DANH SÁCH TOUR TỔNG QUÁT (CHỈ KHI THỰC SỰ HỎI VỀ TOUR)
   // -------------------------------------------------------------
-  const isGeneralTourRequest = qLower.includes('có những tour nào') || qLower.includes('các tour đang mở') || qLower.includes('danh sách tour') || qLower.includes('tour hot') || qLower.includes('tour nổi bật') || qLower.includes('giới thiệu tour') || qLower.includes('xem tour');
+  const isGeneralTourRequest =
+    /(tour.*(nao|gi|mo ban|dang ban|hien co|tat ca|goi y|du lich)|danh sach tour|cac tour|co nhung tour|co tour nao|xem tour|tour hot|tour noi bat|mở bán|mo ban)/i.test(
+      qLower
+    ) ||
+    qLower.includes('có những tour nào') ||
+    qLower.includes('các tour đang mở') ||
+    qLower.includes('danh sách tour') ||
+    qLower.includes('mở bán') ||
+    qLower.includes('tour du lịch nào') ||
+    qLower.includes('tour nào');
 
   if (isGeneralTourRequest) {
     try {

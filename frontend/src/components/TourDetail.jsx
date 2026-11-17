@@ -1,17 +1,41 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerFooter from './CustomerFooter';
 import CustomerNavbar from './CustomerNavbar';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 import TourReviewModal from './TourReviewModal';
-import { Star, Image as ImageIcon, Camera, ThumbsUp, ShieldCheck, X } from 'lucide-react';
+import {
+    Star,
+    Image as ImageIcon,
+    Camera,
+    ThumbsUp,
+    ShieldCheck,
+    X,
+    MapPin,
+    Clock,
+    Calendar,
+    Users,
+    CheckCircle2,
+    XCircle,
+    AlertTriangle,
+    ChevronRight,
+    ChevronDown,
+    Utensils,
+    Car,
+    Tag,
+    PhoneCall,
+    Edit3,
+    Lock,
+    Sparkles,
+    ArrowLeft
+} from 'lucide-react';
 import '../index.css';
 
 
 const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, destinations, bgImage }) => {
     const [isExpanded, setIsExpanded] = React.useState(index === 0);
-    
+
     // Bữa ăn
     let meals = [];
     if (isOldFormat) {
@@ -22,8 +46,8 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
         if (day.meals?.dinner) meals.push('chiều');
         if (meals.length === 0) meals = ['Ăn tự túc'];
     }
-    const mealStr = `🍴 ${meals.join(', ')}`;
-    
+    const mealStr = meals.join(', ');
+
     // Tiêu đề tuyến
     let title = '';
     if (isOldFormat) {
@@ -35,14 +59,14 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
             title = [getD(day.start_destination_id), getD(day.end_destination_id)].filter(Boolean).join(' - ');
         }
     }
-    
+
     // Hoạt động
     let activities = [];
     if (isOldFormat) {
         ['morning', 'noon', 'evening'].forEach(slot => {
-            if(day.slots && day.slots[slot]) {
+            if (day.slots && day.slots[slot]) {
                 day.slots[slot].forEach(item => {
-                   activities.push(item);
+                    activities.push(item);
                 });
             }
         });
@@ -50,7 +74,6 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
         activities = day.activities || [];
     }
 
-    
     let img = parsedDesign?.dayImages?.[day.dayIndex];
     if (img && !img.startsWith('http')) {
         let path = img;
@@ -60,31 +83,48 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
     }
     img = img || bgImage;
 
-
     return (
-        <div style={{ position: 'relative', marginBottom: isExpanded ? '40px' : '20px' }}>
-            {/* The dot marker */}
-            <div style={{ position: 'absolute', left: '-36px', top: isExpanded ? '60px' : '36px', width: '18px', height: '18px', borderRadius: '50%', background: '#0f172a', border: '4px solid #fff', zIndex: 2, transform: 'translateY(-50%)', transition: 'all 0.3s', boxShadow: '0 0 0 1px #cbd5e1' }}></div>
-            
+        <div style={{ position: 'relative', marginBottom: isExpanded ? '28px' : '14px' }}>
+            {/* Timeline marker */}
+            <div style={{
+                position: 'absolute', left: '-34px', top: isExpanded ? '34px' : '30px',
+                width: '16px', height: '16px', borderRadius: '50%',
+                background: isExpanded ? '#168BEB' : '#102A43',
+                border: '3px solid #ffffff', zIndex: 2, transform: 'translateY(-50%)',
+                boxShadow: '0 0 0 2px #D9E2EC'
+            }} />
+
             {isExpanded ? (
-                <div style={{ transition: 'all 0.3s' }}>
-                    {/* Header Card (Blue) */}
-                    <div onClick={() => setIsExpanded(false)} style={{ display: 'flex', background: '#eff6ff', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', minHeight: '160px' }}>
-                        <div style={{ flex: 1, padding: '32px' }}>
-                            <h3 style={{ color: '#3b82f6', fontSize: '24px', marginBottom: '12px', fontWeight: 'bold' }}>Ngày {day.dayIndex}</h3>
-                            <strong style={{ fontSize: '18px', color: '#0f172a', display: 'block', marginBottom: '12px', lineHeight: '1.5' }}>{title || `Khám phá ngày ${day.dayIndex}`}</strong>
-                            <span style={{ color: '#64748b', fontSize: '15px' }}>{mealStr}</span>
+                <div className="tt-card" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                    <div
+                        onClick={() => setIsExpanded(false)}
+                        style={{ display: 'flex', background: '#F3F8FE', cursor: 'pointer', minHeight: '140px', flexWrap: 'wrap' }}
+                    >
+                        <div style={{ flex: 1, minWidth: '240px', padding: '24px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span className="tt-badge tt-badge-primary" style={{ fontSize: '13px', padding: '5px 12px' }}>
+                                    Ngày {day.dayIndex}
+                                </span>
+                                <ChevronDown size={20} color="#168BEB" />
+                            </div>
+                            <strong style={{ fontSize: '17.5px', color: '#102A43', display: 'block', marginBottom: '10px', lineHeight: '1.45' }}>
+                                {title || `Khám phá ngày ${day.dayIndex}`}
+                            </strong>
+                            <span style={{ color: '#486581', fontSize: '13.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                                <Utensils size={14} color="#FF9852" /> {mealStr}
+                            </span>
                         </div>
-                        <div style={{ width: '45%', backgroundImage: `url(${img})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                        <div style={{ width: '40%', minWidth: '200px', minHeight: '140px', backgroundImage: `url(${img})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                     </div>
-                    
-                    {/* Content Card (White) */}
-                    <div style={{ background: '#fff', borderRadius: '20px', padding: '32px', marginTop: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                        <strong style={{ fontSize: '17px', color: '#0f172a', marginBottom: '20px', display: 'block' }}>Hoạt động chính trong ngày:</strong>
-                        <ul style={{ paddingLeft: '24px', color: '#1e293b', fontSize: '15.5px', lineHeight: '2' }}>
+
+                    <div style={{ background: '#ffffff', padding: '24px 28px', borderTop: '1px solid #EBF2F7' }}>
+                        <strong style={{ fontSize: '15.5px', color: '#102A43', marginBottom: '14px', display: 'block' }}>
+                            Hoạt động chính trong ngày
+                        </strong>
+                        <ul style={{ paddingLeft: '20px', margin: 0, color: '#334E68', fontSize: '14.5px', lineHeight: '1.85' }}>
                             {activities.map((act, idx) => (
-                                <li key={idx} style={{ marginBottom: '12px' }}>
-                                    <strong style={{color: '#0f172a'}}>{act.name}</strong> {act.type ? `- ${act.type}` : ''}
+                                <li key={idx} style={{ marginBottom: '8px' }}>
+                                    <strong style={{ color: '#102A43' }}>{act.name}</strong> {act.type ? <span style={{ color: '#486581' }}>— {act.type}</span> : ''}
                                 </li>
                             ))}
                             {activities.length === 0 && <li>Tự do tham quan và nghỉ ngơi theo lịch trình.</li>}
@@ -92,14 +132,21 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
                     </div>
                 </div>
             ) : (
-                <div onClick={() => setIsExpanded(true)} style={{ background: '#fff', borderRadius: '20px', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}
-                     onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)'}
-                     onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.03)'}>
+                <div
+                    onClick={() => setIsExpanded(true)}
+                    className="tt-card"
+                    style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderRadius: '14px' }}
+                >
                     <div>
-                        <strong style={{ fontSize: '17px', color: '#0f172a', display: 'block', marginBottom: '8px' }}>Ngày {day.dayIndex}: {title || `Khám phá ngày ${day.dayIndex}`}</strong>
-                        <span style={{ color: '#64748b', fontSize: '15px' }}>{mealStr}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                            <span className="tt-badge tt-badge-primary">Ngày {day.dayIndex}</span>
+                            <strong style={{ fontSize: '15.5px', color: '#102A43' }}>{title || `Khám phá ngày ${day.dayIndex}`}</strong>
+                        </div>
+                        <span style={{ color: '#486581', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <Utensils size={13} color="#FF9852" /> {mealStr}
+                        </span>
                     </div>
-                    <span style={{ fontSize: '24px', color: '#94a3b8' }}>›</span>
+                    <ChevronRight size={20} color="#829AB1" />
                 </div>
             )}
         </div>
@@ -251,7 +298,24 @@ const TourDetail = () => {
         });
     };
 
-    if (!tour) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Đang tải dữ liệu...</div>;
+    if (!tour) {
+        return (
+            <div className="tt-page">
+                <CustomerNavbar activeTab="explore" />
+                <div className="tt-container" style={{ padding: '40px 24px' }}>
+                    <div className="tt-skeleton" style={{ height: '320px', borderRadius: '18px', marginBottom: '28px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '28px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div className="tt-skeleton" style={{ height: '120px' }} />
+                            <div className="tt-skeleton" style={{ height: '240px' }} />
+                        </div>
+                        <div className="tt-skeleton" style={{ height: '280px' }} />
+                    </div>
+                </div>
+                <CustomerFooter />
+            </div>
+        );
+    }
 
     // ==========================================
     // LOGIC XỬ LÝ ẢNH THÔNG MINH
@@ -286,43 +350,90 @@ const TourDetail = () => {
     const totalAmount = tour.base_price * numPeople;
 
     return (
-        <div className="tour-detail-page">
+        <div className="tt-page">
             <CustomerNavbar activeTab="explore" />
 
-            <div className="detail-hero" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${bgImage})` }}>
-                <div className="detail-hero-content">
-                    <span className="badge-location">📍 {getDestString(tour, parsedDesign)}</span>
-                    <h1>{tour.tour_name}</h1>
-                    <p>{tour.duration_days} Ngày {Math.max(0, tour.duration_days - 1)} Đêm | Trải nghiệm đẳng cấp</p>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '6px 16px', borderRadius: '30px', marginTop: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontWeight: '800', fontSize: '15px' }}>
-                            <Star size={18} fill="#f59e0b" color="#f59e0b" />
-                            <span>{reviewStats?.average_rating ? Number(reviewStats.average_rating).toFixed(1) : (tour.average_rating ? Number(tour.average_rating).toFixed(1) : '5.0')} / 5</span>
-                        </div>
-                        <span style={{ color: '#cbd5e1', fontSize: '13.5px' }}>•</span>
-                        <span style={{ color: '#f1f5f9', fontSize: '13.5px', fontWeight: '600' }}>
-                            {reviewStats?.review_count || tour.review_count || 0} lượt đánh giá thực tế
+            {/* HERO BANNER */}
+            <div style={{
+                position: 'relative',
+                minHeight: '380px',
+                display: 'flex',
+                alignItems: 'flex-end',
+                backgroundImage: `linear-gradient(180deg, rgba(16, 42, 67, 0.35) 0%, rgba(16, 42, 67, 0.88) 100%), url(${bgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                color: '#ffffff',
+                padding: '48px 0 40px 0'
+            }}>
+                <div className="tt-container">
+                    <Link
+                        to="/tours"
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            color: '#D9E2EC', textDecoration: 'none', fontSize: '13.5px', fontWeight: '600',
+                            marginBottom: '18px', background: 'rgba(16, 42, 67, 0.55)', padding: '6px 14px',
+                            borderRadius: '999px', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(6px)'
+                        }}
+                    >
+                        <ArrowLeft size={14} /> Quay lại danh sách tour
+                    </Link>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            background: '#168BEB', color: '#ffffff', padding: '5px 14px',
+                            borderRadius: '999px', fontSize: '13px', fontWeight: '700'
+                        }}>
+                            <MapPin size={14} /> {getDestString(tour, parsedDesign)}
                         </span>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)',
+                            color: '#ffffff', padding: '5px 14px', borderRadius: '999px', fontSize: '13px', fontWeight: '700'
+                        }}>
+                            <Clock size={14} /> {tour.duration_days} Ngày {Math.max(0, tour.duration_days - 1)} Đêm
+                        </span>
+                        {(reviewStats?.review_count || tour.review_count) > 0 && (
+                            <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                background: 'rgba(16, 42, 67, 0.65)', backdropFilter: 'blur(6px)',
+                                padding: '5px 14px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', color: '#FDE68A'
+                            }}>
+                                <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                                {reviewStats?.average_rating ? Number(reviewStats.average_rating).toFixed(1) : Number(tour.average_rating || 0).toFixed(1)} / 5
+                                <span style={{ color: '#D9E2EC', fontWeight: '500' }}>({reviewStats?.review_count || tour.review_count} đánh giá)</span>
+                            </span>
+                        )}
                     </div>
+
+                    <h1 style={{ fontSize: '34px', fontWeight: '900', color: '#ffffff', lineHeight: '1.25', margin: 0, maxWidth: '880px' }}>
+                        {tour.tour_name}
+                    </h1>
                 </div>
             </div>
 
-            <div className="detail-container">
-                <div className="detail-main">
+            <div className="tt-detail-layout">
+                <div style={{ minWidth: 0 }}>
                     {(parsedDesign?.categories?.length > 0 || parsedDesign?.highlights) && (
-                        <div style={{ marginBottom: '24px', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div className="tt-card" style={{ marginBottom: '28px', background: '#ffffff', padding: '24px', borderRadius: '16px' }}>
                             {Array.isArray(parsedDesign.categories) && parsedDesign.categories.length > 0 && (
                                 <div style={{ marginBottom: parsedDesign.highlights ? '16px' : '0' }}>
-                                    <strong style={{ fontSize: '15px', color: '#047857', display: 'block', marginBottom: '10px' }}>🏷️ Phân loại Tour:</strong>
+                                    <strong style={{ fontSize: '14.5px', color: '#102A43', display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
+                                        <Tag size={16} color="#168BEB" /> Phân loại Tour
+                                    </strong>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                        {parsedDesign.categories.map(c => <span key={c} style={{ background: '#ecfdf5', color: '#059669', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', border: '1px solid #a7f3d0' }}>{c}</span>)}
+                                        {parsedDesign.categories.map(c => (
+                                            <span key={c} className="tt-badge tt-badge-primary" style={{ padding: '6px 14px', fontSize: '13px' }}>{c}</span>
+                                        ))}
                                     </div>
                                 </div>
                             )}
                             {parsedDesign.highlights && (
-                                <div style={{ borderTop: (Array.isArray(parsedDesign.categories) && parsedDesign.categories.length > 0) ? '1px dashed #cbd5e1' : 'none', paddingTop: (Array.isArray(parsedDesign.categories) && parsedDesign.categories.length > 0) ? '16px' : '0' }}>
-                                    <strong style={{ fontSize: '15px', color: '#ea580c', display: 'block', marginBottom: '8px' }}>✨ Điểm nhấn hành trình:</strong>
-                                    <p style={{ margin: 0, fontSize: '14px', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{parsedDesign.highlights}</p>
+                                <div style={{ borderTop: (Array.isArray(parsedDesign.categories) && parsedDesign.categories.length > 0) ? '1px dashed #D9E2EC' : 'none', paddingTop: (Array.isArray(parsedDesign.categories) && parsedDesign.categories.length > 0) ? '16px' : '0' }}>
+                                    <strong style={{ fontSize: '14.5px', color: '#102A43', display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
+                                        <Sparkles size={16} color="#FF9852" /> Điểm nhấn hành trình
+                                    </strong>
+                                    <p style={{ margin: 0, fontSize: '14.5px', color: '#334E68', whiteSpace: 'pre-wrap', lineHeight: '1.65' }}>{parsedDesign.highlights}</p>
                                 </div>
                             )}
                         </div>
@@ -454,7 +565,7 @@ const TourDetail = () => {
                             return (
                                 <div>
                                     {/* Tabs Tháng */}
-                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '6px' }} className="hide-scrollbar">
                                         {monthKeys.map(mObj => {
                                             const isActive = mObj.key === selectedMonthTab;
                                             return (
@@ -462,34 +573,38 @@ const TourDetail = () => {
                                                     key={mObj.key}
                                                     onClick={() => setSelectedMonthTab(mObj.key)}
                                                     style={{
-                                                        padding: '12px 24px',
-                                                        borderRadius: '16px',
-                                                        border: isActive ? 'none' : '1px solid #cbd5e1',
-                                                        background: isActive ? '#1d4ed8' : '#fff',
-                                                        color: isActive ? '#fff' : '#64748b',
-                                                        fontWeight: '600',
-                                                        fontSize: '15px',
+                                                        padding: '10px 20px',
+                                                        borderRadius: '12px',
+                                                        border: isActive ? '1.5px solid #168BEB' : '1.5px solid #D9E2EC',
+                                                        background: isActive ? '#168BEB' : '#ffffff',
+                                                        color: isActive ? '#ffffff' : '#486581',
+                                                        fontWeight: '700',
+                                                        fontSize: '14px',
                                                         cursor: 'pointer',
                                                         whiteSpace: 'nowrap',
                                                         display: 'flex',
                                                         flexDirection: 'column',
                                                         alignItems: 'center',
-                                                        gap: '4px',
-                                                        minWidth: '100px'
+                                                        gap: '2px',
+                                                        minWidth: '96px',
+                                                        transition: 'all 0.2s'
                                                     }}
                                                 >
                                                     <span>{mObj.labelMonth}</span>
-                                                    <span style={{ fontSize: '14px', fontWeight: isActive ? '600' : '500' }}>{mObj.labelYear}</span>
+                                                    <span style={{ fontSize: '12.5px', fontWeight: '600', opacity: isActive ? 0.92 : 0.8 }}>{mObj.labelYear}</span>
                                                 </button>
                                             );
                                         })}
                                     </div>
                                     
                                     {/* Danh sách ngày */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                                         {activeDeps.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
-                                                Hiện chưa có lịch khởi hành nào trong {selectedMonthTab ? selectedMonthTab.replace('_', ' năm ') : 'tháng này'}.
+                                            <div className="tt-empty-state" style={{ padding: '32px 20px' }}>
+                                                <Calendar size={26} color="#829AB1" />
+                                                <div style={{ fontSize: '14.5px', color: '#486581', fontWeight: '600' }}>
+                                                    Hiện chưa có lịch khởi hành nào trong {selectedMonthTab ? selectedMonthTab.replace('_', ' năm ') : 'tháng này'}.
+                                                </div>
                                             </div>
                                         ) : activeDeps.map(dep => {
                                             const isSelected = selectedDeparture === dep.departure_id;
@@ -499,30 +614,32 @@ const TourDetail = () => {
                                             const { isClosed, daysLeft } = checkDepartureCutoff(dep.departure_date, dep.status);
                                             
                                             return (
-                                                <div key={dep.departure_id} onClick={() => setSelectedDeparture(dep.departure_id)} style={{ padding: '20px', borderRadius: '16px', border: isSelected ? (isClosed ? '2px solid #ef4444' : '2px solid #1d4ed8') : '1px solid #cbd5e1', background: isClosed ? '#fffbfb' : '#fff', cursor: 'pointer', boxShadow: isSelected ? (isClosed ? '0 4px 12px rgba(239, 68, 68, 0.15)' : '0 4px 12px rgba(29, 78, 216, 0.15)') : 'none', transition: 'all 0.2s' }}>
+                                                <div key={dep.departure_id} onClick={() => setSelectedDeparture(dep.departure_id)} className="tt-card" style={{ padding: '20px', borderRadius: '16px', border: isSelected ? (isClosed ? '2px solid #EF4444' : '2px solid #168BEB') : '1px solid #D9E2EC', background: isClosed ? '#FEF2F2' : '#ffffff', cursor: 'pointer', boxShadow: isSelected ? (isClosed ? '0 8px 20px rgba(239, 68, 68, 0.12)' : '0 8px 24px rgba(22, 139, 235, 0.14)') : undefined }}>
                                                     {/* Header Card */}
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                                            <span style={{ background: isClosed ? '#fee2e2' : '#f8fafc', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', color: isClosed ? '#b91c1c' : '#1e40af', fontSize: '15px' }}>{dayOfWeek}, {dateStr}</span>
-                                                            <span style={{ color: '#475569', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>🎟️ {tour.tour_code || `${tour.tour_id}-DEP`}</span>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                            <span style={{ background: isClosed ? '#FEE2E2' : '#F3F8FE', padding: '7px 14px', borderRadius: '10px', fontWeight: '800', color: isClosed ? '#B91C1C' : '#102A43', fontSize: '14.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                                                <Calendar size={15} color={isClosed ? '#B91C1C' : '#168BEB'} /> {dayOfWeek}, {dateStr}
+                                                            </span>
+                                                            <span style={{ color: '#486581', fontSize: '13.5px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                                                <Tag size={14} color="#829AB1" /> {tour.tour_code || `${tour.tour_id}-DEP`}
+                                                            </span>
                                                             {Number(dep.available_slots) <= 0 ? (
-                                                                <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    🔴 Đã hết chỗ (0 chỗ)
-                                                                </span>
+                                                                <span className="tt-badge tt-badge-danger">Hết chỗ (0 chỗ)</span>
                                                             ) : isClosed ? (
-                                                                <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    🔒 Đã đóng đặt chỗ (Trước 30 ngày)
+                                                                <span className="tt-badge tt-badge-danger">
+                                                                    <Lock size={12} /> Đóng đặt chỗ (Trước 30 ngày)
                                                                 </span>
                                                             ) : (
-                                                                <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    🟢 Đang mở nhận khách (Còn {dep.available_slots} chỗ • {daysLeft} ngày)
+                                                                <span className="tt-badge tt-badge-success">
+                                                                    Còn {dep.available_slots} chỗ • {daysLeft} ngày nữa
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                                            <strong style={{ fontSize: '20px', color: '#0f172a' }}>{formatM(adultPrice)}</strong>
-                                                            <button style={{ background: isSelected ? (isClosed ? '#ef4444' : '#1d4ed8') : '#f1f5f9', color: isSelected ? '#fff' : (isClosed ? '#dc2626' : '#475569'), padding: '10px 22px', borderRadius: '24px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '14px' }}>
-                                                                {isSelected ? (isClosed ? 'Đang xem (Đã khóa)' : 'Đang chọn') : (isClosed ? 'Đã khóa' : 'Chọn')}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                            <strong style={{ fontSize: '19px', color: '#168BEB', fontWeight: '800' }}>{formatM(adultPrice)}</strong>
+                                                            <button className={`tt-btn ${isSelected ? (isClosed ? 'tt-btn-outline' : 'tt-btn-primary') : 'tt-btn-ghost'}`} style={{ padding: '8px 18px', borderRadius: '999px', fontSize: '13.5px', borderColor: isClosed && isSelected ? '#EF4444' : undefined, color: isClosed && isSelected ? '#EF4444' : undefined }}>
+                                                                {isSelected ? (isClosed ? 'Đang xem' : 'Đang chọn') : (isClosed ? 'Đã khóa' : 'Chọn')}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -1033,59 +1150,69 @@ const TourDetail = () => {
 
                 <div className="detail-sidebar">
                     {!selectedDeparture ? (
-                        <div className="booking-card" style={{ padding: '24px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.1)', background: '#fff', border: 'none', position: 'sticky', top: '100px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#475569' }}>
-                                    <span>🏷️ Mã chương trình:</span>
-                                    <strong style={{ color: '#0f172a', marginLeft: 'auto' }}>{tour.tour_code || `${tour.tour_id}-DEP`}</strong>
+                        <div className="tt-card" style={{ padding: '24px', borderRadius: '16px', background: '#ffffff', position: 'sticky', top: '88px', boxShadow: '0 12px 32px rgba(16, 42, 67, 0.1)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#486581' }}>
+                                    <Tag size={16} color="#168BEB" />
+                                    <span>Mã chương trình:</span>
+                                    <strong style={{ color: '#102A43', marginLeft: 'auto' }}>{tour.tour_code || `${tour.tour_id}-DEP`}</strong>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#475569' }}>
-                                    <span>⏱️ Thời gian:</span>
-                                    <strong style={{ color: '#0f172a', marginLeft: 'auto' }}>{tour.duration_days} ngày {Math.max(0, tour.duration_days - 1)} đêm</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#486581' }}>
+                                    <Clock size={16} color="#168BEB" />
+                                    <span>Thời gian:</span>
+                                    <strong style={{ color: '#102A43', marginLeft: 'auto' }}>{tour.duration_days} ngày {Math.max(0, tour.duration_days - 1)} đêm</strong>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', marginTop: '8px' }}>
-                                    <span>Giá từ:</span>
-                                    <strong style={{ color: '#1d4ed8', fontSize: '22px' }}>{new Intl.NumberFormat('vi-VN').format(tour.base_price)}đ</strong>
+                                <div style={{ borderTop: '1px solid #EBF2F7', paddingTop: '14px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '14px', color: '#486581', fontWeight: '600' }}>Giá từ:</span>
+                                    <strong style={{ color: '#168BEB', fontSize: '24px', fontWeight: '900' }}>{new Intl.NumberFormat('vi-VN').format(tour.base_price)}đ</strong>
                                 </div>
-                                <button onClick={() => {
-                                    const el = document.getElementById('lich-trinh-khoi-hanh');
-                                    if(el) {
-                                        window.scrollTo({ top: el.offsetTop - 80, behavior: 'smooth' });
-                                    } else {
-                                        alert('Vui lòng chọn lịch trình khởi hành ở phần bên trái!');
-                                    }
-                                }} style={{ width: '100%', background: '#dc2626', color: '#fff', padding: '14px', borderRadius: '24px', fontSize: '16px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '8px', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)' }}>
-                                    Chọn ngày
+                                <button
+                                    onClick={() => {
+                                        const el = document.getElementById('lich-trinh-khoi-hanh');
+                                        if (el) {
+                                            window.scrollTo({ top: el.offsetTop - 88, behavior: 'smooth' });
+                                        } else {
+                                            alert('Vui lòng chọn lịch trình khởi hành ở phần bên trái!');
+                                        }
+                                    }}
+                                    className="tt-btn tt-btn-accent"
+                                    style={{ width: '100%', padding: '14px', borderRadius: '12px', fontSize: '15.5px', marginTop: '4px' }}
+                                >
+                                    <Calendar size={17} /> Chọn ngày khởi hành
                                 </button>
                             </div>
                         </div>
                     ) : (
                         (() => {
                             const selDep = tour.departures?.find(d => String(d.departure_id) === String(selectedDeparture));
-                            if(!selDep) return null;
+                            if (!selDep) return null;
                             const d = new Date(selDep.departure_date);
                             const dateStr = d.toLocaleDateString('vi-VN');
                             const dayOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()];
-                            
+
                             return (
-                                <div className="booking-card" style={{ padding: '24px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.1)', background: '#fff', border: 'none', position: 'sticky', top: '100px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px' }}>
+                                <div className="tt-card" style={{ padding: '24px', borderRadius: '16px', background: '#ffffff', position: 'sticky', top: '88px', boxShadow: '0 12px 32px rgba(16, 42, 67, 0.1)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #EBF2F7', paddingBottom: '16px', marginBottom: '16px', gap: '10px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>Giá:</span>
-                                            <strong style={{ color: '#1d4ed8', fontSize: '24px' }}>{new Intl.NumberFormat('vi-VN').format(tour.base_price)}đ</strong>
+                                            <span style={{ fontSize: '13px', color: '#486581', fontWeight: '600' }}>Giá người lớn:</span>
+                                            <strong style={{ color: '#168BEB', fontSize: '24px', fontWeight: '900' }}>{new Intl.NumberFormat('vi-VN').format(tour.base_price)}đ</strong>
                                         </div>
-                                        <button onClick={() => setSelectedDeparture('')} style={{ background: '#eff6ff', color: '#1d4ed8', padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {dayOfWeek}, {dateStr} ✏️
+                                        <button
+                                            onClick={() => setSelectedDeparture('')}
+                                            className="tt-btn tt-btn-outline"
+                                            style={{ padding: '7px 12px', borderRadius: '999px', fontSize: '12.5px' }}
+                                        >
+                                            {dayOfWeek}, {dateStr} <Edit3 size={13} />
                                         </button>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '13px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                                            <span style={{ color: '#64748b' }}>🏷️ Mã tour:</span>
-                                            <strong style={{ color: '#1e40af' }}>{tour.tour_code || `${tour.tour_id}-DEP`}</strong>
+                                            <span style={{ color: '#486581', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Tag size={15} color="#168BEB" /> Mã tour:</span>
+                                            <strong style={{ color: '#102A43' }}>{tour.tour_code || `${tour.tour_id}-DEP`}</strong>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                                            <span style={{ color: '#64748b' }}>📍 Khởi hành:</span>
-                                            <strong style={{ color: '#0f172a', textAlign: 'right' }}>
+                                            <span style={{ color: '#486581', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MapPin size={15} color="#168BEB" /> Khởi hành:</span>
+                                            <strong style={{ color: '#102A43', textAlign: 'right' }}>
                                                 {(() => {
                                                     const dName = destinations.find(x => String(x.destination_id) === String(parsedDesign?.days?.[0]?.start_destination_id))?.destination_name;
                                                     if (dName === 'Hồ Chí Minh') return 'TP.HCM';
@@ -1094,49 +1221,46 @@ const TourDetail = () => {
                                             </strong>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                                            <span style={{ color: '#64748b' }}>⏱️ Thời gian:</span>
-                                            <strong style={{ color: '#0f172a' }}>{tour.duration_days} ngày {Math.max(0, tour.duration_days - 1)} đêm</strong>
+                                            <span style={{ color: '#486581', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Clock size={15} color="#168BEB" /> Thời gian:</span>
+                                            <strong style={{ color: '#102A43' }}>{tour.duration_days} ngày {Math.max(0, tour.duration_days - 1)} đêm</strong>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                                            <span style={{ color: '#64748b' }}>💺 Số chỗ còn:</span>
-                                            <strong style={{ color: '#0f172a' }}>Còn {selDep.available_slots} chỗ</strong>
+                                            <span style={{ color: '#486581', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Users size={15} color="#168BEB" /> Số chỗ còn:</span>
+                                            <strong style={{ color: Number(selDep.available_slots) > 0 ? '#059669' : '#DC2626' }}>Còn {selDep.available_slots} chỗ</strong>
                                         </div>
 
                                         {(() => {
                                             const { isClosed: selIsClosed, daysLeft: selDaysLeft } = checkDepartureCutoff(selDep.departure_date, selDep.status);
                                             if (selIsClosed) {
                                                 return (
-                                                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px', fontSize: '13px', color: '#991b1b', lineHeight: '1.5', marginTop: '6px' }}>
-                                                        <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                                            <span>🔒 ĐÃ ĐÓNG ĐẶT CHỖ</span>
+                                                    <div className="tt-alert tt-alert-error" style={{ marginTop: '6px', flexDirection: 'column', gap: '4px' }}>
+                                                        <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <Lock size={14} /> ĐÃ ĐÓNG ĐẶT CHỖ
                                                         </div>
-                                                        Đợt khởi hành này chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng với đối tác (hiện chỉ còn {selDaysLeft > 0 ? selDaysLeft : 0} ngày). Vui lòng chọn đợt khởi hành khác!
+                                                        <span style={{ fontWeight: '500', fontSize: '12.5px' }}>
+                                                            Đợt khởi hành này chỉ nhận đặt trước tối thiểu 30 ngày để chốt dịch vụ khách sạn & nhà hàng (hiện chỉ còn {selDaysLeft > 0 ? selDaysLeft : 0} ngày). Vui lòng chọn đợt khác!
+                                                        </span>
                                                     </div>
                                                 );
                                             }
                                             return null;
                                         })()}
-                                        
-                                        <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '16px', marginTop: '16px' }}></div>
-                                        
+
                                         {(() => {
                                             const { isClosed: selIsClosed } = checkDepartureCutoff(selDep.departure_date, selDep.status);
                                             const isSoldOut = Number(selDep.available_slots) <= 0;
                                             return (
                                                 <button
                                                     onClick={handleGoToBooking}
+                                                    className="tt-btn tt-btn-accent"
                                                     style={{
                                                         width: '100%',
-                                                        background: (selIsClosed || isSoldOut) ? '#94a3b8' : '#dc2626',
-                                                        color: '#fff',
+                                                        background: (selIsClosed || isSoldOut) ? '#9FB3C8' : '#FF9852',
                                                         padding: '14px',
-                                                        borderRadius: '24px',
-                                                        fontSize: '16px',
-                                                        fontWeight: 'bold',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        marginTop: '16px',
-                                                        boxShadow: (selIsClosed || isSoldOut) ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.3)'
+                                                        borderRadius: '12px',
+                                                        fontSize: '15.5px',
+                                                        marginTop: '10px',
+                                                        boxShadow: (selIsClosed || isSoldOut) ? 'none' : undefined
                                                     }}
                                                     title={isSoldOut ? 'Đợt khởi hành này đã hết chỗ' : selIsClosed ? 'Đợt khởi hành này đã đóng nhận khách (trước 30 ngày)' : 'Đặt tour ngay'}
                                                 >

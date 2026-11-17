@@ -140,6 +140,15 @@ const CustomerChatWidget = () => {
     }
   };
 
+  // Lắng nghe sự kiện chuyển tiếp từ AI Chatbot sang nhân viên hỗ trợ
+  useEffect(() => {
+    const onOpenStaffChat = () => {
+      handleOpenChat();
+    };
+    window.addEventListener('open-staff-chat', onOpenStaffChat);
+    return () => window.removeEventListener('open-staff-chat', onOpenStaffChat);
+  }, [conversation]);
+
   // Đóng cửa sổ chat
   const handleCloseChat = () => {
     setIsOpen(false);
@@ -471,7 +480,7 @@ const CustomerChatWidget = () => {
               e.currentTarget.style.transform = 'scale(1)';
               e.currentTarget.style.boxShadow = '0 8px 24px rgba(1, 148, 243, 0.45)';
             }}
-            title="Chat trực tuyến với nhân viên hỗ trợ"
+            title="Chat với nhân viên hỗ trợ (Thường phản hồi sau vài phút)"
           >
             <MessageCircle size={32} />
             {unreadCount > 0 && (
@@ -558,11 +567,11 @@ const CustomerChatWidget = () => {
               </div>
               <div>
                 <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', letterSpacing: '-0.2px' }}>
-                  Hỗ Trợ Khách Hàng 24/7
+                  Hỗ Trợ Khách Hàng
                 </h4>
                 <div style={{ fontSize: '11.5px', color: '#e0f2fe', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }}></span>
-                  <span>Nhân viên trực tuyến • Phản hồi ngay</span>
+                  <span>Nhân viên trực tuyến • Thường phản hồi sau vài phút</span>
                 </div>
               </div>
             </div>
@@ -618,7 +627,7 @@ const CustomerChatWidget = () => {
                   {/* Tên người gửi nếu không phải là mình */}
                   {!isMe && (
                     <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', marginBottom: '3px', marginLeft: '4px' }}>
-                      {isBot ? '🤖 Bot Tư Vấn' : `👨‍💼 ${m.sender_name || 'Nhân viên Travel'}`}
+                      {isBot ? '💬 Lời nhắn tự động' : `👨‍💼 ${m.sender_name || 'Tư vấn viên'}`}
                     </span>
                   )}
 

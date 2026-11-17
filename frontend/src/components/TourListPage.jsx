@@ -1,9 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Search,
+    SlidersHorizontal,
+    MapPin,
+    Clock,
+    Star,
+    Calendar,
+    ArrowRight,
+    RotateCcw,
+    Compass,
+    Sparkles,
+    Award,
+    X
+} from 'lucide-react';
 import TravelPreferenceFilter, { trackBehavior } from './TravelPreferenceFilter';
 import TravelPreferenceSidebar from './TravelPreferenceSidebar';
 import '../index.css';
@@ -18,6 +33,7 @@ const TourListPage = () => {
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
     const [trendingTab, setTrendingTab] = useState('Tất cả');
     const [showSidebar, setShowSidebar] = useState(true);
+    const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
     // Floating Travel Search Inputs
     const [searchLocation, setSearchLocation] = useState('');
@@ -51,6 +67,16 @@ const TourListPage = () => {
     const showcaseRef = useRef(null);
     const destSliderRef = useRef(null);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const searchQ = params.get('search');
+        if (searchQ) {
+            setSearchLocation(searchQ);
+            setPreferences(prev => ({ ...prev, searchTerm: searchQ }));
+        }
+    }, [location.search]);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -385,70 +411,141 @@ const TourListPage = () => {
         scrollToShowcase();
     };
 
+    const handleResetFilters = () => {
+        setPreferences({
+            destinations: [], duration: 'All', tripPurposes: [], companions: [], budgetRange: 'All',
+            interests: [], pace: 'All', accommodationLevel: 'All', transportTypes: [],
+            keyPriorities: [], searchTerm: '', departureDate: ''
+        });
+        setSearchLocation('');
+        setSearchDate('');
+        setSearchGuests('All');
+        setSelectedCategory('Tất cả');
+        setTrendingTab('Tất cả');
+    };
+
     return (
-        <div className="homepage-container" style={{ background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            
-            {/* 1. HEADER (STICKY GLASSMORPHISM NAVBAR) */}
+        <div className="tt-page">
+            {/* 1. HEADER */}
             <CustomerNavbar activeTab="explore" />
 
-            {/* 2. PAGE HEADER BANNER */}
-            <div style={{ 
-                padding: '60px 5%', 
-                background: 'url(https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2000) center/cover no-repeat',
-                position: 'relative',
-                marginBottom: '40px'
+            {/* 2. PAGE HEADER BANNER + INLINE SEARCH */}
+            <div style={{
+                padding: '54px 24px 64px 24px',
+                background: 'linear-gradient(135deg, rgba(16, 42, 67, 0.84) 0%, rgba(22, 139, 235, 0.72) 100%), url(https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2000) center/cover no-repeat',
+                marginBottom: '36px'
             }}>
-                <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(15, 23, 42, 0.5)'
-                }}></div>
-
-                <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', color: '#fff' }}>
-                    <h1 style={{ fontSize: '36px', fontWeight: '900', margin: '0 0 12px 0', letterSpacing: '-0.5px' }}>
-                        Khám Phá Chuyến Đi
+                <div className="tt-container" style={{ textAlign: 'center', color: '#ffffff' }}>
+                    <span style={{
+                        background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(8px)',
+                        padding: '6px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: '700',
+                        display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '14px',
+                        border: '1px solid rgba(255,255,255,0.28)'
+                    }}>
+                        <Compass size={14} color="#FF9852" /> Khám phá hành trình TravelVN ERP
+                    </span>
+                    <h1 style={{ fontSize: '36px', fontWeight: '900', margin: '0 0 10px 0', letterSpacing: '-0.5px', color: '#ffffff' }}>
+                        Khám Phá Tất Cả Tour Du Lịch
                     </h1>
-                    <p style={{ fontSize: '16px', color: '#e2e8f0', margin: 0, maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
-                        Tìm kiếm và chọn lọc hàng trăm hành trình tuyệt vời được thiết kế dành riêng cho bạn.
+                    <p style={{ fontSize: '15.5px', color: '#D9E2EC', margin: '0 auto 26px auto', maxWidth: '620px' }}>
+                        Tìm kiếm và lọc nhanh theo điểm đến, thời lượng, ngân sách và sở thích của bạn.
                     </p>
+
+                    {/* INLINE SEARCH BAR */}
+                    <div style={{ maxWidth: '720px', margin: '0 auto', background: '#ffffff', borderRadius: '14px', padding: '8px', display: 'flex', gap: '8px', boxShadow: '0 16px 36px rgba(16, 42, 67, 0.22)' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '10px' }}>
+                            <Search size={18} color="#829AB1" />
+                            <input
+                                type="text"
+                                placeholder="Tìm theo tên tour, điểm đến (Đà Nẵng, Phú Quốc, Sapa...)"
+                                value={searchLocation}
+                                onChange={(e) => {
+                                    setSearchLocation(e.target.value);
+                                    setPreferences(prev => ({ ...prev, searchTerm: e.target.value }));
+                                }}
+                                onKeyDown={(e) => e.key === 'Enter' && handleApplyFloatingSearch()}
+                                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', color: '#102A43', fontWeight: '600' }}
+                            />
+                            {searchLocation && (
+                                <button
+                                    onClick={() => { setSearchLocation(''); setPreferences(prev => ({ ...prev, searchTerm: '' })); }}
+                                    style={{ border: 'none', background: 'transparent', color: '#829AB1', cursor: 'pointer', padding: '4px' }}
+                                    aria-label="Xóa tìm kiếm"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                        <button onClick={handleApplyFloatingSearch} className="tt-btn tt-btn-primary" style={{ borderRadius: '10px', padding: '10px 20px' }}>
+                            Tìm kiếm
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <section ref={showcaseRef} style={{ padding: '0 5%', marginBottom: '60px' }}>
+            <section ref={showcaseRef} className="tt-container" style={{ marginBottom: '56px' }}>
+                {/* MOBILE FILTER BAR TOGGLE */}
+                <div className="tt-mobile-only" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '10px' }}>
+                    <button
+                        onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+                        className="tt-btn tt-btn-outline"
+                        style={{ flex: 1 }}
+                    >
+                        <SlidersHorizontal size={16} />
+                        {mobileFilterOpen ? 'Ẩn bộ lọc' : 'Bộ lọc nâng cao'}
+                    </button>
+                    <button onClick={handleResetFilters} className="tt-btn tt-btn-ghost">
+                        <RotateCcw size={15} /> Đặt lại
+                    </button>
+                </div>
+
+                {/* MOBILE COLLAPSIBLE FILTER */}
+                {mobileFilterOpen && (
+                    <div className="tt-mobile-only" style={{ marginBottom: '20px', width: '100%' }}>
+                        <div style={{ width: '100%' }}>
+                            <TravelPreferenceSidebar
+                                preferences={preferences}
+                                onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <div className="tour-list-layout-grid" style={{ display: 'grid', gridTemplateColumns: showSidebar ? 'minmax(260px, 290px) 1fr' : '1fr', gap: '28px', alignItems: 'start' }}>
-                    
-                    {/* LEFT STICKY SIDEBAR FILTER */}
+                    {/* LEFT STICKY SIDEBAR FILTER (DESKTOP) */}
                     {showSidebar && (
-                        <TravelPreferenceSidebar 
-                            preferences={preferences}
-                            onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
-                        />
+                        <div className="tt-desktop-only" style={{ display: 'block' }}>
+                            <TravelPreferenceSidebar
+                                preferences={preferences}
+                                onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
+                            />
+                        </div>
                     )}
 
                     {/* MAIN TOURS DISPLAY */}
                     <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                             <div>
-                                <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                                    🔥 Tất Cả Chuyến Đi
+                                <h2 className="tt-section-title" style={{ fontSize: '22px' }}>
+                                    Danh sách Tour Trọn Gói
                                 </h2>
-                                <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px' }}>
-                                    Hiển thị {filteredTours.length} chuyến đi phù hợp nhất theo tiêu chí tìm kiếm
+                                <p className="tt-section-subtitle">
+                                    Hiển thị <strong>{filteredTours.length}</strong> chuyến đi phù hợp
                                 </p>
                             </div>
 
                             {/* TAB SORTING */}
-                            <div style={{ display: 'flex', gap: '6px', background: '#e2e8f0', padding: '4px', borderRadius: '14px' }}>
+                            <div style={{ display: 'flex', gap: '6px', background: '#ffffff', padding: '5px', borderRadius: '12px', border: '1px solid #D9E2EC', flexWrap: 'wrap' }}>
                                 {['Tất cả', 'Ưu đãi đặc quyền', 'Bán chạy', 'Giá tốt'].map(tab => (
-                                    <button 
+                                    <button
                                         key={tab}
                                         onClick={() => setTrendingTab(tab)}
                                         style={{
-                                            padding: '6px 14px', borderRadius: '10px', border: 'none',
-                                            background: trendingTab === tab ? '#ffffff' : 'transparent',
-                                            color: trendingTab === tab ? (tab === 'Ưu đãi đặc quyền' ? '#0284c7' : '#0f172a') : '#64748b',
-                                            fontWeight: trendingTab === tab ? '800' : '600', fontSize: '13px',
-                                            cursor: 'pointer', boxShadow: trendingTab === tab ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                                            transition: 'all 0.2s'
+                                            padding: '7px 14px', borderRadius: '8px', border: 'none',
+                                            background: trendingTab === tab ? '#168BEB' : 'transparent',
+                                            color: trendingTab === tab ? '#ffffff' : '#486581',
+                                            fontWeight: trendingTab === tab ? '700' : '600', fontSize: '13px',
+                                            cursor: 'pointer', transition: 'all 0.2s'
                                         }}
                                     >
                                         {tab}
@@ -459,153 +556,151 @@ const TourListPage = () => {
 
                         {/* TOUR GRID */}
                         {loadingTours ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '20px' }}>
+                            <div className="tt-tour-grid">
                                 {Array(6).fill(0).map((_, i) => (
-                                    <div key={i} style={{ background: '#ffffff', borderRadius: '20px', height: '320px', border: '1px solid #e2e8f0', padding: '16px' }}>
-                                        <div style={{ background: '#e2e8f0', height: '160px', borderRadius: '14px', marginBottom: '14px' }} />
-                                        <div style={{ background: '#e2e8f0', height: '18px', width: '60%', borderRadius: '6px', marginBottom: '8px' }} />
-                                        <div style={{ background: '#e2e8f0', height: '24px', width: '90%', borderRadius: '6px' }} />
+                                    <div key={i} className="tt-tour-card" style={{ padding: '16px', gap: '12px' }}>
+                                        <div className="tt-skeleton" style={{ height: '165px' }} />
+                                        <div className="tt-skeleton" style={{ height: '16px', width: '55%' }} />
+                                        <div className="tt-skeleton" style={{ height: '22px', width: '92%' }} />
+                                        <div className="tt-skeleton" style={{ height: '32px', width: '100%', marginTop: '8px' }} />
                                     </div>
                                 ))}
                             </div>
-                        ) : filteredTours.length === 0 ? (
-                            <div style={{ background: '#ffffff', borderRadius: '24px', padding: '50px 20px', textAlign: 'center', border: '1.5px solid #e2e8f0' }}>
-                                <div style={{ fontSize: '50px', marginBottom: '12px' }}>🔍</div>
-                                <h3 style={{ fontSize: '18px', color: '#0f172a', fontWeight: '800' }}>Không tìm thấy tour phù hợp</h3>
-                                <p style={{ fontSize: '14px', color: '#64748b', maxWidth: '500px', margin: '8px auto 20px auto' }}>
-                                    Không có chuyến đi nào thỏa mãn toàn bộ tiêu chí lọc hiện tại. Vui lòng đặt lại hoặc chọn tiêu chí linh hoạt hơn.
+                        ) : tours.length === 0 ? (
+                            <div className="tt-empty-state">
+                                <div className="tt-empty-icon"><Compass size={28} /></div>
+                                <h3 style={{ fontSize: '18px', color: '#102A43', fontWeight: '800', margin: 0 }}>Hiện chưa có tour nào được mở bán</h3>
+                                <p style={{ fontSize: '14px', color: '#486581', maxWidth: '460px', margin: 0 }}>
+                                    Hệ thống đang cập nhật lịch khởi hành mới. Bạn có thể tự thiết kế lịch trình riêng theo yêu cầu.
                                 </p>
-                                <button
-                                    onClick={() => {
-                                        setPreferences({
-                                            destinations: [], duration: 'All', tripPurposes: [], companions: [], budgetRange: 'All',
-                                            interests: [], pace: 'All', accommodationLevel: 'All', transportTypes: [],
-                                            keyPriorities: [], searchTerm: '', departureDate: ''
-                                        });
-                                        setSearchLocation('');
-                                        setSelectedCategory('Tất cả');
-                                    }}
-                                    style={{ padding: '10px 24px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}
-                                >
-                                    🔄 Đặt lại tất cả bộ lọc
+                                <button onClick={() => navigate('/build-tour')} className="tt-btn tt-btn-primary" style={{ marginTop: '6px' }}>
+                                    <Sparkles size={16} /> Tự thiết kế Tour ngay
+                                </button>
+                            </div>
+                        ) : filteredTours.length === 0 ? (
+                            <div className="tt-empty-state">
+                                <div className="tt-empty-icon"><Search size={28} /></div>
+                                <h3 style={{ fontSize: '18px', color: '#102A43', fontWeight: '800', margin: 0 }}>Không tìm thấy tour phù hợp</h3>
+                                <p style={{ fontSize: '14px', color: '#486581', maxWidth: '480px', margin: 0 }}>
+                                    Không có chuyến đi nào thỏa mãn toàn bộ tiêu chí lọc hiện tại. Vui lòng đặt lại bộ lọc để xem thêm lựa chọn.
+                                </p>
+                                <button onClick={handleResetFilters} className="tt-btn tt-btn-primary" style={{ marginTop: '6px' }}>
+                                    <RotateCcw size={16} /> Đặt lại tất cả bộ lọc
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '20px' }}>
-                                {filteredTours.map(tour => (
-                                    <div 
-                                        key={tour.tour_id}
-                                        onClick={() => {
-                                            trackBehavior('CLICK_TOUR', tour.tour_id, { tour_name: tour.tour_name });
-                                            navigate(`/tour/${tour.tour_id}`);
-                                        }}
-                                        style={{
-                                            background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0',
-                                            overflow: 'hidden', cursor: 'pointer', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.04)',
-                                            transition: 'all 0.25s ease'
-                                        }}
-                                        className="tour-card-modern"
-                                    >
-                                        <div style={{ position: 'relative', height: '170px' }}>
-                                            <div style={{ backgroundImage: `url(${getImageUrl(tour.image_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
-                                            {Number(tour.base_price || 0) <= 4000000 && (
-                                                <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: '800', padding: '4px 8px', borderRadius: '8px' }}>
-                                                    🔥 Giá Cực Tốt
+                            <div className="tt-tour-grid">
+                                {filteredTours.map(tour => {
+                                    const reviewCount = Number(tour.review_count || 0);
+                                    const avgRating = tour.average_rating ? Number(tour.average_rating).toFixed(1) : null;
+                                    const nextDep = tour.next_departure_date || tour.departure_date || null;
+
+                                    return (
+                                        <div
+                                            key={tour.tour_id}
+                                            onClick={() => {
+                                                trackBehavior('CLICK_TOUR', tour.tour_id, { tour_name: tour.tour_name });
+                                                navigate(`/tour/${tour.tour_id}`);
+                                            }}
+                                            className="tt-tour-card"
+                                        >
+                                            <div className="tt-tour-card-media">
+                                                <div
+                                                    className="tt-tour-card-img"
+                                                    style={{ backgroundImage: `url(${getImageUrl(tour.image_url)})` }}
+                                                />
+                                                {Number(tour.base_price || 0) <= 4000000 && (
+                                                    <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#FF9852', color: '#ffffff', fontSize: '11.5px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px' }}>
+                                                        Giá tốt
+                                                    </span>
+                                                )}
+                                                <span style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(16, 42, 67, 0.8)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '11.5px', fontWeight: '700', padding: '5px 10px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                                    <Clock size={13} /> {tour.duration_days} Ngày {Math.max(0, Number(tour.duration_days || 1) - 1)} Đêm
                                                 </span>
-                                            )}
-                                            <span style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '11px', fontWeight: '700', padding: '4px 8px', borderRadius: '8px' }}>
-                                                ⏱️ {tour.duration_days} Ngày
-                                            </span>
-                                        </div>
-
-                                        <div style={{ padding: '16px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
-                                                <span style={{ color: '#0284c7', fontWeight: '700' }}>📍 {tour.destination}</span>
-                                                <span style={{ fontWeight: '700', color: '#f59e0b' }}>⭐ {tour.average_rating ? Number(tour.average_rating).toFixed(1) : '5.0'} ({tour.review_count || 0})</span>
                                             </div>
 
-                                            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', lineHeight: '1.4', margin: '0 0 14px 0', height: '42px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                                {tour.tour_name}
-                                            </h3>
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
-                                                <div>
-                                                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Giá từ</span>
-                                                    <strong style={{ fontSize: '16px', color: '#ef4444' }}>{formatCurrency(tour.base_price)}</strong>
+                                            <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', marginBottom: '8px', gap: '8px' }}>
+                                                    <span style={{ color: '#168BEB', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        <MapPin size={13} /> {tour.destination}
+                                                    </span>
+                                                    {reviewCount > 0 && avgRating ? (
+                                                        <span style={{ fontWeight: '700', color: '#F59E0B', display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                                                            <Star size={13} fill="#F59E0B" color="#F59E0B" /> {avgRating} ({reviewCount})
+                                                        </span>
+                                                    ) : (
+                                                        <span className="tt-badge tt-badge-primary" style={{ fontSize: '11px', padding: '2px 8px' }}>Mở bán</span>
+                                                    )}
                                                 </div>
-                                                <button style={{ padding: '8px 16px', background: '#0194f3', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>
-                                                    Khám phá ➡️
-                                                </button>
+
+                                                <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#102A43', lineHeight: '1.4', margin: '0 0 10px 0', minHeight: '44px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                                    {tour.tour_name}
+                                                </h3>
+
+                                                {nextDep && (
+                                                    <div style={{ fontSize: '12px', color: '#486581', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
+                                                        <Calendar size={13} color="#168BEB" />
+                                                        <span>Khởi hành: {new Date(nextDep).toLocaleDateString('vi-VN')}</span>
+                                                    </div>
+                                                )}
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #EBF2F7', paddingTop: '12px', marginTop: 'auto', gap: '10px' }}>
+                                                    <div>
+                                                        <span style={{ fontSize: '11.5px', color: '#829AB1', display: 'block' }}>Giá từ</span>
+                                                        <strong style={{ fontSize: '17px', color: '#168BEB', fontWeight: '800' }}>{formatCurrency(tour.base_price)}</strong>
+                                                    </div>
+                                                    <button className="tt-btn tt-btn-primary" style={{ padding: '8px 14px', fontSize: '13px', borderRadius: '10px' }}>
+                                                        Khám phá <ArrowRight size={14} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
-
                 </div>
             </section>
 
-
-            {/* 9. SECTION TỰ THIẾT KẾ TOUR BANNER (CÂN ĐỐI, HÀI HÒA & ĐỒNG BỘ 100% GIAO DIỆN) */}
-            <section className="home-section-container custom-tour-banner" style={{
-                position: 'relative',
-                borderRadius: '24px',
-                overflow: 'hidden',
-                padding: '36px 40px',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 55%, #e0f2fe 100%)',
-                border: '1.5px solid #bae6fd',
-                boxShadow: '0 12px 35px rgba(1, 148, 243, 0.08)',
-                display: 'grid',
-                gridTemplateColumns: '1.4fr 1fr',
-                gap: '36px',
-                alignItems: 'center',
-                margin: '0 5% 60px 5%',
-                boxSizing: 'border-box'
-            }}>
-                {/* LEFT COLUMN: TITLE, HIGHLIGHTS & CTA */}
+            {/* SECTION TỰ THIẾT KẾ TOUR BANNER */}
+            <section className="tt-container" style={{ marginBottom: '64px' }}>
+                <div className="custom-tour-banner" style={{
+                    borderRadius: '18px',
+                    overflow: 'hidden',
+                    padding: '36px 40px',
+                    background: 'linear-gradient(135deg, #102A43 0%, #168BEB 100%)',
+                    color: '#ffffff',
+                    boxShadow: '0 18px 40px rgba(16, 42, 67, 0.16)',
+                    display: 'grid',
+                    gridTemplateColumns: '1.4fr 1fr',
+                    gap: '36px',
+                    alignItems: 'center'
+                }}>
                     <div style={{ textAlign: 'left' }}>
                         <span style={{
-                            background: '#e0f2fe',
-                            border: '1px solid #bae6fd',
-                            color: '#0284c7',
+                            background: 'rgba(255, 152, 82, 0.2)',
+                            border: '1px solid rgba(255, 152, 82, 0.45)',
+                            color: '#FF9852',
                             fontSize: '12px',
                             fontWeight: '800',
                             padding: '5px 14px',
-                            borderRadius: '20px',
+                            borderRadius: '999px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            marginBottom: '14px',
-                            letterSpacing: '0.3px'
+                            marginBottom: '14px'
                         }}>
-                            ✨ DỊCH VỤ TOUR THEO YÊU CẦU
+                            <Sparkles size={14} /> DỊCH VỤ TOUR THEO YÊU CẦU
                         </span>
-                        
-                        <h2 style={{ fontSize: '28px', fontWeight: '900', lineHeight: '1.35', marginBottom: '12px', letterSpacing: '-0.4px', color: '#0f172a' }}>
+
+                        <h2 style={{ fontSize: '28px', fontWeight: '900', lineHeight: '1.3', marginBottom: '12px', color: '#ffffff' }}>
                             Tự Thiết Kế Chuyến Đi Của Riêng Bạn
                         </h2>
 
-                        <p style={{ fontSize: '14.5px', color: '#475569', lineHeight: '1.65', marginBottom: '22px', maxWidth: '540px' }}>
-                            Chủ động lựa chọn điểm đến, ngày khởi hành, tiêu chuẩn khách sạn 3★ - 5★ và xe đưa đón riêng. Đội ngũ TravelVN sẽ tối ưu lộ trình và gửi báo giá chi tiết trong 2 phút.
+                        <p style={{ fontSize: '14.5px', color: '#D9E2EC', lineHeight: '1.65', marginBottom: '22px', maxWidth: '540px' }}>
+                            Chủ động lựa chọn điểm đến, ngày khởi hành, tiêu chuẩn khách sạn và phương tiện riêng. Đội ngũ TravelVN sẽ tối ưu lộ trình và gửi báo giá chi tiết.
                         </p>
-
-                        {/* KEY PERKS */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#ffffff', padding: '7px 13px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
-                                <span style={{ fontSize: '15px' }}>🏨</span>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Khách sạn 3★ - 5★</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#ffffff', padding: '7px 13px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
-                                <span style={{ fontSize: '15px' }}>🚗</span>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Xe riêng đưa đón VIP</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#ffffff', padding: '7px 13px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
-                                <span style={{ fontSize: '15px' }}>⚡</span>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Báo giá tự động 2 phút</span>
-                            </div>
-                        </div>
 
                         <button
                             onClick={() => {
@@ -616,94 +711,51 @@ const TourListPage = () => {
                                     navigate('/build-tour');
                                 }
                             }}
-                            style={{
-                                padding: '12px 28px',
-                                borderRadius: '24px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #0194f3 0%, #0066cc 100%)',
-                                color: '#ffffff',
-                                fontWeight: '800',
-                                fontSize: '14.5px',
-                                cursor: 'pointer',
-                                boxShadow: '0 6px 18px rgba(1, 148, 243, 0.35)',
-                                transition: 'all 0.25s ease',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
+                            className="tt-btn tt-btn-accent"
+                            style={{ padding: '13px 26px', fontSize: '15px', borderRadius: '12px' }}
                         >
-                            Tự Thiết Kế Tour Ngay ➔
+                            Tự Thiết Kế Tour Ngay <ArrowRight size={16} />
                         </button>
                     </div>
 
-                    {/* RIGHT COLUMN: TRAVEL REAL SHOWCASE (ẢNH BIỂN ĐẢO NGHỈ DƯỠNG CÂN ĐỐI) */}
                     <div className="custom-tour-visual-card" style={{
                         position: 'relative',
-                        borderRadius: '20px',
+                        borderRadius: '16px',
                         overflow: 'hidden',
-                        boxShadow: '0 10px 25px rgba(15, 23, 42, 0.1)',
-                        border: '4px solid #ffffff',
-                        height: '230px',
+                        border: '3px solid rgba(255,255,255,0.25)',
+                        height: '220px',
                         backgroundImage: 'url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200")',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
+                        justifyContent: 'flex-end',
                         padding: '16px'
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                            <span style={{
-                                background: 'rgba(15, 23, 42, 0.65)',
-                                backdropFilter: 'blur(8px)',
-                                WebkitBackdropFilter: 'blur(8px)',
-                                color: '#ffffff',
-                                fontSize: '11.5px',
-                                fontWeight: '700',
-                                padding: '5px 12px',
-                                borderRadius: '16px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px'
-                            }}>
-                                🌴 Nghỉ dưỡng đẳng cấp theo ý bạn
-                            </span>
-                        </div>
-
                         <div style={{
-                            background: '#ffffff',
-                            borderRadius: '14px',
-                            padding: '10px 16px',
-                            boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+                            background: 'rgba(255,255,255,0.96)',
+                            borderRadius: '12px',
+                            padding: '12px 16px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between'
                         }}>
                             <div>
-                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
-                                    Hơn 1.500+ Khách Hài Lòng
+                                <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#102A43' }}>
+                                    Lịch trình cá nhân hóa 100%
                                 </div>
-                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
-                                    ⭐ 4.9/5 Đánh giá hành trình tùy chỉnh
+                                <div style={{ fontSize: '11.5px', color: '#486581', marginTop: '2px' }}>
+                                    Linh hoạt theo ngân sách & số lượng khách
                                 </div>
                             </div>
-                            <span style={{
-                                background: '#e0f2fe',
-                                color: '#0284c7',
-                                fontSize: '10.5px',
-                                fontWeight: '800',
-                                padding: '3px 8px',
-                                borderRadius: '8px'
-                            }}>
-                                Độc Bản
-                            </span>
+                            <Award size={22} color="#FF9852" />
                         </div>
                     </div>
+                </div>
             </section>
 
-            {/* 10. FOOTER */}
+            {/* FOOTER */}
             <CustomerFooter />
-
         </div>
     );
 };

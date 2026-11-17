@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { Bot, Send, X, RotateCcw, Sparkles, Compass, Calendar, DollarSign, ShieldAlert, ArrowRight, ChevronDown } from 'lucide-react';
+import { Bot, Send, X, RotateCcw, Sparkles, Headset } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5000/api/chat';
 
@@ -53,9 +52,19 @@ const CustomerAIChatWidget = () => {
     sessionStorage.removeItem('travel_ai_chat_messages');
   };
 
+  const handleHandoffToStaff = () => {
+    setIsOpen(false);
+    window.dispatchEvent(new CustomEvent('open-staff-chat'));
+  };
+
   const handleSendMessage = async (textToSend) => {
     const q = (textToSend || inputQuestion).trim();
-    if (!q) return;
+    if (!q || isTyping) return;
+
+    if (q === 'Liên hệ nhân viên' || q === 'Tư vấn trực tiếp') {
+      handleHandoffToStaff();
+      return;
+    }
 
     const userMsg = {
       id: 'user-' + Date.now(),
@@ -64,38 +73,111 @@ const CustomerAIChatWidget = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    const historySnapshot = messages.slice(-8);
     setMessages(prev => [...prev, userMsg]);
     setInputQuestion('');
     setIsTyping(true);
 
+    const aiMsgId = 'ai-' + (Date.now() + 1);
+    let aiMsgCreated = false;
+    let streamedText = '';
+
+    const upsertAiMessage = (text, extra = {}) => {
+      if (!aiMsgCreated) {
+        aiMsgCreated = true;
+        setMessages(prev => [
+          ...prev,
+          {
+            id: aiMsgId,
+            sender: 'ai',
+            text,
+            suggestions: [],
+            handoffSuggested: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            ...extra
+          }
+        ]);
+      } else {
+        setMessages(prev =>
+          prev.map(m => (m.id === aiMsgId ? { ...m, text, ...extra } : m))
+        );
+      }
+    };
+
     try {
-      const res = await axios.post(`${API_BASE_URL}/ai/ask`, {
-        question: q,
-        conversationHistory: messages.slice(-6)
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_BASE_URL}/ai/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          question: q,
+          conversationHistory: historySnapshot
+        })
       });
 
-      if (res.data.success && res.data.data) {
-        const aiMsg = {
-          id: 'ai-' + Date.now(),
-          sender: 'ai',
-          text: res.data.data.reply,
-          suggestions: res.data.data.suggestions || [],
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, aiMsg]);
-      } else {
-        throw new Error('Không nhận được câu trả lời');
+      if (!response.ok || !response.body) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || 'Không thể kết nối máy chủ AI');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() || '';
+
+        for (const frame of frames) {
+          const lines = frame.split('\n');
+          let eventType = 'message';
+          let dataStr = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) eventType = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          const payload = JSON.parse(dataStr);
+
+          if (eventType === 'delta' && payload.text) {
+            streamedText += payload.text;
+            setIsTyping(false);
+            upsertAiMessage(streamedText);
+          } else if (eventType === 'done') {
+            upsertAiMessage(streamedText, {
+              suggestions: payload.suggestions || [],
+              handoffSuggested: Boolean(payload.handoffSuggested)
+            });
+          } else if (eventType === 'error') {
+            throw new Error(payload.message || 'Lỗi luồng AI');
+          }
+        }
+      }
+
+      if (!aiMsgCreated) {
+        upsertAiMessage('Xin lỗi, hiện chưa có phản hồi từ AI. Quý khách vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ.', {
+          handoffSuggested: true,
+          suggestions: ['Liên hệ nhân viên']
+        });
       }
     } catch (error) {
       console.error('Lỗi hỏi AI:', error);
-      const errMsg = {
-        id: 'ai-err-' + Date.now(),
-        sender: 'ai',
-        text: 'Dạ xin lỗi Quý khách, kết nối tới máy chủ AI đang bận một chút. Quý khách vui lòng thử lại hoặc bấm vào nút **Message tròn màu xanh** ngay bên dưới để gặp nhân viên hỗ trợ trực tiếp nhé!',
-        suggestions: ['Thử lại', 'Tour Phú Quốc', 'Chính sách hoàn tiền'],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, errMsg]);
+      upsertAiMessage(
+        error.message && error.message.includes('quá nhanh')
+          ? error.message
+          : 'Dạ xin lỗi Quý khách, kết nối tới trợ lý AI đang bận. Quý khách vui lòng thử lại hoặc bấm **Liên hệ nhân viên** bên dưới để được tư vấn viên hỗ trợ trực tiếp nhé!',
+        {
+          handoffSuggested: true,
+          suggestions: ['Liên hệ nhân viên', 'Tour Đà Lạt', 'Chính sách hủy tour']
+        }
+      );
     } finally {
       setIsTyping(false);
     }
@@ -221,10 +303,10 @@ const CustomerAIChatWidget = () => {
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+              background: 'linear-gradient(135deg, #168BEB 0%, #102A43 100%)',
               border: 'none',
               color: '#ffffff',
-              boxShadow: '0 8px 24px rgba(139, 92, 246, 0.45), 0 0 0 3px rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 24px rgba(22, 139, 235, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.35)',
               cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
@@ -295,13 +377,13 @@ const CustomerAIChatWidget = () => {
         }}>
           {/* HEADER */}
           <div style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)',
+            background: 'linear-gradient(135deg, #102A43 0%, #168BEB 100%)',
             color: '#ffffff',
             padding: '16px 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0 4px 12px rgba(16, 42, 67, 0.18)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
@@ -326,6 +408,30 @@ const CustomerAIChatWidget = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleHandoffToStaff}
+                title="Chuyển sang nhân viên hỗ trợ trực tiếp"
+                style={{
+                  background: '#FF9852',
+                  border: 'none',
+                  color: '#ffffff',
+                  height: '32px',
+                  padding: '0 10px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                <Headset size={14} />
+                <span>Nhân viên</span>
+              </button>
               <button
                 onClick={handleReset}
                 title="Làm mới cuộc trò chuyện"
@@ -597,7 +703,7 @@ const CustomerAIChatWidget = () => {
                   <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#6366f1', animation: 'bounce 1s infinite 0.1s' }}></div>
                   <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#8b5cf6', animation: 'bounce 1s infinite 0.25s' }}></div>
                   <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#ec4899', animation: 'bounce 1s infinite 0.4s' }}></div>
-                  <span style={{ fontSize: '11.5px', color: '#64748b', marginLeft: '4px' }}>AI đang tra cứu CSDL...</span>
+                  <span style={{ fontSize: '11.5px', color: '#64748b', marginLeft: '4px' }}>AI đang suy nghĩ...</span>
                 </div>
               </div>
             )}
@@ -650,7 +756,7 @@ const CustomerAIChatWidget = () => {
                   width: '38px',
                   height: '38px',
                   borderRadius: '12px',
-                  background: inputQuestion.trim() && !isTyping ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#e2e8f0',
+                  background: inputQuestion.trim() && !isTyping ? 'linear-gradient(135deg, #168BEB 0%, #102A43 100%)' : '#e2e8f0',
                   color: '#ffffff',
                   border: 'none',
                   display: 'flex',

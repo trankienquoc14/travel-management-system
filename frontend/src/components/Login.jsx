@@ -1,10 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import {
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Compass,
+  Mail,
+  Lock,
+  User,
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+  CalendarCheck
+} from 'lucide-react';
 
 const Login = () => {
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [isRegisterMode, setIsRegisterMode] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('mode') === 'register';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setIsRegisterMode(params.get('mode') === 'register');
+    setError('');
+  }, [location.search]);
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,14 +40,12 @@ const Login = () => {
   const [isPasswordHovered, setIsPasswordHovered] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const navigate = useNavigate();
 
   // Regex chuẩn kiểm tra định dạng email
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setError('');
 
     // 1. Kiểm tra bỏ trống các trường bắt buộc (*)
@@ -53,10 +77,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const endpoint = isRegisterMode 
-        ? 'http://localhost:5000/api/auth/register' 
+      const endpoint = isRegisterMode
+        ? 'http://localhost:5000/api/auth/register'
         : 'http://localhost:5000/api/auth/login';
-      const payload = isRegisterMode 
+      const payload = isRegisterMode
         ? { full_name: fullName.trim(), email: email.trim(), password }
         : { email: email.trim(), password };
 
@@ -65,7 +89,7 @@ const Login = () => {
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      
+
       // Chuyển hướng mượt mà
       const userRole = Number(user.role_id || user.role);
       if (userRole !== 6) {
@@ -84,150 +108,222 @@ const Login = () => {
     }
   };
 
-  const toggleMode = () => {
-    setIsRegisterMode(!isRegisterMode);
+  const toggleMode = (targetRegister) => {
+    const next = typeof targetRegister === 'boolean' ? targetRegister : !isRegisterMode;
+    setIsRegisterMode(next);
     setError('');
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h2>{isRegisterMode ? 'Đăng ký tài khoản' : 'Đăng nhập Hệ thống'}</h2>
-        
-        {error && (
-          <div className="error-message" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <span>{error}</span>
-          </div>
-        )}
+    <div className="tt-auth-wrapper">
+      {/* LEFT VISUAL SHOWCASE */}
+      <div className="tt-auth-visual">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Link to="/home" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: '#ffffff' }}>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '12px',
+              background: '#168BEB', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 6px 18px rgba(22, 139, 235, 0.4)'
+            }}>
+              <Compass size={22} color="#ffffff" />
+            </div>
+            <span style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-0.4px' }}>
+              TravelVN <span style={{ color: '#FF9852' }}>ERP</span>
+            </span>
+          </Link>
+        </div>
 
-        <form onSubmit={handleSubmit} noValidate>
-          {isRegisterMode && (
-            <div className="input-group">
-              <label>
-                Họ và tên <span style={{ color: '#ef4444', fontWeight: 'bold' }}>(*)</span>
-              </label>
-              <input 
-                type="text" 
-                value={fullName}
-                onChange={(e) => {
-                  setFullName(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder="Ví dụ: Nguyễn Văn A"
-              />
+        <div style={{ maxWidth: '480px' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: 'rgba(255, 255, 255, 0.16)', backdropFilter: 'blur(8px)',
+            padding: '6px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: '700',
+            marginBottom: '18px', border: '1px solid rgba(255,255,255,0.25)'
+          }}>
+            <Sparkles size={14} color="#FF9852" /> Modern TravelTech Platform
+          </span>
+          <h1 style={{ fontSize: '36px', fontWeight: '900', lineHeight: '1.22', margin: '0 0 16px 0', color: '#ffffff' }}>
+            Khám Phá Việt Nam Theo Cách Thông Minh Hơn
+          </h1>
+          <p style={{ fontSize: '15.5px', color: '#E2E8F0', lineHeight: '1.65', margin: '0 0 28px 0' }}>
+            Quản lý đặt tour trực tuyến, theo dõi vé điện tử QR, tự thiết kế hành trình riêng và nhận thông báo cập nhật theo thời gian thực.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[
+              { icon: <ShieldCheck size={18} color="#FF9852" />, text: 'Thanh toán an toàn, minh bạch chi phí từng hành khách' },
+              { icon: <CalendarCheck size={18} color="#38BDF8" />, text: 'Lịch khởi hành & số chỗ cập nhật theo thời gian thực' },
+              { icon: <Sparkles size={18} color="#FF9852" />, text: 'Tự thiết kế tour cá nhân hóa và nhận báo giá nhanh chóng' }
+            ].map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#F0F4F8', fontWeight: '600' }}>
+                {item.icon}
+                <span>{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ fontSize: '13px', color: '#CBD5E1' }}>
+          © {new Date().getFullYear()} TravelVN ERP — Hệ thống Lữ hành & Quản trị Tour
+        </div>
+      </div>
+
+      {/* RIGHT FORM SIDE */}
+      <div className="tt-auth-form-side">
+        <div className="tt-auth-card">
+          <div style={{ marginBottom: '20px' }}>
+            <Link
+              to="/home"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                fontSize: '13px', fontWeight: '700', color: '#486581', textDecoration: 'none'
+              }}
+            >
+              <ArrowLeft size={14} /> Về trang chủ
+            </Link>
+          </div>
+
+          {/* MODE SWITCHER */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px',
+            background: '#F3F8FE', padding: '5px', borderRadius: '12px', marginBottom: '24px',
+            border: '1px solid #D9E2EC'
+          }}>
+            <button
+              type="button"
+              onClick={() => toggleMode(false)}
+              style={{
+                padding: '9px 12px', borderRadius: '9px', border: 'none', cursor: 'pointer',
+                fontWeight: '700', fontSize: '13.5px', transition: 'all 0.2s',
+                background: !isRegisterMode ? '#168BEB' : 'transparent',
+                color: !isRegisterMode ? '#ffffff' : '#486581'
+              }}
+            >
+              Đăng nhập
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleMode(true)}
+              style={{
+                padding: '9px 12px', borderRadius: '9px', border: 'none', cursor: 'pointer',
+                fontWeight: '700', fontSize: '13.5px', transition: 'all 0.2s',
+                background: isRegisterMode ? '#168BEB' : 'transparent',
+                color: isRegisterMode ? '#ffffff' : '#486581'
+              }}
+            >
+              Đăng ký
+            </button>
+          </div>
+
+          <h2 style={{ fontSize: '23px', fontWeight: '900', color: '#102A43', margin: '0 0 6px 0' }}>
+            {isRegisterMode ? 'Tạo tài khoản thành viên' : 'Chào mừng trở lại'}
+          </h2>
+          <p style={{ fontSize: '13.5px', color: '#486581', margin: '0 0 22px 0' }}>
+            {isRegisterMode
+              ? 'Đăng ký để đặt tour nhanh chóng và tự thiết kế lịch trình riêng.'
+              : 'Đăng nhập bằng tài khoản TravelVN ERP của bạn để tiếp tục.'}
+          </p>
+
+          {error && (
+            <div className="tt-alert tt-alert-error" style={{ marginBottom: '18px' }}>
+              <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="input-group">
-            <label>
-              Email đăng nhập <span style={{ color: '#ef4444', fontWeight: 'bold' }}>(*)</span>
-            </label>
-            <input 
-              type="text" 
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="Ví dụ: admin@example.com"
-            />
-          </div>
-
-          <div className="input-group">
-            <label>
-              Mật khẩu <span style={{ color: '#ef4444', fontWeight: 'bold' }}>(*)</span>
-            </label>
-            <div 
-              style={{ position: 'relative' }}
-              onMouseEnter={() => setIsPasswordHovered(true)}
-              onMouseLeave={() => setIsPasswordHovered(false)}
-            >
-              {password.length > 0 && password.length < 6 && isPasswordHovered && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 'calc(100% + 6px)',
-                    left: '0',
-                    background: '#fffbeb',
-                    color: '#b45309',
-                    border: '1px solid #fcd34d',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                    zIndex: 20,
-                    pointerEvents: 'none',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <AlertCircle size={14} color="#d97706" style={{ flexShrink: 0 }} />
-                  <span>Mật khẩu từ 6 ký tự trở lên</span>
+          <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {isRegisterMode && (
+              <div>
+                <label className="tt-input-label">
+                  Họ và tên <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <User size={16} color="#829AB1" style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="tt-input"
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      if (error) setError('');
+                    }}
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    style={{ paddingLeft: '38px' }}
+                  />
                 </div>
-              )}
-              <input 
-                type={showPassword ? 'text' : 'password'} 
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder="Nhập mật khẩu"
-                title={password.length > 0 && password.length < 6 ? 'Mật khẩu từ 6 ký tự trở lên' : undefined}
-                style={{ 
-                  paddingRight: '42px',
-                  borderColor: password.length > 0 && password.length < 6 ? '#f59e0b' : undefined
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
+              </div>
+            )}
 
-          {isRegisterMode && (
-            <div className="input-group">
-              <label>
-                Nhập lại mật khẩu <span style={{ color: '#ef4444', fontWeight: 'bold' }}>(*)</span>
+            <div>
+              <label className="tt-input-label">
+                Email đăng nhập <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
-                <input 
-                  type={showConfirmPassword ? 'text' : 'password'} 
-                  value={confirmPassword}
+                <Mail size={16} color="#829AB1" style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="tt-input"
+                  value={email}
                   onChange={(e) => {
-                    setConfirmPassword(e.target.value);
+                    setEmail(e.target.value);
                     if (error) setError('');
                   }}
-                  placeholder="Nhập lại mật khẩu"
-                  style={{ paddingRight: '42px' }}
+                  placeholder="Ví dụ: khachhang@example.com"
+                  style={{ paddingLeft: '38px' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="tt-input-label">
+                Mật khẩu <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setIsPasswordHovered(true)}
+                onMouseLeave={() => setIsPasswordHovered(false)}
+              >
+                {password.length > 0 && password.length < 6 && isPasswordHovered && (
+                  <div
+                    className="tt-alert tt-alert-warning"
+                    style={{
+                      position: 'absolute',
+                      bottom: 'calc(100% + 6px)',
+                      left: '0',
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      zIndex: 20,
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 4px 12px rgba(16, 42, 67, 0.12)'
+                    }}
+                  >
+                    <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                    <span>Mật khẩu từ 6 ký tự trở lên</span>
+                  </div>
+                )}
+                <Lock size={16} color="#829AB1" style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="tt-input"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                  title={password.length > 0 && password.length < 6 ? 'Mật khẩu từ 6 ký tự trở lên' : undefined}
+                  style={{
+                    paddingLeft: '38px',
+                    paddingRight: '42px',
+                    borderColor: password.length > 0 && password.length < 6 ? '#F59E0B' : undefined
+                  }}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
-                  aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   style={{
                     position: 'absolute',
                     right: '12px',
@@ -236,35 +332,80 @@ const Login = () => {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#94a3b8',
+                    color: '#829AB1',
                     padding: 0,
                     display: 'flex',
                     alignItems: 'center'
                   }}
                 >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
-          )}
 
-          <button 
-            type="submit" 
-            className="login-button"
-            disabled={loading}
-          >
-            {loading ? 'Đang xử lý...' : (isRegisterMode ? 'Đăng ký' : 'Đăng nhập')}
-          </button>
-        </form>
+            {isRegisterMode && (
+              <div>
+                <label className="tt-input-label">
+                  Nhập lại mật khẩu <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={16} color="#829AB1" style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="tt-input"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (error) setError('');
+                    }}
+                    placeholder="Nhập lại mật khẩu"
+                    style={{ paddingLeft: '38px', paddingRight: '42px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={-1}
+                    aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#829AB1',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            )}
 
-        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#64748b' }}>
-          {isRegisterMode ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'} 
-          <span 
-            onClick={toggleMode}
-            style={{ color: '#0194f3', fontWeight: '600', cursor: 'pointer', marginLeft: '5px' }}
-          >
-            {isRegisterMode ? 'Đăng nhập ngay' : 'Đăng ký ngay'}
-          </span>
+            <button
+              type="submit"
+              className="tt-btn tt-btn-primary"
+              disabled={loading}
+              style={{ width: '100%', padding: '13px 20px', fontSize: '15px', borderRadius: '12px', marginTop: '6px' }}
+            >
+              {loading ? 'Đang xử lý...' : (isRegisterMode ? 'Đăng ký tài khoản' : 'Đăng nhập')}
+              {!loading && <ArrowRight size={16} />}
+            </button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13.5px', color: '#486581' }}>
+            {isRegisterMode ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'}
+            <span
+              onClick={() => toggleMode(!isRegisterMode)}
+              style={{ color: '#168BEB', fontWeight: '700', cursor: 'pointer', marginLeft: '6px' }}
+            >
+              {isRegisterMode ? 'Đăng nhập ngay' : 'Đăng ký ngay'}
+            </span>
+          </div>
         </div>
       </div>
     </div>
