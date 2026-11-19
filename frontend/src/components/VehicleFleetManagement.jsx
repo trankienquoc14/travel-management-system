@@ -216,7 +216,7 @@ const VehicleFleetManagement = () => {
       setAlertMsg({ type: 'success', text: `Đã xóa xe ${plate} khỏi hệ thống.` });
       fetchVehicles();
     } catch (err) {
-      alert('Không thể xóa xe này.');
+      alert(err.response?.data?.message || 'Không thể xóa xe này.');
     }
   };
 
