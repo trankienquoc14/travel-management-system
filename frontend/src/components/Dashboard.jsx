@@ -439,7 +439,7 @@ const Dashboard = () => {
                   {isOfficeStaffVehicleGroupOpen && (
                     <>
                       <li className={activeTab === 'staff_fleet_vehicles' || activeTab === 'staff_vehicle_history' ? 'active' : ''} onClick={() => setActiveTab('staff_fleet_vehicles')}>
-                        🚌 Quản lý xe
+                        🚌 Cập nhật tình trạng xe
                       </li>
                       <li className={activeTab === 'staff_vehicle_incidents' ? 'active' : ''} onClick={() => setActiveTab('staff_vehicle_incidents')}>
                         ⚠️ Xử lý sự cố xe
