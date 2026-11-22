@@ -3,7 +3,12 @@
  * for TravelVN ERP Customer Chatbot.
  */
 
-const { GoogleGenAI } = require('@google/genai');
+let GoogleGenAI = null;
+try {
+  GoogleGenAI = require('@google/genai').GoogleGenAI;
+} catch (e) {
+  console.warn('⚠️ [@google/genai] chưa được cài đặt, Chatbot sẽ dùng deterministic fallback.');
+}
 const { KNOWLEDGE_CHUNKS, retrieveKnowledge, normalizeVi } = require('./knowledgeBase');
 const { GEMINI_TOOL_DECLARATIONS, executeErpTool } = require('./erpTools');
 const { processAIQuery: legacyBotQuery } = require('../aiBotEngine');
@@ -62,6 +67,7 @@ CÁC NGUYÊN TẮC VẬN HÀNH BẮT BUỘC:
    - Khi dẫn link tour, BẮT BUỘC dùng định dạng chuẩn: [Tên tour](/tour/{tour_id}) để khách bấm mở trực tiếp trên hệ thống.`;
 
 function isUsableGeminiKey() {
+  if (!GoogleGenAI) return false;
   const key = (process.env.GEMINI_API_KEY || '').trim();
   if (!key) return false;
   if (key === 'your_gemini_api_key_here' || key.startsWith('your_')) return false;

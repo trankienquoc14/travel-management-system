@@ -625,7 +625,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.CHAT_SERVICE_PORT || process.env.PORT || 5005;
+const PORT = process.env.CHAT_SERVICE_PORT || 5005;
 server.listen(PORT, () => {
   console.log(`💬 Chat Service running on port ${PORT}`);
   console.log(`📡 Socket.IO ready at http://localhost:${PORT}`);

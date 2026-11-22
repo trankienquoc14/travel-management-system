@@ -15,6 +15,15 @@ app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(__dirname, '../shared-uploads')));
 app.use('/uploads', express.static(path.join(__dirname, '../tour-service/uploads')));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'API Gateway', timestamp: new Date().toISOString() });
+});
+
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'TravelVN ERP API Gateway', version: '1.0.0' });
+});
+
 // Routing configuration for microservices
 const services = {
   auth: process.env.AUTH_SERVICE_URL || 'http://localhost:5001',
@@ -23,6 +32,14 @@ const services = {
   hr: process.env.HR_SERVICE_URL || 'http://localhost:5004',
   chat: process.env.CHAT_SERVICE_URL || 'http://localhost:5005'
 };
+
+// WebSocket proxy for Socket.IO realtime chat (MUST be placed before root proxy)
+const wsProxy = createProxyMiddleware({
+  target: services.chat,
+  ws: true,
+  changeOrigin: true
+});
+app.use('/socket.io', wsProxy);
 
 // Set up proxy using router option to preserve paths
 app.use('/', createProxyMiddleware({
@@ -49,15 +66,18 @@ app.use('/', createProxyMiddleware({
   }
 }));
 
-// Proxy WebSocket for Socket.IO realtime chat
-app.use('/socket.io', createProxyMiddleware({
-  target: services.chat,
-  ws: true,
-  changeOrigin: true
-}));
-
 const PORT = process.env.PORT || process.env.API_GATEWAY_PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`API Gateway is running on http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 [API Gateway] Server is successfully running on http://0.0.0.0:${PORT}`);
+});
+
+server.on('error', (err) => {
+  console.error('❌ [API Gateway] Server listen error:', err);
+});
+
+server.on('upgrade', (req, socket, head) => {
+  if (req.url && req.url.startsWith('/socket.io')) {
+    wsProxy.upgrade(req, socket, head);
+  }
 });
