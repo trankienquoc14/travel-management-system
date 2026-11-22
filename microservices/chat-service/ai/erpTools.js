@@ -3,7 +3,11 @@
  * All queries are strictly read-only, parameterized, bounded, and enforce JWT ownership for personal data.
  */
 
-const { Type } = require('@google/genai');
+let Type = { OBJECT: 'OBJECT', STRING: 'STRING', NUMBER: 'NUMBER', BOOLEAN: 'BOOLEAN', ARRAY: 'ARRAY' };
+try {
+  const genai = require('@google/genai');
+  if (genai && genai.Type) Type = genai.Type;
+} catch (e) {}
 
 const GEMINI_TOOL_DECLARATIONS = [
   {
