@@ -130,7 +130,7 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Đăng ký tài khoản thành công',
+      message: 'Đăng ký tài khoản thành công!',
       token,
       user: {
         id: newUser.user_id,
@@ -141,7 +141,8 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+    console.error('Lỗi đăng ký:', error);
+    res.status(500).json({ success: false, message: 'Không thể xử lý yêu cầu đăng ký do lỗi server' });
   }
 };
 

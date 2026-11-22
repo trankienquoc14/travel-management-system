@@ -5,6 +5,7 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  CheckCircle,
   Compass,
   Mail,
   Lock,
@@ -29,6 +30,7 @@ const Login = () => {
     const params = new URLSearchParams(location.search);
     setIsRegisterMode(params.get('mode') === 'register');
     setError('');
+    setSuccessMsg('');
   }, [location.search]);
 
   const [fullName, setFullName] = useState('');
@@ -39,6 +41,7 @@ const Login = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordHovered, setIsPasswordHovered] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Regex chuẩn kiểm tra định dạng email
@@ -48,30 +51,39 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    // 1. Kiểm tra bỏ trống các trường bắt buộc (*)
+    // 1. Kiểm tra các trường khi Đăng ký
     if (isRegisterMode) {
-      if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
-        return setError('Vui lòng nhập đầy đủ các thông tin bắt buộc');
+      if (!fullName || !fullName.trim()) {
+        return setError('Vui lòng nhập họ và tên');
+      }
+      if (!email || !email.trim()) {
+        return setError('Vui lòng nhập email đăng ký');
+      }
+      if (!emailRegex.test(email.trim())) {
+        return setError('Email nhập phải đúng định dạng');
+      }
+      if (!password) {
+        return setError('Vui lòng nhập mật khẩu');
+      }
+      if (password.length < 6) {
+        return setError('Mật khẩu phải từ 6 ký tự trở lên');
+      }
+      if (!confirmPassword || password !== confirmPassword) {
+        return setError('Mật khẩu nhập lại không khớp!');
       }
     } else {
-      if (!email.trim() || !password) {
-        return setError('Vui lòng nhập đầy đủ các thông tin bắt buộc');
+      // 5.1. Bỏ trống trường bắt buộc: Email đăng nhập
+      if (!email || !email.trim()) {
+        return setError('Vui lòng nhập email đăng nhập');
       }
-    }
-
-    // 2. Kiểm tra định dạng Email
-    if (!emailRegex.test(email.trim())) {
-      return setError('Email nhập phải đúng định dạng');
-    }
-
-    // 3. Mật khẩu phải từ 6 ký tự trở lên
-    if (password.length < 6) {
-      return setError('Mật khẩu phải từ 6 ký tự trở lên');
-    }
-
-    // 4. Nếu ở chế độ Đăng ký: kiểm tra xác nhận mật khẩu
-    if (isRegisterMode && password !== confirmPassword) {
-      return setError('Mật khẩu nhập lại không khớp!');
+      // Kiểm tra định dạng Email
+      if (!emailRegex.test(email.trim())) {
+        return setError('Email nhập phải đúng định dạng');
+      }
+      // 5.2. Bỏ trống trường bắt buộc: Mật khẩu
+      if (!password) {
+        return setError('Vui lòng nhập mật khẩu');
+      }
     }
 
     setLoading(true);
@@ -90,18 +102,46 @@ const Login = () => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Chuyển hướng mượt mà
-      const userRole = Number(user.role_id || user.role);
-      if (userRole !== 6) {
-        navigate('/dashboard');
+      if (isRegisterMode) {
+        // 8. Hệ thống hiển thị thông báo "Đăng ký tài khoản thành công!" và tự động đăng nhập vào hệ thống điều hướng về trang chủ
+        setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng...');
+        setTimeout(() => {
+          navigate('/home');
+        }, 1200);
       } else {
-        navigate('/home');
+        // Chuyển hướng mượt mà theo vai trò
+        const userRole = Number(user.role_id || user.role);
+        if (userRole !== 6) {
+          navigate('/dashboard');
+        } else {
+          navigate('/home');
+        }
       }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
+        const serverMsg = err.response.data.message;
+        if (!isRegisterMode) {
+          // 5.3, 5.4, 5.5: Hiển thị thông báo "Đăng nhập thất bại" kèm theo thông báo lỗi từ server
+          if (serverMsg.toLowerCase().includes('đã tồn tại')) {
+            setError('Đăng nhập thất bại! Tài khoản đã tồn tại');
+          } else {
+            setError(`Đăng nhập thất bại: ${serverMsg}`);
+          }
+        } else {
+          // 5.7 & 7.1: Xử lý lỗi đăng ký từ server
+          if (err.response.status === 500) {
+            setError('Không thể xử lý yêu cầu đăng ký do lỗi server');
+          } else {
+            setError(serverMsg);
+          }
+        }
       } else {
-        setError('Lỗi kết nối đến máy chủ. Vui lòng thử lại sau.');
+        // Luồng ngoại lệ (exception flow)
+        if (isRegisterMode) {
+          setError('Không thể xử lý yêu cầu đăng ký do lỗi server');
+        } else {
+          setError('Đăng nhập thất bại! Lỗi kết nối đến máy chủ. Vui lòng thử lại sau.');
+        }
       }
     } finally {
       setLoading(false);
@@ -112,6 +152,7 @@ const Login = () => {
     const next = typeof targetRegister === 'boolean' ? targetRegister : !isRegisterMode;
     setIsRegisterMode(next);
     setError('');
+    setSuccessMsg('');
   };
 
   return (
@@ -224,6 +265,26 @@ const Login = () => {
               : 'Đăng nhập bằng tài khoản TravelVN ERP của bạn để tiếp tục.'}
           </p>
 
+          {successMsg && (
+            <div style={{
+              marginBottom: '18px',
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #6ee7b7',
+              color: '#047857',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '14px',
+              fontWeight: '700',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)'
+            }}>
+              <CheckCircle size={20} color="#059669" style={{ flexShrink: 0 }} />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
           {error && (
             <div className="tt-alert tt-alert-error" style={{ marginBottom: '18px' }}>
               <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
@@ -283,7 +344,7 @@ const Login = () => {
                 onMouseEnter={() => setIsPasswordHovered(true)}
                 onMouseLeave={() => setIsPasswordHovered(false)}
               >
-                {password.length > 0 && password.length < 6 && isPasswordHovered && (
+                {isRegisterMode && password.length > 0 && password.length < 6 && isPasswordHovered && (
                   <div
                     className="tt-alert tt-alert-warning"
                     style={{
@@ -311,12 +372,12 @@ const Login = () => {
                     setPassword(e.target.value);
                     if (error) setError('');
                   }}
-                  placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-                  title={password.length > 0 && password.length < 6 ? 'Mật khẩu từ 6 ký tự trở lên' : undefined}
+                  placeholder={isRegisterMode ? "Nhập mật khẩu (tối thiểu 6 ký tự)" : "Nhập mật khẩu"}
+                  title={isRegisterMode && password.length > 0 && password.length < 6 ? 'Mật khẩu từ 6 ký tự trở lên' : undefined}
                   style={{
                     paddingLeft: '38px',
                     paddingRight: '42px',
-                    borderColor: password.length > 0 && password.length < 6 ? '#F59E0B' : undefined
+                    borderColor: isRegisterMode && password.length > 0 && password.length < 6 ? '#F59E0B' : undefined
                   }}
                 />
                 <button

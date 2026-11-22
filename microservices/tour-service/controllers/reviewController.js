@@ -92,7 +92,7 @@ exports.getTourReviews = async (req, res) => {
   }
 };
 
-// Kiểm tra xem khách hàng hiện tại đã đánh giá tour này chưa (Luồng 4.2)
+// Kiểm tra xem khách hàng hiện tại đã đánh giá tour này chưa và có đủ điều kiện đánh giá không (đã hoàn thành tour)
 exports.getMyReviewForTour = async (req, res) => {
   try {
     const tourId = req.params.id;
@@ -100,9 +100,42 @@ exports.getMyReviewForTour = async (req, res) => {
     const bookingId = req.query.booking_id;
 
     if (!customerId) {
-      return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập!' });
+      return res.status(200).json({
+        success: true,
+        isEligible: false,
+        hasReviewed: false,
+        review: null,
+        message: 'Vui lòng đăng nhập'
+      });
     }
 
+    // 1. Kiểm tra xem khách hàng có đơn hàng ĐÃ HOÀN THÀNH cho tour này không
+    // Đơn hoàn thành: booking_status = 'Completed' HOẶC (booking_status = 'Confirmed' VÀ ngày về <= hôm nay HOẶC departure.status = 'Completed')
+    const [eligibleBookings] = await sequelize.query(`
+      SELECT b.booking_id, b.booking_status, d.departure_date, d.return_date, d.status AS departure_status
+      FROM bookings b
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      WHERE b.customer_id = ? 
+        AND (d.tour_id = ? OR b.departure_id IN (SELECT departure_id FROM departures WHERE tour_id = ?))
+        AND b.booking_status != 'Cancelled'
+        AND (
+          b.booking_status = 'Completed' 
+          OR (
+            b.booking_status = 'Confirmed' 
+            AND (d.return_date <= CURDATE() OR d.status = 'Completed')
+          )
+          ${bookingId ? 'OR b.booking_id = ?' : ''}
+        )
+      ORDER BY b.booking_id DESC
+      LIMIT 1
+    `, {
+      replacements: bookingId ? [customerId, tourId, tourId, bookingId] : [customerId, tourId, tourId]
+    });
+
+    const isEligibleBooking = eligibleBookings && eligibleBookings.length > 0;
+    const matchedBookingId = isEligibleBooking ? eligibleBookings[0].booking_id : null;
+
+    // 2. Kiểm tra xem đã có đánh giá cũ chưa
     let query = `
       SELECT * FROM reviews 
       WHERE customer_id = ? AND (tour_id = ? ${bookingId ? 'OR booking_id = ?' : ''})
@@ -112,6 +145,7 @@ exports.getMyReviewForTour = async (req, res) => {
 
     const [rows] = await sequelize.query(query, { replacements });
 
+    let reviewData = null;
     if (rows && rows.length > 0) {
       const review = rows[0];
       let imgList = [];
@@ -122,20 +156,21 @@ exports.getMyReviewForTour = async (req, res) => {
           imgList = review.images.split(',').map(s => s.trim()).filter(Boolean);
         }
       }
-      return res.status(200).json({
-        success: true,
-        hasReviewed: true,
-        review: {
-          ...review,
-          images: imgList
-        }
-      });
+      reviewData = {
+        ...review,
+        images: imgList
+      };
     }
+
+    // Đủ điều kiện đánh giá khi: đã hoàn thành tour HOẶC đã từng gửi đánh giá trước đó (cho phép sửa)
+    const canUserReview = isEligibleBooking || Boolean(reviewData);
 
     res.status(200).json({
       success: true,
-      hasReviewed: false,
-      review: null
+      isEligible: canUserReview,
+      hasReviewed: Boolean(reviewData),
+      bookingId: matchedBookingId,
+      review: reviewData
     });
 
   } catch (error) {
@@ -174,45 +209,59 @@ exports.submitTourReview = async (req, res) => {
     }
 
     // 2. Tiền điều kiện (Pre-condition): Khách hàng đã hoàn thành chuyến đi
-    // Kiểm tra trong CSDL đơn hàng của khách hàng với tour này
     const [eligibleBookings] = await sequelize.query(`
-      SELECT b.booking_id, b.booking_status, d.return_date
+      SELECT b.booking_id, b.booking_status, d.return_date, d.status AS departure_status
       FROM bookings b
       LEFT JOIN departures d ON b.departure_id = d.departure_id
       WHERE b.customer_id = ? 
         AND (d.tour_id = ? OR b.departure_id IN (SELECT departure_id FROM departures WHERE tour_id = ?))
+        AND b.booking_status != 'Cancelled'
         AND (
           b.booking_status = 'Completed' 
-          OR (b.booking_status = 'Confirmed' AND d.return_date <= CURDATE())
-          ${booking_id ? 'OR b.booking_id = ?' : ''}
+          OR (
+            b.booking_status = 'Confirmed' 
+            AND (d.return_date <= CURDATE() OR d.status = 'Completed')
+          )
         )
+      ORDER BY b.booking_id DESC
       LIMIT 1
     `, {
-      replacements: booking_id ? [customerId, tourId, tourId, booking_id] : [customerId, tourId, tourId]
+      replacements: [customerId, tourId, tourId]
     });
 
-    if (!eligibleBookings || eligibleBookings.length === 0) {
-      // Nếu có booking_id được gửi lên, kiểm tra trực tiếp booking đó
-      if (booking_id) {
-        const [directBkg] = await sequelize.query(`
-          SELECT booking_id, booking_status FROM bookings WHERE booking_id = ? AND customer_id = ?
-        `, { replacements: [booking_id, customerId] });
+    let targetBookingId = eligibleBookings[0]?.booking_id || null;
+    if (booking_id) {
+      const [directBkg] = await sequelize.query(`
+        SELECT b.booking_id, b.booking_status, d.return_date, d.status AS departure_status
+        FROM bookings b
+        LEFT JOIN departures d ON b.departure_id = d.departure_id
+        WHERE b.booking_id = ? AND b.customer_id = ?
+          AND b.booking_status != 'Cancelled'
+          AND (
+            b.booking_status = 'Completed' 
+            OR (
+              b.booking_status = 'Confirmed' 
+              AND (d.return_date <= CURDATE() OR d.status = 'Completed')
+            )
+          )
+      `, { replacements: [booking_id, customerId] });
 
-        if (!directBkg || directBkg.length === 0) {
-          return res.status(403).json({
-            success: false,
-            message: 'Bạn chưa hoàn thành chuyến đi này hoặc không sở hữu đơn hàng tương ứng.'
-          });
-        }
-      } else {
-        return res.status(403).json({
-          success: false,
-          message: 'Chỉ khách hàng đã hoàn thành chuyến đi tour mới có thể gửi đánh giá.'
-        });
+      if (directBkg && directBkg.length > 0) {
+        targetBookingId = booking_id;
       }
     }
 
-    const targetBookingId = booking_id || (eligibleBookings[0] ? eligibleBookings[0].booking_id : null);
+    // Kiểm tra xem khách đã có đánh giá trước đó chưa (cho phép chỉnh sửa đánh giá)
+    const [priorReview] = await sequelize.query(`
+      SELECT review_id FROM reviews WHERE customer_id = ? AND tour_id = ? LIMIT 1
+    `, { replacements: [customerId, tourId] });
+
+    if (!targetBookingId && (!priorReview || priorReview.length === 0)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ những khách hàng đã tham gia và hoàn thành chuyến đi mới có thể gửi đánh giá cho tour này.'
+      });
+    }
 
     // 3. Xử lý hình ảnh (Ảnh mới upload + Ảnh cũ giữ lại)
     let imagesList = [];

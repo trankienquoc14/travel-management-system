@@ -167,6 +167,8 @@ const TourDetail = () => {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [selectedImageModal, setSelectedImageModal] = useState(null);
     const [canReview, setCanReview] = useState(false);
+    const [userReviewed, setUserReviewed] = useState(false);
+    const [reviewBookingId, setReviewBookingId] = useState(null);
 
     const fetchReviews = async () => {
         try {
@@ -185,17 +187,30 @@ const TourDetail = () => {
 
     const checkReviewEligibility = async () => {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            setCanReview(false);
+            setUserReviewed(false);
+            setReviewBookingId(null);
+            return;
+        }
         try {
             const res = await axios.get(`http://localhost:5000/api/tours/${id}/my-review`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                // Cho phép review nếu đã review trước đó (Cập nhật) hoặc nếu người dùng đã đăng nhập
-                setCanReview(true);
+                // Chỉ cho phép review nếu tài khoản ĐÃ ĐẶT VÀ HOÀN THÀNH TOUR (isEligible = true)
+                setCanReview(Boolean(res.data.isEligible));
+                setUserReviewed(Boolean(res.data.hasReviewed));
+                setReviewBookingId(res.data.bookingId || null);
+            } else {
+                setCanReview(false);
+                setUserReviewed(false);
+                setReviewBookingId(null);
             }
         } catch (e) {
-            // Không đủ điều kiện hoặc chưa hoàn thành tour
+            setCanReview(false);
+            setUserReviewed(false);
+            setReviewBookingId(null);
         }
     };
 
@@ -857,34 +872,35 @@ const TourDetail = () => {
                                 </p>
                             </div>
 
-                            <button
-                                onClick={() => {
-                                    const token = localStorage.getItem('token');
-                                    if (!token) {
-                                        alert('Vui lòng đăng nhập để gửi đánh giá chuyến đi!');
-                                        return navigate('/login');
-                                    }
-                                    setIsReviewModalOpen(true);
-                                }}
-                                style={{
-                                    padding: '12px 24px',
-                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '14px',
-                                    fontWeight: '800',
-                                    fontSize: '14.5px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.35)',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <Star size={18} fill="#ffffff" color="#ffffff" />
-                                Viết đánh giá chuyến đi
-                            </button>
+                            {canReview && (
+                                <button
+                                    onClick={() => {
+                                        setIsReviewModalOpen(true);
+                                    }}
+                                    style={{
+                                        padding: '12px 24px',
+                                        background: userReviewed
+                                            ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                                            : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '14px',
+                                        fontWeight: '800',
+                                        fontSize: '14.5px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: userReviewed
+                                            ? '0 4px 15px rgba(2, 132, 199, 0.35)'
+                                            : '0 4px 15px rgba(245, 158, 11, 0.35)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Star size={18} fill="#ffffff" color="#ffffff" />
+                                    <span>{userReviewed ? 'Chỉnh sửa đánh giá của bạn' : 'Viết đánh giá chuyến đi'}</span>
+                                </button>
+                            )}
                         </div>
 
                         {/* Tổng quan Điểm số & Tiêu chí chi tiết */}
@@ -994,24 +1010,42 @@ const TourDetail = () => {
                                 <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
                                     Hãy là du khách đầu tiên chia sẻ cảm nhận và hình ảnh thực tế sau khi hoàn thành tour!
                                 </p>
-                                <button
-                                    onClick={() => {
-                                        const token = localStorage.getItem('token');
-                                        if (!token) return navigate('/login');
-                                        setIsReviewModalOpen(true);
-                                    }}
-                                    style={{
-                                        padding: '10px 22px',
-                                        background: '#0194f3',
-                                        color: '#ffffff',
-                                        border: 'none',
+                                {canReview ? (
+                                    <button
+                                        onClick={() => setIsReviewModalOpen(true)}
+                                        style={{
+                                            padding: '10px 22px',
+                                            background: userReviewed
+                                                ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                                                : '#0194f3',
+                                            color: '#ffffff',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 12px rgba(1, 148, 243, 0.3)'
+                                        }}
+                                    >
+                                        ⭐ {userReviewed ? 'Chỉnh sửa đánh giá của bạn' : 'Viết đánh giá ngay'}
+                                    </button>
+                                ) : (
+                                    <div style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '10px 20px',
+                                        background: '#ffffff',
+                                        color: '#64748b',
                                         borderRadius: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    ⭐ Viết đánh giá ngay
-                                </button>
+                                        fontSize: '13.5px',
+                                        fontWeight: '600',
+                                        border: '1px solid #e2e8f0',
+                                        marginTop: '4px'
+                                    }}>
+                                        <span>🔒</span>
+                                        <span>Chức năng đánh giá chỉ dành cho tài khoản đã đặt và hoàn thành chuyến đi này.</span>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1281,9 +1315,11 @@ const TourDetail = () => {
                 isOpen={isReviewModalOpen}
                 onClose={() => setIsReviewModalOpen(false)}
                 tour={tour}
+                booking={reviewBookingId ? { booking_id: reviewBookingId, tour_id: id } : null}
                 onReviewSubmitted={() => {
                     fetchTourDetail();
                     fetchReviews();
+                    checkReviewEligibility();
                 }}
             />
 
