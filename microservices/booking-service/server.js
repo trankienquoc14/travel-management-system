@@ -8,9 +8,15 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const sequelize = require('./config/database');
 const bookingRoutes = require('./routes/bookingRoutes');
+const bookingController = require('./controllers/bookingController');
+
+// Hỗ trợ webhook SePay ở mọi đường dẫn URL phổ biến
+app.post('/sepay-webhook', bookingController.sepayWebhook);
+app.post('/api/sepay-webhook', bookingController.sepayWebhook);
 
 // Cấu hình routes
 app.use('/api/bookings', bookingRoutes);

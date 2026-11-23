@@ -54,6 +54,8 @@ app.use('/', createProxyMiddleware({
     '/api/custom-tours': services.tour,
     '/api/service-requests': services.tour,
     '/api/bookings': services.booking,
+    '/api/sepay-webhook': services.booking,
+    '/sepay-webhook': services.booking,
     '/api/hr': services.hr,
     '/api/guide': services.hr,
     '/api/driver': services.hr,

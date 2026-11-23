@@ -380,9 +380,13 @@ async function sendBookingConfirmationEmail(bookingId) {
             <div style="display: inline-block; background: rgba(255, 255, 255, 0.15); border-radius: 9999px; padding: 6px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
               HỆ THỐNG QUẢN LÝ DU LỊCH TRAVELERP
             </div>
-            <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">🎉 ĐẶT TOUR THÀNH CÔNG!</h1>
+            <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
+              ${isPaid ? '🎉 ĐẶT TOUR & THANH TOÁN THÀNH CÔNG!' : '⏱️ KHỞI TẠO ĐƠN & GIỮ CHỖ THÀNH CÔNG!'}
+            </h1>
             <p style="margin: 8px 0 0 0; font-size: 15px; opacity: 0.9;">
-              Cảm ơn quý khách <strong>${recipientName}</strong> đã đặt tour du lịch cùng chúng tôi.
+              ${isPaid 
+                ? `Cảm ơn quý khách <strong>${recipientName}</strong> đã đặt tour du lịch cùng chúng tôi. Khoản thanh toán đã được ghi nhận thành công!` 
+                : `Cảm ơn quý khách <strong>${recipientName}</strong>. Đơn đặt tour của bạn đã được ghi nhận và đang giữ chỗ tạm thời (10 phút). Vui lòng hoàn tất thanh toán để nhận vé điện tử chính thức.`}
             </p>
           </div>
 
@@ -512,11 +516,17 @@ async function sendBookingConfirmationEmail(bookingId) {
     `;
 
     const transporter = await getTransporter();
+    const mailSubject = isPaid
+      ? `[TravelERP] 🎉 Xác nhận đặt tour & thanh toán thành công #${booking.booking_id} - ${booking.tour_name}`
+      : `[TravelERP] ⏱️ Xác nhận giữ chỗ tour #${booking.booking_id} (Chờ thanh toán) - ${booking.tour_name}`;
+
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <no-reply@travelerp.vn>',
       to: recipientEmail,
-      subject: `[TravelERP] 🎉 Xác nhận đặt tour thành công #${booking.booking_id} - ${booking.tour_name}`,
-      text: `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đã được ghi nhận thành công!\nTổng tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)} từ ${departurePlace}.\n\nCảm ơn bạn đã lựa chọn TravelERP!`,
+      subject: mailSubject,
+      text: isPaid
+        ? `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đã được thanh toán thành công!\nTổng tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)} từ ${departurePlace}.\n\nCảm ơn bạn đã lựa chọn TravelERP!`
+        : `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đang được giữ chỗ tạm thời (10 phút) chờ thanh toán!\nTổng tiền cần thanh toán: ${formatVND(totalAmount)}\nNội dung chuyển khoản: ${transferContent}\n\nVui lòng hoàn tất thanh toán để nhận vé điện tử chính thức.`,
       html: htmlContent
     };
 

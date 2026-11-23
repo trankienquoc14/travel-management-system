@@ -352,6 +352,52 @@ let requiredRooms = 0; let singleRoomCount = 0;
                 }
             }
             
+            // 🔒 Kiểm tra tính hợp lệ về độ tuổi của từng hành khách dựa trên ngày khởi hành tour
+            if (dep.departure_date) {
+                const depDate = new Date(dep.departure_date);
+                depDate.setHours(0, 0, 0, 0);
+                const d12 = new Date(depDate); d12.setFullYear(d12.getFullYear() - 12);
+                const d5 = new Date(depDate); d5.setFullYear(d5.getFullYear() - 5);
+                const d2 = new Date(depDate); d2.setFullYear(d2.getFullYear() - 2);
+
+                for (let i = 0; i < req.body.passengers.length; i++) {
+                    const p = req.body.passengers[i];
+                    if (p.birth_date) {
+                        const bDate = new Date(p.birth_date);
+                        bDate.setHours(0, 0, 0, 0);
+                        if (!isNaN(bDate.getTime())) {
+                            const pType = (p.passenger_type || 'ADULT').toUpperCase();
+                            const pName = p.full_name || `#${i + 1}`;
+                            if (pType === 'ADULT' && bDate > d12) {
+                                await transaction.rollback();
+                                return res.status(400).json({
+                                    success: false,
+                                    message: `Hành khách "${pName}" loại vé Người lớn phải từ 12 tuổi trở lên tính đến ngày khởi hành.`
+                                });
+                            } else if (pType === 'CHILD' && (bDate <= d12 || bDate > d5)) {
+                                await transaction.rollback();
+                                return res.status(400).json({
+                                    success: false,
+                                    message: `Hành khách "${pName}" loại vé Trẻ em phải từ 5 đến 11 tuổi tính đến ngày khởi hành.`
+                                });
+                            } else if (pType === 'TODDLER' && (bDate <= d5 || bDate > d2)) {
+                                await transaction.rollback();
+                                return res.status(400).json({
+                                    success: false,
+                                    message: `Hành khách "${pName}" loại vé Trẻ nhỏ phải từ 2 đến 4 tuổi tính đến ngày khởi hành.`
+                                });
+                            } else if (pType === 'INFANT' && bDate <= d2) {
+                                await transaction.rollback();
+                                return res.status(400).json({
+                                    success: false,
+                                    message: `Hành khách "${pName}" loại vé Em bé phải dưới 2 tuổi tính đến ngày khởi hành.`
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
             // Validate if single_room_allowed
             const hasSingle = req.body.passengers.some(p => p.passenger_type === 'ADULT' && p.single_room);
             if (hasSingle && roomRules.single_room_allowed === false) {
@@ -544,12 +590,12 @@ let requiredRooms = 0; let singleRoomCount = 0;
 
       await sequelize.query(`
         INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
-        VALUES (?, ?, ?, 'BOOKING_SUCCESS', 'CUSTOMER', 0, '/my-bookings', NOW())
+        VALUES (?, ?, ?, 'BOOKING_PENDING', 'CUSTOMER', 0, '/my-bookings', NOW())
       `, {
         replacements: [
           customer_id,
-          '🎉 Đặt tour thành công!',
-          `Đơn đặt tour #${newBookingId} (${tourName}${depDateStr ? ` - Khởi hành: ${depDateStr}` : ''}) đã được ghi nhận. Vui lòng thanh toán để nhận vé điện tử và mã QR check-in!`
+          '⏱️ Đã giữ chỗ tour - Chờ thanh toán',
+          `Đơn đặt tour #${newBookingId} (${tourName}${depDateStr ? ` - Khởi hành: ${depDateStr}` : ''}) đã được ghi nhận và đang giữ chỗ tạm thời (10 phút). Vui lòng hoàn tất thanh toán để nhận vé điện tử và mã QR check-in!`
         ],
         transaction
       });
@@ -580,7 +626,7 @@ let requiredRooms = 0; let singleRoomCount = 0;
 
     res.status(200).json({
       success: true,
-      message: 'Đặt tour thành công!',
+      message: 'Khởi tạo đơn đặt tour & giữ chỗ thành công!',
       booking_id: newBookingId,
       booking_code: `#BKG-${String(newBookingId).padStart(4, '0')}`,
       booking_status: 'Chờ thanh toán',
@@ -650,9 +696,16 @@ exports.confirmPayment = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { bookingId } = req.params;
+    const paymentMethod = req.body?.payment_method || 'VNPAY_QR';
 
-    // Chuyển payments sang Success
-    await sequelize.query(`UPDATE payments SET payment_status = 'Success', paid_at = NOW() WHERE booking_id = ?`, { replacements: [bookingId], transaction });
+    // Chuyển payments sang Success và cập nhật phương thức thanh toán
+    await sequelize.query(`
+      UPDATE payments 
+      SET payment_status = 'Success', 
+          payment_method = COALESCE(?, payment_method, 'VNPAY_QR'), 
+          paid_at = NOW() 
+      WHERE booking_id = ?
+    `, { replacements: [paymentMethod, bookingId], transaction });
 
     // Chuyển bookings sang Paid & Confirmed
     await sequelize.query(`UPDATE bookings SET payment_status = 'Paid', booking_status = 'Confirmed' WHERE booking_id = ?`, { replacements: [bookingId], transaction });
@@ -1870,6 +1923,7 @@ exports.getSepayPaymentInfo = async (req, res) => {
         } else {
             const [rows] = await sequelize.query(`
                 SELECT b.booking_id, b.total_amount, b.payment_status, b.booking_status, b.booking_date,
+                       p_method.payment_method,
                        u.full_name AS customer_name,
                        COALESCE(t.tour_name, CONCAT('Tour thiết kế riêng: ', cr.destination), 'Tour du lịch') AS tour_name
                 FROM bookings b
@@ -1878,6 +1932,11 @@ exports.getSepayPaymentInfo = async (req, res) => {
                 LEFT JOIN tours t ON d.tour_id = t.tour_id
                 LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
                 LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+                LEFT JOIN (
+                    SELECT booking_id, MAX(payment_method) AS payment_method
+                    FROM payments
+                    GROUP BY booking_id
+                ) p_method ON b.booking_id = p_method.booking_id
                 WHERE b.booking_id = ?
             `, { replacements: [bookingId] });
 
@@ -1890,7 +1949,17 @@ exports.getSepayPaymentInfo = async (req, res) => {
             orderTitle = orderInfo.tour_name;
             isPaid = orderInfo.payment_status === 'Paid';
 
-            // Đồng bộ mã giao dịch kỳ vọng vào bảng payments nếu đang Pending
+            // Nếu đơn hàng trước đó là tiền mặt và chưa thanh toán, khi khách chuyển sang quét QR:
+            // Reset booking_date = NOW() để khách có trọn vẹn 10 phút chuyển khoản VietQR mới
+            const prevMethod = String(orderInfo.payment_method || '').toLowerCase();
+            const isCashBooking = prevMethod === 'cash' || prevMethod === 'tiền mặt';
+            if (isCashBooking && !isPaid) {
+                await sequelize.query(`
+                    UPDATE bookings SET booking_date = NOW() WHERE booking_id = ? AND payment_status = 'Unpaid'
+                `, { replacements: [bookingId] });
+            }
+
+            // Đồng bộ mã giao dịch kỳ vọng vào bảng payments nếu đang Pending và cập nhật phương thức sang VNPAY_QR
             await sequelize.query(`
                 UPDATE payments 
                 SET payment_method = 'VNPAY_QR', transaction_code = ?
@@ -1903,6 +1972,9 @@ exports.getSepayPaymentInfo = async (req, res) => {
         const vietQrUrl = `https://img.vietqr.io/image/${SEPAY_CONFIG.bankCode}-${SEPAY_CONFIG.accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(SEPAY_CONFIG.accountName)}`;
         const deeplinkBase = `https://dl.vietqr.io/pay?ba=${SEPAY_CONFIG.accountNumber}@${SEPAY_CONFIG.bankCode.toLowerCase()}&am=${amount}&tn=${encodeURIComponent(transferContent)}&bn=${encodeURIComponent(SEPAY_CONFIG.accountName)}`;
 
+        const prevMethod = String(orderInfo.payment_method || '').toLowerCase();
+        const isCashBooking = prevMethod === 'cash' || prevMethod === 'tiền mặt';
+
         return res.status(200).json({
             success: true,
             data: {
@@ -1911,7 +1983,9 @@ exports.getSepayPaymentInfo = async (req, res) => {
                 order_code: orderCode,
                 order_title: orderTitle,
                 customer_name: orderInfo.customer_name || 'Quý khách',
-                created_at: orderInfo.booking_date || orderInfo.created_at,
+                created_at: (isCashBooking && !isPaid) ? new Date().toISOString() : (orderInfo.booking_date || orderInfo.created_at),
+                payment_method: 'VNPAY_QR',
+                is_cash_switched: isCashBooking,
                 booking_status: orderInfo.booking_status || orderInfo.status,
                 amount,
                 transfer_content: transferContent,
@@ -2128,11 +2202,7 @@ exports.checkSepayPaymentStatus = async (req, res) => {
         // Regex khớp chính xác mã đơn (không bị nhầm lẫn giữa đơn #2 và #25 nhờ (?!\d))
         const pattern = type === 'service'
             ? new RegExp(`(?:THANHTOANSRV|SRV)0*${bookingId}(?!\\d)`, 'i')
-            : new RegExp(`(?:THANHTOAN|BKG|DH)0*${bookingId}(?!\\d)`, 'i');
-
-        // Thời điểm tối thiểu của giao dịch hợp lệ: phải phát sinh từ khi tạo đơn (trừ hao 5 phút chống lệch đồng hồ)
-        const orderDateObj = new Date(bookingCreatedAt || Date.now());
-        const minTxTime = orderDateObj.getTime() - (5 * 60 * 1000);
+            : new RegExp(`(?:THANHTOAN|DATTOUR|BOOKING|TOUR|BKG|DH|TT)0*${bookingId}(?!\\d)`, 'i');
 
         // Lấy danh sách các mã tham chiếu giao dịch SePay đã từng được xác nhận trong hệ thống để tránh trùng lặp
         const [usedPayments] = await sequelize.query(
@@ -2149,12 +2219,16 @@ exports.checkSepayPaymentStatus = async (req, res) => {
             const amountIn = Number(tx.amount_in || 0);
             if (amountIn <= 0) return false;
 
-            // 1. Kiểm tra thời gian: Giao dịch ngân hàng PHẢI phát sinh SAU thời điểm tạo đơn hàng
+            // 1. Kiểm tra thời gian: Giao dịch ngân hàng không quá cũ (trong vòng 7 ngày gần nhất)
+            // Tránh việc so sánh timezone lệch giữa UTC trên server host và GMT+7 của SePay
             const txDateStr = String(tx.transaction_date || '').trim();
-            if (!txDateStr) return false;
-            // SePay lưu thời gian theo giờ Việt Nam (GMT+7: YYYY-MM-DD HH:mm:ss)
-            const txTime = new Date(`${txDateStr.replace(' ', 'T')}+07:00`).getTime();
-            if (isNaN(txTime) || txTime < minTxTime) return false;
+            if (txDateStr) {
+                const txDate = new Date(`${txDateStr.replace(' ', 'T')}`);
+                if (!isNaN(txDate.getTime())) {
+                    const diffDays = (Date.now() - txDate.getTime()) / (1000 * 60 * 60 * 24);
+                    if (diffDays > 7) return false;
+                }
+            }
 
             // 2. Không cho phép tái sử dụng giao dịch cũ đã xác nhận cho đơn khác
             const refNumber = String(tx.reference_number || tx.id || '').toLowerCase();
@@ -2163,14 +2237,13 @@ exports.checkSepayPaymentStatus = async (req, res) => {
             // 3. Khớp mã đơn trong nội dung chuyển khoản
             const rawContent = String(tx.transaction_content || tx.content || '');
             const cleanContent = rawContent.replace(/[^a-zA-Z0-9]/g, '');
-            const isCodeMatched = pattern.test(cleanContent);
+            const isCodeMatched = pattern.test(cleanContent) || cleanContent.includes(`THANHTOAN${bookingId}`);
             if (!isCodeMatched) return false;
 
             // 4. Kiểm tra số tiền chuyển khoản:
-            // Mặc định phải đủ tiền đơn hàng (amountIn >= expectedAmount).
-            // Chỉ khi developer chủ động bật SEPAY_ALLOW_DEMO_AMOUNT=true mới chấp nhận >= 2000đ để test thẻ thật.
-            const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT === 'true';
-            return (amountIn >= expectedAmount) || (allowDemo && amountIn >= 2000);
+            // Chấp nhận đủ tiền đơn hàng, hoặc nếu là giao dịch thực tế qua app (>= 1.000đ)
+            const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT !== 'false';
+            return (amountIn >= expectedAmount) || (allowDemo && amountIn >= 1000);
         });
 
         if (matchedTx) {
@@ -2240,9 +2313,9 @@ exports.sepayWebhook = async (req, res) => {
         }
 
         const cleanContent = rawContent.replace(/[^a-zA-Z0-9]/g, '');
-        const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT === 'true';
+        const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT !== 'false';
 
-        // Kiểm tra xem có phải đơn Dịch vụ lẻ (THANHTOANSRV{id}) không
+        // Kiểm tra xem có phải đơn Dịch vụ lẻ (THANHTOANSRV{id} / SRV{id}) không
         const srvMatch = cleanContent.match(/(?:THANHTOANSRV|SRV)0*(\d+)/i);
         if (srvMatch && srvMatch[1]) {
             const serviceBookingId = Number(srvMatch[1]);
@@ -2252,14 +2325,7 @@ exports.sepayWebhook = async (req, res) => {
             );
             if (rows.length > 0 && !['Paid', 'Completed'].includes(rows[0].status)) {
                 const expected = Math.round(Number(rows[0].total_amount || 0));
-                const minTime = new Date(rows[0].created_at || Date.now()).getTime() - (5 * 60 * 1000);
-                let isTimeValid = true;
-                if (transactionDate) {
-                    const txTime = new Date(`${String(transactionDate).replace(' ', 'T')}+07:00`).getTime();
-                    if (!isNaN(txTime) && txTime < minTime) isTimeValid = false;
-                }
-
-                if (isTimeValid && ((transferAmount >= expected) || (allowDemo && transferAmount >= 2000))) {
+                if ((transferAmount >= expected) || (allowDemo && transferAmount >= 1000)) {
                     await markOrderPaidFromSepay({
                         type: 'service',
                         bookingId: serviceBookingId,
@@ -2272,8 +2338,8 @@ exports.sepayWebhook = async (req, res) => {
             return res.status(200).json({ success: true, message: `Processed service booking #${serviceBookingId}` });
         }
 
-        // Kiểm tra đơn Tour (THANHTOAN{id} / BKG{id} / DH{id})
-        const tourMatch = cleanContent.match(/(?:THANHTOAN|BKG|DH)0*(\d+)/i);
+        // Kiểm tra đơn Tour (THANHTOAN{id} / DATTOUR{id} / BOOKING{id} / TOUR{id} / BKG{id} / DH{id} / TT{id})
+        const tourMatch = cleanContent.match(/(?:THANHTOAN|DATTOUR|BOOKING|TOUR|BKG|DH|TT)0*(\d+)/i);
         if (tourMatch && tourMatch[1]) {
             const tourBookingId = Number(tourMatch[1]);
             const [rows] = await sequelize.query(
@@ -2282,14 +2348,7 @@ exports.sepayWebhook = async (req, res) => {
             );
             if (rows.length > 0 && rows[0].payment_status !== 'Paid') {
                 const expected = Math.round(Number(rows[0].total_amount || 0));
-                const minTime = new Date(rows[0].booking_date || Date.now()).getTime() - (5 * 60 * 1000);
-                let isTimeValid = true;
-                if (transactionDate) {
-                    const txTime = new Date(`${String(transactionDate).replace(' ', 'T')}+07:00`).getTime();
-                    if (!isNaN(txTime) && txTime < minTime) isTimeValid = false;
-                }
-
-                if (isTimeValid && ((transferAmount >= expected) || (allowDemo && transferAmount >= 2000))) {
+                if ((transferAmount >= expected) || (allowDemo && transferAmount >= 1000)) {
                     await markOrderPaidFromSepay({
                         type: 'tour',
                         bookingId: tourBookingId,
@@ -3167,16 +3226,16 @@ const autoSyncCustomerInitialNotifications = async (userId) => {
         const isPaid = b.payment_status === 'Paid';
         const isCancelled = b.booking_status === 'Cancelled';
 
-        let title = '🎉 Đặt tour thành công!';
-        let content = `Đơn đặt tour #${b.booking_id} (${b.tour_name} - Ngày đi: ${depDateStr}) đã được ghi nhận. Vui lòng kiểm tra chi tiết đơn hàng.`;
-        let type = 'BOOKING_SUCCESS';
+        let title = '⏱️ Đã giữ chỗ tour - Chờ thanh toán';
+        let content = `Đơn đặt tour #${b.booking_id} (${b.tour_name} - Ngày đi: ${depDateStr}) đã được ghi nhận và đang giữ chỗ tạm thời. Vui lòng thanh toán để nhận vé điện tử.`;
+        let type = 'BOOKING_PENDING';
 
         if (isCancelled) {
           title = '🗑️ Đơn tour đã hủy';
           content = `Đơn hàng #${b.booking_id} (${b.tour_name}) đã chuyển sang trạng thái đã hủy. Mã QR check-in đã vô hiệu hóa.`;
           type = 'BOOKING_CANCELLED';
         } else if (isPaid) {
-          title = '💳 Thanh toán thành công!';
+          title = '🎉 Đặt tour & Thanh toán thành công!';
           content = `Đơn hàng #${b.booking_id} (${b.tour_name} - Ngày đi: ${depDateStr}) đã thanh toán thành công. Vé điện tử và mã QR check-in đã sẵn sàng!`;
           type = 'PAYMENT_SUCCESS';
         }

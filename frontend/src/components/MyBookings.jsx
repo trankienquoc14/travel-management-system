@@ -8,7 +8,7 @@ import SepayPaymentModal from './SepayPaymentModal';
 import TourReviewModal from './TourReviewModal';
 import { Star } from 'lucide-react';
 
-const GATEWAY_URL = 'http://localhost:5000';
+const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
 const PAYMENT_DEADLINE_SECONDS = 600; // Thời hạn thanh toán chuyển khoản: 10 phút (600 giây)
 
 const getDaysLeftBeforeDeparture = (depDateStr) => {
@@ -864,6 +864,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                             {filteredBookings.map((booking) => {
                                 const isCustom = Boolean(booking.quote_id);
                                 const isTransfer = isBankTransferBooking(booking);
+                                const isCash = !isTransfer;
                                 const remainingPaySec = getRemainingPaymentSeconds(booking, fetchedAtMs, nowMs);
                                 const daysLeft = getDaysLeftBeforeDeparture(booking.departure_date);
                                 const allowCancelOrReschedule = canCancelOrRescheduleBooking(booking, remainingPaySec);
@@ -871,8 +872,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                     booking.payment_status === 'Unpaid' &&
                                     booking.booking_status !== 'Cancelled' &&
                                     !isBookingCompleted(booking) &&
-                                    isTransfer &&
-                                    remainingPaySec > 0;
+                                    (isTransfer ? remainingPaySec > 0 : true);
 
                                 return (
                                     <div key={booking.booking_id} className="my-booking-item-card" style={{ display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
@@ -904,7 +904,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                 </div>
 
                                                 {/* Thông báo đếm ngược hạn thanh toán chuyển khoản (CK) */}
-                                                {showPayNowBtn && (
+                                                {isTransfer && showPayNowBtn && (
                                                     <div style={{
                                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px',
                                                         padding: '10px 14px', marginBottom: '12px', borderRadius: '12px',
@@ -922,6 +922,29 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                             color: '#ffffff', fontWeight: '800', fontSize: '12.5px'
                                                         }}>
                                                             ⏱️ Còn {formatCountdown(remainingPaySec)}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Hướng dẫn cho đơn thanh toán tiền mặt có thể đổi sang chuyển khoản VietQR */}
+                                                {isCash && booking.payment_status === 'Unpaid' && booking.booking_status !== 'Cancelled' && !isBookingCompleted(booking) && (
+                                                    <div style={{
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px',
+                                                        padding: '10px 14px', marginBottom: '12px', borderRadius: '12px',
+                                                        backgroundColor: '#eff6ff',
+                                                        border: '1px solid #bfdbfe',
+                                                        color: '#1e40af',
+                                                        fontSize: '13px', fontWeight: '600'
+                                                    }}>
+                                                        <span>
+                                                            💵 Đơn đặt tiền mặt tại văn phòng • Bạn có thể bấm <strong>Chuyển Khoản Ngay (VietQR)</strong> để tự động xác nhận đơn tức thì.
+                                                        </span>
+                                                        <span style={{
+                                                            padding: '3px 10px', borderRadius: '20px',
+                                                            backgroundColor: '#2563eb',
+                                                            color: '#ffffff', fontWeight: '700', fontSize: '12px'
+                                                        }}>
+                                                            Hỗ trợ VietQR 24/7
                                                         </span>
                                                     </div>
                                                 )}
@@ -1045,13 +1068,17 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                         )
                                                     )}
 
-                                                    {/* Nút Thanh Toán Ngay: Hiển thị cho đơn thanh toán bằng Chuyển khoản (CK) khi đang còn hạn thanh toán */}
+                                                    {/* Nút Thanh Toán Ngay / Chuyển khoản VietQR */}
                                                     {showPayNowBtn && (
                                                         <button 
                                                             onClick={() => setSepayModalData({ bookingId: booking.booking_id, type: 'tour' })}
                                                             style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', fontSize: '13.5px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.28)', display: 'flex', alignItems: 'center', gap: '6px' }}
                                                         >
-                                                            <span>💳 Thanh Toán Ngay ({formatCountdown(remainingPaySec)})</span>
+                                                            <span>
+                                                                {isTransfer 
+                                                                    ? `💳 Thanh Toán Ngay (${formatCountdown(remainingPaySec)})`
+                                                                    : '💳 Chuyển Khoản Ngay (VietQR)'}
+                                                            </span>
                                                         </button>
                                                     )}
                                                 </div>
@@ -1457,12 +1484,12 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                             {!detailBooking.isService && (() => {
                                 const detailRemSec = getRemainingPaymentSeconds(detailBooking, fetchedAtMs, nowMs);
                                 const detailCanChange = canCancelOrRescheduleBooking(detailBooking, detailRemSec);
+                                const detailIsTransfer = isBankTransferBooking(detailBooking);
                                 const detailShowPayNow =
                                     detailBooking.payment_status === 'Unpaid' &&
                                     detailBooking.booking_status !== 'Cancelled' &&
                                     !isBookingCompleted(detailBooking) &&
-                                    isBankTransferBooking(detailBooking) &&
-                                    detailRemSec > 0;
+                                    (detailIsTransfer ? detailRemSec > 0 : true);
 
                                 return (
                                     <>
@@ -1491,7 +1518,9 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                 }}
                                                 style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.28)' }}
                                             >
-                                                💳 Thanh Toán Ngay ({formatCountdown(detailRemSec)})
+                                                {detailIsTransfer
+                                                    ? `💳 Thanh Toán Ngay (${formatCountdown(detailRemSec)})`
+                                                    : '💳 Chuyển Khoản Ngay (VietQR)'}
                                             </button>
                                         )}
                                     </>

@@ -5,6 +5,8 @@ import UserProfile from './UserProfile';
 import soundService from '../utils/soundService';
 import { notifyBell } from '../context/NotificationContext';
 
+const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
+
 const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [user, setUser] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -47,7 +49,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
         const token = localStorage.getItem('token');
         if (!token) return;
         try {
-            const res = await axios.get('http://localhost:5000/api/bookings/customer-notifications', {
+            const res = await axios.get(`${GATEWAY_URL}/api/bookings/customer-notifications`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
@@ -134,7 +136,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
             setUnreadCount(prev => Math.max(0, prev - 1));
             const token = localStorage.getItem('token');
             if (token) {
-                axios.put(`http://localhost:5000/api/bookings/customer-notifications/${n.notification_id}/read`, {}, {
+                axios.put(`${GATEWAY_URL}/api/bookings/customer-notifications/${n.notification_id}/read`, {}, {
                     headers: { Authorization: `Bearer ${token}` }
                 }).catch(err => console.error(err));
             }
@@ -151,7 +153,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
-                await axios.put('http://localhost:5000/api/bookings/customer-notifications/read-all', {}, {
+                await axios.put(`${GATEWAY_URL}/api/bookings/customer-notifications/read-all`, {}, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             } catch (err) {

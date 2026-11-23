@@ -590,7 +590,7 @@ exports.bookCustomTourQuote = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: '🎉 Đặt tour thành công! Đang chuyển hướng đến cổng thanh toán...',
+            message: '⏱️ Khởi tạo đơn & giữ chỗ thành công! Đang chuyển hướng đến cổng thanh toán...',
             data: {
                 booking_id: newBookingId,
                 total_amount: quote.quote_price,

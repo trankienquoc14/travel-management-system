@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const GATEWAY_URL = 'http://localhost:5000';
+const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
 
 const calculatePolicyForBooking = (booking) => {
   if (!booking) return null;
@@ -550,6 +550,34 @@ const StaffBookingManagement = () => {
             {/* 9. FOOTER ACTIONS */}
             <div style={{ padding: '20px 28px', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', gap: '12px', zIndex: 10, flexShrink: 0 }}>
               
+              {/* Nút xác nhận thu tiền mặt cho khách thanh toán tại quầy */}
+              {selectedBooking.payment_status !== 'Paid' && selectedBooking.booking_status !== 'Cancelled' && (
+                <button
+                  onClick={async () => {
+                    if (!window.confirm(`Xác nhận đã nhận tiền mặt (${formatCurrency(selectedBooking.total_amount)}) cho đơn #${selectedBooking.booking_id}?`)) return;
+                    setActionLoading(true);
+                    try {
+                      const token = localStorage.getItem('token');
+                      const res = await axios.put(`${GATEWAY_URL}/api/bookings/${selectedBooking.booking_id}/confirm-cash`, {}, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      if (res.data?.success) {
+                        alert('✅ Đã xác nhận thu tiền mặt và duyệt đơn thành công!');
+                        fetchBookings();
+                        setSelectedBooking(null);
+                      }
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Lỗi khi xác nhận tiền mặt');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                  style={{ padding: '10px 24px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }}
+                >
+                  {actionLoading ? 'Đang xử lý...' : '💵 Xác Nhận Đã Nhận Tiền Mặt (Duyệt Đơn)'}
+                </button>
+              )}
 
               {/* Giữ lại Duyệt cho Tour yêu cầu riêng nếu cần, nếu không thì ẩn */}
               {selectedBooking.booking_status !== 'Confirmed' && selectedBooking.quote_id && (

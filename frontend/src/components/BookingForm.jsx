@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
@@ -8,6 +8,145 @@ import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
+
+const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
+
+// Helper format ngày dd/mm/yyyy
+const formatDateDMY = (dateStr) => {
+    if (!dateStr) return '';
+    const cleanDate = String(dateStr).split('T')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+};
+
+// Định nghĩa quy tắc tính tuổi và ngày sinh hợp lệ theo ngày khởi hành tour
+const getPassengerAgeRules = (depDate) => {
+    let base = (depDate && !isNaN(new Date(depDate).getTime())) 
+        ? new Date(depDate) 
+        : new Date();
+    
+    // Đưa về 00:00:00 của ngày khởi hành để so sánh chuẩn xác
+    base = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    const toISO = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const toDMY = (d) => {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
+    const addDays = (d, days) => {
+        const res = new Date(d.getTime());
+        res.setDate(res.getDate() + days);
+        return res;
+    };
+
+    const addYears = (d, years) => {
+        const res = new Date(d.getTime());
+        res.setFullYear(res.getFullYear() + years);
+        return res;
+    };
+
+    // Mốc 12 năm trước ngày khởi hành (Người lớn: sinh từ d12 trở về trước)
+    const d12 = addYears(base, -12);
+    // Mốc 5 năm trước ngày khởi hành (Trẻ em: sinh từ d12 + 1 ngày đến d5)
+    const d5 = addYears(base, -5);
+    // Mốc 2 năm trước ngày khởi hành (Trẻ nhỏ: sinh từ d5 + 1 ngày đến d2)
+    const d2 = addYears(base, -2);
+
+    return {
+        baseDate: base,
+        adults: {
+            minDate: '1900-01-01',
+            maxDate: toISO(d12),
+            desc: `Người lớn sinh trước ngày ${toDMY(addDays(d12, 1))} (từ 12 tuổi trở lên)`,
+            shortDesc: `Từ 12 tuổi trở lên (sinh trước ${toDMY(addDays(d12, 1))})`,
+            validator: (dobStr) => {
+                if (!dobStr || !dobStr.trim()) return 'Vui lòng nhập ngày sinh';
+                const dob = new Date(dobStr);
+                if (isNaN(dob.getTime())) return 'Ngày sinh không hợp lệ';
+                dob.setHours(0, 0, 0, 0);
+                if (dob > d12) {
+                    return `Hành khách Người lớn phải từ 12 tuổi trở lên (sinh trước ngày ${toDMY(addDays(d12, 1))}).`;
+                }
+                if (dob < new Date(1900, 0, 1)) {
+                    return 'Năm sinh không hợp lệ.';
+                }
+                return null;
+            }
+        },
+        children: {
+            minDate: toISO(addDays(d12, 1)),
+            maxDate: toISO(d5),
+            desc: `Trẻ em sinh từ ${toDMY(addDays(d12, 1))} đến ${toDMY(d5)} (từ 5 - 11 tuổi)`,
+            shortDesc: `Từ 5 - 11 tuổi (sinh ${toDMY(addDays(d12, 1))} - ${toDMY(d5)})`,
+            validator: (dobStr) => {
+                if (!dobStr || !dobStr.trim()) return 'Vui lòng nhập ngày sinh';
+                const dob = new Date(dobStr);
+                if (isNaN(dob.getTime())) return 'Ngày sinh không hợp lệ';
+                dob.setHours(0, 0, 0, 0);
+                if (dob <= d12) {
+                    return `Hành khách này đã từ 12 tuổi trở lên (sinh trước ngày ${toDMY(addDays(d12, 1))}), vui lòng chọn vé Người lớn.`;
+                }
+                if (dob > d5) {
+                    return `Trẻ em phải từ 5 đến 11 tuổi (sinh từ ${toDMY(addDays(d12, 1))} đến ${toDMY(d5)}).`;
+                }
+                return null;
+            }
+        },
+        toddlers: {
+            minDate: toISO(addDays(d5, 1)),
+            maxDate: toISO(d2),
+            desc: `Trẻ nhỏ sinh từ ${toDMY(addDays(d5, 1))} đến ${toDMY(d2)} (từ 2 - 4 tuổi)`,
+            shortDesc: `Từ 2 - 4 tuổi (sinh ${toDMY(addDays(d5, 1))} - ${toDMY(d2)})`,
+            validator: (dobStr) => {
+                if (!dobStr || !dobStr.trim()) return 'Vui lòng nhập ngày sinh';
+                const dob = new Date(dobStr);
+                if (isNaN(dob.getTime())) return 'Ngày sinh không hợp lệ';
+                dob.setHours(0, 0, 0, 0);
+                if (dob <= d5) {
+                    return `Hành khách này đã từ 5 tuổi trở lên, vui lòng chọn vé Trẻ em hoặc Người lớn.`;
+                }
+                if (dob > d2) {
+                    return `Trẻ nhỏ phải từ 2 đến 4 tuổi (sinh từ ${toDMY(addDays(d5, 1))} đến ${toDMY(d2)}).`;
+                }
+                return null;
+            }
+        },
+        infants: {
+            minDate: toISO(addDays(d2, 1)),
+            maxDate: toISO(today),
+            desc: `Em bé sinh từ ${toDMY(addDays(d2, 1))} (dưới 2 tuổi)`,
+            shortDesc: `Dưới 2 tuổi (sinh từ ${toDMY(addDays(d2, 1))})`,
+            validator: (dobStr) => {
+                if (!dobStr || !dobStr.trim()) return 'Vui lòng nhập ngày sinh';
+                const dob = new Date(dobStr);
+                if (isNaN(dob.getTime())) return 'Ngày sinh không hợp lệ';
+                dob.setHours(0, 0, 0, 0);
+                if (dob <= d2) {
+                    return `Hành khách này đã từ 2 tuổi trở lên, vui lòng chọn vé Trẻ nhỏ hoặc Trẻ em.`;
+                }
+                if (dob > today) {
+                    return `Ngày sinh không hợp lệ (không được lớn hơn ngày hiện tại).`;
+                }
+                return null;
+            }
+        }
+    };
+};
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -86,7 +225,7 @@ const BookingFormInner = () => {
     
     const [destinations, setDestinations] = useState([]);
     useEffect(() => {
-        axios.get('http://localhost:5000/api/destinations')
+        axios.get(`${GATEWAY_URL}/api/destinations`)
             .then(res => setDestinations(res.data?.data || []))
             .catch(err => console.log(err));
     }, []);
@@ -158,9 +297,13 @@ const BookingFormInner = () => {
         retObj.setDate(retObj.getDate() + Math.max(0, durationDays - 1));
         retDateStr = retObj.toLocaleDateString('vi-VN');
     } else if (isCustom && quote) {
+        if (!depDateObj && quote.departure_date) depDateObj = new Date(quote.departure_date);
         depDateStr = quote.departure_date ? new Date(quote.departure_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
         retDateStr = quote.return_date ? new Date(quote.return_date).toLocaleDateString('vi-VN') : 'Đang cập nhật';
     }
+
+    // --- BẢNG QUY TẮC ĐỘ TUỔI HÀNH KHÁCH DỰA TRÊN NGÀY KHỞI HÀNH TOUR ---
+    const ageRules = useMemo(() => getPassengerAgeRules(depDateObj), [depDateObj]);
 
     // --- 2. TRANSPORT & TIME ---
     const transportType = parsedDesign?.costConfig?.selectedTransport?.service_type;
@@ -284,7 +427,7 @@ const BookingFormInner = () => {
             if (!imagePath.startsWith('uploads/')) {
                 imagePath = `uploads/${imagePath}`;
             }
-            finalImageUrl = `http://localhost:5000/${imagePath}`;
+            finalImageUrl = `${GATEWAY_URL}/${imagePath}`;
         }
     }
     const bgImage = isCustom
@@ -338,13 +481,43 @@ const BookingFormInner = () => {
                     [field]: value
                 }
             };
+
+            // Nếu cập nhật ngày sinh (field 'dob'), đồng bộ luôn dobYear, dobMonth, dobDay để tương thích tuyệt đối
+            if (field === 'dob') {
+                if (value && typeof value === 'string') {
+                    const parts = value.split('-');
+                    if (parts.length === 3) {
+                        next[key].dobYear = parts[0];
+                        next[key].dobMonth = String(parseInt(parts[1], 10));
+                        next[key].dobDay = String(parseInt(parts[2], 10));
+                    }
+                } else {
+                    next[key].dobYear = '';
+                    next[key].dobMonth = '';
+                    next[key].dobDay = '';
+                }
+            }
+
             const pObj = next[key] || {};
             setFieldErrors(prevErr => {
                 const updatedErr = { ...prevErr };
                 if (field === 'name') {
                     if (value && value.trim()) delete updatedErr[`${key}_name`];
+                } else if (field === 'dob') {
+                    const ageErr = ageRules[type]?.validator(value);
+                    if (ageErr) {
+                        updatedErr[`${key}_dob`] = ageErr;
+                    } else {
+                        delete updatedErr[`${key}_dob`];
+                    }
                 } else if (field === 'dobDay' || field === 'dobMonth' || field === 'dobYear') {
-                    if (pObj.dobDay && pObj.dobMonth && pObj.dobYear) delete updatedErr[`${key}_dob`];
+                    const currentDob = pObj.dob || (pObj.dobYear && pObj.dobMonth && pObj.dobDay ? `${pObj.dobYear}-${String(pObj.dobMonth).padStart(2, '0')}-${String(pObj.dobDay).padStart(2, '0')}` : '');
+                    const ageErr = ageRules[type]?.validator(currentDob);
+                    if (ageErr) {
+                        updatedErr[`${key}_dob`] = ageErr;
+                    } else {
+                        delete updatedErr[`${key}_dob`];
+                    }
                 } else if (field === 'phone') {
                     if (!value || !value.trim() || validatePhoneFormat(value)) {
                         delete updatedErr[`${key}_phone`];
@@ -541,8 +714,10 @@ const BookingFormInner = () => {
                 if (!pObj.name || !pObj.name.trim()) {
                     newErrors[`${pKey}_name`] = 'Vui lòng nhập họ tên hành khách';
                 }
-                if (!pObj.dobDay || !pObj.dobMonth || !pObj.dobYear) {
-                    newErrors[`${pKey}_dob`] = 'Vui lòng chọn đầy đủ Ngày / Tháng / Năm sinh';
+                const dobVal = pObj.dob || (pObj.dobYear && pObj.dobMonth && pObj.dobDay ? `${pObj.dobYear}-${String(pObj.dobMonth).padStart(2, '0')}-${String(pObj.dobDay).padStart(2, '0')}` : '');
+                const ageErr = ageRules[type]?.validator(dobVal);
+                if (ageErr) {
+                    newErrors[`${pKey}_dob`] = ageErr;
                 }
                 if (pObj.phone && pObj.phone.trim() !== '' && !validatePhoneFormat(pObj.phone)) {
                     newErrors[`${pKey}_phone`] = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
@@ -589,8 +764,8 @@ const BookingFormInner = () => {
                 if (pGender === 'Nam') mappedGender = 'Male';
                 if (pGender === 'Nữ') mappedGender = 'Female';
 
-                let birthDateStr = null;
-                if (pObj.dobYear && pObj.dobMonth && pObj.dobDay) {
+                let birthDateStr = pObj.dob || null;
+                if (!birthDateStr && pObj.dobYear && pObj.dobMonth && pObj.dobDay) {
                     const y = pObj.dobYear;
                     const m = pObj.dobMonth.toString().padStart(2, '0');
                     const d = pObj.dobDay.toString().padStart(2, '0');
@@ -618,7 +793,7 @@ const BookingFormInner = () => {
 
             if (isCustom) {
                 const response = await axios.post(
-                    `http://localhost:5000/api/custom-tours/quotes/${quote.quote_id}/book`,
+                    `${GATEWAY_URL}/api/custom-tours/quotes/${quote.quote_id}/book`,
                     { 
                         payment_method: dbPaymentMethod, 
                         notes: contactInfo.notes, 
@@ -648,7 +823,7 @@ const BookingFormInner = () => {
                     });
                 }
             } else {
-                const response = await axios.post('http://localhost:5000/api/bookings', {
+                const response = await axios.post(`${GATEWAY_URL}/api/bookings`, {
                     departure_id: bookingData.departureId,
                     num_people: totalPax, // Gửi tổng số người xuống backend
                     total_amount: totalAmount,
@@ -886,7 +1061,7 @@ const BookingFormInner = () => {
                         {['adults', 'children', 'toddlers', 'infants'].map(type => {
                             if (pax[type] === 0) return null;
                             const typeName = type === 'adults' ? 'Người lớn' : type === 'children' ? 'Trẻ em' : type === 'toddlers' ? 'Trẻ nhỏ' : 'Em bé';
-                            const typeDesc = type === 'adults' ? 'Từ 12 tuổi trở lên' : type === 'children' ? 'Từ 5 - 11 tuổi' : type === 'toddlers' ? 'Từ 2 - 4 tuổi' : 'Dưới 2 tuổi';
+                            const typeDesc = ageRules[type]?.shortDesc || (type === 'adults' ? 'Từ 12 tuổi trở lên' : type === 'children' ? 'Từ 5 - 11 tuổi' : type === 'toddlers' ? 'Từ 2 - 4 tuổi' : 'Dưới 2 tuổi');
 
                             return (
                                 <div key={type} style={{ marginBottom: '24px' }}>
@@ -927,7 +1102,7 @@ const BookingFormInner = () => {
                                                         {pData.name ? (
                                                             <span style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>
                                                                 {pData.name}
-                                                                {pData.dobDay && pData.dobMonth && pData.dobYear ? ` • ${String(pData.dobDay).padStart(2, '0')}/${String(pData.dobMonth).padStart(2, '0')}/${pData.dobYear}` : ''}
+                                                                {pData.dob ? ` • ${formatDateDMY(pData.dob)}` : (pData.dobDay && pData.dobMonth && pData.dobYear ? ` • ${String(pData.dobDay).padStart(2, '0')}/${String(pData.dobMonth).padStart(2, '0')}/${pData.dobYear}` : '')}
                                                             </span>
                                                         ) : (
                                                             <span style={{ fontSize: '14px', color: '#dc2626', fontWeight: '500' }}>Nhập thông tin ➔</span>
@@ -1228,7 +1403,7 @@ const BookingFormInner = () => {
                             {['adults', 'children', 'toddlers', 'infants'].map(type => {
                                 if (pax[type] === 0) return null;
                                 const typeName = type === 'adults' ? 'Người lớn' : type === 'children' ? 'Trẻ em' : type === 'toddlers' ? 'Trẻ nhỏ' : 'Em bé';
-                                const typeDesc = type === 'adults' ? 'Người lớn sinh trước ngày 04/09/2014' : type === 'children' ? 'Trẻ em sinh từ 05/09/2014 đến 04/09/2021' : type === 'toddlers' ? 'Trẻ nhỏ sinh từ 05/09/2021 đến 04/09/2024' : 'Em bé sinh từ 05/09/2024';
+                                const typeDesc = ageRules[type]?.desc || '';
                                 
                                 return (
                                     <div key={type} style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
@@ -1243,10 +1418,6 @@ const BookingFormInner = () => {
                                             const errName = fieldErrors[`${pKey}_name`];
                                             const errDob = fieldErrors[`${pKey}_dob`];
                                             const errPhone = fieldErrors[`${pKey}_phone`];
-                                            const daysList = Array.from({length: 31}, (_, i) => i + 1);
-                                            const monthsList = Array.from({length: 12}, (_, i) => i + 1);
-                                            const currentYear = new Date().getFullYear();
-                                            const yearsList = Array.from({length: 100}, (_, i) => currentYear - i);
 
                                             return (
                                             <div key={idx} style={{ display: 'flex', gap: '16px', marginBottom: '24px', paddingBottom: idx !== pax[type]-1 ? '24px' : '0', borderBottom: idx !== pax[type]-1 ? '1px dashed #e2e8f0' : 'none' }}>
@@ -1266,7 +1437,8 @@ const BookingFormInner = () => {
                                                                 border: errName ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
                                                                 background: errName ? '#fef2f2' : '#f8fafc',
                                                                 fontSize: '15px',
-                                                                outline: 'none'
+                                                                outline: 'none',
+                                                                boxSizing: 'border-box'
                                                             }}
                                                         />
                                                         {errName && <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px' }}>⚠️ {errName}</div>}
@@ -1275,25 +1447,29 @@ const BookingFormInner = () => {
                                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                                         <div>
                                                             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Ngày sinh <span style={{color: '#dc2626'}}>*</span></label>
-                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                                                                <select value={pData.dobDay || ''} onChange={e => updatePassenger(type, idx, 'dobDay', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: (errDob && !pData.dobDay) ? '1.5px solid #ef4444' : '1px solid #e2e8f0', background: (errDob && !pData.dobDay) ? '#fef2f2' : '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
-                                                                    <option value="">Ngày</option>
-                                                                    {daysList.map(d => <option key={d} value={d}>{d}</option>)}
-                                                                </select>
-                                                                <select value={pData.dobMonth || ''} onChange={e => updatePassenger(type, idx, 'dobMonth', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: (errDob && !pData.dobMonth) ? '1.5px solid #ef4444' : '1px solid #e2e8f0', background: (errDob && !pData.dobMonth) ? '#fef2f2' : '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
-                                                                    <option value="">Tháng</option>
-                                                                    {monthsList.map(m => <option key={m} value={m}>{m}</option>)}
-                                                                </select>
-                                                                <select value={pData.dobYear || ''} onChange={e => updatePassenger(type, idx, 'dobYear', e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: (errDob && !pData.dobYear) ? '1.5px solid #ef4444' : '1px solid #e2e8f0', background: (errDob && !pData.dobYear) ? '#fef2f2' : '#f8fafc', fontSize: '14px', outline: 'none', appearance: 'none' }}>
-                                                                    <option value="">Năm</option>
-                                                                    {yearsList.map(y => <option key={y} value={y}>{y}</option>)}
-                                                                </select>
-                                                            </div>
+                                                            <input
+                                                                type="date"
+                                                                value={pData.dob || (pData.dobYear && pData.dobMonth && pData.dobDay ? `${pData.dobYear}-${String(pData.dobMonth).padStart(2, '0')}-${String(pData.dobDay).padStart(2, '0')}` : '')}
+                                                                onChange={e => updatePassenger(type, idx, 'dob', e.target.value)}
+                                                                min={ageRules[type]?.minDate}
+                                                                max={ageRules[type]?.maxDate}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '12px 16px',
+                                                                    borderRadius: '24px',
+                                                                    border: errDob ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                                                    background: errDob ? '#fef2f2' : '#f8fafc',
+                                                                    fontSize: '15px',
+                                                                    outline: 'none',
+                                                                    color: '#0f172a',
+                                                                    boxSizing: 'border-box'
+                                                                }}
+                                                            />
                                                             {errDob && <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px' }}>⚠️ {errDob}</div>}
                                                         </div>
                                                         <div>
                                                             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Giới tính <span style={{color: '#dc2626'}}>*</span></label>
-                                                            <select value={pData.gender || 'Nam'} onChange={e => updatePassenger(type, idx, 'gender', e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none', appearance: 'none' }}>
+                                                            <select value={pData.gender || 'Nam'} onChange={e => updatePassenger(type, idx, 'gender', e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none', appearance: 'none', boxSizing: 'border-box' }}>
                                                                 <option value="Nam">Nam</option>
                                                                 <option value="Nữ">Nữ</option>
                                                             </select>
@@ -1316,7 +1492,8 @@ const BookingFormInner = () => {
                                                                         border: errPhone ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
                                                                         background: errPhone ? '#fef2f2' : '#f8fafc',
                                                                         fontSize: '15px',
-                                                                        outline: 'none'
+                                                                        outline: 'none',
+                                                                        boxSizing: 'border-box'
                                                                     }}
                                                                 />
                                                                 {errPhone && <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: '500', marginTop: '6px' }}>⚠️ {errPhone}</div>}
@@ -1351,8 +1528,10 @@ const BookingFormInner = () => {
                                             if (!pObj.name || !pObj.name.trim()) {
                                                 paxErrors[`${pKey}_name`] = 'Vui lòng nhập họ tên hành khách';
                                             }
-                                            if (!pObj.dobDay || !pObj.dobMonth || !pObj.dobYear) {
-                                                paxErrors[`${pKey}_dob`] = 'Vui lòng chọn đầy đủ Ngày / Tháng / Năm sinh';
+                                            const dobVal = pObj.dob || (pObj.dobYear && pObj.dobMonth && pObj.dobDay ? `${pObj.dobYear}-${String(pObj.dobMonth).padStart(2, '0')}-${String(pObj.dobDay).padStart(2, '0')}` : '');
+                                            const ageErr = ageRules[type]?.validator(dobVal);
+                                            if (ageErr) {
+                                                paxErrors[`${pKey}_dob`] = ageErr;
                                             }
                                             if (pObj.phone && pObj.phone.trim() !== '' && !validatePhoneFormat(pObj.phone)) {
                                                 paxErrors[`${pKey}_phone`] = 'Số điện thoại không hợp lệ (gồm 10–11 chữ số, bắt đầu bằng 0)';
@@ -1658,7 +1837,7 @@ const BookingFormInner = () => {
                                 <div style={{ fontSize: '22px', lineHeight: 1 }}>💵</div>
                                 <div style={{ fontSize: '13px', color: '#92400e', lineHeight: '1.5' }}>
                                     <strong style={{ display: 'block', marginBottom: '2px', color: '#78350f' }}>Thanh toán tiền mặt:</strong>
-                                    Vui lòng đến văn phòng TravelERP để hoàn tất thanh toán và nhận vé bản cứng trước ngày khởi hành.
+                                    Bạn có thể đến văn phòng TravelERP để hoàn tất thanh toán, hoặc bấm chuyển khoản VietQR ngay bên dưới để xác nhận đơn thành công lập tức.
                                 </div>
                             </div>
                         ) : (
@@ -1686,11 +1865,7 @@ const BookingFormInner = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    if (successModal.paymentMethod === 'Cash') {
-                                        navigate('/my-bookings');
-                                    } else {
-                                        navigate(`/my-bookings?pay=${successModal.bookingId}&type=tour`);
-                                    }
+                                    navigate(`/my-bookings?pay=${successModal.bookingId}&type=tour`);
                                 }}
                                 style={{
                                     width: '100%',
@@ -1709,8 +1884,26 @@ const BookingFormInner = () => {
                                     gap: '8px'
                                 }}
                             >
-                                <span>Xác nhận tiếp tục thanh toán</span>
+                                <span>{successModal.paymentMethod === 'Cash' ? '💳 Đổi sang Chuyển khoản VietQR ngay' : 'Xác nhận tiếp tục thanh toán'}</span>
                                 <ArrowRight size={18} />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/my-bookings')}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: '#f8fafc',
+                                    color: '#0f172a',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '14px',
+                                    fontSize: '14px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                📋 Xem Đơn Hàng Của Tôi
                             </button>
 
                             <button

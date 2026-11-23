@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-const GATEWAY_URL = 'http://localhost:5000';
+const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
 
 const SepayPaymentModal = ({ 
     bookingId, 
@@ -19,6 +19,7 @@ const SepayPaymentModal = ({
     const [copiedField, setCopiedField] = useState('');
     const [countdown, setCountdown] = useState(600); // 10 phút = 600 giây
     const [qrImgError, setQrImgError] = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     const pollIntervalRef = useRef(null);
     const timerIntervalRef = useRef(null);
@@ -57,16 +58,22 @@ const SepayPaymentModal = ({
 
                     // Tính thời gian đếm ngược chính xác dựa trên thời điểm tạo đơn (tối đa 10 phút = 600s)
                     let initialCountdown = 600;
-                    if (data.created_at) {
+                    if (data.is_cash_switched) {
+                        initialCountdown = 600;
+                    } else if (data.created_at) {
                         const createdAtTime = new Date(data.created_at).getTime();
                         if (!isNaN(createdAtTime)) {
                             const elapsed = Math.floor((Date.now() - createdAtTime) / 1000);
                             if (elapsed >= 0 && elapsed < 600) {
                                 initialCountdown = 600 - elapsed;
                             } else if (elapsed >= 600) {
-                                setCountdown(0);
-                                handleAutoCancel();
-                                return;
+                                if (data.payment_method === 'Cash') {
+                                    initialCountdown = 600;
+                                } else {
+                                    setCountdown(0);
+                                    handleAutoCancel();
+                                    return;
+                                }
                             }
                         }
                     }
@@ -80,6 +87,33 @@ const SepayPaymentModal = ({
         };
         fetchQrData();
     }, [bookingId, type]);
+
+    // Xác nhận đã chuyển khoản thành công thủ công (chấp nhận đơn đặt ngay)
+    const handleManualConfirm = async () => {
+        if (confirming) return;
+        try {
+            setConfirming(true);
+            const token = localStorage.getItem('token');
+            const res = await axios.put(`${GATEWAY_URL}/api/bookings/${bookingId}/pay`, {
+                payment_method: 'VNPAY_QR'
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data && res.data.success) {
+                setIsPaid(true);
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+                if (onSuccess) onSuccess(res.data);
+            } else {
+                alert(res.data?.message || 'Có lỗi khi xác nhận đơn.');
+            }
+        } catch (err) {
+            console.error('Lỗi xác nhận thanh toán:', err);
+            alert(err.response?.data?.message || 'Không thể xác nhận thanh toán. Vui lòng thử lại!');
+        } finally {
+            setConfirming(false);
+        }
+    };
 
     // 2. Tự động hủy đơn hàng khi hết 10 phút
     const handleAutoCancel = async () => {
@@ -565,6 +599,41 @@ const SepayPaymentModal = ({
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* NÚT XÁC NHẬN ĐÃ CHUYỂN KHOẢN (CHẤP NHẬN ĐƠN NGAY) */}
+                        <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <button
+                                type="button"
+                                onClick={handleManualConfirm}
+                                disabled={confirming}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 20px',
+                                    borderRadius: '14px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                    color: '#ffffff',
+                                    fontWeight: '800',
+                                    fontSize: '15px',
+                                    cursor: confirming ? 'not-allowed' : 'pointer',
+                                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {confirming ? (
+                                    <span>⏳ Đang kiểm tra & kích hoạt vé...</span>
+                                ) : (
+                                    <span>✓ Tôi Đã Chuyển Khoản Thành Công (Xác Nhận Đơn Ngay)</span>
+                                )}
+                            </button>
+                            <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center' }}>
+                                💡 Nhấn nút trên sau khi đã hoàn tất chuyển khoản từ ứng dụng ngân hàng để hệ thống lập tức chốt đơn thành công và xuất vé điện tử.
                             </div>
                         </div>
 
