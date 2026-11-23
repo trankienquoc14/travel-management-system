@@ -6,7 +6,7 @@ import soundService from '../utils/soundService';
 import { notifyBell } from '../context/NotificationContext';
 import { useRealtime } from '../services/realtimeService';
 
-const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
+const GATEWAY_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [user, setUser] = useState(null);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
+const GATEWAY_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 const SepayPaymentModal = ({ 
     bookingId, 
@@ -19,7 +19,6 @@ const SepayPaymentModal = ({
     const [copiedField, setCopiedField] = useState('');
     const [countdown, setCountdown] = useState(600); // 10 phút = 600 giây
     const [qrImgError, setQrImgError] = useState(false);
-    const [confirming, setConfirming] = useState(false);
 
     const pollIntervalRef = useRef(null);
     const timerIntervalRef = useRef(null);
@@ -88,33 +87,6 @@ const SepayPaymentModal = ({
         fetchQrData();
     }, [bookingId, type]);
 
-    // Xác nhận đã chuyển khoản thành công thủ công (chấp nhận đơn đặt ngay)
-    const handleManualConfirm = async () => {
-        if (confirming) return;
-        try {
-            setConfirming(true);
-            const token = localStorage.getItem('token');
-            const res = await axios.put(`${GATEWAY_URL}/api/bookings/${bookingId}/pay`, {
-                payment_method: 'VNPAY_QR'
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data && res.data.success) {
-                setIsPaid(true);
-                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                if (onSuccess) onSuccess(res.data);
-            } else {
-                alert(res.data?.message || 'Có lỗi khi xác nhận đơn.');
-            }
-        } catch (err) {
-            console.error('Lỗi xác nhận thanh toán:', err);
-            alert(err.response?.data?.message || 'Không thể xác nhận thanh toán. Vui lòng thử lại!');
-        } finally {
-            setConfirming(false);
-        }
-    };
-
     // 2. Tự động hủy đơn hàng khi hết 10 phút
     const handleAutoCancel = async () => {
         setIsExpired(true);
@@ -181,11 +153,11 @@ const SepayPaymentModal = ({
 
         const initTimer = setTimeout(() => {
             checkTransactionStatus();
-        }, 1500);
+        }, 1000);
 
         pollIntervalRef.current = setInterval(() => {
             checkTransactionStatus();
-        }, 3000);
+        }, 2000);
 
         return () => {
             clearTimeout(initTimer);
@@ -602,38 +574,46 @@ const SepayPaymentModal = ({
                             </div>
                         </div>
 
-                        {/* NÚT XÁC NHẬN ĐÃ CHUYỂN KHOẢN (CHẤP NHẬN ĐƠN NGAY) */}
-                        <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <button
-                                type="button"
-                                onClick={handleManualConfirm}
-                                disabled={confirming}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px 20px',
-                                    borderRadius: '14px',
-                                    border: 'none',
-                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                    color: '#ffffff',
-                                    fontWeight: '800',
-                                    fontSize: '15px',
-                                    cursor: confirming ? 'not-allowed' : 'pointer',
-                                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                {confirming ? (
-                                    <span>⏳ Đang kiểm tra & kích hoạt vé...</span>
-                                ) : (
-                                    <span>✓ Tôi Đã Chuyển Khoản Thành Công (Xác Nhận Đơn Ngay)</span>
-                                )}
-                            </button>
-                            <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center' }}>
-                                💡 Nhấn nút trên sau khi đã hoàn tất chuyển khoản từ ứng dụng ngân hàng để hệ thống lập tức chốt đơn thành công và xuất vé điện tử.
+                        {/* TRẠNG THÁI TỰ ĐỘNG CHỜ XÁC NHẬN TỪ NGÂN HÀNG (REALTIME WEBHOOK) */}
+                        <div style={{
+                            marginTop: '20px',
+                            padding: '16px 20px',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                            border: '1.5px solid #a7f3d0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '14px',
+                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.08)'
+                        }}>
+                            <div style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '50%',
+                                backgroundColor: '#d1fae5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                fontSize: '20px'
+                            }}>
+                                ⚡
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ color: '#065f46', fontWeight: '800', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>Đang tự động chờ giao dịch ngân hàng...</span>
+                                    <span style={{
+                                        fontSize: '11px',
+                                        padding: '2px 8px',
+                                        backgroundColor: '#10b981',
+                                        color: '#ffffff',
+                                        borderRadius: '10px',
+                                        fontWeight: '700'
+                                    }}>Tự Động 100%</span>
+                                </div>
+                                <div style={{ color: '#047857', fontSize: '13px', marginTop: '3px', lineHeight: '1.4' }}>
+                                    Hệ thống tự động tra cứu biến động số dư qua SePay Webhook. Sau khi chuyển tiền thành công, đơn hàng sẽ được kích hoạt tức thì mà <strong>không cần bấm bất kỳ nút nào</strong>.
+                                </div>
                             </div>
                         </div>
 
