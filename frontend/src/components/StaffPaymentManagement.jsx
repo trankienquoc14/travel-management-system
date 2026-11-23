@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Filter, Calendar, MapPin, X } from 'lucide-react';
+import { useRealtime } from '../services/realtimeService';
 import '../index.css';
 
 const StaffPaymentManagement = () => {
@@ -20,6 +21,10 @@ const StaffPaymentManagement = () => {
     fetchPaymentsAndBookings();
     fetchDestinations();
   }, []);
+
+  useRealtime(['realtime:booking', 'realtime:payment'], () => {
+    fetchPaymentsAndBookings();
+  });
 
   const fetchDestinations = async () => {
     try {

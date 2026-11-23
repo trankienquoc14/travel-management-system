@@ -8,6 +8,7 @@ import TravelPreferenceFilter, { trackBehavior } from './TravelPreferenceFilter'
 import TravelPreferenceSidebar from './TravelPreferenceSidebar';
 import CustomerChatWidget from './CustomerChatWidget';
 import CustomerAIChatWidget from './CustomerAIChatWidget';
+import { useRealtime } from '../services/realtimeService';
 import '../index.css';
 
 const HomePage = () => {
@@ -59,6 +60,10 @@ const HomePage = () => {
         if (storedUser) setUser(JSON.parse(storedUser));
         fetchTours();
     }, []);
+
+    useRealtime('realtime:tour', () => {
+        fetchTours();
+    });
 
     const fetchTours = async () => {
         setLoadingTours(true);

@@ -1,6 +1,12 @@
 const { calculateDepartureCrossBooking } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
 const Tour = require('../models/Tour');
+const { broadcastRealtime } = require('../../shared/realtimeNotifier');
+
+const notifyTourEvent = (type, data = {}) => {
+  broadcastRealtime('realtime:tour', { type, ...data });
+  broadcastRealtime('realtime:dashboard', { type, ...data });
+};
 
 // Tự động kiểm tra và chuyển trạng thái đợt khởi hành hết hạn / quá ngày về CLOSED
 const syncExpiredDeparturesStatus = async (transaction = null) => {
@@ -64,7 +70,8 @@ exports.createTour = async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, { replacements: [tour_name, description, destination, duration_days, base_price, finalImageUrl, status, created_by] });
 
-    res.status(201).json({ success: true, message: 'ThÄ‚Âªm Tour thÄ‚Â nh cÄ‚Â´ng!' });
+    notifyTourEvent('create_tour');
+    res.status(201).json({ success: true, message: 'Thêm Tour thành công!' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -85,7 +92,8 @@ exports.updateTour = async (req, res) => {
       WHERE tour_id = ?
     `, { replacements: [tour_name, description, destination, duration_days, base_price, finalImageUrl, status, id] });
 
-    res.status(200).json({ success: true, message: 'CĂ¡ÂºÂ­p nhĂ¡ÂºÂ­t Tour thÄ‚Â nh cÄ‚Â´ng!' });
+    notifyTourEvent('update_tour', { tourId: id });
+    res.status(200).json({ success: true, message: 'Cập nhật Tour thành công!' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -96,7 +104,8 @@ exports.deleteTour = async (req, res) => {
   try {
     const { id } = req.params;
     await sequelize.query(`DELETE FROM tours WHERE tour_id = ?`, { replacements: [id] });
-    res.status(200).json({ success: true, message: 'XÄ‚Â³a Tour thÄ‚Â nh cÄ‚Â´ng!' });
+    notifyTourEvent('delete_tour', { tourId: id });
+    res.status(200).json({ success: true, message: 'Xóa Tour thành công!' });
   } catch (error) {
     if (error.original && error.original.errno === 1451) {
       return res.status(400).json({ success: false, message: 'KhÄ‚Â´ng thĂ¡Â»Æ’ xÄ‚Â³a! Tour nÄ‚Â y Ă„â€˜ang cÄ‚Â³ NgÄ‚Â y khĂ¡Â»Å¸i hÄ‚Â nh hoĂ¡ÂºÂ·c Ă„ÂĂ†Â¡n Ă„â€˜Ă¡ÂºÂ·t hÄ‚Â ng liÄ‚Âªn kĂ¡ÂºÂ¿t.' });

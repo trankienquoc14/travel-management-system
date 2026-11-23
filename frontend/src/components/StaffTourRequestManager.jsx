@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { useRealtime } from '../services/realtimeService';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 import { 
     Search,
@@ -330,6 +331,10 @@ const StaffTourRequestManager = ({ onStartDesign, defaultFilter, mode = 'tour_re
     useEffect(() => {
         fetchRequests();
     }, [mode]);
+
+    useRealtime('realtime:request', () => {
+        fetchRequests();
+    });
 
     const fetchRequests = async () => {
         try {

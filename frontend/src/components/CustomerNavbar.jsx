@@ -4,6 +4,7 @@ import axios from 'axios';
 import UserProfile from './UserProfile';
 import soundService from '../utils/soundService';
 import { notifyBell } from '../context/NotificationContext';
+import { useRealtime } from '../services/realtimeService';
 
 const CustomerNavbar = ({ activeTab = 'home' }) => {
     const [user, setUser] = useState(null);
@@ -109,6 +110,13 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    useRealtime(['realtime:notification', 'realtime:booking', 'realtime:request'], () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetchCustomerNotifications();
+        }
+    });
 
     const handleLogout = () => {
         localStorage.removeItem('token');
