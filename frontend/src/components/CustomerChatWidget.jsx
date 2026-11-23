@@ -36,10 +36,18 @@ const CustomerChatWidget = () => {
 
   // References
   const socketRef = useRef(null);
+  const conversationRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    conversationRef.current = conversation;
+    if (conversation?.conversation_id && socketRef.current?.connected) {
+      socketRef.current.emit('join_conversation', conversation.conversation_id);
+    }
+  }, [conversation]);
 
   // Lấy hoặc tạo Guest ID trong LocalStorage nếu khách chưa đăng nhập
   const getGuestId = () => {
@@ -57,6 +65,12 @@ const CustomerChatWidget = () => {
       transports: ['websocket', 'polling']
     });
     socketRef.current = socket;
+
+    socket.on('connect', () => {
+      if (conversationRef.current?.conversation_id) {
+        socket.emit('join_conversation', conversationRef.current.conversation_id);
+      }
+    });
 
     // Lấy thông tin user đăng nhập
     const storedUserStr = localStorage.getItem('user');
@@ -93,6 +107,11 @@ const CustomerChatWidget = () => {
       setMessages(prev => {
         // Tránh trùng lặp
         if (prev.some(m => m.message_id === newMsg.message_id)) return prev;
+        // Nếu có tin nhắn tạm (tempId), thay thế tin nhắn tạm đó
+        const hasTemp = prev.some(m => String(m.message_id).startsWith('temp_') && m.content === newMsg.content);
+        if (hasTemp) {
+          return prev.map(m => (String(m.message_id).startsWith('temp_') && m.content === newMsg.content) ? newMsg : m);
+        }
         return [...prev, newMsg];
       });
 
@@ -169,6 +188,7 @@ const CustomerChatWidget = () => {
       try { user = JSON.parse(storedUser); } catch (e) {}
     }
 
+    const tempId = 'temp_' + Date.now();
     const payload = {
       conversation_id: conversation.conversation_id,
       sender_type: 'customer',
@@ -178,11 +198,27 @@ const CustomerChatWidget = () => {
       content: text
     };
 
+    // Optimistic UI: Hiển thị ngay lập tức
+    const optimisticMsg = {
+      ...payload,
+      message_id: tempId,
+      created_at: new Date().toISOString(),
+      is_read: 0
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
       if (socketRef.current?.connected) {
-        socketRef.current.emit('send_message', payload);
+        socketRef.current.emit('send_message', payload, (res) => {
+          if (res?.success && res?.data) {
+            setMessages(prev => prev.map(m => m.message_id === tempId ? res.data : m));
+          }
+        });
       } else {
-        await axios.post(`${CHAT_API_URL}/messages`, payload);
+        const res = await axios.post(`${CHAT_API_URL}/messages`, payload);
+        if (res.data?.success && res.data?.data) {
+          setMessages(prev => prev.map(m => m.message_id === tempId ? res.data.data : m));
+        }
       }
     } catch (err) {
       console.error('Lỗi gửi tin nhắn:', err);
