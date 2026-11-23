@@ -1312,8 +1312,10 @@ exports.processChangeRequest = async (req, res) => {
           `, { replacements: [bk[0].num_people || 1, bk[0].departure_id], transaction });
         }
       } else if (request.request_type === 'Reschedule') {
-        // Đổi sang ngày khởi hành mới (lấy từ req.body hoặc từ yêu cầu ban đầu)
-        const finalNewDepartureId = new_departure_id || request.new_departure_id;
+        // Đổi sang ngày khởi hành mới (bắt buộc nhân viên phải chọn đợt khởi hành mới hợp lệ)
+        const finalNewDepartureId = (new_departure_id !== undefined && new_departure_id !== null && String(new_departure_id).trim() !== '')
+          ? new_departure_id 
+          : null;
         if (!finalNewDepartureId) {
           await transaction.rollback();
           return res.status(400).json({ success: false, message: 'Vui lòng chọn đợt khởi hành mới để chuyển lịch trình đơn hàng!' });

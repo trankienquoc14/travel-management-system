@@ -279,9 +279,9 @@ const StaffChangeRequestManager = () => {
 
   const handleProcess = async (status, customNote, customNewDepId) => {
     if (!selectedReq) return;
-    const depIdToUse = customNewDepId || selectedNewDepForReview || selectedReq.new_departure_id;
+    const depIdToUse = customNewDepId !== undefined ? customNewDepId : selectedNewDepForReview;
     if (status === 'Approved' && selectedReq.request_type === 'Reschedule') {
-      if (!depIdToUse) {
+      if (!depIdToUse || String(depIdToUse).trim() === '') {
         alert("Vui lòng chọn đợt khởi hành mới để chuyển lịch trình!");
         return;
       }
@@ -1645,11 +1645,11 @@ const StaffChangeRequestManager = () => {
                       type="button"
                       onClick={() => {
                         if (!isCancel) {
-                          const targetDepId = selectedNewDepForReview || selectedReq.new_departure_id;
-                          if (!targetDepId) {
-                            alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang trước khi phê duyệt!");
+                          if (!selectedNewDepForReview || String(selectedNewDepForReview).trim() === '') {
+                            alert("Vui lòng chọn đợt khởi hành mới muốn chuyển sang trước khi phê duyệt đổi lịch!");
                             return;
                           }
+                          const targetDepId = selectedNewDepForReview;
                           // Kiểm tra số chỗ khả dụng thời gian thực
                           const matchedDep = reviewDepartures.find(d => String(d.departure_id) === String(targetDepId));
                           const currentSlots = matchedDep ? Number(matchedDep.available_slots || 0) : Number(selectedReq.requested_available_slots || 0);
