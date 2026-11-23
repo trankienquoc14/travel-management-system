@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
-import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag, MessageSquare, ShieldCheck, ChevronDown, Check, X, Calendar, CheckCircle2, AlertCircle, AlertTriangle, ArrowRight, Banknote, CreditCard } from 'lucide-react';
+import { ShoppingCart, CheckCircle, ChevronRight, User, Phone, Mail, MapPin, Tag, MessageSquare, ShieldCheck, ChevronDown, Check, X, Calendar, CheckCircle2, AlertCircle, AlertTriangle, ArrowRight, Banknote, CreditCard, Clock } from 'lucide-react';
 
 
 import CustomerNavbar from './CustomerNavbar';
@@ -1165,15 +1165,6 @@ const BookingFormInner = () => {
                         </div>
                     </div>
 
-                    {/* Khối Mã ưu đãi */}
-                    <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '16px' }}>Mã ưu đãi</h2>
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                            <input type="text" placeholder="Ví dụ: TRAVELERP100" style={{ flex: 1, padding: '14px 20px', borderRadius: '24px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '15px', outline: 'none' }} />
-                            <button style={{ padding: '0 32px', borderRadius: '24px', background: '#e2e8f0', color: '#94a3b8', border: 'none', fontWeight: 'bold', fontSize: '15px' }}>Áp dụng</button>
-                        </div>
-                    </div>
-
                     {/* Khối Phương thức thanh toán (QR / Ngân hàng + Tiền mặt) */}
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '16px' }}>Phương thức thanh toán</h2>
@@ -1724,24 +1715,24 @@ const BookingFormInner = () => {
                         position: 'relative',
                         border: '1px solid #e2e8f0'
                     }}>
-                        {/* Glowing Success Badge */}
+                        {/* Glowing Pending/Hold Badge */}
                         <div style={{
                             width: '80px',
                             height: '80px',
                             borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+                            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
                             margin: '0 auto 20px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            boxShadow: '0 12px 28px rgba(34, 197, 94, 0.25)'
+                            boxShadow: '0 12px 28px rgba(245, 158, 11, 0.25)'
                         }}>
-                            <CheckCircle2 size={46} color="#16a34a" strokeWidth={2.5} />
+                            <Clock size={46} color="#d97706" strokeWidth={2.5} />
                         </div>
 
                         {/* Title & Booking Code (Bước 10, 11, 12) */}
                         <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>
-                            Khởi Tạo Đơn Đặt Tour & Giữ Chỗ Thành Công!
+                            Khởi Tạo Đơn Đặt Tour - Giữ Chỗ Tạm Thời
                         </h2>
                         {successModal.bookingId && (
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>

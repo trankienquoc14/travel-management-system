@@ -19,22 +19,39 @@ let isEthereal = false;
 async function getTransporter() {
   if (cachedTransporter) return cachedTransporter;
 
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const emailUser = (process.env.EMAIL_USER || 'doantram0901@gmail.com').trim();
+  const emailPass = (process.env.EMAIL_PASS || 'gzqf tdxk bywf pali').replace(/\s+/g, '');
 
   if (emailUser && emailPass) {
-    // Có cấu hình SMTP thật (Gmail / Outlook / Custom SMTP)
-    cachedTransporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: Number(process.env.EMAIL_PORT) || 587,
-      secure: process.env.EMAIL_SECURE === 'true' || Number(process.env.EMAIL_PORT) === 465,
-      auth: {
-        user: emailUser,
-        pass: emailPass
-      }
-    });
+    // Ưu tiên service: 'gmail' (cổng 465 SSL, không bị chặn port 587 trên cloud hosting)
+    const isGmail = emailUser.includes('gmail.com') || (process.env.EMAIL_HOST && process.env.EMAIL_HOST.includes('gmail'));
+    if (isGmail) {
+      cachedTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+    } else {
+      cachedTransporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: Number(process.env.EMAIL_PORT) || 465,
+        secure: process.env.EMAIL_SECURE === 'true' || Number(process.env.EMAIL_PORT) === 465,
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+    }
     isEthereal = false;
-    console.log(`📧 [EmailService] Đã kích hoạt SMTP thật qua tài khoản: ${emailUser}`);
+    console.log(`📧 [EmailService] Đã kích hoạt Gmail SMTP thật qua tài khoản: ${emailUser}`);
   } else {
     // Chưa có tài khoản SMTP trong .env -> Tự động dùng Ethereal Test Account để test và preview URL
     try {
@@ -501,7 +518,7 @@ async function sendBookingConfirmationEmail(bookingId) {
 
     const transporter = await getTransporter();
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <no-reply@travelerp.vn>',
+      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <doantram0901@gmail.com>',
       to: recipientEmail,
       subject: `[TravelERP] 🎉 Xác nhận đặt tour thành công #${booking.booking_id} - ${booking.tour_name}`,
       text: `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đã được ghi nhận thành công!\nTổng tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)} từ ${departurePlace}.\n\nCảm ơn bạn đã lựa chọn TravelERP!`,
@@ -639,7 +656,7 @@ async function sendPaymentSuccessEmail(bookingId) {
 
     const transporter = await getTransporter();
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <no-reply@travelerp.vn>',
+      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <doantram0901@gmail.com>',
       to: recipientEmail,
       subject: `[TravelERP] ✅ Xác nhận thanh toán & Vé điện tử #${booking.booking_id} - ${booking.tour_name}`,
       text: `Kính chào ${recipientName},\n\nĐơn hàng #${booking.booking_id} (${booking.tour_name}) đã được thanh toán thành công!\nSố tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)}.\n\nChúc bạn có một chuyến đi tuyệt vời!`,

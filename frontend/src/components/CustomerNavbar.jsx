@@ -54,7 +54,20 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                const newNotifs = res.data.data || [];
+                const rawNotifs = res.data.data || [];
+                // Chuẩn hóa tiêu đề: Đơn hàng chưa thanh toán (chờ thanh toán / giữ chỗ) tuyệt đối không để tiêu đề "thành công"
+                const newNotifs = rawNotifs.map(n => {
+                    const content = String(n.content || '').toLowerCase();
+                    const title = String(n.title || '');
+                    const isPending = n.type === 'BOOKING_PENDING' || content.includes('chờ thanh toán') || content.includes('giữ chỗ tạm thời') || content.includes('vui lòng thanh toán');
+                    if (isPending && (title.includes('thành công') || title.includes('Thành công'))) {
+                        return {
+                            ...n,
+                            title: '⏱️ Tiếp nhận đơn đặt tour - Chờ thanh toán'
+                        };
+                    }
+                    return n;
+                });
                 const newUnread = Number(res.data.unreadCount || 0);
 
                 if (isInitialCustFetchRef.current) {

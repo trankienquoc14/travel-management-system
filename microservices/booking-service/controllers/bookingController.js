@@ -602,8 +602,8 @@ let requiredRooms = 0; let singleRoomCount = 0;
       `, {
         replacements: [
           customer_id,
-          '⏱️ Đã giữ chỗ tour - Chờ thanh toán',
-          `Đơn đặt tour #${newBookingId} (${tourName}${depDateStr ? ` - Khởi hành: ${depDateStr}` : ''}) đã được ghi nhận và đang giữ chỗ tạm thời (10 phút). Vui lòng hoàn tất thanh toán để nhận vé điện tử và mã QR check-in!`
+          '⏱️ Tiếp nhận đơn đặt tour - Chờ thanh toán',
+          `Đơn đặt tour #${newBookingId} (${tourName}${depDateStr ? ` - Khởi hành: ${depDateStr}` : ''}) đang giữ chỗ tạm thời trong 10 phút. Vui lòng hoàn tất thanh toán để nhận vé điện tử và mã QR check-in!`
         ],
         transaction
       });
@@ -3244,8 +3244,8 @@ const autoSyncCustomerInitialNotifications = async (userId) => {
         const isPaid = b.payment_status === 'Paid';
         const isCancelled = b.booking_status === 'Cancelled';
 
-        let title = '⏱️ Đã giữ chỗ tour - Chờ thanh toán';
-        let content = `Đơn đặt tour #${b.booking_id} (${b.tour_name} - Ngày đi: ${depDateStr}) đã được ghi nhận và đang giữ chỗ tạm thời. Vui lòng thanh toán để nhận vé điện tử.`;
+        let title = '⏱️ Tiếp nhận đơn đặt tour - Chờ thanh toán';
+        let content = `Đơn đặt tour #${b.booking_id} (${b.tour_name} - Ngày đi: ${depDateStr}) đang giữ chỗ tạm thời trong 10 phút. Vui lòng thanh toán để xác nhận đơn tour chính thức.`;
         let type = 'BOOKING_PENDING';
 
         if (isCancelled) {
