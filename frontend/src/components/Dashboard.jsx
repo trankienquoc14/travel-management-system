@@ -54,6 +54,17 @@ import StaffVehicleHistory from './StaffVehicleHistory';
 import StaffNotificationBell from './StaffNotificationBell';
 import StaffLiveChat from './StaffLiveChat';
 
+// 🚀 KeepAliveTab: Giữ component trong DOM sau khi mở lần đầu, chuyển tab mượt mà 0ms
+const KeepAliveTab = ({ tabKey, currentTab, visitedTabs, children, style = {} }) => {
+  if (!visitedTabs || !visitedTabs.has(tabKey)) return null;
+  const isCurrent = currentTab === tabKey;
+  return (
+    <div style={{ display: isCurrent ? 'block' : 'none', width: '100%', minHeight: '100%', ...style }}>
+      {children}
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [isPersonalOpen, setIsPersonalOpen] = useState(false);
@@ -77,6 +88,24 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [visitedTabs, setVisitedTabs] = useState(() => new Set(['overview']));
+
+  useEffect(() => {
+    if (activeTab) {
+      setVisitedTabs(prev => {
+        let tabToAdd = activeTab;
+        if (['guide_assigned', 'guide_work', 'guide_passengers', 'guide_itinerary', 'guide_map', 'guide_incidents', 'guide_updates'].includes(activeTab)) {
+          tabToAdd = 'guide_workspace';
+        } else if (['driver_schedule', 'driver_contacts', 'driver_expenses', 'driver_incidents'].includes(activeTab)) {
+          tabToAdd = 'driver_workspace';
+        }
+        if (prev.has(tabToAdd)) return prev;
+        const next = new Set(prev);
+        next.add(tabToAdd);
+        return next;
+      });
+    }
+  }, [activeTab]);
   const [editTourId, setEditTourId] = useState(null);
   const [editServiceData, setEditServiceData] = useState(null);
   const [editPartnerData, setEditPartnerData] = useState(null);
@@ -848,12 +877,12 @@ const Dashboard = () => {
 
         <div className="content-area" style={activeTab === 'staff_live_chat' ? { padding: '16px 20px', overflow: 'hidden' } : {}}>
           {/* Điểm danh & Chấm công cá nhân bằng GPS (Tất cả Nhân viên nội bộ công ty) */}
-          {activeTab === 'personal_attendance' && isInternalStaff && (
-            <PersonalAttendance />
-          )}
+          <KeepAliveTab tabKey="personal_attendance" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isInternalStaff && <PersonalAttendance />}
+          </KeepAliveTab>
 
           {/* Hồ sơ cá nhân (Dành cho tất cả các tài khoản) */}
-          {activeTab === 'profile' && (
+          <KeepAliveTab tabKey="profile" currentTab={activeTab} visitedTabs={visitedTabs}>
             <UserProfile 
               onProfileUpdated={(updated) => {
                 const updatedUser = { 
@@ -866,57 +895,56 @@ const Dashboard = () => {
                 localStorage.setItem('user', JSON.stringify({ ...stored, fullName: updated.full_name, avatar: updated.avatar }));
               }} 
             />
-          )}
+          </KeepAliveTab>
 
           {/* Vùng chung: Trung tâm Báo cáo Tổng quan & Dashboard */}
-          {activeTab === 'overview' && (isOfficeStaff || isTourManager || isAdmin) && (
-            false ? (
-              <OfficeStaffDashboard 
-                onNavigateToOrders={() => setActiveTab('orders')}
-                onNavigateToChangeRequests={() => setActiveTab('change_request')}
-              />
-            ) : (
+          <KeepAliveTab tabKey="overview" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isTourManager || isAdmin) && (
               <GeneralOverview onNavigateToOrders={() => setActiveTab('orders')} onNavigateToChangeRequests={() => setActiveTab('change_request')} />
-            )
-          )}
+            )}
+          </KeepAliveTab>
 
           {/* Vùng Tư vấn & Chat Trực Tuyến với Khách Hàng (Nhân viên VP, Admin) */}
-          {activeTab === 'staff_live_chat' && (isOfficeStaff || isAdmin) && (
-            <StaffLiveChat />
-          )}
+          <KeepAliveTab tabKey="staff_live_chat" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && <StaffLiveChat />}
+          </KeepAliveTab>
 
           {/* Vùng Nghiệp vụ Tour & Quản lý Yêu cầu (Nhân viên VP, Admin) */}
-          {['tour_requests', 'tour_requests_pending', 'tour_requests_revision'].includes(activeTab) && (isOfficeStaff || isAdmin) && (
-            <ErrorBoundary key={activeTab}>
-              <StaffTourRequestManager
-                mode={activeTab}
-                defaultFilter={
-                  activeTab === 'tour_requests_pending' ? 'Tất cả' :
-                  activeTab === 'tour_requests_revision' ? 'Tất cả cần sửa' : 'Tất cả'
-                }
-                onStartDesign={(req) => {
-                  setDesigningRequest(req);      // Lưu data khách đang tư vấn dở
-                  setActiveTab('tour_designer'); // Chuyển thẳng sang trang Thiết kế
+          {['tour_requests', 'tour_requests_pending', 'tour_requests_revision'].map((modeKey) => (
+            <KeepAliveTab key={modeKey} tabKey={modeKey} currentTab={activeTab} visitedTabs={visitedTabs}>
+              {(isOfficeStaff || isAdmin) && (
+                <ErrorBoundary key={modeKey}>
+                  <StaffTourRequestManager
+                    mode={modeKey}
+                    defaultFilter={
+                      modeKey === 'tour_requests_pending' ? 'Tất cả' :
+                      modeKey === 'tour_requests_revision' ? 'Tất cả cần sửa' : 'Tất cả'
+                    }
+                    onStartDesign={(req) => {
+                      setDesigningRequest(req);      // Lưu data khách đang tư vấn dở
+                      setActiveTab('tour_designer'); // Chuyển thẳng sang trang Thiết kế
+                    }}
+                  />
+                </ErrorBoundary>
+              )}
+            </KeepAliveTab>
+          ))}
+
+          {/* Vùng Tour đã thiết kế */}
+          <KeepAliveTab tabKey="approved_tours" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && (
+              <StaffPendingTours
+                onEditDesign={(req) => {
+                  setDesigningRequest(req);
+                  setActiveTab('tour_designer');
+                }}
+                onEditFixedDesign={(tour) => {
+                  setFixedTourToEdit(tour);
+                  setActiveTab('fixed_tours');
                 }}
               />
-            </ErrorBoundary>
-          )}
-          {/* Vùng Tour đã thiết kế */}
-          {activeTab === 'approved_tours' && (isOfficeStaff || isAdmin) && (
-            <StaffPendingTours
-              onEditDesign={(req) => {
-                // Đưa toàn bộ data của tour này vào state của phòng thiết kế
-                setDesigningRequest(req);
-                // Đẩy sang tab thiết kế để sửa
-                setActiveTab('tour_designer');
-              }}
-              // 🚀 THÊM ĐOẠN NÀY ĐỂ MỞ BẢN SỬA TOUR CỐ ĐỊNH
-              onEditFixedDesign={(tour) => {
-                setFixedTourToEdit(tour); // Lưu tour cần sửa
-                setActiveTab('fixed_tours'); // Chuyển sang màn hình Thiết kế Tour Cố Định
-              }}
-            />
-          )}
+            )}
+          </KeepAliveTab>
 
           {/* Vùng Thiết kế Tour */}
           {activeTab === 'tour_designer' && (isOfficeStaff || isAdmin) && (
@@ -927,30 +955,88 @@ const Dashboard = () => {
           )}
 
           {/* Vùng Quản lý Tour */}
-          {activeTab === 'services' && (isTourManager || isAdmin) && <ServiceManagement onAddNew={() => { setEditServiceData(null); setActiveTab('service_form'); }} onEdit={(data) => { setEditServiceData(data); setActiveTab('service_form'); }} />}
-          {activeTab === 'service_form' && (isTourManager || isAdmin) && <ServiceForm editData={editServiceData} onBack={() => { setActiveTab('services'); setEditServiceData(null); }} />}
-          {activeTab === 'places' && (isTourManager || isAdmin) && <PlaceManagement />}
-          {activeTab === "partners" && (isTourManager || isAdmin) && <PartnerManagement onAddNew={() => { setEditPartnerData(null); setActiveTab("partner_form"); }} onEdit={(data) => { setEditPartnerData(data); setActiveTab("partner_form"); }} />}
-          {activeTab === "partner_form" && (isTourManager || isAdmin) && <PartnerForm editData={editPartnerData} onBack={() => { setEditPartnerData(null); setActiveTab("partners"); }} />}
-          {activeTab === 'tours' && (isTourManager || isAdmin) && <TourManagement onAddNew={() => { setEditTourId(null); setActiveTab('tour_form'); }} onEdit={(id) => { setEditTourId(id); setActiveTab('tour_form'); }} />}
-          {activeTab === 'tour_form' && (isTourManager || isAdmin) && <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />}
-          {activeTab === 'approve_quotes' && (isTourManager || isAdmin) && <ManagerTourApproval />} {/* THÊM DÒNG NÀY */}
-          {activeTab === 'orders' && (isOfficeStaff || isAdmin) && <StaffBookingManagement />}
-          {activeTab === 'payments' && (isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
-          {activeTab === 'change_request' && (isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
-          {activeTab === 'operational_manager' && (isTourManager || isAdmin) && <TourOperationalManager />}
-          {activeTab === 'tour_operations' && (isTourManager || isAdmin) && <TourOperations />}
-          {activeTab === 'fleet_vehicles' && (isTourManager || isAdmin) && <VehicleFleetManagement />}
-          {activeTab === 'driver_assigned' && (isDriver || isAdmin) && (
-            <DriverAssignedVehicles 
-              setActiveTab={setActiveTab} 
-              setSelectedDeparture={setSelectedDeparture} 
-              selectedDeparture={selectedDeparture} 
-            />
+          <KeepAliveTab tabKey="services" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && (
+              <ServiceManagement 
+                onAddNew={() => { setEditServiceData(null); setActiveTab('service_form'); }} 
+                onEdit={(data) => { setEditServiceData(data); setActiveTab('service_form'); }} 
+              />
+            )}
+          </KeepAliveTab>
+          {activeTab === 'service_form' && (isTourManager || isAdmin) && (
+            <ServiceForm editData={editServiceData} onBack={() => { setActiveTab('services'); setEditServiceData(null); }} />
           )}
+
+          <KeepAliveTab tabKey="places" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <PlaceManagement />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="partners" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && (
+              <PartnerManagement 
+                onAddNew={() => { setEditPartnerData(null); setActiveTab("partner_form"); }} 
+                onEdit={(data) => { setEditPartnerData(data); setActiveTab("partner_form"); }} 
+              />
+            )}
+          </KeepAliveTab>
+          {activeTab === "partner_form" && (isTourManager || isAdmin) && (
+            <PartnerForm editData={editPartnerData} onBack={() => { setEditPartnerData(null); setActiveTab("partners"); }} />
+          )}
+
+          <KeepAliveTab tabKey="tours" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && (
+              <TourManagement 
+                onAddNew={() => { setEditTourId(null); setActiveTab('tour_form'); }} 
+                onEdit={(id) => { setEditTourId(id); setActiveTab('tour_form'); }} 
+              />
+            )}
+          </KeepAliveTab>
+          {activeTab === 'tour_form' && (isTourManager || isAdmin) && (
+            <TourForm tourId={editTourId} onBack={() => { setActiveTab('tours'); setEditTourId(null); }} />
+          )}
+
+          <KeepAliveTab tabKey="approve_quotes" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <ManagerTourApproval />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="orders" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && <StaffBookingManagement />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="payments" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && <StaffPaymentManagement />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="change_request" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && <StaffChangeRequestManager />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="operational_manager" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <TourOperationalManager />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="tour_operations" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <TourOperations />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="fleet_vehicles" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <VehicleFleetManagement />}
+          </KeepAliveTab>
+
+          <KeepAliveTab tabKey="driver_assigned" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isDriver || isAdmin) && (
+              <DriverAssignedVehicles 
+                setActiveTab={setActiveTab} 
+                setSelectedDeparture={setSelectedDeparture} 
+                selectedDeparture={selectedDeparture} 
+              />
+            )}
+          </KeepAliveTab>
           
           {/* QUẢN LÝ YÊU CẦU DỊCH VỤ */}
-          {activeTab === 'service_requests' && (isTourManager || isAdmin) && <ServiceRequestList />}
+          <KeepAliveTab tabKey="service_requests" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <ServiceRequestList />}
+          </KeepAliveTab>
           {activeTab === 'create_request' && (isTourManager || isAdmin) && (
             <ServiceRequestCreate 
               setActiveTab={setActiveTab} 
@@ -960,57 +1046,112 @@ const Dashboard = () => {
           {activeTab === 'create_supplement_request' && (isTourManager || isAdmin) && <ServiceRequestSupplement />}
           
           {activeTab === 'fixed_tours' && (isOfficeStaff || isAdmin) && <StaffFixedTourDesigner editTourData={fixedTourToEdit} />}
+
           {/* Vùng đối tác */}
-          {activeTab === 'partner_inventory' && isPartner && <PartnerInventory />}
-          {activeTab === 'partner_requests' && isPartner && <PartnerServiceRequests />}
-          {activeTab === 'partner_summary' && isPartner && <PartnerServiceSummary />}
+          <KeepAliveTab tabKey="partner_inventory" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isPartner && <PartnerInventory />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="partner_requests" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isPartner && <PartnerServiceRequests />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="partner_summary" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isPartner && <PartnerServiceSummary />}
+          </KeepAliveTab>
 
           {/* Đơn xin nghỉ phép & Giải trình chấm công */}
-          {activeTab === 'leave_requests' && isInternalStaff && <HRLeaveRequest mode="my_requests" />}
-          {activeTab === 'personal_schedule' && isInternalStaff && <PersonalSchedule />}
+          <KeepAliveTab tabKey="leave_requests" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isInternalStaff && <HRLeaveRequest mode="my_requests" />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="personal_schedule" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isInternalStaff && <PersonalSchedule />}
+          </KeepAliveTab>
 
           {/* Vùng Quản lý nhân sự */}
-          {activeTab === 'hr_employees' && (isHRManager || isAdmin) && <HREmployeeManagement />}
-          {activeTab === 'hr_customers' && (isOfficeStaff || isAdmin) && <HRCustomerManagement />}
+          <KeepAliveTab tabKey="hr_employees" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isHRManager || isAdmin) && <HREmployeeManagement />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="hr_customers" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && <HRCustomerManagement />}
+          </KeepAliveTab>
 
-          {activeTab === 'staff_fleet_vehicles' && (isOfficeStaff || isAdmin) && <StaffVehicleManagement onViewHistory={(vid) => { if (vid) sessionStorage.setItem('staff_selected_history_vehicle_id', String(vid)); setActiveTab('staff_vehicle_history'); }} />}
-          {activeTab === 'staff_vehicle_incidents' && (isOfficeStaff || isAdmin) && <StaffVehicleIncidents onViewHistory={(vid) => { if (vid) sessionStorage.setItem('staff_selected_history_vehicle_id', String(vid)); setActiveTab('staff_vehicle_history'); }} />}
-          {activeTab === 'staff_vehicle_history' && (isOfficeStaff || isAdmin) && <StaffVehicleHistory onBack={() => setActiveTab('staff_fleet_vehicles')} />}
+          <KeepAliveTab tabKey="staff_fleet_vehicles" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && (
+              <StaffVehicleManagement 
+                onViewHistory={(vid) => { 
+                  if (vid) sessionStorage.setItem('staff_selected_history_vehicle_id', String(vid)); 
+                  setActiveTab('staff_vehicle_history'); 
+                }} 
+              />
+            )}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="staff_vehicle_incidents" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isOfficeStaff || isAdmin) && (
+              <StaffVehicleIncidents 
+                onViewHistory={(vid) => { 
+                  if (vid) sessionStorage.setItem('staff_selected_history_vehicle_id', String(vid)); 
+                  setActiveTab('staff_vehicle_history'); 
+                }} 
+              />
+            )}
+          </KeepAliveTab>
+          {activeTab === 'staff_vehicle_history' && (isOfficeStaff || isAdmin) && (
+            <StaffVehicleHistory onBack={() => setActiveTab('staff_fleet_vehicles')} />
+          )}
 
-          {activeTab === 'hr_attendance' && (isHRManager || isAdmin) && <HRAttendance />}
-          {activeTab === 'hr_payroll' && (isHRManager || isAdmin) && <HRPayroll />}
-          {activeTab === 'hr_performance' && (isHRManager || isAdmin) && <HRPerformanceReview />}
+          <KeepAliveTab tabKey="hr_attendance" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isHRManager || isAdmin) && <HRAttendance />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="hr_payroll" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isHRManager || isAdmin) && <HRPayroll />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="hr_performance" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isHRManager || isAdmin) && <HRPerformanceReview />}
+          </KeepAliveTab>
 
           {/* Vùng Hướng dẫn viên */}
-          {['guide_assigned', 'guide_work', 'guide_passengers', 'guide_itinerary', 'guide_map', 'guide_incidents', 'guide_updates'].includes(activeTab) && (isTourGuide || isAdmin) && (
-            <GuideWorkspace 
-              activeTab={activeTab} 
-              selectedDeparture={selectedDeparture} 
-              setSelectedDeparture={setSelectedDeparture} 
-              setActiveTab={setActiveTab} 
-            />
+          {visitedTabs.has('guide_workspace') && (isTourGuide || isAdmin) && (
+            <div style={{ display: ['guide_assigned', 'guide_work', 'guide_passengers', 'guide_itinerary', 'guide_map', 'guide_incidents', 'guide_updates'].includes(activeTab) ? 'block' : 'none', width: '100%', minHeight: '100%' }}>
+              <GuideWorkspace 
+                activeTab={activeTab} 
+                selectedDeparture={selectedDeparture} 
+                setSelectedDeparture={setSelectedDeparture} 
+                setActiveTab={setActiveTab} 
+              />
+            </div>
           )}
 
           {/* Vùng Tài xế dẫn đoàn */}
-          {['driver_schedule', 'driver_contacts', 'driver_expenses', 'driver_incidents'].includes(activeTab) && (isDriver || isAdmin) && (
-            <DriverWorkspace 
-              activeTab={activeTab} 
-              selectedDeparture={selectedDeparture} 
-              setSelectedDeparture={setSelectedDeparture} 
-              setActiveTab={setActiveTab} 
-            />
+          {visitedTabs.has('driver_workspace') && (isDriver || isAdmin) && (
+            <div style={{ display: ['driver_schedule', 'driver_contacts', 'driver_expenses', 'driver_incidents'].includes(activeTab) ? 'block' : 'none', width: '100%', minHeight: '100%' }}>
+              <DriverWorkspace 
+                activeTab={activeTab} 
+                selectedDeparture={selectedDeparture} 
+                setSelectedDeparture={setSelectedDeparture} 
+                setActiveTab={setActiveTab} 
+              />
+            </div>
           )}
 
           {/* Vùng Xử lý Sự cố (Dành cho Quản lý Tour & Admin) */}
-          {activeTab === 'incidents' && (isTourManager || isAdmin) && <IncidentManagement />}
+          <KeepAliveTab tabKey="incidents" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {(isTourManager || isAdmin) && <IncidentManagement />}
+          </KeepAliveTab>
 
           {/* Vùng Quản trị viên Admin */}
-          {activeTab === 'users' && isAdmin && <AdminUserManagement />}
+          <KeepAliveTab tabKey="users" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isAdmin && <AdminUserManagement />}
+          </KeepAliveTab>
 
           {/* Vùng Khách hàng */}
-          {activeTab === 'my_bookings' && isCustomer && <MyBookings />}
-          {activeTab === 'customer_quotes' && isCustomer && <CustomerQuotes onRequestNew={() => setActiveTab('customer_builder')} />}
-          {activeTab === 'customer_builder' && isCustomer && <CustomerTourBuilder onSubmitted={() => setActiveTab('customer_quotes')} />}
+          <KeepAliveTab tabKey="my_bookings" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isCustomer && <MyBookings />}
+          </KeepAliveTab>
+          <KeepAliveTab tabKey="customer_quotes" currentTab={activeTab} visitedTabs={visitedTabs}>
+            {isCustomer && <CustomerQuotes onRequestNew={() => setActiveTab('customer_builder')} />}
+          </KeepAliveTab>
+          {activeTab === 'customer_builder' && isCustomer && (
+            <CustomerTourBuilder onSubmitted={() => setActiveTab('customer_quotes')} />
+          )}
         </div>
       </main>
     </div>

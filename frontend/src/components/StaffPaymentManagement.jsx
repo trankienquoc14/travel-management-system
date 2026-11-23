@@ -23,7 +23,7 @@ const StaffPaymentManagement = () => {
   }, []);
 
   useRealtime(['realtime:booking', 'realtime:payment'], () => {
-    fetchPaymentsAndBookings();
+    fetchPaymentsAndBookings(true);
   });
 
   const fetchDestinations = async () => {
@@ -37,7 +37,10 @@ const StaffPaymentManagement = () => {
     }
   };
 
-  const fetchPaymentsAndBookings = async () => {
+  const fetchPaymentsAndBookings = async (isBackground = false) => {
+    if (!isBackground && payments.length === 0 && bookings.length === 0) {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('token');
       const [payRes, bookRes] = await Promise.all([

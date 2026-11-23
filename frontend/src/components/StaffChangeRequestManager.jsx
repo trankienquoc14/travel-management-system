@@ -55,11 +55,13 @@ const StaffChangeRequestManager = () => {
   }, []);
 
   useRealtime('realtime:booking', () => {
-    fetchRequests();
+    fetchRequests(true);
   });
 
-  const fetchRequests = async () => {
-    setLoading(true);
+  const fetchRequests = async (isBackground = false) => {
+    if (!isBackground && requests.length === 0) {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(`${GATEWAY_URL}/api/bookings/admin/change-requests`, {
@@ -70,7 +72,9 @@ const StaffChangeRequestManager = () => {
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách yêu cầu hủy/đổi lịch:", err);
-      setAlertMsg({ type: 'error', text: 'Không thể tải danh sách yêu cầu. Vui lòng thử lại!' });
+      if (!isBackground) {
+        setAlertMsg({ type: 'error', text: 'Không thể tải danh sách yêu cầu. Vui lòng thử lại!' });
+      }
     } finally {
       setLoading(false);
     }
@@ -322,6 +326,9 @@ const StaffChangeRequestManager = () => {
     if (!r) return { label: 'Chờ xử lý', color: '#b45309', bg: '#fef3c7', border: '#fde68a' };
 
     if (r.status === 'Pending') {
+      if (r.request_type === 'Reschedule') {
+        return { label: 'Chờ đổi lịch', color: '#b45309', bg: '#fef3c7', border: '#fde68a' };
+      }
       return { label: 'Chờ quyết toán', color: '#b45309', bg: '#fef3c7', border: '#fde68a' };
     }
 
@@ -572,6 +579,20 @@ const StaffChangeRequestManager = () => {
                                   } else if (r.requested_departure_date) {
                                     const match = deps.find(d => d.departure_date && d.departure_date.substring(0, 10) === r.requested_departure_date.substring(0, 10));
                                     if (match) setSelectedNewDepForReview(String(match.departure_id));
+                                  } else if (r.reason) {
+                                    // Tự động nhận diện ngày khách ghi trong lý do (VD: 31/12 hoặc 31/12/2026)
+                                    const dateMatch = r.reason.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{4}))?/);
+                                    if (dateMatch) {
+                                      const dDay = Number(dateMatch[1]);
+                                      const dMonth = Number(dateMatch[2]);
+                                      const dYear = dateMatch[3] ? Number(dateMatch[3]) : null;
+                                      const match = deps.find(d => {
+                                        if (!d.departure_date) return false;
+                                        const dt = new Date(d.departure_date);
+                                        return dt.getDate() === dDay && (dt.getMonth() + 1) === dMonth && (!dYear || dt.getFullYear() === dYear);
+                                      });
+                                      if (match) setSelectedNewDepForReview(String(match.departure_id));
+                                    }
                                   }
                                 }
                               } else {
@@ -1226,7 +1247,7 @@ const StaffChangeRequestManager = () => {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                      Xử Lý Yêu Cầu Quyết Toán Tài Chính
+                      {isCancel ? 'Xử Lý Yêu Cầu Quyết Toán Hủy Tour' : 'Xử Lý Yêu Cầu Đổi Lịch Khởi Hành'}
                     </h2>
                     <span style={{ 
                       fontSize: '12px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px',
@@ -1337,7 +1358,11 @@ const StaffChangeRequestManager = () => {
                           <div>
                             <span style={{ color: '#64748b', fontSize: '11.5px', display: 'block' }}>Số chỗ khả dụng lúc check:</span>
                             <strong style={{ fontSize: '14px', color: isProposedEnough ? '#15803d' : '#b91c1c' }}>
-                              {isKnown ? `Còn ${reqSlots} / ${maxSlots || 0} chỗ` : 'Đang đồng bộ...'}
+                              {loadingReviewDeps 
+                                ? 'Đang kiểm tra...' 
+                                : (isKnown 
+                                    ? `Còn ${reqSlots} / ${maxSlots || 0} chỗ` 
+                                    : (selectedNewDepForReview ? 'Đang cập nhật...' : 'Chưa chọn đợt chuyển'))}
                             </strong>
                           </div>
                           <div>
@@ -1446,7 +1471,7 @@ const StaffChangeRequestManager = () => {
                     fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', 
                     letterSpacing: '0.6px', marginBottom: '12px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' 
                   }}>
-                    3. Chi Tiết Quyết Toán Tài Chính
+                    {isCancel ? '3. Chi Tiết Quyết Toán Hoàn Tiền' : '2. Chi Tiết Phụ Phí Đổi Lịch'}
                   </div>
 
                   {/* THÔNG SỐ ĐỐI SOÁT */}
@@ -1468,10 +1493,10 @@ const StaffChangeRequestManager = () => {
                     </div>
                     <div>
                       <span style={{ color: '#64748b', fontSize: '12px', display: 'block' }}>
-                        Phí khấu trừ ({Number(selectedReq.fee_percentage || 0)}%)
+                        {isCancel ? `Phí khấu trừ (${Number(selectedReq.fee_percentage || 0)}%)` : `Mức phụ phí (${Number(selectedReq.fee_percentage || 0)}%)`}
                       </span>
-                      <strong style={{ fontSize: '14px', color: '#dc2626' }}>
-                        -{Number(selectedReq.fee_amount || 0).toLocaleString('vi-VN')} ₫
+                      <strong style={{ fontSize: '14px', color: isCancel ? '#dc2626' : (Number(selectedReq.fee_amount || 0) > 0 ? '#d97706' : '#15803d') }}>
+                        {isCancel ? `-${Number(selectedReq.fee_amount || 0).toLocaleString('vi-VN')} ₫` : (Number(selectedReq.fee_amount || 0) > 0 ? `+${Number(selectedReq.fee_amount || 0).toLocaleString('vi-VN')} ₫` : '0 ₫')}
                       </strong>
                     </div>
                   </div>

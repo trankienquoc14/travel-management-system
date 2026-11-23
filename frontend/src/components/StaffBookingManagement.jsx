@@ -87,11 +87,13 @@ const StaffBookingManagement = () => {
   }, []);
 
   useRealtime(['realtime:booking', 'realtime:payment'], () => {
-    fetchBookings();
+    fetchBookings(true);
   });
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = async (isBackground = false) => {
+    if (!isBackground && bookings.length === 0) {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(`${GATEWAY_URL}/api/bookings/admin/all-bookings`, {
@@ -102,7 +104,9 @@ const StaffBookingManagement = () => {
       }
     } catch (err) {
       console.error("Lỗi khi tải danh sách booking:", err);
-      setAlertMsg({ type: 'error', text: 'Không thể tải danh sách đơn hàng. Vui lòng thử lại!' });
+      if (!isBackground) {
+        setAlertMsg({ type: 'error', text: 'Không thể tải danh sách đơn hàng. Vui lòng thử lại!' });
+      }
     } finally {
       setLoading(false);
     }
