@@ -167,6 +167,23 @@ async function saveMessageToDb({
 
 // =================== REST APIS ===================
 
+// 0. Endpoint Realtime Broadcast chung cho toàn bộ hệ thống
+app.post('/api/chat/broadcast', (req, res) => {
+  try {
+    const { event, data, room } = req.body;
+    if (!event) return res.status(400).json({ success: false, message: 'Event is required' });
+    if (room) {
+      io.to(room).emit(event, data);
+    } else {
+      io.emit(event, data);
+    }
+    return res.json({ success: true, event });
+  } catch (err) {
+    console.error('Broadcast error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 1. Khách hàng khởi tạo / tìm hội thoại
 app.post('/api/chat/init', async (req, res) => {
   try {
@@ -598,6 +615,16 @@ io.on('connection', (socket) => {
   // Tham gia phòng chung của nhân viên
   socket.on('join_staff', () => {
     socket.join('staff_room');
+  });
+
+  // Tham gia phòng người dùng (khách hoặc nhân viên)
+  socket.on('join_user', (userId) => {
+    if (userId) socket.join(`user_${userId}`);
+  });
+
+  // Tham gia phòng theo vai trò (1: Admin, 3: Office Staff, 4: Tour Manager...)
+  socket.on('join_role', (roleId) => {
+    if (roleId) socket.join(`role_${roleId}`);
   });
 
   // Sự kiện gửi tin nhắn qua Socket

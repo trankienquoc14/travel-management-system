@@ -8,12 +8,27 @@ import TravelPreferenceFilter, { trackBehavior } from './TravelPreferenceFilter'
 import TravelPreferenceSidebar from './TravelPreferenceSidebar';
 import CustomerChatWidget from './CustomerChatWidget';
 import CustomerAIChatWidget from './CustomerAIChatWidget';
+import { useRealtime } from '../services/realtimeService';
 import '../index.css';
 
 const HomePage = () => {
     const [user, setUser] = useState(null);
-    const [tours, setTours] = useState([]);
-    const [loadingTours, setLoadingTours] = useState(true);
+    const [tours, setTours] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_tours_data');
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
+    });
+    const [loadingTours, setLoadingTours] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_tours_data');
+            return !cached || JSON.parse(cached).length === 0;
+        } catch (e) {
+            return true;
+        }
+    });
 
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
     const [trendingTab, setTrendingTab] = useState('Tất cả');
@@ -58,17 +73,52 @@ const HomePage = () => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
         fetchTours();
+
+        const handleOnline = () => fetchTours();
+        const handleOffline = () => setLoadingTours(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
     }, []);
 
+    useRealtime('realtime:tour', () => {
+        fetchTours();
+    });
+
     const fetchTours = async () => {
-        setLoadingTours(true);
+        // Nếu offline, sử dụng ngay dữ liệu cache trong localStorage và tắt loading
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setLoadingTours(false);
+            return;
+        }
+
+        // Chỉ bật hiệu ứng skeleton khi chưa có dữ liệu nào
+        if (tours.length === 0) {
+            setLoadingTours(true);
+        }
+
         try {
-            const response = await axios.get('http://localhost:5000/api/tours');
-            if (response.data.success) {
+            const response = await axios.get('http://localhost:5000/api/tours', {
+                timeout: 7000
+            });
+            if (response.data && response.data.success && Array.isArray(response.data.data)) {
                 setTours(response.data.data);
+                try {
+                    localStorage.setItem('cached_tours_data', JSON.stringify(response.data.data));
+                } catch (e) {}
             }
         } catch (error) {
-            console.error('Lỗi khi tải danh sách tour:', error);
+            console.warn('Lỗi kết nối khi tải tour (sử dụng cache nếu có):', error.message);
+            try {
+                const cached = localStorage.getItem('cached_tours_data');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed.length > 0) setTours(parsed);
+                }
+            } catch (e) {}
         } finally {
             setLoadingTours(false);
         }

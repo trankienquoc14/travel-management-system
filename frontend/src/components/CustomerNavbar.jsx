@@ -4,6 +4,7 @@ import axios from 'axios';
 import UserProfile from './UserProfile';
 import soundService from '../utils/soundService';
 import { notifyBell } from '../context/NotificationContext';
+import { useRealtime } from '../services/realtimeService';
 
 const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
 
@@ -111,6 +112,13 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    useRealtime(['realtime:notification', 'realtime:booking', 'realtime:request'], () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetchCustomerNotifications();
+        }
+    });
 
     const handleLogout = () => {
         localStorage.removeItem('token');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { useRealtime } from '../services/realtimeService';
 import { 
     Calculator, DollarSign, Users, Bus, UserCheck, Utensils, Hotel, 
     Ticket, ShieldCheck, TrendingUp, RotateCcw, Check, X, AlertCircle, Sparkles 
@@ -36,6 +37,10 @@ const TourManagement = () => {
         fetchTours();
         fetchDestinations();
     }, []);
+
+    useRealtime('realtime:tour', () => {
+        fetchTours();
+    });
 
     const fetchDestinations = async () => {
         try {

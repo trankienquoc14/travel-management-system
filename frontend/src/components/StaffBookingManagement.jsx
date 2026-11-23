@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useRealtime } from '../services/realtimeService';
 
 const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
 
@@ -84,6 +85,10 @@ const StaffBookingManagement = () => {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  useRealtime(['realtime:booking', 'realtime:payment'], () => {
+    fetchBookings();
+  });
 
   const fetchBookings = async () => {
     setLoading(true);

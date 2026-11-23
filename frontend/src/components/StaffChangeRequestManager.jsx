@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useRealtime } from '../services/realtimeService';
 
 const GATEWAY_URL = 'http://localhost:5000';
 
@@ -52,6 +53,10 @@ const StaffChangeRequestManager = () => {
   useEffect(() => {
     fetchRequests();
   }, []);
+
+  useRealtime('realtime:booking', () => {
+    fetchRequests();
+  });
 
   const fetchRequests = async () => {
     setLoading(true);

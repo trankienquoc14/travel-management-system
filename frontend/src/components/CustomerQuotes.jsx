@@ -4,6 +4,7 @@ import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
+import { useRealtime } from '../services/realtimeService';
 import '../index.css';
 
 const cleanHotelDisplayName = (name) => {
@@ -200,6 +201,17 @@ const CustomerQuotes = () => {
             navigate('/login');
         }
     }, [navigate]);
+
+    useRealtime('realtime:request', () => {
+        const storedUserStr = localStorage.getItem('user');
+        if (storedUserStr) {
+            try {
+                const storedUser = JSON.parse(storedUserStr);
+                const customerId = storedUser.user_id || storedUser.id || storedUser.userId;
+                if (customerId) fetchMyQuotes(customerId);
+            } catch (e) {}
+        }
+    });
 
     // 2. HÀM LẤY DỮ LIỆU TỪ BACKEND (Backend đã LEFT JOIN lấy bản Quote mới nhất từ bảng custom_tour_quotes)
     const fetchMyQuotes = async (userId) => {

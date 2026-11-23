@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import soundService from '../utils/soundService';
 import { notifyBell } from '../context/NotificationContext';
+import { useRealtime } from '../services/realtimeService';
 
 const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
   const [notifications, setNotifications] = useState([]);
@@ -79,6 +80,10 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  useRealtime(['realtime:notification', 'realtime:booking', 'realtime:request'], () => {
+    fetchNotifications(true);
+  });
 
   // Xử lý đóng dropdown khi click ra ngoài
   useEffect(() => {

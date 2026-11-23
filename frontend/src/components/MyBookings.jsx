@@ -7,6 +7,7 @@ import CustomerFooter from './CustomerFooter';
 import SepayPaymentModal from './SepayPaymentModal';
 import TourReviewModal from './TourReviewModal';
 import { Star } from 'lucide-react';
+import { useRealtime } from '../services/realtimeService';
 
 const GATEWAY_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.hostname}:5000` : 'http://localhost:5000');
 const PAYMENT_DEADLINE_SECONDS = 600; // Thời hạn thanh toán chuyển khoản: 10 phút (600 giây)
@@ -544,6 +545,10 @@ const MyBookings = () => {
             navigate('/my-bookings', { replace: true });
         }
     }, []);
+
+    useRealtime(['realtime:booking', 'realtime:payment'], () => {
+        fetchMyBookings();
+    });
 
     const fetchMyBookings = async () => {
         try {

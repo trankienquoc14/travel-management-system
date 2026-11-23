@@ -1,5 +1,12 @@
 const sequelize = require('../config/database');
 const { sendBookingConfirmationEmail } = require('../utils/emailService');
+const { broadcastRealtime } = require('../../shared/realtimeNotifier');
+
+const notifyRequestChange = (type, data = {}) => {
+    broadcastRealtime('realtime:request', { type, ...data });
+    broadcastRealtime('realtime:notification', { type, ...data });
+    broadcastRealtime('realtime:dashboard', { type, ...data });
+};
 
 exports.createCustomRequest = async (req, res) => {
     try {
@@ -36,6 +43,8 @@ exports.createCustomRequest = async (req, res) => {
                 count, estBudget, requirementsString
             ]
         });
+
+        notifyRequestChange('create_request');
 
         res.status(201).json({
             success: true,
@@ -111,6 +120,7 @@ exports.quoteRequest = async (req, res) => {
         }
 
         await transaction.commit();
+        notifyRequestChange('update');
         res.status(200).json({ success: true, message: currentApprovalStatus === 'Pending_Approval' ? 'ÄĂ£ gá»­i quáº£n lĂ½ phĂª duyá»‡t!' : 'ÄĂ£ lÆ°u nhĂ¡p báº£n thiáº¿t káº¿!' });
     } catch (error) {
         await transaction.rollback();
@@ -134,6 +144,7 @@ exports.approveRequest = async (req, res) => {
         `, { replacements: [managerId, id], transaction });
 
         await transaction.commit();
+        notifyRequestChange('update');
         res.status(200).json({ success: true, message: 'ÄĂ£ duyá»‡t bĂ¡o giĂ¡!' });
     } catch (error) {
         await transaction.rollback();
@@ -158,6 +169,7 @@ exports.rejectRequest = async (req, res) => {
         `, { replacements: [managerId, note, id], transaction });
 
         await transaction.commit();
+        notifyRequestChange('update');
         res.status(200).json({ success: true, message: 'ÄĂ£ tá»« chá»‘i vĂ  báº¯t lĂ m láº¡i!' });
     } catch (error) {
         await transaction.rollback();
@@ -292,6 +304,7 @@ exports.sendNotification = async (req, res) => {
         `, { replacements: [id], transaction });
 
         await transaction.commit();
+        notifyRequestChange('update');
         res.status(200).json({ success: true, message: 'Ä Ă£ gá»­i bĂ¡o giĂ¡ má»›i nháº¥t cho khĂ¡ch hĂ ng!' });
     } catch (error) {
         await transaction.rollback();
@@ -334,6 +347,7 @@ exports.updateCustomerAction = async (req, res) => {
         }
 
         await transaction.commit();
+        notifyRequestChange('update');
         res.status(200).json({ success: true, message: 'Cập nhật phản hồi thành công!' });
     } catch (error) {
         await transaction.rollback();
@@ -582,6 +596,7 @@ exports.bookCustomTourQuote = async (req, res) => {
         `, { replacements: [newBookingId, payment_method, exactTotalAmount, txnCode], transaction });
 
         await transaction.commit();
+        notifyRequestChange('update');
 
         // 8. Gửi email xác nhận đặt tour thiết kế riêng về email khách đã điền
         sendBookingConfirmationEmail(newBookingId).catch(mailErr => {

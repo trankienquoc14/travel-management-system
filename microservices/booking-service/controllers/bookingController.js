@@ -2,6 +2,14 @@ const https = require('https');
 const { calculateRooms } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
 const { sendBookingConfirmationEmail, sendPaymentSuccessEmail, sendBookingCancelledUnpaidEmail } = require('../utils/emailService');
+const { broadcastRealtime } = require('../../shared/realtimeNotifier');
+
+const notifyBookingEvent = (type, data = {}) => {
+  broadcastRealtime('realtime:booking', { type, ...data });
+  broadcastRealtime('realtime:notification', { type, ...data });
+  broadcastRealtime('realtime:dashboard', { type, ...data });
+  broadcastRealtime('realtime:tour', { type, ...data });
+};
 
 // Tự động kiểm tra và bổ sung các cột cần thiết trong bảng bookings & booking_passengers
 let isBookingSchemaEnsured = false;
@@ -624,6 +632,8 @@ let requiredRooms = 0; let singleRoomCount = 0;
       console.error('❌ [EmailService] Lỗi gửi email xác nhận đặt tour createBooking:', mailErr);
     });
 
+    notifyBookingEvent('create_booking', { bookingId: newBookingId });
+
     res.status(200).json({
       success: true,
       message: 'Khởi tạo đơn đặt tour & giữ chỗ thành công!',
@@ -848,6 +858,7 @@ exports.confirmCashByStaff = async (req, res) => {
     sendPaymentSuccessEmail(bookingId).catch(mailErr => {
       console.error('❌ [EmailService] Lỗi gửi email xác nhận tiền mặt confirmCashByStaff:', mailErr);
     });
+    notifyBookingEvent('confirm_cash', { bookingId });
     res.status(200).json({ success: true, message: '✅ Xác nhận thu tiền mặt & chốt đơn thành công!' });
   } catch (error) {
     await transaction.rollback();
@@ -1178,6 +1189,8 @@ exports.createChangeRequest = async (req, res) => {
       console.error('Lỗi tạo notification createChangeRequest:', notifErr);
     }
 
+    notifyBookingEvent('create_change_request', { bookingId: booking_id });
+
     res.status(201).json({
       success: true,
       data: {
@@ -1402,6 +1415,7 @@ exports.processChangeRequest = async (req, res) => {
     }
 
     await transaction.commit();
+    notifyBookingEvent('process_change_request', { requestId: id, status });
     res.status(200).json({
       success: true,
       message: status === 'Approved' 
@@ -1634,6 +1648,8 @@ exports.updateBookingStatus = async (req, res) => {
     if (booking_status === 'Confirmed') {
       await autoSyncAttendanceForTourDate(bookingId);
     }
+
+    notifyBookingEvent('update_booking_status', { bookingId, status: booking_status });
 
     res.status(200).json({ success: true, message: '✅ Cập nhật trạng thái booking thành công!' });
   } catch (error) {
@@ -2139,6 +2155,7 @@ const markOrderPaidFromSepay = async ({ type, bookingId, txAmount, txRef, txCont
         }
 
         await transaction.commit();
+        notifyBookingEvent('sepay_paid', { bookingId, type });
 
         if (type !== 'service') {
             await autoSyncAttendanceForTourDate(bookingId);
@@ -2463,6 +2480,7 @@ exports.cancelExpiredBooking = async (req, res) => {
             }
 
             await transaction.commit();
+            notifyBookingEvent('cancel_expired', { bookingId, type });
 
             if (!wasAlreadyCancelled) {
                 console.log(`⏱️ [Auto-Cancel] Đã tự động hủy đơn TOUR #${bookingId} do hết hạn thanh toán 10 phút.`);
