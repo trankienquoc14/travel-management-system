@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
+import { useRealtime } from '../services/realtimeService';
 import {
     ChevronLeft,
     ChevronRight,
@@ -25,10 +26,38 @@ import '../index.css';
 
 const TourListPage = () => {
     const [user, setUser] = useState(null);
-    const [tours, setTours] = useState([]);
-    const [services, setServices] = useState([]);
-    const [loadingTours, setLoadingTours] = useState(true);
-    const [loadingServices, setLoadingServices] = useState(true);
+    const [tours, setTours] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_tours_data');
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
+    });
+    const [services, setServices] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_services_data');
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
+    });
+    const [loadingTours, setLoadingTours] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_tours_data');
+            return !cached || JSON.parse(cached).length === 0;
+        } catch (e) {
+            return true;
+        }
+    });
+    const [loadingServices, setLoadingServices] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_services_data');
+            return !cached || JSON.parse(cached).length === 0;
+        } catch (e) {
+            return true;
+        }
+    });
 
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
     const [trendingTab, setTrendingTab] = useState('Tất cả');
@@ -83,32 +112,87 @@ const TourListPage = () => {
         if (storedUser) setUser(JSON.parse(storedUser));
         fetchTours();
         fetchServices();
+
+        const handleOnline = () => {
+            fetchTours();
+            fetchServices();
+        };
+        const handleOffline = () => {
+            setLoadingTours(false);
+            setLoadingServices(false);
+        };
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
     }, []);
 
+    useRealtime('realtime:tour', () => {
+        fetchTours();
+    });
+
     const fetchTours = async () => {
-        setLoadingTours(true);
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setLoadingTours(false);
+            return;
+        }
+
+        if (tours.length === 0) {
+            setLoadingTours(true);
+        }
+
         try {
-            const response = await axios.get('http://localhost:5000/api/tours');
-            if (response.data.success) {
+            const response = await axios.get('http://localhost:5000/api/tours', { timeout: 7000 });
+            if (response.data && response.data.success && Array.isArray(response.data.data)) {
                 setTours(response.data.data);
+                try {
+                    localStorage.setItem('cached_tours_data', JSON.stringify(response.data.data));
+                } catch (e) {}
             }
         } catch (error) {
-            console.error('Lỗi khi tải danh sách tour:', error);
+            console.warn('Lỗi khi tải danh sách tour (sử dụng cache nếu có):', error.message);
+            try {
+                const cached = localStorage.getItem('cached_tours_data');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed.length > 0) setTours(parsed);
+                }
+            } catch (e) {}
         } finally {
             setLoadingTours(false);
         }
     };
 
     const fetchServices = async () => {
-        setLoadingServices(true);
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setLoadingServices(false);
+            return;
+        }
+
+        if (services.length === 0) {
+            setLoadingServices(true);
+        }
+
         try {
-            const res = await axios.get('http://localhost:5000/api/services');
-            if (res.data.success) {
+            const res = await axios.get('http://localhost:5000/api/services', { timeout: 7000 });
+            if (res.data && res.data.success && Array.isArray(res.data.data)) {
                 const activeServices = res.data.data.filter(s => s.status === 'Active');
                 setServices(activeServices);
+                try {
+                    localStorage.setItem('cached_services_data', JSON.stringify(activeServices));
+                } catch (e) {}
             }
         } catch (error) {
-            console.error('Lỗi khi tải dịch vụ:', error);
+            console.warn('Lỗi khi tải dịch vụ (sử dụng cache nếu có):', error.message);
+            try {
+                const cached = localStorage.getItem('cached_services_data');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed.length > 0) setServices(parsed);
+                }
+            } catch (e) {}
         } finally {
             setLoadingServices(false);
         }
