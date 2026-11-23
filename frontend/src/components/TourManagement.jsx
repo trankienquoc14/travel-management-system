@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useRealtime } from '../services/realtimeService';
 import { 
@@ -7,6 +7,99 @@ import {
 } from 'lucide-react';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
 import '../index.css';
+
+// 🚀 Component CurrencyInput: Định dạng tiền tệ VNĐ, giữ vị trí con trỏ chuột chính xác khi gõ/sửa ở giữa
+const CurrencyInput = ({
+    value,
+    onChange,
+    style = {},
+    suffix = 'đ',
+    suffixWidth = 28,
+    placeholder = '0',
+    ...rest
+}) => {
+    const inputRef = useRef(null);
+
+    const formatDisplay = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const num = Number(val);
+        return isNaN(num) ? '' : num.toLocaleString('vi-VN');
+    };
+
+    const handleChange = (e) => {
+        const input = e.target;
+        const rawStr = input.value;
+        const cursor = input.selectionStart || 0;
+        const digitsBefore = (rawStr.slice(0, cursor).match(/\d/g) || []).length;
+
+        const numericOnly = rawStr.replace(/\D/g, '');
+        const numVal = numericOnly === '' ? 0 : Number(numericOnly);
+        const newFormatted = numericOnly === '' ? '' : Number(numericOnly).toLocaleString('vi-VN');
+
+        let newCursor = 0;
+        if (numericOnly === '') {
+            newCursor = 0;
+        } else {
+            let count = 0;
+            for (let i = 0; i < newFormatted.length; i++) {
+                if (/\d/.test(newFormatted[i])) {
+                    count++;
+                    if (count === digitsBefore) {
+                        newCursor = i + 1;
+                        break;
+                    }
+                }
+            }
+            if (count < digitsBefore) {
+                newCursor = newFormatted.length;
+            }
+        }
+
+        onChange(numVal);
+
+        requestAnimationFrame(() => {
+            if (inputRef.current) {
+                inputRef.current.setSelectionRange(newCursor, newCursor);
+            }
+        });
+    };
+
+    return (
+        <div style={{ position: 'relative', width: '100%' }}>
+            <input
+                ref={inputRef}
+                type="text"
+                inputMode="numeric"
+                value={formatDisplay(value)}
+                onChange={handleChange}
+                placeholder={placeholder}
+                style={{
+                    width: '100%',
+                    paddingRight: suffix ? `${suffixWidth}px` : '10px',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    ...style
+                }}
+                {...rest}
+            />
+            {suffix && (
+                <span style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    pointerEvents: 'none',
+                    userSelect: 'none'
+                }}>
+                    {suffix}
+                </span>
+            )}
+        </div>
+    );
+};
 
 const TourManagement = () => {
     const [tours, setTours] = useState([]);
@@ -182,6 +275,7 @@ const TourManagement = () => {
             insurance,
             otherVariable,
             singleSupplement,
+            customSellingPrice: Number(tourData.base_price || tourData.price || 0) || undefined,
             rawDesignData: parsedDesign
         };
     };
@@ -248,7 +342,12 @@ const TourManagement = () => {
 
         // 4. Giá bán niêm yết (Selling Price / Base Price)
         const margin = Number(costForm.margin !== undefined ? costForm.margin : 20);
-        const autoSellingPrice = Math.round(netCost * (1 + margin / 100));
+        let autoSellingPrice = 0;
+        if (costForm.customSellingPrice !== undefined && costForm.customSellingPrice !== null) {
+            autoSellingPrice = Number(costForm.customSellingPrice);
+        } else {
+            autoSellingPrice = Math.round(netCost * (1 + margin / 100));
+        }
         const profitPerPax = autoSellingPrice - netCost;
 
         return {
@@ -276,18 +375,31 @@ const TourManagement = () => {
         }
     };
 
-    const handleDirectSellingPriceChange = (valStr) => {
-        const rawVal = Number(String(valStr).replace(/\D/g, ''));
+    const handleDirectSellingPriceChange = (numVal) => {
+        const rawVal = Number(numVal || 0);
         if (!computedValues) return;
         const netCost = computedValues.netCost;
+        let newMargin = 0;
         if (netCost > 0) {
-            const newMargin = Number((((rawVal / netCost) - 1) * 100).toFixed(2));
-            setCostForm(prev => ({ ...prev, margin: newMargin }));
+            newMargin = Number((((rawVal / netCost) - 1) * 100).toFixed(1));
         }
+        setCostForm(prev => ({
+            ...prev,
+            customSellingPrice: rawVal,
+            margin: newMargin
+        }));
     };
 
     const handleMarginChange = (val) => {
-        setCostForm(prev => ({ ...prev, margin: Number(val) }));
+        const numMargin = Number(val);
+        if (!computedValues) return;
+        const netCost = computedValues.netCost;
+        const newSelling = Math.round(netCost * (1 + numMargin / 100));
+        setCostForm(prev => ({
+            ...prev,
+            margin: numMargin,
+            customSellingPrice: newSelling
+        }));
     };
 
     const handleSavePrice = async () => {
@@ -661,10 +773,10 @@ const TourManagement = () => {
                     <div style={{
                         background: '#ffffff',
                         borderRadius: '24px',
-                        width: '940px',
+                        width: '980px',
                         maxWidth: '96vw',
-                        height: '90vh',
-                        maxHeight: '90vh',
+                        height: '92vh',
+                        maxHeight: '92vh',
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
@@ -694,10 +806,10 @@ const TourManagement = () => {
                                     <Calculator size={22} />
                                 </div>
                                 <div>
-                                    <h3 style={{ margin: 0, fontSize: '19px', color: '#0f172a', fontWeight: '800' }}>
+                                    <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '800' }}>
                                         Điều Chỉnh Giá & Chi Phí Thiết Kế Tour
                                     </h3>
-                                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '3px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ fontWeight: '700', color: '#0284c7' }}>{editingTour?.tour_name}</span>
                                         <span>•</span>
                                         <span>📍 {editingTour?.destination || 'Việt Nam'}</span>
@@ -751,62 +863,69 @@ const TourManagement = () => {
                                         padding: '16px 20px',
                                         boxShadow: '0 4px 14px rgba(22, 163, 74, 0.08)'
                                     }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', alignItems: 'center' }}>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', alignItems: 'stretch' }}>
+                                            {/* Card 1: Định phí */}
+                                            <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e0f2fe' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
                                                     1. Định phí / Khách
                                                 </div>
-                                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#0369a1', marginTop: '2px' }}>
+                                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#0369a1', marginTop: '3px' }}>
                                                     {formatPrice(computedValues.fixedPerPax)}
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>
-                                                    Tổng đoàn: {formatPrice(computedValues.totalFixed)} ÷ {costForm.minimumPax} pax
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    Tổng: {formatPrice(computedValues.totalFixed)} ÷ {costForm.minimumPax} pax
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                            {/* Card 2: Biến phí */}
+                                            <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: '12px', border: '1px solid #f3e8ff' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
                                                     2. Biến phí / Khách
                                                 </div>
-                                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#7c3aed', marginTop: '2px' }}>
+                                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#7c3aed', marginTop: '3px' }}>
                                                     {formatPrice(computedValues.totalVariable)}
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>
-                                                    Vé, phòng KS, ăn uống, vé điểm, BH
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    Vé, phòng KS, ăn uống, điểm, BH
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                            {/* Card 3: Giá vốn */}
+                                            <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: '12px', border: '1px solid #fef3c7' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
                                                     3. Giá vốn mỗi khách
                                                 </div>
-                                                <div style={{ fontSize: '19px', fontWeight: '900', color: '#d97706', marginTop: '2px' }}>
+                                                <div style={{ fontSize: '18px', fontWeight: '900', color: '#d97706', marginTop: '3px' }}>
                                                     {formatPrice(computedValues.netCost)}
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap' }}>
                                                     = Định phí + Biến phí
                                                 </div>
                                             </div>
 
+                                            {/* Card 4: Giá bán niêm yết */}
                                             <div style={{
                                                 background: '#ffffff',
                                                 padding: '12px 16px',
                                                 borderRadius: '12px',
                                                 border: '2px solid #22c55e',
-                                                boxShadow: '0 2px 8px rgba(34, 197, 94, 0.15)'
+                                                boxShadow: '0 2px 8px rgba(34, 197, 94, 0.15)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'center'
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '800', textTransform: 'uppercase' }}>
+                                                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '800', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                                         GIÁ BÁN NIÊM YẾT MỚI
                                                     </span>
-                                                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#16a34a', background: '#dcfce7', padding: '1px 6px', borderRadius: '6px' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#16a34a', background: '#dcfce7', padding: '1px 6px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
                                                         +{costForm.margin}% LN
                                                     </span>
                                                 </div>
-                                                <div style={{ fontSize: '22px', fontWeight: '900', color: '#15803d', marginTop: '2px' }}>
+                                                <div style={{ fontSize: '20px', fontWeight: '900', color: '#15803d', marginTop: '2px' }}>
                                                     {formatPrice(computedValues.autoSellingPrice)}
                                                 </div>
-                                                <div style={{ fontSize: '11.5px', color: '#16a34a', fontWeight: '700', marginTop: '2px' }}>
+                                                <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '700', marginTop: '1px', whiteSpace: 'nowrap' }}>
                                                     Lãi dự kiến: +{formatPrice(computedValues.profitPerPax)}/khách
                                                 </div>
                                             </div>
@@ -819,14 +938,15 @@ const TourManagement = () => {
                                             <div style={{ background: '#e0f2fe', color: '#0284c7', padding: '6px', borderRadius: '8px' }}>
                                                 <Bus size={18} />
                                             </div>
-                                            <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '800', color: '#0f172a' }}>
+                                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
                                                 1. Chi Phí Cố Định Cho Đoàn (Định Phí Phân Bổ Theo Khách)
                                             </h4>
                                         </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 2fr 1.5fr', gap: '14px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.3fr 1.5fr 1.3fr', gap: '14px', alignItems: 'flex-start' }}>
+                                            {/* Điểm hòa vốn */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Điểm hòa vốn (Số khách)
                                                 </label>
                                                 <input
@@ -834,63 +954,55 @@ const TourManagement = () => {
                                                     min="1"
                                                     max="200"
                                                     value={costForm.minimumPax}
-                                                    onChange={e => setCostForm({ ...costForm, minimumPax: Math.max(1, Number(e.target.value)) })}
-                                                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
+                                                    onChange={e => setCostForm({ ...costForm, minimumPax: Math.max(1, Number(e.target.value)), customSellingPrice: undefined })}
+                                                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
                                                 />
-                                                <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>Dùng chia đều định phí</span>
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>Dùng chia đều định phí</span>
                                             </div>
 
+                                            {/* Xe du lịch */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Xe du lịch / Phương tiện đoàn
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.transportFixed || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, transportFixed: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
-                                                <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>Trọn gói chuyến đi</span>
+                                                <CurrencyInput
+                                                    value={costForm.transportFixed}
+                                                    onChange={val => setCostForm({ ...costForm, transportFixed: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>Trọn gói cả chuyến</span>
                                             </div>
 
+                                            {/* Công tác phí HDV */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
-                                                    Công tác phí Hướng dẫn viên (HDV)
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
+                                                    Công tác phí HDV ({computedValues.totalDays} ngày)
                                                 </label>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ position: 'relative', flex: 1 }}>
-                                                        <input
-                                                            type="text"
-                                                            value={Number(costForm.guidePerDay || 0).toLocaleString('vi-VN')}
-                                                            onChange={e => setCostForm({ ...costForm, guidePerDay: Number(e.target.value.replace(/\D/g, '')) })}
-                                                            style={{ width: '100%', padding: '9px 24px 9px 10px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                        />
-                                                        <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '11px' }}>đ/ng</span>
-                                                    </div>
-                                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>× {computedValues.totalDays} ngày =</span>
-                                                    <strong style={{ fontSize: '13px', color: '#0284c7', minWidth: '95px' }}>
-                                                        {formatPrice(computedValues.guideTotal)}
-                                                    </strong>
-                                                </div>
+                                                <CurrencyInput
+                                                    value={costForm.guidePerDay}
+                                                    onChange={val => setCostForm({ ...costForm, guidePerDay: val, customSellingPrice: undefined })}
+                                                    suffix="đ/ngày"
+                                                    suffixWidth={52}
+                                                    style={{ padding: '9px 52px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
+                                                <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: '700', marginTop: '3px', display: 'block', whiteSpace: 'nowrap' }}>
+                                                    = {formatPrice(computedValues.guideTotal)} cả đoàn
+                                                </span>
                                             </div>
 
+                                            {/* Chi phí cố định khác */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Chi phí cố định khác
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.otherFixed || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, otherFixed: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
-                                                <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>Banner, nước uống đoàn...</span>
+                                                <CurrencyInput
+                                                    value={costForm.otherFixed}
+                                                    onChange={val => setCostForm({ ...costForm, otherFixed: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>Banner, nước uống đoàn...</span>
                                             </div>
                                         </div>
 
@@ -918,63 +1030,54 @@ const TourManagement = () => {
                                             <div style={{ background: '#f3e8ff', color: '#7c3aed', padding: '6px', borderRadius: '8px' }}>
                                                 <Users size={18} />
                                             </div>
-                                            <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '800', color: '#0f172a' }}>
+                                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
                                                 2. Chi Phí Biến Đổi Theo Khách (Tính Trực Tiếp Cho Mỗi Người)
                                             </h4>
                                         </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', alignItems: 'flex-start' }}>
                                             {/* Vé di chuyển riêng */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Vé di chuyển / Vé máy bay (khách)
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.transportTicket || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, transportTicket: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
-                                                <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>Vé tàu, máy bay khứ hồi / người</span>
+                                                <CurrencyInput
+                                                    value={costForm.transportTicket}
+                                                    onChange={val => setCostForm({ ...costForm, transportTicket: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>Vé tàu, máy bay khứ hồi / người</span>
                                             </div>
 
                                             {/* Khách sạn lưu trú */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Phòng Khách sạn / Lưu trú ({computedValues.totalNights} đêm)
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.accommTotal || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, accommTotal: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
-                                                <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>
+                                                <CurrencyInput
+                                                    value={costForm.accommTotal}
+                                                    onChange={val => setCostForm({ ...costForm, accommTotal: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>
                                                     ~{formatPrice(Math.round(costForm.accommTotal / Math.max(1, computedValues.totalNights)))}/đêm/khách
                                                 </span>
                                             </div>
 
                                             {/* Vé tham quan */}
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Tổng vé tham quan / Thắng cảnh
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.tickets || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, tickets: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
-                                                <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>Vé các điểm trong lịch trình</span>
+                                                <CurrencyInput
+                                                    value={costForm.tickets}
+                                                    onChange={val => setCostForm({ ...costForm, tickets: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
+                                                <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', display: 'block' }}>Vé các điểm trong lịch trình</span>
                                             </div>
                                         </div>
 
@@ -992,121 +1095,133 @@ const TourManagement = () => {
 
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                                                 {/* Ăn sáng */}
-                                                <div style={{ background: '#fff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                                                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Bữa Sáng</div>
+                                                <div style={{ background: '#fff', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#475569' }}>Bữa Sáng</span>
+                                                        <strong style={{ fontSize: '12px', color: '#0f172a' }}>= {formatPrice(computedValues.breakfastTotal)}</strong>
+                                                    </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <input
-                                                            type="text"
-                                                            value={Number(costForm.breakfast || 0).toLocaleString('vi-VN')}
-                                                            onChange={e => setCostForm({ ...costForm, breakfast: Number(e.target.value.replace(/\D/g, '')) })}
-                                                            style={{ width: '80px', padding: '4px 6px', fontSize: '12.5px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
-                                                        />
-                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>đ ×</span>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={costForm.countBreakfast}
-                                                            onChange={e => setCostForm({ ...costForm, countBreakfast: Math.max(0, Number(e.target.value)) })}
-                                                            style={{ width: '42px', padding: '4px 6px', fontSize: '12.5px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
-                                                        />
-                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>bữa =</span>
-                                                        <strong style={{ fontSize: '12px', color: '#0f172a' }}>{formatPrice(computedValues.breakfastTotal)}</strong>
+                                                        <div style={{ flex: 1 }}>
+                                                            <CurrencyInput
+                                                                value={costForm.breakfast}
+                                                                onChange={val => setCostForm({ ...costForm, breakfast: val, customSellingPrice: undefined })}
+                                                                suffix="đ"
+                                                                suffixWidth={22}
+                                                                style={{ padding: '6px 22px 6px 8px', fontSize: '13px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right' }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>×</span>
+                                                        <div style={{ width: '52px' }}>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={costForm.countBreakfast}
+                                                                onChange={e => setCostForm({ ...costForm, countBreakfast: Math.max(0, Number(e.target.value)), customSellingPrice: undefined })}
+                                                                style={{ width: '100%', padding: '6px 4px', fontSize: '13px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', boxSizing: 'border-box', outline: 'none' }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>bữa</span>
                                                     </div>
                                                 </div>
 
                                                 {/* Ăn trưa */}
-                                                <div style={{ background: '#fff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                                                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Bữa Trưa</div>
+                                                <div style={{ background: '#fff', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#475569' }}>Bữa Trưa</span>
+                                                        <strong style={{ fontSize: '12px', color: '#0f172a' }}>= {formatPrice(computedValues.lunchTotal)}</strong>
+                                                    </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <input
-                                                            type="text"
-                                                            value={Number(costForm.lunch || 0).toLocaleString('vi-VN')}
-                                                            onChange={e => setCostForm({ ...costForm, lunch: Number(e.target.value.replace(/\D/g, '')) })}
-                                                            style={{ width: '80px', padding: '4px 6px', fontSize: '12.5px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
-                                                        />
-                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>đ ×</span>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={costForm.countLunch}
-                                                            onChange={e => setCostForm({ ...costForm, countLunch: Math.max(0, Number(e.target.value)) })}
-                                                            style={{ width: '42px', padding: '4px 6px', fontSize: '12.5px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
-                                                        />
-                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>bữa =</span>
-                                                        <strong style={{ fontSize: '12px', color: '#0f172a' }}>{formatPrice(computedValues.lunchTotal)}</strong>
+                                                        <div style={{ flex: 1 }}>
+                                                            <CurrencyInput
+                                                                value={costForm.lunch}
+                                                                onChange={val => setCostForm({ ...costForm, lunch: val, customSellingPrice: undefined })}
+                                                                suffix="đ"
+                                                                suffixWidth={22}
+                                                                style={{ padding: '6px 22px 6px 8px', fontSize: '13px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right' }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>×</span>
+                                                        <div style={{ width: '52px' }}>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={costForm.countLunch}
+                                                                onChange={e => setCostForm({ ...costForm, countLunch: Math.max(0, Number(e.target.value)), customSellingPrice: undefined })}
+                                                                style={{ width: '100%', padding: '6px 4px', fontSize: '13px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', boxSizing: 'border-box', outline: 'none' }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>bữa</span>
                                                     </div>
                                                 </div>
 
                                                 {/* Ăn tối */}
-                                                <div style={{ background: '#fff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                                                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Bữa Tối</div>
+                                                <div style={{ background: '#fff', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#475569' }}>Bữa Tối</span>
+                                                        <strong style={{ fontSize: '12px', color: '#0f172a' }}>= {formatPrice(computedValues.dinnerTotal)}</strong>
+                                                    </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <input
-                                                            type="text"
-                                                            value={Number(costForm.dinner || 0).toLocaleString('vi-VN')}
-                                                            onChange={e => setCostForm({ ...costForm, dinner: Number(e.target.value.replace(/\D/g, '')) })}
-                                                            style={{ width: '80px', padding: '4px 6px', fontSize: '12.5px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
-                                                        />
-                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>đ ×</span>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={costForm.countDinner}
-                                                            onChange={e => setCostForm({ ...costForm, countDinner: Math.max(0, Number(e.target.value)) })}
-                                                            style={{ width: '42px', padding: '4px 6px', fontSize: '12.5px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
-                                                        />
-                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>bữa =</span>
-                                                        <strong style={{ fontSize: '12px', color: '#0f172a' }}>{formatPrice(computedValues.dinnerTotal)}</strong>
+                                                        <div style={{ flex: 1 }}>
+                                                            <CurrencyInput
+                                                                value={costForm.dinner}
+                                                                onChange={val => setCostForm({ ...costForm, dinner: val, customSellingPrice: undefined })}
+                                                                suffix="đ"
+                                                                suffixWidth={22}
+                                                                style={{ padding: '6px 22px 6px 8px', fontSize: '13px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right' }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>×</span>
+                                                        <div style={{ width: '52px' }}>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={costForm.countDinner}
+                                                                onChange={e => setCostForm({ ...costForm, countDinner: Math.max(0, Number(e.target.value)), customSellingPrice: undefined })}
+                                                                style={{ width: '100%', padding: '6px 4px', fontSize: '13px', fontWeight: '700', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', boxSizing: 'border-box', outline: 'none' }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '11px', color: '#64748b' }}>bữa</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Hàng bảo hiểm & biến phí khác */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginTop: '14px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginTop: '14px', alignItems: 'flex-start' }}>
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Bảo hiểm du lịch (khách)
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.insurance || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, insurance: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
+                                                <CurrencyInput
+                                                    value={costForm.insurance}
+                                                    onChange={val => setCostForm({ ...costForm, insurance: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
                                             </div>
 
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Biến phí khác (khách)
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.otherVariable || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, otherVariable: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
+                                                <CurrencyInput
+                                                    value={costForm.otherVariable}
+                                                    onChange={val => setCostForm({ ...costForm, otherVariable: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
                                             </div>
 
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap' }}>
                                                     Phụ thu phòng đơn (khách lẻ)
                                                 </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(costForm.singleSupplement || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => setCostForm({ ...costForm, singleSupplement: Number(e.target.value.replace(/\D/g, '')) })}
-                                                        style={{ width: '100%', padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none' }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>đ</span>
-                                                </div>
+                                                <CurrencyInput
+                                                    value={costForm.singleSupplement}
+                                                    onChange={val => setCostForm({ ...costForm, singleSupplement: val, customSellingPrice: undefined })}
+                                                    suffix="đ"
+                                                    style={{ padding: '9px 28px 9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
+                                                />
                                             </div>
                                         </div>
 
@@ -1130,93 +1245,91 @@ const TourManagement = () => {
                                             <div style={{ background: '#e0f2fe', color: '#0284c7', padding: '6px', borderRadius: '8px' }}>
                                                 <TrendingUp size={18} />
                                             </div>
-                                            <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '800', color: '#0f172a' }}>
+                                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
                                                 3. Tỷ Suất Lợi Nhuận & Điều Chỉnh Giá Niêm Yết
                                             </h4>
                                         </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '20px', alignItems: 'center' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '20px', alignItems: 'stretch' }}>
                                             {/* Chỉnh % Lợi nhuận */}
-                                            <div>
-                                                <label style={{ display: 'block', fontSize: '12.5px', color: '#475569', fontWeight: '700', marginBottom: '6px' }}>
-                                                    Tỷ suất lợi nhuận định mức (Markup / Margin %)
-                                                </label>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ position: 'relative', width: '120px' }}>
-                                                        <input
-                                                            type="number"
-                                                            step="0.5"
-                                                            value={costForm.margin}
-                                                            onChange={e => handleMarginChange(e.target.value)}
-                                                            style={{
-                                                                width: '100%',
-                                                                padding: '10px 24px 10px 12px',
-                                                                borderRadius: '10px',
-                                                                border: '2px solid #0284c7',
-                                                                fontSize: '16px',
-                                                                fontWeight: '800',
-                                                                color: '#0284c7',
-                                                                outline: 'none',
-                                                                textAlign: 'right'
-                                                            }}
-                                                        />
-                                                        <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#0284c7' }}>%</span>
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: '5px' }}>
-                                                        {[10, 15, 20, 25, 30].map(p => (
-                                                            <button
-                                                                key={p}
-                                                                type="button"
-                                                                onClick={() => handleMarginChange(p)}
+                                            <div style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '12.5px', color: '#475569', fontWeight: '700', marginBottom: '8px' }}>
+                                                        Tỷ suất lợi nhuận định mức (Markup / Margin %)
+                                                    </label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                        <div style={{ position: 'relative', width: '110px' }}>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                value={costForm.margin}
+                                                                onChange={e => handleMarginChange(e.target.value)}
                                                                 style={{
-                                                                    padding: '7px 10px',
+                                                                    width: '100%',
+                                                                    padding: '9px 24px 9px 12px',
                                                                     borderRadius: '8px',
-                                                                    border: costForm.margin === p ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                                                                    background: costForm.margin === p ? '#e0f2fe' : '#ffffff',
-                                                                    color: costForm.margin === p ? '#0284c7' : '#475569',
-                                                                    fontSize: '12px',
-                                                                    fontWeight: '700',
-                                                                    cursor: 'pointer'
+                                                                    border: '2px solid #0284c7',
+                                                                    fontSize: '16px',
+                                                                    fontWeight: '800',
+                                                                    color: '#0284c7',
+                                                                    outline: 'none',
+                                                                    textAlign: 'right',
+                                                                    boxSizing: 'border-box'
                                                                 }}
-                                                            >
-                                                                {p}%
-                                                            </button>
-                                                        ))}
+                                                            />
+                                                            <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#0284c7' }}>%</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                            {[10, 15, 20, 25, 30].map(p => (
+                                                                <button
+                                                                    key={p}
+                                                                    type="button"
+                                                                    onClick={() => handleMarginChange(p)}
+                                                                    style={{
+                                                                        padding: '7px 9px',
+                                                                        borderRadius: '6px',
+                                                                        border: costForm.margin === p ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                                                                        background: costForm.margin === p ? '#e0f2fe' : '#ffffff',
+                                                                        color: costForm.margin === p ? '#0284c7' : '#475569',
+                                                                        fontSize: '12px',
+                                                                        fontWeight: '700',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    {p}%
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '8px' }}>
                                                     💡 Thay đổi % lợi nhuận thì giá bán tự động cập nhật ngay.
                                                 </div>
                                             </div>
 
                                             {/* Gõ trực tiếp giá bán niêm yết */}
-                                            <div style={{ background: '#f0fdf4', padding: '14px 16px', borderRadius: '12px', border: '1.5px solid #86efac' }}>
-                                                <label style={{ display: 'block', fontSize: '12px', color: '#166534', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase' }}>
-                                                    Hoặc nhập trực tiếp Giá Niêm Yết Mới (VNĐ)
-                                                </label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={Number(computedValues.autoSellingPrice || 0).toLocaleString('vi-VN')}
-                                                        onChange={e => handleDirectSellingPriceChange(e.target.value)}
+                                            <div style={{ background: '#f0fdf4', padding: '14px 18px', borderRadius: '12px', border: '1.5px solid #86efac', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '12px', color: '#166534', fontWeight: '800', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                                        Hoặc nhập trực tiếp Giá Niêm Yết Mới (VNĐ)
+                                                    </label>
+                                                    <CurrencyInput
+                                                        value={computedValues.autoSellingPrice}
+                                                        onChange={handleDirectSellingPriceChange}
+                                                        suffix="đ"
+                                                        suffixWidth={32}
                                                         style={{
-                                                            width: '100%',
-                                                            padding: '10px 32px 10px 12px',
+                                                            padding: '9px 34px 9px 14px',
                                                             borderRadius: '10px',
                                                             border: '2px solid #22c55e',
-                                                            fontSize: '20px',
+                                                            fontSize: '19px',
                                                             fontWeight: '900',
                                                             color: '#15803d',
-                                                            outline: 'none',
-                                                            background: '#ffffff',
-                                                            boxSizing: 'border-box'
+                                                            background: '#ffffff'
                                                         }}
                                                     />
-                                                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#15803d', fontSize: '15px' }}>
-                                                        đ
-                                                    </span>
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: '#15803d', marginTop: '4px' }}>
+                                                <div style={{ fontSize: '11px', color: '#15803d', marginTop: '8px', fontWeight: '600' }}>
                                                     ✨ Tự động tính ngược lại tỷ suất lợi nhuận Margin % khi sửa giá bán trực tiếp!
                                                 </div>
                                             </div>
