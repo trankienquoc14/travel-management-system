@@ -438,7 +438,7 @@ app.get('/api/chat/ai/health', (req, res) => {
   res.json({
     success: true,
     geminiConfigured: isUsableGeminiKey(),
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash'
   });
 });
 

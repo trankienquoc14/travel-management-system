@@ -15,11 +15,11 @@ const { processAIQuery: legacyBotQuery } = require('../aiBotEngine');
 
 const CANDIDATE_MODELS = [
   process.env.GEMINI_MODEL,
-  'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-1.5-flash'
+  'gemini-1.5-flash',
+  'gemini-1.5-pro'
 ].filter(Boolean);
-const DEFAULT_MODEL = CANDIDATE_MODELS[0] || 'gemini-2.5-flash';
+const DEFAULT_MODEL = CANDIDATE_MODELS[0] || 'gemini-2.0-flash';
 const GEMINI_TIMEOUT_MS = 25000;
 const MAX_TOOL_ROUNDS = 4;
 
@@ -610,6 +610,12 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
 
   // 3. Other Policies & FAQs
   const isChildPriceQuery = /(tre em|em be|\bbe\b|\btuoi\b|do tuoi|bao nhieu tuoi|phu thu|phong don|gia ve tre em|ve tre em)/.test(normQ);
+  const isPaymentQuery = /(thanh toan|chuyen khoan|vietqr|sepay|ngan hang|tien mat|ma qr|giu cho|10 phut)/.test(normQ);
+  const isPickupQuery = /(diem don|don o dau|xuat phat o dau|xe may cho|phuong tien|don khach|tieu chuan)/.test(normQ);
+  const isCustomTourQuery = /(tour rieng|thiet ke tour|custom tour|doan rieng|doan cong ty|team building|tu chon)/.test(normQ);
+  const isDocumentLuggageQuery = /(giay to|cccd|cmnd|ho chieu|passport|giay khai sinh|hanh ly|mang gi|chuan bi gi)/.test(normQ);
+  const isVatQuery = /(hoa don|vat|xuat hoa don|hoa don dien tu|thue|mst|ma so thue)/.test(normQ);
+  const isContactQuery = /(lien he|hotline|so dien thoai|nhan vien|tong dai|tu van vien|gap truc tiep)/.test(normQ);
   if (isChildPriceQuery) {
     const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'age_pricing_policy');
     if (chunk) {
