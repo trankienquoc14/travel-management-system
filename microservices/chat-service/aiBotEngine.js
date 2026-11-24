@@ -327,12 +327,44 @@ function extractDestination(text) {
   return null;
 }
 
+function extractBudgetFromText(rawText = '') {
+  const text = rawText.toLowerCase();
+  const compoundRegex = /(\d+)\s*(?:tr|trieu|triệu|củ|cu)\s*(\d+)\b/i;
+  const compMatch = text.match(compoundRegex);
+  if (compMatch) {
+    const main = parseInt(compMatch[1], 10);
+    const sub = parseInt(compMatch[2], 10);
+    const fraction = sub >= 10 ? sub / 100 : sub / 10;
+    return Math.round((main + fraction) * 1000000);
+  }
+  const millionRegex = /(\d+(?:[.,]\d+)?)\s*(?:triệu|trieu|tr|củ|cu)\b/i;
+  const millionMatch = text.match(millionRegex);
+  if (millionMatch) {
+    const num = parseFloat(millionMatch[1].replace(',', '.'));
+    if (!isNaN(num) && num > 0) return Math.round(num * 1000000);
+  }
+  const kRegex = /(\d+(?:[.,]\d+)?)\s*k\b/i;
+  const kMatch = text.match(kRegex);
+  if (kMatch) {
+    const num = parseFloat(kMatch[1].replace(',', '.'));
+    if (!isNaN(num) && num > 0) return Math.round(num * 1000);
+  }
+  const fullNumRegex = /(?:ngân sách|budget|tầm|khoảng|dưới|tối đa|giá)?\s*(\d{1,3}(?:[.,]\d{3}){1,3}|\d{6,8})\s*(?:đ|vnd|dong|vnđ)?/i;
+  const fullMatch = text.match(fullNumRegex);
+  if (fullMatch && fullMatch[1]) {
+    const cleanNum = parseInt(fullMatch[1].replace(/[.,]/g, ''), 10);
+    if (!isNaN(cleanNum) && cleanNum >= 100000) return cleanNum;
+  }
+  return null;
+}
+
 /**
  * Phân tích và xử lý câu hỏi người dùng
  */
 async function processAIQuery(question, conversationHistory = []) {
   const qRaw = (question || '').trim();
   const qLower = qRaw.toLowerCase();
+  const userBudget = extractBudgetFromText(qRaw);
 
   // -------------------------------------------------------------
   // 1. CHÀO HỎI / GIỚI THIỆU
@@ -489,11 +521,17 @@ async function processAIQuery(question, conversationHistory = []) {
       directParams.push(`%${term}%`, `%${term}%`);
     });
 
+    let sqlWhere = `status = 'Active' AND (${directClauses.join(' OR ')})`;
+    if (userBudget) {
+      sqlWhere += ' AND base_price <= ?';
+      directParams.push(userBudget);
+    }
+
     const [matchedTours] = await pool.query(`
       SELECT tour_id, tour_name, destination, duration_days, base_price, description
       FROM tours
-      WHERE status = 'Active' AND (${directClauses.join(' OR ')})
-      ORDER BY tour_id DESC
+      WHERE ${sqlWhere}
+      ORDER BY ${userBudget ? 'base_price ASC' : 'tour_id DESC'}
     `, directParams);
 
     // TRƯỜNG HỢP A: CÓ TOUR TRONG CSDL KHỚP VỚI ĐỊA DANH
@@ -669,18 +707,32 @@ async function processAIQuery(question, conversationHistory = []) {
     qLower.includes('tour du lịch nào') ||
     qLower.includes('tour nào');
 
-  if (isGeneralTourRequest) {
+  if (isGeneralTourRequest || userBudget) {
     try {
-      const [tours] = await pool.query(`
-        SELECT tour_id, tour_name, destination, duration_days, base_price, description
-        FROM tours
-        WHERE status = 'Active'
-        ORDER BY tour_id DESC
-        LIMIT 5
-      `);
+      const tourQuery = userBudget
+        ? `SELECT tour_id, tour_name, destination, duration_days, base_price, description
+           FROM tours
+           WHERE status = 'Active' AND base_price <= ?
+           ORDER BY base_price ASC
+           LIMIT 6`
+        : `SELECT tour_id, tour_name, destination, duration_days, base_price, description
+           FROM tours
+           WHERE status = 'Active'
+           ORDER BY tour_id DESC
+           LIMIT 5`;
+      const [tours] = await pool.query(tourQuery, userBudget ? [userBudget] : []);
+
+      if (userBudget && (!tours || tours.length === 0)) {
+        return {
+          reply: `Dạ hiện tại TravelVN chưa có tour trọn gói mở bán sẵn dưới **${Number(userBudget).toLocaleString('vi-VN')} ₫** ạ.\n\n✨ Quý khách có thể bấm vào mục **[Thiết kế Tour riêng](/build-tour)** để điều chỉnh tiêu chuẩn phòng, phương tiện và tự do thiết lập chuyến đi theo đúng ngân sách của mình nhé!`,
+          suggestions: ['Thiết kế tour riêng', 'Xem các tour đang mở bán', 'Liên hệ tư vấn viên']
+        };
+      }
 
       if (tours && tours.length > 0) {
-        let tourText = `🌟 **CÁC TOUR DU LỊCH NỔI BẬT ĐANG MỞ BÁN TẠI TRAVELVN:**\n\n`;
+        let tourText = userBudget
+          ? `🎯 **CÁC TOUR DU LỊCH PHÙ HỢP VỚI NGÂN SÁCH DƯỚI ${Number(userBudget).toLocaleString('vi-VN')} ₫:**\n\n`
+          : `🌟 **CÁC TOUR DU LỊCH NỔI BẬT ĐANG MỞ BÁN TẠI TRAVELVN:**\n\n`;
 
         for (let i = 0; i < tours.length; i++) {
           const t = tours[i];

@@ -13,7 +13,7 @@ const GEMINI_TOOL_DECLARATIONS = [
   {
     name: 'searchTours',
     description:
-      'Tìm kiếm danh sách tour du lịch đang hoạt động trong CSDL TravelVN ERP theo địa điểm, từ khóa tên tour, ngân sách tối đa (VNĐ) hoặc số ngày. Trả về tối đa 8 tour kèm giá và đợt khởi hành gần nhất.',
+      'Tìm kiếm danh sách tour du lịch đang hoạt động trong CSDL TravelVN ERP theo địa điểm, từ khóa tên tour, ngân sách tối đa (VNĐ), số ngày hoặc vùng miền. Trả về tối đa 8 tour kèm giá và đợt khởi hành gần nhất.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -27,15 +27,23 @@ const GEMINI_TOOL_DECLARATIONS = [
         },
         maxPrice: {
           type: Type.NUMBER,
-          description: 'Ngân sách tối đa cho mỗi khách (VNĐ).'
+          description: 'Ngân sách tối đa cho mỗi khách (VNĐ). Bắt buộc truyền nếu khách nêu ngân sách.'
+        },
+        minPrice: {
+          type: Type.NUMBER,
+          description: 'Ngân sách tối thiểu cho mỗi khách (VNĐ).'
         },
         minDays: {
           type: Type.INTEGER,
-          description: 'Số ngày tối thiểu.'
+          description: 'Số ngày tối thiểu (ví dụ: du lịch xa, dài ngày thì minDays = 3).'
         },
         maxDays: {
           type: Type.INTEGER,
-          description: 'Số ngày tối đa.'
+          description: 'Số ngày tối đa (ví dụ: tour ngắn ngày, trong ngày thì maxDays = 1 hoặc 2).'
+        },
+        region: {
+          type: Type.STRING,
+          description: 'Vùng miền: north (miền Bắc), central (miền Trung), highland (Tây Nguyên), south (miền Nam/miền Tây), beach (biển/đảo).'
         }
       }
     }
@@ -114,7 +122,7 @@ function formatDateVi(d) {
 }
 
 async function searchTours(pool, args = {}) {
-  const { destination, keyword, maxPrice, minDays, maxDays } = args;
+  const { destination, keyword, maxPrice, minPrice, minDays, maxDays, region, isFar, isNear, isCheapSort } = args;
   const where = [`t.status = 'Active'`, `(t.is_custom IS NULL OR t.is_custom = 0)`];
   const params = [];
 
@@ -132,6 +140,10 @@ async function searchTours(pool, args = {}) {
     where.push(`t.base_price <= ?`);
     params.push(maxPrice);
   }
+  if (typeof minPrice === 'number' && minPrice > 0) {
+    where.push(`t.base_price >= ?`);
+    params.push(minPrice);
+  }
   if (typeof minDays === 'number' && minDays > 0) {
     where.push(`t.duration_days >= ?`);
     params.push(minDays);
@@ -140,6 +152,36 @@ async function searchTours(pool, args = {}) {
     where.push(`t.duration_days <= ?`);
     params.push(maxDays);
   }
+
+  // Filter for far/long distance tours
+  if (isFar) {
+    where.push(`(t.duration_days >= 3 OR t.destination NOT IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho'))`);
+  }
+  // Filter for near/short tours
+  if (isNear) {
+    where.push(`(t.duration_days <= 2 OR t.destination IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho'))`);
+  }
+
+  // Filter for region
+  if (region) {
+    const REGION_MAP = {
+      north: ['Hà Nội', 'Sapa', 'Hạ Long', 'Ninh Bình', 'Hà Giang', 'Tam Chúc', 'Tràng An'],
+      central: ['Đà Nẵng', 'Hội An', 'Huế', 'Nha Trang', 'Quy Nhơn', 'Phú Yên', 'Phan Thiết'],
+      highland: ['Tây Nguyên', 'Đắk Lắk', 'Đà Lạt', 'Pleiku', 'Măng Đen', 'Buôn Ma Thuột'],
+      south: ['Cần Thơ', 'Miền Tây', 'Tây Ninh', 'Đồng Tháp', 'Vũng Tàu', 'Bến Tre', 'Cà Mau', 'Mỹ Tho'],
+      beach: ['Phú Quốc', 'Nha Trang', 'Đà Nẵng', 'Vũng Tàu', 'Quy Nhơn', 'Phú Yên', 'Phan Thiết']
+    };
+    const targetTerms = REGION_MAP[String(region).toLowerCase()];
+    if (targetTerms && targetTerms.length > 0) {
+      const orClauses = targetTerms.map(() => `(t.destination LIKE ? OR t.tour_name LIKE ?)`).join(' OR ');
+      where.push(`(${orClauses})`);
+      targetTerms.forEach((term) => params.push(`%${term}%`, `%${term}%`));
+    }
+  }
+
+  const orderBy = (typeof maxPrice === 'number' && maxPrice > 0) || isCheapSort
+    ? 't.base_price ASC, total_available_slots DESC'
+    : 'total_available_slots DESC, t.tour_id DESC';
 
   const sql = `
     SELECT
@@ -155,11 +197,61 @@ async function searchTours(pool, args = {}) {
     LEFT JOIN departures d ON t.tour_id = d.tour_id
     WHERE ${where.join(' AND ')}
     GROUP BY t.tour_id, t.tour_name, t.destination, t.duration_days, t.base_price, t.description
-    ORDER BY total_available_slots DESC, t.tour_id DESC
+    ORDER BY ${orderBy}
     LIMIT 8
   `;
 
   const [rows] = await pool.query(sql, params);
+
+  // If no tours match budget constraint, find closest/cheapest alternative active tours
+  let suggestedAlternatives = [];
+  let minPriceInDb = null;
+  if (rows.length === 0 && typeof maxPrice === 'number' && maxPrice > 0) {
+    try {
+      const altWhere = [`t.status = 'Active'`, `(t.is_custom IS NULL OR t.is_custom = 0)`];
+      const altParams = [];
+      if (destination && String(destination).trim()) {
+        const like = `%${String(destination).trim()}%`;
+        altWhere.push(`(t.destination LIKE ? OR t.tour_name LIKE ?)`);
+        altParams.push(like, like);
+      }
+      const altSql = `
+        SELECT
+          t.tour_id,
+          t.tour_name,
+          t.destination,
+          t.duration_days,
+          t.base_price,
+          LEFT(COALESCE(t.description, ''), 240) AS short_description,
+          MIN(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.departure_date ELSE NULL END) AS next_departure_date,
+          COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
+        FROM tours t
+        LEFT JOIN departures d ON t.tour_id = d.tour_id
+        WHERE ${altWhere.join(' AND ')}
+        GROUP BY t.tour_id, t.tour_name, t.destination, t.duration_days, t.base_price, t.description
+        ORDER BY t.base_price ASC
+        LIMIT 4
+      `;
+      const [altRows] = await pool.query(altSql, altParams);
+      if (altRows && altRows.length > 0) {
+        minPriceInDb = Number(altRows[0].base_price || 0);
+        suggestedAlternatives = altRows.map((r) => ({
+          tour_id: r.tour_id,
+          tour_name: r.tour_name,
+          destination: r.destination,
+          duration_days: r.duration_days,
+          base_price_vnd: Number(r.base_price || 0),
+          short_description: r.short_description,
+          next_departure_date: formatDateVi(r.next_departure_date),
+          total_available_slots: Number(r.total_available_slots || 0),
+          detail_path: `/tour/${r.tour_id}`
+        }));
+      }
+    } catch (e) {
+      console.warn('[searchTours] Could not fetch alternative tours:', e.message);
+    }
+  }
+
   return {
     count: rows.length,
     tours: rows.map((r) => ({
@@ -172,7 +264,9 @@ async function searchTours(pool, args = {}) {
       next_departure_date: formatDateVi(r.next_departure_date),
       total_available_slots: Number(r.total_available_slots || 0),
       detail_path: `/tour/${r.tour_id}`
-    }))
+    })),
+    suggestedAlternatives,
+    minPriceInDb
   };
 }
 
