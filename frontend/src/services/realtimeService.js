@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-const REALTIME_SERVER_URL = 'http://localhost:5005';
+const REALTIME_SERVER_URL = (
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://travel-management-system-xzid.onrender.com'
+    : 'http://localhost:5005')
+).replace(/\/+$/, '');
 
 let socketInstance = null;
 const listeners = new Map();

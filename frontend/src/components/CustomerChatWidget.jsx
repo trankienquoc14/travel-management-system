@@ -7,8 +7,16 @@ import {
   ChevronDown, Smile, AlertCircle
 } from 'lucide-react';
 
-const SOCKET_SERVER_URL = 'http://localhost:5005';
-const CHAT_API_URL = 'http://localhost:5005/api/chat';
+const BACKEND_URL = (
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://travel-management-system-xzid.onrender.com'
+    : 'http://localhost:5005')
+).replace(/\/+$/, '');
+
+const SOCKET_SERVER_URL = BACKEND_URL;
+const CHAT_API_URL = `${BACKEND_URL}/api/chat`;
 
 const CustomerChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);

@@ -653,8 +653,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.CHAT_SERVICE_PORT || 5005;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`💬 Chat Service running on port ${PORT}`);
-  console.log(`📡 Socket.IO ready at http://localhost:${PORT}`);
+  console.log(`📡 Socket.IO ready at http://0.0.0.0:${PORT}`);
   console.log(`📁 Uploads served from ${uploadsDir}`);
 });

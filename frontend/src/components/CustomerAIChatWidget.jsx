@@ -2,7 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, Send, X, RotateCcw, Sparkles, Headset } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api/chat';
+const GATEWAY_URL = (
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://travel-management-system-xzid.onrender.com'
+    : 'http://localhost:5000')
+).replace(/\/+$/, '');
+
+const API_BASE_URL = `${GATEWAY_URL}/api/chat`;
 
 const CustomerAIChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,56 +117,78 @@ const CustomerAIChatWidget = () => {
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const response = await fetch(`${API_BASE_URL}/ai/stream`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          question: q,
-          conversationHistory: historySnapshot
-        })
-      });
+      try {
+        const response = await fetch(`${API_BASE_URL}/ai/stream`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            question: q,
+            conversationHistory: historySnapshot
+          })
+        });
 
-      if (!response.ok || !response.body) {
-        const errBody = await response.json().catch(() => ({}));
-        throw new Error(errBody.message || 'Không thể kết nối máy chủ AI');
-      }
+        if (!response.ok || !response.body) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.message || 'Không thể kết nối máy chủ AI');
+        }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
 
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop() || '';
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() || '';
 
-        for (const frame of frames) {
-          const lines = frame.split('\n');
-          let eventType = 'message';
-          let dataStr = '';
-          for (const line of lines) {
-            if (line.startsWith('event:')) eventType = line.slice(6).trim();
-            else if (line.startsWith('data:')) dataStr += line.slice(5).trim();
-          }
-          if (!dataStr) continue;
-          const payload = JSON.parse(dataStr);
+          for (const frame of frames) {
+            const lines = frame.split('\n');
+            let eventType = 'message';
+            let dataStr = '';
+            for (const line of lines) {
+              if (line.startsWith('event:')) eventType = line.slice(6).trim();
+              else if (line.startsWith('data:')) dataStr += line.slice(5).trim();
+            }
+            if (!dataStr) continue;
+            const payload = JSON.parse(dataStr);
 
-          if (eventType === 'delta' && payload.text) {
-            streamedText += payload.text;
-            setIsTyping(false);
-            upsertAiMessage(streamedText);
-          } else if (eventType === 'done') {
-            upsertAiMessage(streamedText, {
-              suggestions: payload.suggestions || [],
-              handoffSuggested: Boolean(payload.handoffSuggested)
-            });
-          } else if (eventType === 'error') {
-            throw new Error(payload.message || 'Lỗi luồng AI');
+            if (eventType === 'delta' && payload.text) {
+              streamedText += payload.text;
+              setIsTyping(false);
+              upsertAiMessage(streamedText);
+            } else if (eventType === 'done') {
+              upsertAiMessage(streamedText, {
+                suggestions: payload.suggestions || [],
+                handoffSuggested: Boolean(payload.handoffSuggested)
+              });
+            } else if (eventType === 'error') {
+              throw new Error(payload.message || 'Lỗi luồng AI');
+            }
           }
         }
+      } catch (streamErr) {
+        console.warn('Lỗi stream AI, đang thử lại với endpoint dự phòng /ai/ask:', streamErr.message);
+        const fallbackRes = await fetch(`${API_BASE_URL}/ai/ask`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            question: q,
+            conversationHistory: historySnapshot
+          })
+        });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData?.success && fallbackData?.data?.answer) {
+          setIsTyping(false);
+          upsertAiMessage(fallbackData.data.answer, {
+            suggestions: fallbackData.data.suggestions || [],
+            handoffSuggested: Boolean(fallbackData.data.handoffSuggested)
+          });
+          return;
+        }
+        throw streamErr;
       }
 
       if (!aiMsgCreated) {
