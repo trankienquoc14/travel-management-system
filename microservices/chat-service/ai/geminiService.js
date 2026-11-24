@@ -329,6 +329,33 @@ function parseCustomerTourQuery(rawQuestion = '', normQ = '') {
   };
 }
 
+function extractFamilyComposition(rawText = '', normQ = '') {
+  const text = rawText.toLowerCase();
+
+  let adultCount = null;
+  const adultMatch = text.match(/(\d+)\s*(?:người lớn|nguoi lon|ng lớn|ng lon|khách lớn|vé người lớn)/i);
+  if (adultMatch) {
+    adultCount = parseInt(adultMatch[1], 10);
+  }
+
+  const children = [];
+  const childRegex = /(\d+)?\s*(?:bé|be|trẻ\s*em|tre\s*em|trẻ\s*nhỏ|tre\s*nho|trẻ|tre|cháu|chau|con|em\s*bé|em\s*be)\s*(\d+(?:[.,]\d+)?)\s*(?:tuổi|tuoi|\bt\b)/gi;
+  let match;
+  while ((match = childRegex.exec(text)) !== null) {
+    const count = match[1] ? parseInt(match[1], 10) : 1;
+    const age = parseFloat(match[2].replace(',', '.'));
+    if (!isNaN(age)) {
+      children.push({ count, age });
+    }
+  }
+
+  return {
+    adultCount,
+    children,
+    hasFamilyCalculation: adultCount !== null && (children.length > 0 || /(tính tiền|tổng tiền|tổng chi phí|hết bao nhiêu|tất cả bao nhiêu)/.test(normQ))
+  };
+}
+
 /**
  * Deterministic fallback when GEMINI_API_KEY is missing or Gemini API fails/times out.
  */
@@ -392,22 +419,188 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
     };
   }
 
-  // 1. Policy & FAQ retrieval via RAG knowledge base
-  const isChildPriceQuery = /(tre em|em be|\bbe\b|\btuoi\b|do tuoi|bao nhieu tuoi|phu thu|phong don|gia ve tre em|ve tre em)/.test(normQ);
-  const isCancelRefundQuery = /(huy tour|hoan tien|doi lich|chinh sach huy|huy don|hoan phi|mat phi|tra tien|huy ve|khong di duoc|doi ngay)/.test(normQ);
-  const isPaymentQuery = /(thanh toan|chuyen khoan|vietqr|sepay|ngan hang|tien mat|ma qr|giu cho|10 phut)/.test(normQ);
-  const isPickupQuery = /(diem don|don o dau|xuat phat o dau|xe may cho|phuong tien|don khach|tieu chuan)/.test(normQ);
-  const isCustomTourQuery = /(tour rieng|thiet ke tour|custom tour|doan rieng|doan cong ty|team building|tu chon)/.test(normQ);
-  const isDocumentLuggageQuery = /(giay to|cccd|cmnd|ho chieu|passport|giay khai sinh|hanh ly|mang gi|chuan bi gi)/.test(normQ);
-  const isVatQuery = /(hoa don|vat|xuat hoa don|hoa don dien tu|thue|mst|ma so thue)/.test(normQ);
-  const isContactQuery = /(lien he|hotline|so dien thoai|nhan vien|tong dai|tu van vien|gap truc tiep)/.test(normQ);
+  // 1. Family Price Calculation & Child Age Queries
+  const familyComp = extractFamilyComposition(question, normQ);
+  if (familyComp.hasFamilyCalculation) {
+    const matchedDest = [
+      { dest: 'Phú Quốc', regex: /(phu quoc|dao ngoc)/ },
+      { dest: 'Đà Lạt', regex: /(da lat|lam dong)/ },
+      { dest: 'Đà Nẵng', regex: /(da nang|ba na|hoi an)/ },
+      { dest: 'Hà Nội', regex: /(ha noi|trang an|tam chuc|ninh binh)/ },
+      { dest: 'Sapa', regex: /(sapa|fansipan)/ },
+      { dest: 'Hạ Long', regex: /(ha long|vinh ha long)/ },
+      { dest: 'Nha Trang', regex: /(nha trang|vinh hy)/ },
+      { dest: 'Tây Ninh', regex: /(tay ninh|nui ba den)/ },
+      { dest: 'Đồng Tháp', regex: /(dong thap|sa dec)/ },
+      { dest: 'Cần Thơ', regex: /(can tho|mien tay|ca mau|my tho)/ },
+      { dest: 'Phú Yên', regex: /(phu yen|xuyen viet|quy nhon)/ },
+      { dest: 'Vũng Tàu', regex: /(vung tau|ho tram)/ },
+      { dest: 'Đắk Lắk', regex: /(dak lak|pleiku|mang den|buon ma thuot)/ },
+      { dest: 'Phan Thiết', regex: /(phan thiet|binh thuan|phu quy|mui ne)/ },
+      { dest: 'Hà Giang', regex: /(ha giang|quan ba|nho que)/ }
+    ].find((d) => d.regex.test(normQ));
 
-  if (isChildPriceQuery) {
-    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'age_pricing_policy');
+    const tourRes = await executeErpTool(pool, 'searchTours', {
+      destination: matchedDest ? matchedDest.dest : undefined
+    });
+
+    if (tourRes.count > 0) {
+      const tour = tourRes.tours[0];
+      const basePrice = Number(tour.base_price_vnd || 0);
+      let total = 0;
+      const lines = [];
+
+      const adultCount = familyComp.adultCount || 2;
+      const adultTotal = adultCount * basePrice;
+      total += adultTotal;
+      lines.push(
+        `• 🧑 **${adultCount} Người lớn (100%):** ${adultCount} × ${basePrice.toLocaleString('vi-VN')} ₫ = **${adultTotal.toLocaleString('vi-VN')} ₫**`
+      );
+
+      for (const c of familyComp.children) {
+        const age = c.age;
+        const count = c.count || 1;
+        let rate = 1;
+        let group = '';
+        if (age < 2) {
+          rate = 0;
+          group = `Em bé ${age} tuổi (Dưới 2 tuổi - Miễn phí 100%)`;
+        } else if (age < 5) {
+          rate = 0.5;
+          group = `Trẻ nhỏ ${age} tuổi (2 - 4 tuổi - 50%)`;
+        } else if (age < 12) {
+          rate = 0.7;
+          group = `Trẻ em ${age} tuổi (5 - 11 tuổi - 70%)`;
+        } else {
+          rate = 1.0;
+          group = `Trẻ ${age} tuổi (Từ 12 tuổi trở lên - 100%)`;
+        }
+
+        const pricePerChild = Math.round(basePrice * rate);
+        const childTotal = pricePerChild * count;
+        total += childTotal;
+        lines.push(
+          `• 👶 **${count} ${group}:** ${count} × ${pricePerChild.toLocaleString('vi-VN')} ₫ = **${childTotal.toLocaleString('vi-VN')} ₫**`
+        );
+      }
+
+      const reply =
+        `💰 **BẢNG DỰ TOÁN CHI PHÍ TOUR CHO GIA ĐÌNH BẠN:**\n\n` +
+        `🏝️ **Tour:** [${tour.tour_name}](${tour.detail_path})\n` +
+        `💵 **Giá vé niêm yết người lớn:** **${basePrice.toLocaleString('vi-VN')} ₫**/khách\n\n` +
+        `📋 **Chi tiết từng thành viên:**\n` +
+        `${lines.join('\n')}\n\n` +
+        `--------------------------------------------------\n` +
+        `👉 **TỔNG CHI PHÍ DỰ TÍNH:** **${total.toLocaleString('vi-VN')} ₫**\n\n` +
+        `✨ **Giá đã bao gồm:** Toàn bộ xe du lịch đời mới đưa đón, khách sạn tiện nghi, các bữa ăn trọn gói theo tour, vé tham quan và bảo hiểm du lịch.\n` +
+        `💡 *Quý khách có thể bấm trực tiếp vào tên tour ở trên để kiểm tra lịch khởi hành và tiến hành đặt vé giữ chỗ trực tuyến!*`;
+
+      return {
+        reply,
+        suggestions: [`Lịch khởi hành tour ${tour.destination}`, 'Chính sách hủy tour', 'Thanh toán VietQR', 'Liên hệ nhân viên'],
+        toolsUsed: ['searchTours', 'family_calculator'],
+        mode: 'fallback_calculator',
+        handoffSuggested: false
+      };
+    }
+  }
+
+  // If specific child age mentioned (e.g. "bé 6 tuổi", "trẻ 3 tuổi")
+  if (familyComp.children.length > 0 && /(tuoi|ve|gia|tinh|bao nhieu)/.test(normQ)) {
+    const c = familyComp.children[0];
+    const age = c.age;
+    let groupName = '';
+    let rate = 100;
+    let service = '';
+
+    if (age < 2) {
+      groupName = 'Em bé (dưới 2 tuổi)';
+      rate = 0;
+      service = 'Được **miễn phí 100%** vé tour (bố mẹ tự túc chi phí ăn uống và dịch vụ phát sinh cho bé)';
+    } else if (age < 5) {
+      groupName = 'Trẻ nhỏ (từ 2 đến 4 tuổi)';
+      rate = 50;
+      service = 'Tính **50% giá vé người lớn** (có ghế ngồi riêng trên xe du lịch, ngủ chung giường với bố mẹ/người lớn đi kèm)';
+    } else if (age < 12) {
+      groupName = 'Trẻ em (từ 5 đến 11 tuổi)';
+      rate = 70;
+      service = 'Tính **70% giá vé người lớn** (có suất ăn riêng, ghế ngồi riêng trên xe du lịch, ngủ chung giường với bố mẹ)';
+    } else {
+      groupName = 'Người lớn (từ 12 tuổi trở lên)';
+      rate = 100;
+      service = 'Tính **100% giá vé người lớn** (hưởng đầy đủ các dịch vụ ăn uống, ghế ngồi, vé tham quan)';
+    }
+
+    const reply =
+      `👶 **CHÍNH SÁCH GIÁ VÉ CHO BÉ ${age} TUỔI TẠI TRAVELVN:**\n\n` +
+      `Theo quy định của hệ thống, bé **${age} tuổi** thuộc diện **${groupName}**:\n` +
+      `• 🎟️ **Mức tính vé:** **${rate}% giá vé người lớn**.\n` +
+      `• 🍽️ **Tiêu chuẩn dịch vụ:** ${service}.\n` +
+      `• 🛏️ **Quy định chỗ ngủ:** Ngủ chung phòng và chung giường với người lớn đi kèm (nếu gia đình có nhu cầu ngủ riêng 1 phòng sẽ áp dụng phụ thu phòng đơn).\n\n` +
+      `📋 *Bảng tóm tắt các độ tuổi khác để Quý khách tiện tham khảo:* \n` +
+      `- 🍼 **Dưới 2 tuổi:** Miễn phí (0%)\n` +
+      `- 🧒 **2 đến 4 tuổi:** 50% giá người lớn\n` +
+      `- 👦 **5 đến 11 tuổi:** 70% giá người lớn\n` +
+      `- 🧑 **Từ 12 tuổi trở lên:** 100% giá người lớn`;
+
+    return {
+      reply,
+      suggestions: ['Xem các tour đang mở', 'Chính sách hủy tour', 'Liên hệ nhân viên'],
+      toolsUsed: ['knowledge_base'],
+      mode: 'fallback_rag',
+      handoffSuggested: false
+    };
+  }
+
+  // 2. Cancellation & Refund Policy with Specific Days
+  const isCancelRefundQuery = /(huy tour|hoan tien|doi lich|chinh sach huy|huy don|hoan phi|mat phi|tra tien|huy ve|khong di duoc|doi ngay)/.test(normQ);
+  if (isCancelRefundQuery) {
+    const daysMatch = question.match(/(\d+)\s*(?:ngày|ngay)/i);
+    if (daysMatch) {
+      const days = parseInt(daysMatch[1], 10);
+      let refundPercent = 0;
+      let bracketDesc = '';
+
+      if (days >= 15) {
+        refundPercent = 90;
+        bracketDesc = 'trước ngày khởi hành từ 15 ngày trở lên';
+      } else if (days >= 7) {
+        refundPercent = 70;
+        bracketDesc = 'trước ngày khởi hành từ 7 đến 14 ngày';
+      } else if (days >= 3) {
+        refundPercent = 50;
+        bracketDesc = 'trước ngày khởi hành từ 3 đến 6 ngày';
+      } else {
+        refundPercent = 0;
+        bracketDesc = 'dưới 48 giờ trước giờ khởi hành';
+      }
+
+      const reply =
+        `🔄 **QUY ĐỊNH HOÀN TIỀN KHI HỦY TOUR TRƯỚC ${days} NGÀY:**\n\n` +
+        `Theo chính sách của TravelVN, mốc **${days} ngày trước khởi hành** thuộc khung **${bracketDesc}**:\n` +
+        `• 🟢 **Mức hoàn tiền nhận được:** **${refundPercent}% tổng giá trị đơn hàng** (mức phí hủy áp dụng là ${100 - refundPercent}%).\n` +
+        `• ⏱️ **Hình thức hoàn tiền:** Tiền hoàn sẽ được chuyển khoản trực tiếp qua ngân hàng cho Quý khách trong vòng 1 - 3 ngày làm việc.\n\n` +
+        `📋 *Bảng khung chính sách hoàn tiền tổng thể tại TravelVN:*\n` +
+        `- 🟢 **Trước >= 15 ngày:** Hoàn **90%** (phí hủy 10%)\n` +
+        `- 🟡 **Từ 7 đến 14 ngày:** Hoàn **70%** (phí hủy 30%)\n` +
+        `- 🟠 **Từ 3 đến 6 ngày:** Hoàn **50%** (phí hủy 50%)\n` +
+        `- 🔴 **Dưới 48 giờ:** Không hoàn tiền (0%)\n` +
+        `- 📅 **Đổi lịch khởi hành:** Báo trước tối thiểu 7 ngày và đợt mới còn chỗ trống.`;
+
+      return {
+        reply,
+        suggestions: ['Đổi lịch khởi hành', 'Phương thức thanh toán', 'Liên hệ nhân viên'],
+        toolsUsed: ['knowledge_base'],
+        mode: 'fallback_rag',
+        handoffSuggested: false
+      };
+    }
+
+    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'cancellation_refund_policy');
     if (chunk) {
       return {
-        reply: `👶 **${chunk.title}**\n\n${chunk.content}`,
-        suggestions: ['Chính sách hủy tour', 'Thanh toán VietQR', 'Xem tour trọn gói'],
+        reply: `🔄 **${chunk.title}**\n\n${chunk.content}`,
+        suggestions: ['Phương thức thanh toán', 'Lịch khởi hành sắp tới', 'Liên hệ nhân viên'],
         toolsUsed: ['knowledge_base'],
         mode: 'fallback_rag',
         handoffSuggested: false
@@ -415,12 +608,14 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
     }
   }
 
-  if (isCancelRefundQuery) {
-    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'cancellation_refund_policy');
+  // 3. Other Policies & FAQs
+  const isChildPriceQuery = /(tre em|em be|\bbe\b|\btuoi\b|do tuoi|bao nhieu tuoi|phu thu|phong don|gia ve tre em|ve tre em)/.test(normQ);
+  if (isChildPriceQuery) {
+    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'age_pricing_policy');
     if (chunk) {
       return {
-        reply: `🔄 **${chunk.title}**\n\n${chunk.content}`,
-        suggestions: ['Phương thức thanh toán', 'Lịch khởi hành sắp tới', 'Liên hệ nhân viên'],
+        reply: `👶 **${chunk.title}**\n\n${chunk.content}`,
+        suggestions: ['Chính sách hủy tour', 'Thanh toán VietQR', 'Xem tour trọn gói'],
         toolsUsed: ['knowledge_base'],
         mode: 'fallback_rag',
         handoffSuggested: false
