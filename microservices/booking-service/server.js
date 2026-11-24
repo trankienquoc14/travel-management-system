@@ -26,10 +26,13 @@ const PORT = process.env.BOOKING_SERVICE_PORT || 5003;
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Booking Service đã kết nối MySQL Database thành công!');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Booking Service đang chạy tại http://localhost:${PORT}`);
     });
   })
   .catch(err => {
-    console.error('❌ Lỗi kết nối Database:', err);
+    console.error('❌ [Booking Service] Lỗi kết nối Database:', err.message);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.warn(`⚠️ [Booking Service] Đang chạy cổng ${PORT} (chờ kiểm tra kết nối lại MySQL Database)...`);
+    });
   });

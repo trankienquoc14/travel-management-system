@@ -26,11 +26,11 @@ app.get('/', (req, res) => {
 
 // Routing configuration for microservices
 const services = {
-  auth: process.env.AUTH_SERVICE_URL || 'http://localhost:5001',
-  tour: process.env.TOUR_SERVICE_URL || 'http://localhost:5002',
-  booking: process.env.BOOKING_SERVICE_URL || 'http://localhost:5003',
-  hr: process.env.HR_SERVICE_URL || 'http://localhost:5004',
-  chat: process.env.CHAT_SERVICE_URL || 'http://localhost:5005'
+  auth: process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001',
+  tour: process.env.TOUR_SERVICE_URL || 'http://127.0.0.1:5002',
+  booking: process.env.BOOKING_SERVICE_URL || 'http://127.0.0.1:5003',
+  hr: process.env.HR_SERVICE_URL || 'http://127.0.0.1:5004',
+  chat: process.env.CHAT_SERVICE_URL || 'http://127.0.0.1:5005'
 };
 
 // WebSocket proxy for Socket.IO realtime chat (MUST be placed before root proxy)
@@ -45,6 +45,17 @@ app.use('/socket.io', wsProxy);
 app.use('/', createProxyMiddleware({
   target: 'http://127.0.0.1:9999', // Fail fast instead of infinite loop
   changeOrigin: true,
+  on: {
+    error: (err, req, res) => {
+      console.error(`❌ [API Gateway Proxy] Lỗi kết nối tới dịch vụ (${req.method} ${req.url}):`, err.message);
+      if (res && !res.headersSent && typeof res.status === 'function') {
+        res.status(502).json({
+          success: false,
+          message: `Không thể kết nối đến microservice xử lý (${err.code || err.message}). Vui lòng kiểm tra dịch vụ đã được khởi động chưa.`
+        });
+      }
+    }
+  },
   router: {
     '/api/auth': services.auth,
     '/api/tours': services.tour,
