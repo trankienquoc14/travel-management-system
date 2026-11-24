@@ -444,10 +444,11 @@ app.get('/api/chat/ai/health', (req, res) => {
 
 app.post('/api/chat/ai/tour-copilot', async (req, res) => {
   try {
-    const { action, destinationName, daysCount, days, availablePlaces, availableHotels } = req.body || {};
+    const { action, destinationName, destinationsList, daysCount, days, availablePlaces, availableHotels } = req.body || {};
     const result = await copilotTourDesign({
       action: action || 'audit',
       destinationName,
+      destinationsList: Array.isArray(destinationsList) ? destinationsList : [],
       daysCount: Number(daysCount || 3),
       days: Array.isArray(days) ? days : [],
       availablePlaces: Array.isArray(availablePlaces) ? availablePlaces : [],
