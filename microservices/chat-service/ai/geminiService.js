@@ -1147,8 +1147,272 @@ async function askAIStream({ pool, question, conversationHistory = [], authUser 
   }
 }
 
+/**
+ * AI Copilot for Tour Itinerary Design & Audit (Support Office Staff)
+ */
+async function copilotTourDesign({ action = 'audit', destinationName = '', daysCount = 3, days = [], availablePlaces = [], availableHotels = [] }) {
+  const normDest = normalizeVi(destinationName || '');
+
+  // 1. RULE-BASED AUDIT ENGINE
+  if (action === 'audit') {
+    const issues = [];
+
+    // Danh sách từ khóa địa danh lớn để phát hiện lệch tỉnh thành
+    const CITY_KEYWORDS = [
+      { city: 'Hồ Chí Minh', regex: /(ben thanh|suoi tien|dam sen|pho di bo nguyen hue|dinh doc lap|nha tho duc ba|cho ben thanh)/i },
+      { city: 'Hà Nội', regex: /(ho guom|ho tay|chua mot cot|lang bac|van mieu|hoa lo|dong xuan)/i },
+      { city: 'Đà Nẵng', regex: /(ba na|cau vang|ngu hanh son|linh ung|son tra|my khe)/i },
+      { city: 'Đà Lạt', regex: /(langbiang|xuan huong|tuyen lam|datanla|thung lung tinh yeu|samten hills)/i },
+      { city: 'Nha Trang', regex: /(ponagar|hon mun|vinwonders nha trang|i-resort|chua long son)/i },
+      { city: 'Phú Quốc', regex: /(hon thom|safari phu quoc|grand world|bai sao|dinh cau)/i },
+      { city: 'Sapa', regex: /(fansipan|cat cat|o quy ho|ham rong)/i },
+      { city: 'Hạ Long', regex: /(vinh ha long|hang sung sot|dao ti top|tuan chau)/i },
+      { city: 'Ninh Bình', regex: /(trang an|tam coc|bai dinh|hang mua)/i },
+      { city: 'Huế', regex: /(dai noi|thien mu|lang khai dinh|song huong)/i }
+    ];
+
+    days.forEach((day, index) => {
+      const dNum = day.dayIndex || (index + 1);
+      const acts = Array.isArray(day.activities) ? day.activities : [];
+      let tourDayEndDest = day.end_destination_id;
+      let sightseeingCount = 0;
+
+      acts.forEach(act => {
+        const actName = act.name || '';
+        const normActName = normalizeVi(actName);
+        if (act.type === 'Tham quan') sightseeingCount++;
+
+        // Kiểm tra place_id với danh sách places
+        if (act.place_id && availablePlaces.length > 0) {
+          const matchedPlace = availablePlaces.find(p => String(p.place_id) === String(act.place_id));
+          if (matchedPlace && matchedPlace.destination_id) {
+            if (tourDayEndDest && String(matchedPlace.destination_id) !== String(tourDayEndDest)) {
+              issues.push({
+                dayIndex: dNum,
+                severity: 'error',
+                type: 'location_mismatch',
+                title: 'Sai lệch địa phương',
+                message: `Điểm tham quan "${actName}" có mã vùng không thuộc điểm đến Ngày ${dNum}. Vui lòng kiểm tra lại để tránh nhầm tuyến.`
+              });
+            }
+          }
+        }
+
+        // Kiểm tra từ khóa địa danh chéo
+        for (const kw of CITY_KEYWORDS) {
+          const kwNorm = normalizeVi(kw.city);
+          if (normDest && !normDest.includes(kwNorm) && !kwNorm.includes(normDest)) {
+            if (kw.regex.test(actName) || kw.regex.test(normActName)) {
+              issues.push({
+                dayIndex: dNum,
+                severity: 'error',
+                type: 'location_mismatch',
+                title: 'Địa điểm không cùng tỉnh/thành',
+                message: `Phát hiện "${actName}" thuộc khu vực ${kw.city}, trong khi tour đang đi ${destinationName || 'điểm đến khác'}. Việc di chuyển giữa hai nơi này là bất khả thi trong cùng một ngày.`
+              });
+            }
+          }
+        }
+      });
+
+      // Kiểm tra mật độ hoạt động
+      if (sightseeingCount >= 5) {
+        issues.push({
+          dayIndex: dNum,
+          severity: 'warning',
+          type: 'overload',
+          title: 'Lịch trình quá dày',
+          message: `Ngày ${dNum} có tới ${sightseeingCount} điểm tham quan. Khách du lịch sẽ phải di chuyển vội vàng, dễ mệt mỏi và không có đủ thời gian trải nghiệm.`
+        });
+      }
+
+      // Kiểm tra các công viên lớn cần nhiều thời gian
+      const hasBigPark = acts.some(a => /(vinwonders|sun world|ba na|safari|fansipan|grand world)/i.test(a.name || ''));
+      if (hasBigPark && sightseeingCount >= 3) {
+        issues.push({
+          dayIndex: dNum,
+          severity: 'warning',
+          type: 'pacing',
+          title: 'Xung đột thời gian vui chơi',
+          message: `Ngày ${dNum} có khu vui chơi quy mô lớn cần từ 5 - 8 tiếng trải nghiệm. Không nên xếp thêm nhiều điểm tham quan khác trong cùng ngày này.`
+        });
+      }
+
+      // Kiểm tra nơi lưu trú cho ngày qua đêm
+      if (index < days.length - 1 && (!day.accommodation || !day.accommodation.name)) {
+        issues.push({
+          dayIndex: dNum,
+          severity: 'info',
+          type: 'hotel_missing',
+          title: 'Chưa chọn nơi lưu trú',
+          message: `Ngày ${dNum} là ngày qua đêm nhưng chưa chọn khách sạn đối tác lưu trú.`
+        });
+      }
+    });
+
+    let aiReviewText = '';
+    const ai = createGeminiClient();
+    if (ai) {
+      try {
+        const prompt = `Bạn là Chuyên gia Điều hành & Thẩm định Thiết kế Tour tại TravelVN.
+Hãy đánh giá ngắn gọn lịch trình tour sau đây dành cho nhân viên văn phòng (tối đa 4 câu):
+- Điểm đến: ${destinationName}
+- Số ngày: ${days.length} ngày
+- Lịch trình các ngày:
+${days.map(d => `Ngày ${d.dayIndex}: ${d.route_title || ''} (Khách sạn: ${d.accommodation?.name || 'Chưa chọn'}) - Các hoạt động: ${(d.activities || []).map(a => a.name).join(', ')}`).join('\n')}
+
+Hãy nhận xét súc tích về tính khả thi, phân bổ thời gian sáng - chiều - tối, và đưa ra 2 lời khuyên hữu ích cho người thiết kế. Văn phong lịch sự, tích cực, mang tính hỗ trợ tư vấn viên.`;
+        
+        const geminiRes = await callGeminiWithRetry(ai, {
+          model: DEFAULT_MODEL,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          config: { temperature: 0.3 }
+        });
+        aiReviewText = (geminiRes.text || '').trim();
+      } catch (geminiErr) {
+        console.warn('Gemini review fallback:', geminiErr.message);
+      }
+    }
+
+    if (!aiReviewText) {
+      if (issues.length === 0) {
+        aiReviewText = `Lịch trình tour ${destinationName || ''} được phân bổ khoa học, các hoạt động tham quan và nghỉ ngơi cân đối, đảm bảo trải nghiệm thư giãn cho du khách.`;
+      } else {
+        aiReviewText = `Hệ thống ghi nhận một số điểm cần điều chỉnh về địa phương hoặc thời lượng di chuyển. Nhân viên vui lòng xem chi tiết cảnh báo bên dưới để tối ưu trước khi gửi quản lý hoặc khách hàng.`;
+      }
+    }
+
+    return {
+      action: 'audit',
+      overallStatus: issues.some(i => i.severity === 'error') ? 'error' : (issues.some(i => i.severity === 'warning') ? 'warning' : 'good'),
+      summary: issues.length === 0 ? 'Lịch trình rất tốt, không phát hiện lỗi xung đột!' : `Phát hiện ${issues.length} lưu ý cần xem xét trên lịch trình.`,
+      issues,
+      aiReview: aiReviewText
+    };
+  }
+
+  // 2. SMART ITINERARY SUGGESTION ENGINE
+  if (action === 'suggest') {
+    const ai = createGeminiClient();
+    let suggestedResult = null;
+
+    if (ai && availablePlaces.length > 0) {
+      try {
+        const prompt = `Bạn là Chuyên gia Thiết kế Lịch trình Tour Du lịch chuyên nghiệp tại TravelVN.
+Nhiệm vụ của bạn là xây dựng lịch trình mẫu ${daysCount} ngày cho điểm đến: [${destinationName}].
+Dưới đây là danh sách điểm tham quan CÓ THẬT trong cơ sở dữ liệu:
+${JSON.stringify(availablePlaces.slice(0, 30).map(p => ({ place_id: p.place_id, name: p.auto_text || p.place_name, price: p.estimated_price })), null, 2)}
+
+Dưới đây là danh sách khách sạn CÓ THẬT trong cơ sở dữ liệu:
+${JSON.stringify(availableHotels.slice(0, 10).map(h => ({ service_id: h.service_id, name: h.service_name, price: h.base_cost })), null, 2)}
+
+NGUYÊN TẮC:
+1. Mỗi ngày bố trí từ 2 - 3 điểm tham quan cùng tuyến đường.
+2. Thêm các hoạt động ăn uống và nghỉ ngơi: 'Di chuyển', 'Ăn sáng', 'Ăn trưa', 'Ăn tối', 'Nghỉ ngơi'.
+3. Chọn khách sạn phù hợp cho các đêm lưu trú.
+
+Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
+{
+  "tourName": "Tên tour gợi ý (ví dụ: Khám phá Nha Trang - Biển Xanh Cát Trắng 3N2Đ)",
+  "tourDescription": "Mô tả điểm nhấn chuyến đi...",
+  "suggestedDays": [
+    {
+      "dayIndex": 1,
+      "route_title": "Tiêu đề ngày",
+      "activities": [
+        { "type": "Di chuyển", "name": "Đón khách tại điểm hẹn..." },
+        { "type": "Tham quan", "name": "Tên điểm từ danh sách", "place_id": 1, "price": 30000 },
+        { "type": "Ăn trưa", "name": "Dùng bữa trưa tại nhà hàng địa phương" },
+        { "type": "Tham quan", "name": "Tên điểm từ danh sách", "place_id": 2, "price": 50000 },
+        { "type": "Ăn tối", "name": "Thưởng thức ẩm thực địa phương" },
+        { "type": "Nghỉ ngơi", "name": "Về khách sạn nhận phòng nghỉ ngơi" }
+      ],
+      "accommodation": {
+        "service_id": 123,
+        "name": "Tên khách sạn (hoặc tương đương)",
+        "price": 900000
+      }
+    }
+  ]
+}`;
+
+        const geminiRes = await callGeminiWithRetry(ai, {
+          model: DEFAULT_MODEL,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          config: { temperature: 0.3 }
+        });
+        const text = (geminiRes.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
+        suggestedResult = JSON.parse(text);
+      } catch (err) {
+        console.warn('Gemini suggest error, using deterministic generator:', err.message);
+      }
+    }
+
+    // Deterministic fallback generator if Gemini is unavailable
+    if (!suggestedResult || !Array.isArray(suggestedResult.suggestedDays)) {
+      const defaultHotel = availableHotels[0] ? {
+        service_id: availableHotels[0].service_id,
+        name: `${availableHotels[0].service_name} (hoặc tương đương)`,
+        price: availableHotels[0].base_cost || 900000
+      } : null;
+
+      const suggestedDays = [];
+      const placesPool = [...availablePlaces];
+
+      for (let i = 1; i <= daysCount; i++) {
+        const dayActs = [];
+        if (i === 1) {
+          dayActs.push({ type: 'Di chuyển', name: `Đón khách và khởi hành đến ${destinationName || 'điểm đến'}` });
+        } else {
+          dayActs.push({ type: 'Ăn sáng', name: 'Dùng bữa sáng tại khách sạn' });
+        }
+
+        // Bốc 2 điểm tham quan từ pool
+        const p1 = placesPool.shift();
+        if (p1) {
+          dayActs.push({ type: 'Tham quan', name: p1.auto_text || p1.place_name, place_id: p1.place_id, price: Number(p1.estimated_price || 0) });
+        }
+        dayActs.push({ type: 'Ăn trưa', name: 'Dùng bữa trưa tại nhà hàng địa phương' });
+        
+        const p2 = placesPool.shift();
+        if (p2) {
+          dayActs.push({ type: 'Tham quan', name: p2.auto_text || p2.place_name, place_id: p2.place_id, price: Number(p2.estimated_price || 0) });
+        }
+        dayActs.push({ type: 'Ăn tối', name: 'Dùng bữa tối đặc sản địa phương' });
+
+        if (i < daysCount) {
+          dayActs.push({ type: 'Nghỉ ngơi', name: 'Về khách sạn nghỉ ngơi, tự do dạo phố đêm' });
+        } else {
+          dayActs.push({ type: 'Di chuyển', name: `Mua sắm đặc sản và tiễn khách kết thúc hành trình` });
+        }
+
+        suggestedDays.push({
+          dayIndex: i,
+          route_title: `${destinationName || 'Hành trình'} - Ngày ${i}`,
+          activities: dayActs,
+          accommodation: i < daysCount ? defaultHotel : null
+        });
+      }
+
+      suggestedResult = {
+        tourName: `Tour Khám Phá ${destinationName || 'Việt Nam'} ${daysCount}N${Math.max(1, daysCount - 1)}Đ`,
+        tourDescription: `Hành trình trải nghiệm trọn vẹn nét đẹp thiên nhiên, văn hóa và ẩm thực đặc trưng tại ${destinationName || 'các điểm đến'}.`,
+        suggestedDays
+      };
+    }
+
+    return {
+      action: 'suggest',
+      ...suggestedResult
+    };
+  }
+
+  return { success: false, message: 'Invalid action' };
+}
+
 module.exports = {
   askAI,
   askAIStream,
-  isUsableGeminiKey
+  isUsableGeminiKey,
+  copilotTourDesign
 };

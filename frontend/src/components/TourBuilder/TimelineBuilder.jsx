@@ -1,9 +1,35 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Sparkles } from 'lucide-react';
 import DayCard from './DayCard';
+import TourAiAssistantModal from './TourAiAssistantModal';
 import { formatVehicleDisplayName } from '../../utils/vehicleDisplayHelper';
 
 const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, setDayImages, dayImagePreviews, setDayImagePreviews, costConfig, setCostConfig, requestData, tourName, setTourName, tourDescription, setTourDescription }) => {
+    const [showAiModal, setShowAiModal] = useState(false);
+    const [allPlaces, setAllPlaces] = useState([]);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const GATEWAY_URL = (
+            import.meta.env.VITE_BACKEND_URL ||
+            import.meta.env.VITE_API_BASE_URL ||
+            (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+                ? 'https://travel-management-system-xzid.onrender.com'
+                : 'http://localhost:5000')
+        ).replace(/\/+$/, '');
+
+        axios.get(`${GATEWAY_URL}/api/builder/places`, { headers })
+            .then(res => {
+                if (res.data?.success && Array.isArray(res.data?.data)) {
+                    setAllPlaces(res.data.data);
+                }
+            })
+            .catch(err => console.warn('Could not preload builder places:', err.message));
+    }, []);
+
     const addDay = () => {
         const lastDay = days[days.length - 1];
         setDays([...days, { 
@@ -47,7 +73,32 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px' }}>Chi tiết Lịch trình</h3>
-                <button onClick={addDay} style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>+ Thêm Ngày</button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button 
+                        type="button" 
+                        onClick={() => setShowAiModal(true)} 
+                        style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px', 
+                            padding: '6px 14px', 
+                            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', 
+                            color: '#fff', 
+                            border: 'none', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer', 
+                            fontWeight: 'bold', 
+                            fontSize: '13px', 
+                            boxShadow: '0 2px 4px rgba(99, 102, 241, 0.25)',
+                            transition: 'opacity 0.2s'
+                        }}
+                        title="Trợ lý AI rà soát lỗi địa phương & gợi ý phân bổ lộ trình chuẩn xác"
+                    >
+                        <Sparkles size={15} />
+                        <span>✨ Trợ lý AI Lịch trình</span>
+                    </button>
+                    <button onClick={addDay} style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>+ Thêm Ngày</button>
+                </div>
             </div>
             
 
@@ -352,6 +403,23 @@ const TimelineBuilder = ({ days, setDays, destinations, allServices, dayImages, 
                     />
                 ))}
             </div>
+
+            {showAiModal && (
+                <TourAiAssistantModal
+                    isOpen={showAiModal}
+                    onClose={() => setShowAiModal(false)}
+                    days={days}
+                    setDays={setDays}
+                    destinations={destinations}
+                    allServices={allServices}
+                    allPlaces={allPlaces}
+                    requestData={requestData}
+                    tourName={tourName}
+                    setTourName={setTourName}
+                    tourDescription={tourDescription}
+                    setTourDescription={setTourDescription}
+                />
+            )}
         </div>
     );
 };

@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const mysql = require('../node_modules/mysql2/promise');
 const jwt = require('../node_modules/jsonwebtoken');
-const { askAI, askAIStream, isUsableGeminiKey } = require('./ai/geminiService');
+const { askAI, askAIStream, isUsableGeminiKey, copilotTourDesign } = require('./ai/geminiService');
 const {
   validateQuestion,
   checkRateLimit,
@@ -440,6 +440,30 @@ app.get('/api/chat/ai/health', (req, res) => {
     geminiConfigured: isUsableGeminiKey(),
     model: process.env.GEMINI_MODEL || 'gemini-2.0-flash'
   });
+});
+
+app.post('/api/chat/ai/tour-copilot', async (req, res) => {
+  try {
+    const { action, destinationName, daysCount, days, availablePlaces, availableHotels } = req.body || {};
+    const result = await copilotTourDesign({
+      action: action || 'audit',
+      destinationName,
+      daysCount: Number(daysCount || 3),
+      days: Array.isArray(days) ? days : [],
+      availablePlaces: Array.isArray(availablePlaces) ? availablePlaces : [],
+      availableHotels: Array.isArray(availableHotels) ? availableHotels : []
+    });
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error in tour-copilot:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi xử lý trợ lý AI thiết kế tour: ' + error.message
+    });
+  }
 });
 
 app.post('/api/chat/ai/ask', async (req, res) => {
