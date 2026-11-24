@@ -30,10 +30,13 @@ const PORT = process.env.TOUR_SERVICE_PORT || 5002;
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Tour Service đã kết nối MySQL Database thành công!');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Tour Service đang chạy tại http://localhost:${PORT}`);
     });
   })
   .catch(err => {
-    console.error('❌ Lỗi kết nối Database:', err);
+    console.error('❌ [Tour Service] Lỗi kết nối Database:', err.message);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.warn(`⚠️ [Tour Service] Đang chạy cổng ${PORT} (chờ kết nối Database)...`);
+    });
   });

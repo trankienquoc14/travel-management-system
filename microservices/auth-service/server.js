@@ -21,10 +21,13 @@ const PORT = process.env.AUTH_SERVICE_PORT || 5001;
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Auth Service đã kết nối MySQL Database thành công!');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Auth Service đang chạy tại http://localhost:${PORT}`);
     });
   })
   .catch(err => {
-    console.error('❌ Lỗi kết nối Database:', err);
+    console.error('❌ [Auth Service] Lỗi kết nối Database:', err.message);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.warn(`⚠️ [Auth Service] Đang chạy cổng ${PORT} (chờ kết nối Database)...`);
+    });
   });

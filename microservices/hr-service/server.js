@@ -38,10 +38,13 @@ const PORT = process.env.HR_SERVICE_PORT || 5004;
 sequelize.authenticate()
   .then(() => {
     console.log('✅ HR Service đã kết nối MySQL Database thành công!');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 HR Service đang chạy tại http://localhost:${PORT}`);
     });
   })
   .catch(err => {
-    console.error('❌ Lỗi kết nối Database:', err);
+    console.error('❌ [HR Service] Lỗi kết nối Database:', err.message);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.warn(`⚠️ [HR Service] Đang chạy cổng ${PORT} (chờ kết nối Database)...`);
+    });
   });
