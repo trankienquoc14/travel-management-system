@@ -585,10 +585,26 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
     };
   }
 
-  // 2. Cancellation & Refund Policy with Specific Days
+  // 2. Payment & VietQR Policy (Priority over generic cancellation)
+  const isPaymentQuery = /(thanh toan|chuyen khoan|vietqr|sepay|ma qr|giu cho|10 phut|ngan hang)/.test(normQ) &&
+    !/(huy tour|huy don|mat coc|doi lich|tra ve)/.test(normQ);
+  if (isPaymentQuery) {
+    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'payment_policy');
+    if (chunk) {
+      return {
+        reply: `💳 **${chunk.title}**\n\n${chunk.content}`,
+        suggestions: ['Thời gian giữ chỗ', 'Chính sách hủy tour', 'Liên hệ nhân viên'],
+        toolsUsed: ['knowledge_base'],
+        mode: 'fallback_rag',
+        handoffSuggested: false
+      };
+    }
+  }
+
+  // 3. Cancellation & Refund Policy with Specific Days
   const isCancelRefundQuery =
     /(huy tour|hoan tien|doi lich|chinh sach huy|huy don|hoan phi|mat phi|tra tien|huy ve|khong di duoc|doi ngay)/.test(normQ) ||
-    (/(huy|hoan|mat coc|lay lai coc|hoan lai)/.test(normQ) && /(tour|ve|coc|dat|khoi hanh|tien|ngay|phan tram|bao nhieu)/.test(normQ));
+    (/(huy|hoan tien|hoan lai|mat coc|lay lai coc)/.test(normQ) && /(tour|ve|coc|dat|khoi hanh|tien|ngay|phan tram|bao nhieu)/.test(normQ));
   if (isCancelRefundQuery) {
     const daysMatch = question.match(/(\d+)\s*(?:ngày|ngay)/i);
     if (daysMatch) {
@@ -643,10 +659,9 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
     }
   }
 
-  // 3. Other Policies & FAQs
+  // 4. Other Policies & FAQs
   const isChildPriceQuery = /(tre em|em be|\bbe\b|\btuoi\b|do tuoi|bao nhieu tuoi|phu thu|phong don|gia ve tre em|ve tre em)/.test(normQ);
-  const isPaymentQuery = /(thanh toan|chuyen khoan|vietqr|sepay|ngan hang|tien mat|ma qr|giu cho|10 phut)/.test(normQ);
-  const isPickupQuery = /(diem don|don o dau|xuat phat o dau|xe may cho|phuong tien|don khach|tieu chuan)/.test(normQ);
+  const isPickupQuery = /(diem don|don o dau|xuat phat o dau|xe may cho|phuong tien|don khach|tieu chuan|dong xe|xe du lich|xe 16|xe 29|xe 45)/.test(normQ);
   const isCustomTourQuery = /(tour rieng|thiet ke tour|custom tour|doan rieng|doan cong ty|team building|tu chon)/.test(normQ);
   const isDocumentLuggageQuery = /(giay to|cccd|cmnd|ho chieu|passport|giay khai sinh|hanh ly|mang gi|chuan bi gi)/.test(normQ);
   const isVatQuery = /(hoa don|vat|xuat hoa don|hoa don dien tu|thue|mst|ma so thue)/.test(normQ);
@@ -664,18 +679,6 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
     }
   }
 
-  if (isPaymentQuery) {
-    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'payment_policy');
-    if (chunk) {
-      return {
-        reply: `💳 **${chunk.title}**\n\n${chunk.content}`,
-        suggestions: ['Chính sách hủy tour', 'Xem các tour đang mở', 'Liên hệ nhân viên'],
-        toolsUsed: ['knowledge_base'],
-        mode: 'fallback_rag',
-        handoffSuggested: false
-      };
-    }
-  }
 
   if (isPickupQuery) {
     const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === 'pickup_service_standards');

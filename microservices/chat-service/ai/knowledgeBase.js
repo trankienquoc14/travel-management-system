@@ -77,7 +77,13 @@ const KNOWLEDGE_CHUNKS = [
     content: [
       'Tiêu chuẩn phục vụ & Đội xe TravelVN ERP:',
       '- Điểm đón khách: Các điểm tập trung trung tâm thuận tiện tại TP.HCM (Quận 1, Hàng Xanh, Bến xe Miền Đông, Bến xe Miền Tây, Sân bay Tân Sơn Nhất), Hà Nội (Nhà hát Lớn, Sân bay Nội Bài), Đà Nẵng (Sân bay Đà Nẵng, trung tâm Hải Châu)... Khách chọn điểm đón khi điền thông tin đặt tour.',
-      '- Đội xe du lịch: Xe đời mới chất lượng cao từ 4, 7, 16, 29 đến 45 chỗ; trang bị máy lạnh, ghế ngả êm ái, wifi và hệ thống âm thanh hiện đại; tài xế lịch sự, nhiều năm kinh nghiệm lái xe an toàn.',
+      '- Các dòng xe du lịch đang phục vụ tại TravelVN ERP:',
+      '  • Xe 4 - 7 chỗ: Toyota Innova, Fortuner, Kia Carnival/Sedona.',
+      '  • Xe 16 chỗ: Ford Transit, Hyundai Solati đời mới ghế da ngả êm ái.',
+      '  • Xe 29 chỗ: Thaco Town, Isuzu Samco máy lạnh êm, khoang hành lý rộng rãi.',
+      '  • Xe 45 chỗ: Hyundai Universe tiêu chuẩn du lịch cao cấp.',
+      '  • Xe Limousine VIP: 9 - 11 chỗ hạng thương gia.',
+      '- Tiện ích trên xe: 100% xe đời mới trang bị máy lạnh mát sâu, ghế ngả bọc da cao cấp, wifi tốc độ cao, micro hướng dẫn viên, nước suối khăn lạnh và bảo hiểm hành khách trọn gói; tài xế lịch sự, nhiều năm kinh nghiệm lái xe an toàn.',
       '- Hướng dẫn viên (HDV): Có thẻ hướng dẫn viên quốc gia, chuyên nghiệp, nhiệt tình, am hiểu văn hóa - lịch sử - ẩm thực và chăm sóc chu đáo từng thành viên trong đoàn suốt hành trình.',
       '- Bảo hiểm du lịch: Bảo hiểm du lịch nội địa theo quy định pháp luật được bao gồm trọn gói trong giá vé tour.',
       '- Khách sạn & Ẩm thực: Khách sạn 3★ - 5★ tiện nghi; các bữa ăn chính mang đậm hương vị đặc sản địa phương được nêu rõ trong lịch trình chi tiết.'
