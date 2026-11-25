@@ -437,8 +437,18 @@ const MasterOperationalTimeline = ({ guideSchedules, selectedMonth, setSelectedM
     );
 };
 
+const VIETNAM_POPULAR_DESTINATIONS = [
+    // Miền Bắc
+    "Hà Nội", "Hải Phòng", "Quảng Ninh", "Hạ Long", "Ninh Bình", "Lào Cai", "Sa Pa", "Hà Giang", "Cao Bằng", "Mai Châu", "Mộc Châu",
+    // Miền Trung & Tây Nguyên
+    "Đà Nẵng", "Huế", "Quảng Bình", "Hội An", "Quy Nhơn", "Bình Định", "Phú Yên", "Nha Trang", "Khánh Hòa", "Phan Thiết", "Bình Thuận", "Đà Lạt", "Lâm Đồng", "Đắk Lắk", "Buôn Ma Thuột", "Gia Lai", "Pleiku", "Kon Tum", "Măng Đen",
+    // Miền Nam & Miền Tây
+    "TP. Hồ Chí Minh", "Vũng Tàu", "Bà Rịa - Vũng Tàu", "Tây Ninh", "Cần Thơ", "Phú Quốc", "Kiên Giang", "Đồng Tháp", "Sa Đéc", "An Giang", "Châu Đốc", "Tiền Giang", "Mỹ Tho", "Bến Tre", "Cà Mau", "Bạc Liêu", "Sóc Trăng"
+];
+
 const TourOperationalManager = () => {
     const [tours, setTours] = useState([]);
+    const [dbDestinations, setDbDestinations] = useState([]);
     const [selectedDestination, setSelectedDestination] = useState('all');
     const [selectedTour, setSelectedTour] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -508,6 +518,16 @@ const TourOperationalManager = () => {
                     e.status === 'Active'
                 );
                 setDrivers(driverList);
+            }
+
+            // 3. Fetch Master Destinations
+            try {
+                const resDest = await axios.get('http://localhost:5000/api/destinations');
+                if (resDest.data.success && Array.isArray(resDest.data.data)) {
+                    setDbDestinations(resDest.data.data.map(d => d.destination_name).filter(Boolean));
+                }
+            } catch (destErr) {
+                console.warn('Không thể tải bảng destinations từ server', destErr);
             }
         } catch (error) { 
             console.error('Error fetching initial data', error); 
@@ -999,9 +1019,25 @@ const TourOperationalManager = () => {
         setDepartures(prev => [...prev, newDep]);
     };
 
-    // Hàm lấy danh sách tour có đợt di chuyển thuộc Tháng m
-    const uniqueDestinations = Array.from(new Set(tours.map(t => t.destination).filter(Boolean))).sort();
-    const filteredTours = tours.filter(t => selectedDestination === 'all' || t.destination === selectedDestination);
+    // Hàm so sánh và khớp điểm đến thông minh (khớp cả destination lẫn tên tour/lộ trình)
+    const matchDestination = (t, destFilter) => {
+        if (!destFilter || destFilter === 'all') return true;
+        const filterNorm = destFilter.toLowerCase().trim();
+        const destNorm = (t.destination || '').toLowerCase().trim();
+        if (destNorm === filterNorm || destNorm.includes(filterNorm) || filterNorm.includes(destNorm)) return true;
+        const nameNorm = (t.tour_name || '').toLowerCase();
+        if (nameNorm.includes(filterNorm)) return true;
+        return false;
+    };
+
+    // Danh sách toàn bộ tỉnh thành & điểm đến du lịch phong phú
+    const uniqueDestinations = Array.from(new Set([
+        ...tours.map(t => t.destination).filter(Boolean),
+        ...dbDestinations,
+        ...VIETNAM_POPULAR_DESTINATIONS
+    ])).sort((a, b) => a.localeCompare(b, 'vi'));
+
+    const filteredTours = tours.filter(t => matchDestination(t, selectedDestination));
 
     const checkDateMatchesMonthYear = (dateStr, targetMonth, targetYear = currentYear) => {
         if (!dateStr) return false;
@@ -1995,7 +2031,7 @@ const TourOperationalManager = () => {
                                     const filteredModalTours = tours
                                         .filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (!t.is_custom || t.is_custom === 0))
                                         .filter(t => {
-                                            if (modalDestinationFilter !== 'all' && t.destination !== modalDestinationFilter) return false;
+                                            if (!matchDestination(t, modalDestinationFilter)) return false;
                                             if (modalSearchTerm.trim()) {
                                                 const term = modalSearchTerm.toLowerCase().trim();
                                                 const matchName = (t.tour_name || '').toLowerCase().includes(term);
