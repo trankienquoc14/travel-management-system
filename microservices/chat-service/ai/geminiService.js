@@ -1149,12 +1149,13 @@ async function askAIStream({ pool, question, conversationHistory = [], authUser 
 
 /**
  * AI Copilot for Tour Itinerary Design & Audit (Support Office Staff)
- * Supports both Single Destination tours and Multi-Destination routes (Liên tỉnh / Xuyên Việt).
+ * Supports Departure/Pickup origin, Single Destination tours and Multi-Destination routes.
  */
 async function copilotTourDesign({
   action = 'audit',
   destinationName = '',
   destinationsList = [],
+  departureDestination = null,
   daysCount = 3,
   days = [],
   availablePlaces = [],
@@ -1165,11 +1166,21 @@ async function copilotTourDesign({
     ? destinationsList
     : (destinationName ? [{ destination_id: '', destination_name: destinationName }] : []);
 
-  const routeLabel = activeDestList.length > 0
-    ? activeDestList.map(d => d.destination_name).join(' - ')
-    : (destinationName || 'Hành trình');
+  const depDest = departureDestination && typeof departureDestination === 'object' && departureDestination.destination_name
+    ? departureDestination
+    : (departureDestination && typeof departureDestination === 'string' && departureDestination.trim()
+        ? { destination_id: '', destination_name: departureDestination.trim() }
+        : null);
 
-  const allowedCitiesNorm = activeDestList.map(d => normalizeVi(d.destination_name));
+  const destLabels = activeDestList.map(d => d.destination_name);
+  const routeLabel = depDest
+    ? `${depDest.destination_name} - ${destLabels.join(' - ')}${daysCount > 1 ? ` - ${depDest.destination_name}` : ''}`
+    : destLabels.join(' - ');
+
+  const allowedCitiesNorm = [
+    ...(depDest ? [normalizeVi(depDest.destination_name)] : []),
+    ...activeDestList.map(d => normalizeVi(d.destination_name))
+  ];
 
   // 1. RULE-BASED AUDIT ENGINE
   if (action === 'audit') {
@@ -1317,7 +1328,7 @@ Hãy nhận xét súc tích về tính khả thi, phân bổ thời gian giữa 
     };
   }
 
-  // 2. SMART ITINERARY SUGGESTION ENGINE (SINGLE & MULTI-DESTINATION ROUTE)
+  // 2. SMART ITINERARY SUGGESTION ENGINE (DEPARTURE ORIGIN + ROUTE)
   if (action === 'suggest') {
     // Xây dựng kế hoạch phân bổ ngày cho từng tỉnh
     const daysPlan = [];
@@ -1331,20 +1342,49 @@ Hãy nhận xét súc tích về tính khả thi, phân bổ thời gian giữa 
       if (remainder > 0) remainder--;
 
       for (let i = 0; i < count; i++) {
+        const isFirstDayOfTour = (currentDayIndex === 1);
+        const isLastDayOfTour = (currentDayIndex === daysCount);
         const isTransfer = (i === 0 && dIdx > 0);
         const prevDest = isTransfer ? activeDestList[dIdx - 1] : null;
+
+        let startDestId = dest.destination_id;
+        let endDestId = dest.destination_id;
+        let routeTitle = `${dest.destination_name} - Ngày ${i + 1}`;
+
+        if (isFirstDayOfTour) {
+          if (depDest && depDest.destination_id) {
+            startDestId = depDest.destination_id;
+            endDestId = dest.destination_id;
+            routeTitle = `${depDest.destination_name} - ${dest.destination_name}`;
+          } else if (depDest && depDest.destination_name) {
+            routeTitle = `${depDest.destination_name} - ${dest.destination_name}`;
+          }
+        } else if (isLastDayOfTour && daysCount > 1) {
+          if (depDest && depDest.destination_id) {
+            startDestId = dest.destination_id;
+            endDestId = depDest.destination_id;
+            routeTitle = `${dest.destination_name} - ${depDest.destination_name}`;
+          } else if (depDest && depDest.destination_name) {
+            routeTitle = `${dest.destination_name} - ${depDest.destination_name}`;
+          }
+        } else if (isTransfer && prevDest) {
+          startDestId = prevDest.destination_id;
+          endDestId = dest.destination_id;
+          routeTitle = `${prevDest.destination_name} - ${dest.destination_name}`;
+        }
 
         daysPlan.push({
           dayIndex: currentDayIndex,
           destId: dest.destination_id,
           destName: dest.destination_name,
-          startDestId: prevDest ? prevDest.destination_id : dest.destination_id,
-          endDestId: dest.destination_id,
-          routeTitle: prevDest
-            ? `${prevDest.destination_name} - ${dest.destination_name}`
-            : (activeDestList.length > 1 ? `${dest.destination_name} - Khám phá ngày ${i + 1}` : `${dest.destination_name} - Ngày ${i + 1}`),
+          startDestId,
+          endDestId,
+          routeTitle,
+          isFirstDayOfTour,
+          isLastDayOfTour,
           isTransferDay: isTransfer,
-          prevDest
+          prevDest,
+          depDest
         });
         currentDayIndex++;
       }
@@ -1356,10 +1396,13 @@ Hãy nhận xét súc tích về tính khả thi, phân bổ thời gian giữa 
     if (ai && availablePlaces.length > 0) {
       try {
         const prompt = `Bạn là Chuyên gia Thiết kế Lịch trình Tour Du lịch chuyên nghiệp tại TravelVN.
-Nhiệm vụ của bạn là xây dựng lịch trình tour ${activeDestList.length > 1 ? 'liên tỉnh' : 'trọn gói'} ${daysCount} ngày qua tuyến: [${activeDestList.map(d => d.destination_name).join(' ➔ ')}].
+Nhiệm vụ của bạn là xây dựng lịch trình tour ${daysCount} ngày:
+- Nơi khởi hành (đón & trả khách): ${depDest ? depDest.destination_name : 'Tại địa phương'}
+- Tuyến điểm du lịch: [${activeDestList.map(d => d.destination_name).join(' ➔ ')}]
+- Cung đường tổng thể: ${routeLabel}
 
 PHÂN BỔ TUYẾN ĐƯỜNG CÁC NGÀY:
-${daysPlan.map(dp => `Ngày ${dp.dayIndex}: ${dp.isTransferDay ? `Di chuyển từ ${dp.prevDest.destination_name} sang ${dp.destName} & tham quan ${dp.destName}` : `Khám phá tại ${dp.destName}`}`).join('\n')}
+${daysPlan.map(dp => `Ngày ${dp.dayIndex} (${dp.routeTitle}): ${dp.isFirstDayOfTour && dp.depDest ? `Đón khách tại ${dp.depDest.destination_name}, di chuyển đến ${dp.destName} & tham quan nhẹ buổi chiều` : (dp.isLastDayOfTour && dp.depDest ? `Tham quan mua sắm tại ${dp.destName}, khởi hành về lại ${dp.depDest.destination_name}` : (dp.isTransferDay ? `Di chuyển từ ${dp.prevDest.destination_name} sang ${dp.destName} & khám phá ${dp.destName}` : `Khám phá trọn vẹn tại ${dp.destName}`))}`).join('\n')}
 
 DANH SÁCH ĐIỂM THAM QUAN CÓ THẬT TRONG CƠ SỞ DỮ LIỆU:
 ${JSON.stringify(availablePlaces.slice(0, 50).map(p => ({ place_id: p.place_id, destination_id: p.destination_id, name: p.auto_text || p.place_name, price: p.estimated_price })), null, 2)}
@@ -1368,26 +1411,26 @@ DANH SÁCH KHÁCH SẠN CÓ THẬT TRONG CƠ SỞ DỮ LIỆU:
 ${JSON.stringify(availableHotels.slice(0, 20).map(h => ({ service_id: h.service_id, destination_id: h.destination_id, name: h.service_name, price: h.base_cost })), null, 2)}
 
 NGUYÊN TẮC:
-1. Ngày nào ở tỉnh nào thì BẮT BUỘC chỉ chọn điểm tham quan và khách sạn thuộc tỉnh đó (theo destination_id tương ứng).
-2. Vào các ngày di chuyển liên tỉnh, hoạt động đầu ngày là trả phòng và di chuyển, sau đó đến nơi ăn trưa và nhận phòng tại tỉnh mới.
-3. Mỗi ngày bố trí 2 - 3 điểm tham quan hợp lý cùng tuyến di chuyển.
-4. Thêm các hoạt động ăn uống và nghỉ ngơi: 'Di chuyển', 'Ăn sáng', 'Ăn trưa', 'Ăn tối', 'Nghỉ ngơi'.
+1. Ngày 1: Hoạt động đầu tiên là đón khách tại ${depDest ? depDest.destination_name : 'điểm hẹn'}, di chuyển đến điểm du lịch đầu tiên.
+2. Ngày cuối: Hoạt động cuối cùng là đưa khách trở về lại ${depDest ? depDest.destination_name : 'điểm đón ban đầu'}, kết thúc tour. Ngày cuối không ghép khách sạn lưu trú (accommodation: null).
+3. Ngày nào ở điểm đến nào thì BẮT BUỘC chỉ chọn điểm tham quan và khách sạn thuộc điểm đến đó (theo destination_id tương ứng).
+4. Mỗi ngày bố trí 2 - 3 điểm tham quan hợp lý cùng tuyến di chuyển, kết hợp ăn sáng, ăn trưa, ăn tối và nghỉ ngơi khoa học.
 
 Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
 {
-  "tourName": "Tên tour gợi ý (ví dụ: Tour Liên Tuyến Đà Lạt - Nha Trang 4N3Đ)",
+  "tourName": "Tên tour gợi ý (ví dụ: Tour Khám Phá Đà Lạt - Nha Trang 4N3Đ)",
   "tourDescription": "Mô tả điểm nhấn chuyến đi...",
   "suggestedDays": [
     {
       "dayIndex": 1,
-      "start_destination_id": 2,
+      "start_destination_id": 1,
       "end_destination_id": 2,
       "route_title": "Tiêu đề ngày",
       "activities": [
         { "type": "Di chuyển", "name": "Đón khách và khởi hành..." },
-        { "type": "Tham quan", "name": "Tên điểm từ danh sách", "place_id": 1, "price": 30000 },
+        { "type": "Ăn sáng", "name": "Dừng chân dùng điểm tâm sáng" },
         { "type": "Ăn trưa", "name": "Dùng bữa trưa tại nhà hàng địa phương" },
-        { "type": "Tham quan", "name": "Tên điểm từ danh sách", "place_id": 2, "price": 50000 },
+        { "type": "Tham quan", "name": "Tên điểm từ danh sách", "place_id": 1, "price": 30000 },
         { "type": "Ăn tối", "name": "Thưởng thức ẩm thực địa phương" },
         { "type": "Nghỉ ngơi", "name": "Về khách sạn nhận phòng nghỉ ngơi" }
       ],
@@ -1430,31 +1473,71 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
         } : null);
 
         const dayActs = [];
-        if (dp.dayIndex === 1) {
-          dayActs.push({ type: 'Di chuyển', name: `Đón khách và khởi hành đến ${dp.destName}` });
+
+        if (dp.isFirstDayOfTour) {
+          if (dp.depDest) {
+            dayActs.push({ type: 'Di chuyển', name: `Xe & HDV đón Quý khách tại ${dp.depDest.destination_name}, khởi hành đi ${dp.destName}` });
+            dayActs.push({ type: 'Ăn sáng', name: 'Dừng chân dùng điểm tâm sáng trên cung đường di chuyển' });
+            dayActs.push({ type: 'Ăn trưa', name: `Đến ${dp.destName}, dùng bữa trưa tại nhà hàng địa phương` });
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng nghỉ ngơi` });
+          } else {
+            dayActs.push({ type: 'Di chuyển', name: `Đón khách và khởi hành đến ${dp.destName}` });
+            dayActs.push({ type: 'Ăn sáng', name: 'Dùng bữa sáng tại khách sạn hoặc điểm hẹn' });
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương ở ${dp.destName}` });
+          }
+
+          const p1 = destPlaces.shift();
+          if (p1) {
+            dayActs.push({ type: 'Tham quan', name: p1.auto_text || p1.place_name, place_id: p1.place_id, price: Number(p1.estimated_price || 0) });
+          }
+          dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do khám phá ${dp.destName} về đêm` });
+
+        } else if (dp.isLastDayOfTour && dp.dayIndex > 1) {
+          dayActs.push({ type: 'Ăn sáng', name: `Dùng điểm tâm sáng tại khách sạn ${dp.destName} và làm thủ tục trả phòng` });
+
+          const pLast = destPlaces.shift();
+          if (pLast) {
+            dayActs.push({ type: 'Tham quan', name: pLast.auto_text || pLast.place_name, place_id: pLast.place_id, price: Number(pLast.estimated_price || 0) });
+          } else {
+            dayActs.push({ type: 'Tham quan', name: `Tự do tham quan và mua sắm đặc sản làm quà tại ${dp.destName}` });
+          }
+
+          if (dp.depDest) {
+            dayActs.push({ type: 'Di chuyển', name: `Lên xe khởi hành về lại ${dp.depDest.destination_name}` });
+            dayActs.push({ type: 'Ăn trưa', name: 'Dừng chân dùng bữa trưa tại trạm dừng chân trên đường về' });
+            dayActs.push({ type: 'Di chuyển', name: `Về đến ${dp.depDest.destination_name}, xe đưa Quý khách về điểm hẹn ban đầu, kết thúc chương trình tour` });
+          } else {
+            dayActs.push({ type: 'Di chuyển', name: `Mua sắm đặc sản và tiễn khách kết thúc hành trình` });
+          }
+
         } else if (dp.isTransferDay && dp.prevDest) {
           dayActs.push({ type: 'Ăn sáng', name: `Dùng bữa sáng tại khách sạn ${dp.prevDest.destination_name} và làm thủ tục trả phòng` });
           dayActs.push({ type: 'Di chuyển', name: `Khởi hành từ ${dp.prevDest.destination_name} di chuyển đến ${dp.destName}` });
+          dayActs.push({ type: 'Ăn trưa', name: `Đến ${dp.destName}, dùng bữa trưa tại nhà hàng địa phương` });
+
+          const p1 = destPlaces.shift();
+          if (p1) {
+            dayActs.push({ type: 'Tham quan', name: p1.auto_text || p1.place_name, place_id: p1.place_id, price: Number(p1.estimated_price || 0) });
+          }
+          dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng và nghỉ ngơi` });
+
         } else {
           dayActs.push({ type: 'Ăn sáng', name: 'Dùng bữa sáng tại khách sạn' });
-        }
 
-        const p1 = destPlaces.shift();
-        if (p1) {
-          dayActs.push({ type: 'Tham quan', name: p1.auto_text || p1.place_name, place_id: p1.place_id, price: Number(p1.estimated_price || 0) });
-        }
-        dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương ở ${dp.destName}` });
+          const p1 = destPlaces.shift();
+          if (p1) {
+            dayActs.push({ type: 'Tham quan', name: p1.auto_text || p1.place_name, place_id: p1.place_id, price: Number(p1.estimated_price || 0) });
+          }
+          dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương ở ${dp.destName}` });
 
-        const p2 = destPlaces.shift();
-        if (p2) {
-          dayActs.push({ type: 'Tham quan', name: p2.auto_text || p2.place_name, place_id: p2.place_id, price: Number(p2.estimated_price || 0) });
-        }
-        dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
-
-        if (dp.dayIndex < daysCount) {
-          dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng và nghỉ ngơi` });
-        } else {
-          dayActs.push({ type: 'Di chuyển', name: `Mua sắm đặc sản và tiễn khách kết thúc hành trình` });
+          const p2 = destPlaces.shift();
+          if (p2) {
+            dayActs.push({ type: 'Tham quan', name: p2.auto_text || p2.place_name, place_id: p2.place_id, price: Number(p2.estimated_price || 0) });
+          }
+          dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nghỉ ngơi` });
         }
 
         suggestedDays.push({
@@ -1463,13 +1546,13 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
           end_destination_id: dp.endDestId,
           route_title: dp.routeTitle,
           activities: dayActs,
-          accommodation: dp.dayIndex < daysCount ? chosenHotel : null
+          accommodation: dp.isLastDayOfTour ? null : chosenHotel
         });
       });
 
       suggestedResult = {
         tourName: `Tour Khám Phá ${routeLabel} ${daysCount}N${Math.max(1, daysCount - 1)}Đ`,
-        tourDescription: `Hành trình liên tuyến trải nghiệm trọn vẹn nét đẹp thiên nhiên, văn hóa và ẩm thực đặc trưng tại ${routeLabel}.`,
+        tourDescription: `Hành trình trải nghiệm trọn vẹn nét đẹp thiên nhiên, văn hóa và ẩm thực đặc trưng tại ${routeLabel}.`,
         suggestedDays
       };
     }
