@@ -89,14 +89,7 @@ const TourAiAssistantModal = ({
         });
       }
 
-      // Nếu chưa có, chọn một điểm đến khác với điểm đón khách
-      if (detectedIds.length === 0) {
-        const candidate = destinations.find(d => String(d.destination_id) !== String(departureDestId)) || destinations[0];
-        if (candidate) {
-          detectedIds.push(String(candidate.destination_id));
-        }
-      }
-
+      // Nếu tour chưa có điểm đến, để trống để nhân viên tự do chọn
       setSelectedDestIds(detectedIds);
     }
 
@@ -138,24 +131,29 @@ const TourAiAssistantModal = ({
   const handleAddDestinationToRoute = (destId) => {
     if (!destId) return;
     if (selectedDestIds.includes(String(destId))) {
-      alert('Điểm đến này đã có trong tuyến hành trình!');
       return;
     }
     setSelectedDestIds([...selectedDestIds, String(destId)]);
   };
 
-  // Xóa tỉnh khỏi tuyến hành trình
+  // Xóa tỉnh khỏi tuyến hành trình (Cho phép xóa tự do)
   const handleRemoveDestinationFromRoute = (indexToRemove) => {
-    if (selectedDestIds.length <= 1) {
-      alert('Tuyến tour cần có ít nhất một điểm đến du lịch!');
-      return;
-    }
     const updated = selectedDestIds.filter((_, idx) => idx !== indexToRemove);
     setSelectedDestIds(updated);
   };
 
   // Gửi yêu cầu Thẩm định Lịch trình
   const handleRunAudit = async () => {
+    if (!days || days.length === 0) {
+      setAuditResult({
+        overallStatus: 'info',
+        summary: 'Chưa có lịch trình các ngày trong bản thiết kế.',
+        issues: [],
+        aiReview: 'Hiện tại bản thiết kế chưa có ngày nào. Bạn có thể sử dụng tab "AI Gợi Ý Lịch Trình Chuẩn" để tạo nhanh khung lịch trình mẫu rồi nhấn Áp dụng.'
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await axios.post(`${GATEWAY_URL}/api/chat/ai/tour-copilot`, {
@@ -526,8 +524,12 @@ const TourAiAssistantModal = ({
                     <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>
                       📍 Tuyến Điểm Du Lịch Ghé Thăm:
                     </label>
-                    <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                      {selectedDestIds.length <= 1 ? '(1 điểm đến • bấm "+ Thêm điểm đến" để tạo tour liên tỉnh)' : `(${selectedDestIds.length} điểm đến liên tuyến)`}
+                    <span style={{ fontSize: '11.5px', color: selectedDestIds.length === 0 ? '#ef4444' : '#64748b', fontWeight: selectedDestIds.length === 0 ? '600' : '400' }}>
+                      {selectedDestIds.length === 0 
+                        ? '⚠️ Chưa chọn điểm đến du lịch nào' 
+                        : (selectedDestIds.length === 1 
+                            ? '(1 điểm đến • bấm "+ Thêm điểm đến" để đi liên tỉnh)' 
+                            : `(${selectedDestIds.length} điểm đến liên tuyến)`)}
                     </span>
                   </div>
 
@@ -539,7 +541,7 @@ const TourAiAssistantModal = ({
                     background: '#fff',
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    border: selectedDestIds.length === 0 ? '1.5px dashed #a855f7' : '1px solid #cbd5e1',
                     minHeight: '44px'
                   }}>
                     {activeDestObjects.map((dest, idx) => (
@@ -589,22 +591,24 @@ const TourAiAssistantModal = ({
                         }}
                         defaultValue=""
                         style={{
-                          padding: '4px 10px',
+                          padding: selectedDestIds.length === 0 ? '6px 14px' : '4px 10px',
                           borderRadius: '16px',
-                          border: '1px dashed #6366f1',
-                          background: '#faf5ff',
-                          color: '#6366f1',
-                          fontSize: '12.5px',
-                          fontWeight: '600',
+                          border: selectedDestIds.length === 0 ? '1.5px solid #6366f1' : '1px dashed #6366f1',
+                          background: selectedDestIds.length === 0 ? '#eff6ff' : '#faf5ff',
+                          color: '#4f46e5',
+                          fontSize: selectedDestIds.length === 0 ? '13px' : '12.5px',
+                          fontWeight: '700',
                           cursor: 'pointer'
                         }}
                       >
-                        <option value="" disabled>+ Thêm điểm đến tiếp theo...</option>
+                        <option value="" disabled>
+                          {selectedDestIds.length === 0 ? '👉 Bấm vào đây để chọn điểm đến du lịch...' : '+ Thêm điểm đến tiếp theo...'}
+                        </option>
                         {destinations
                           .filter(d => !selectedDestIds.includes(String(d.destination_id)))
                           .map(d => (
                             <option key={d.destination_id} value={d.destination_id}>
-                              + {d.destination_name}
+                              {selectedDestIds.length === 0 ? `📍 ${d.destination_name}` : `+ ${d.destination_name}`}
                             </option>
                           ))}
                       </select>
@@ -625,7 +629,14 @@ const TourAiAssistantModal = ({
                   borderRadius: '6px'
                 }}>
                   <Navigation size={13} color="#6366f1" />
-                  <span><strong>Lộ trình tổng thể:</strong> Khởi hành từ <strong>{activeDepDest?.destination_name || 'Điểm đón'}</strong> ➔ {activeDestObjects.map(d => d.destination_name).join(' ➔ ')} {daysCountInput > 1 ? `➔ Về lại ${activeDepDest?.destination_name || 'Điểm đón'}` : ''}</span>
+                  <span>
+                    <strong>Lộ trình tổng thể:</strong> Khởi hành từ <strong>{activeDepDest?.destination_name || 'Điểm đón'}</strong>
+                    {activeDestObjects.length > 0 ? (
+                      <> ➔ {activeDestObjects.map(d => d.destination_name).join(' ➔ ')} {daysCountInput > 1 ? `➔ Về lại ${activeDepDest?.destination_name || 'Điểm đón'}` : ''}</>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}> ➔ (Chưa chọn điểm du lịch)</span>
+                    )}
+                  </span>
                 </div>
               </div>
 
