@@ -1,5 +1,8 @@
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 const sequelize = require('../config/database');
+
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://travelvn-erp.vercel.app').replace(/\/+$/, '');
 
 // Cấu hình ngân hàng SePay mặc định (đồng bộ từ .env)
 const SEPAY_CONFIG = {
@@ -14,46 +17,129 @@ let cachedTransporter = null;
 let isEthereal = false;
 
 /**
- * Khởi tạo hoặc lấy Transporter gửi mail
+ * Bộ điều phối gửi email thông minh đa kênh:
+ * Kênh 1: Brevo HTTPS REST API (Port 443 - không bao giờ bị chặn trên Cloud)
+ * Kênh 2: Resend HTTPS REST API (Port 443 - không bao giờ bị chặn trên Cloud)
+ * Kênh 3: Gmail SMTP SSL Port 465 (Thử trước với timeout 10s)
+ * Kênh 4: Gmail SMTP STARTTLS Port 587 (Dự phòng nếu Port 465 bị mạng Cloud chặn)
+ */
+async function dispatchEmail({ to, subject, html, text }) {
+  const emailUser = (process.env.EMAIL_USER || 'doantram0901@gmail.com').replace(/["'\s]/g, '');
+  const emailPass = (process.env.EMAIL_PASS || 'gzqf tdxk bywf pali').replace(/["'\s]/g, '');
+
+  // 1. Kênh Brevo HTTP REST API (Port 443 HTTPS)
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  if (brevoKey) {
+    try {
+      const resp = await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: 'TravelERP Du Lịch', email: emailUser },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+        textContent: text || ''
+      }, {
+        headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' },
+        timeout: 10000
+      });
+      console.log(`✅ [EmailService] Gửi thành công qua Brevo HTTPS API tới <${to}> (MsgId: ${resp.data?.messageId})`);
+      return { success: true, messageId: resp.data?.messageId, method: 'brevo_https' };
+    } catch (brevoErr) {
+      console.warn('⚠️ [EmailService] Gửi qua Brevo API lỗi, chuyển sang kênh dự phòng:', brevoErr.response?.data || brevoErr.message);
+    }
+  }
+
+  // 2. Kênh Resend HTTP REST API (Port 443 HTTPS)
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+  if (resendKey) {
+    try {
+      const fromAddr = (process.env.RESEND_FROM || 'TravelERP <onboarding@resend.dev>').trim();
+      const resp = await axios.post('https://api.resend.com/emails', {
+        from: fromAddr,
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text || ''
+      }, {
+        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        timeout: 10000
+      });
+      console.log(`✅ [EmailService] Gửi thành công qua Resend HTTPS API tới <${to}> (Id: ${resp.data?.id})`);
+      return { success: true, messageId: resp.data?.id, method: 'resend_https' };
+    } catch (resendErr) {
+      console.warn('⚠️ [EmailService] Gửi qua Resend API lỗi, chuyển sang kênh dự phòng:', resendErr.response?.data || resendErr.message);
+    }
+  }
+
+  // 3. Kênh SMTP qua Gmail (Thử cổng 465 SSL trước)
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || `"TravelERP Du Lịch" <${emailUser}>`,
+    to,
+    subject,
+    text,
+    html
+  };
+
+  try {
+    const transporter465 = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: emailUser, pass: emailPass },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      tls: { rejectUnauthorized: false }
+    });
+    const info = await transporter465.sendMail(mailOptions);
+    console.log(`✅ [EmailService] Gửi thành công qua Gmail SMTP (cổng 465) tới <${to}> (MsgID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId, method: 'gmail_smtp_465' };
+  } catch (err465) {
+    console.warn(`⚠️ [EmailService] Gửi qua cổng 465 thất bại (${err465.code || err465.message}), chuyển sang thử cổng 587 STARTTLS...`);
+
+    // 4. Kênh SMTP qua Gmail (Thử cổng 587 STARTTLS dự phòng)
+    try {
+      const transporter587 = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: { user: emailUser, pass: emailPass },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        tls: { rejectUnauthorized: false }
+      });
+      const info = await transporter587.sendMail(mailOptions);
+      console.log(`✅ [EmailService] Gửi thành công qua Gmail SMTP (cổng 587) tới <${to}> (MsgID: ${info.messageId})`);
+      return { success: true, messageId: info.messageId, method: 'gmail_smtp_587' };
+    } catch (err587) {
+      console.error(`❌ [EmailService] Toàn bộ cổng SMTP đều thất bại:`, err587.message);
+      throw err587;
+    }
+  }
+}
+
+/**
+ * Khởi tạo hoặc lấy Transporter gửi mail (dành cho các tác vụ cần transporter trực tiếp)
  */
 async function getTransporter() {
   if (cachedTransporter) return cachedTransporter;
 
-  const emailUser = (process.env.EMAIL_USER || 'doantram0901@gmail.com').trim();
-  const emailPass = (process.env.EMAIL_PASS || 'gzqf tdxk bywf pali').replace(/\s+/g, '');
+  const emailUser = (process.env.EMAIL_USER || 'doantram0901@gmail.com').replace(/["'\s]/g, '');
+  const emailPass = (process.env.EMAIL_PASS || 'gzqf tdxk bywf pali').replace(/["'\s]/g, '');
 
   if (emailUser && emailPass) {
-    // Ưu tiên service: 'gmail' (dùng cổng 465 SSL trực tiếp, không bị cloud firewall chặn như cổng 587)
-    const isGmail = emailUser.includes('gmail.com') || (process.env.EMAIL_HOST && process.env.EMAIL_HOST.includes('gmail'));
-    if (isGmail) {
-      cachedTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: emailUser,
-          pass: emailPass
-        },
-        tls: {
-          rejectUnauthorized: false
-        }
-      });
-    } else {
-      cachedTransporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: Number(process.env.EMAIL_PORT) || 465,
-        secure: process.env.EMAIL_SECURE === 'true' || Number(process.env.EMAIL_PORT) === 465,
-        auth: {
-          user: emailUser,
-          pass: emailPass
-        },
-        tls: {
-          rejectUnauthorized: false
-        }
-      });
-    }
+    cachedTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      },
+      connectionTimeout: 10000,
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
     isEthereal = false;
-    console.log(`📧 [EmailService] Đã kích hoạt Gmail SMTP thật qua tài khoản: ${emailUser}`);
+    console.log(`📧 [EmailService] Đã kích hoạt Gmail SMTP qua tài khoản: ${emailUser}`);
   } else {
-    // Chưa có tài khoản SMTP trong .env -> Tự động dùng Ethereal Test Account để test và preview URL
     try {
       const testAccount = await nodemailer.createTestAccount();
       cachedTransporter = nodemailer.createTransport({
@@ -68,13 +154,36 @@ async function getTransporter() {
       isEthereal = true;
       console.log(`📧 [EmailService] Đã tạo Ethereal Test Transporter (${testAccount.user}) để kiểm thử.`);
     } catch (err) {
-      console.warn('⚠️ [EmailService] Không thể tạo Ethereal test account, dùng JSON transporter fallback:', err.message);
       cachedTransporter = nodemailer.createTransport({ jsonTransport: true });
       isEthereal = false;
     }
   }
 
   return cachedTransporter;
+}
+
+/**
+ * Gửi email kiểm tra kết nối trực tiếp
+ */
+async function sendTestEmailDirect(targetEmail) {
+  const subject = `[TravelERP] 🔔 Kiểm tra kết nối Email từ Cloud Host - ${new Date().toLocaleTimeString('vi-VN')}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #0284c7;">✅ Kiểm tra kết nối Email thành công!</h2>
+      <p>Hệ thống TravelERP đã gửi thành công email kiểm tra từ Cloud Host đến hòm thư: <strong>${targetEmail}</strong>.</p>
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 13px; color: #475569; margin: 16px 0;">
+        ⏱️ Thời gian gửi: ${new Date().toLocaleString('vi-VN')}<br>
+        🚀 Môi trường: Cloud Deployment (Render / TiDB / Vercel)
+      </div>
+      <p style="margin-top: 16px; font-size: 13px; color: #64748b;">Nếu bạn nhận được email này, tính năng gửi thông báo đơn hàng và vé điện tử trên hệ thống đã hoạt động hoàn toàn bình thường!</p>
+    </div>
+  `;
+  return await dispatchEmail({
+    to: targetEmail,
+    subject,
+    html,
+    text: `Kiểm tra kết nối Email từ Cloud Host thành công lúc ${new Date().toLocaleString('vi-VN')}!`
+  });
 }
 
 /**
@@ -532,30 +641,23 @@ async function sendBookingConfirmationEmail(bookingId) {
       </html>
     `;
 
-    const transporter = await getTransporter();
     const mailSubject = isPaid
       ? `[TravelERP] 🎉 Xác nhận đặt tour & thanh toán thành công #${booking.booking_id} - ${booking.tour_name}`
       : `[TravelERP] ⏱️ Xác nhận giữ chỗ tour #${booking.booking_id} (Chờ thanh toán) - ${booking.tour_name}`;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <doantram0901@gmail.com>',
+    const mailText = isPaid
+      ? `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đã được thanh toán thành công!\nTổng tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)} từ ${departurePlace}.\n\nCảm ơn bạn đã lựa chọn TravelERP!`
+      : `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đang được giữ chỗ tạm thời (10 phút) chờ thanh toán!\nTổng tiền cần thanh toán: ${formatVND(totalAmount)}\nNội dung chuyển khoản: ${transferContent}\n\nVui lòng hoàn tất thanh toán để nhận vé điện tử chính thức.`;
+
+    const sendRes = await dispatchEmail({
       to: recipientEmail,
       subject: mailSubject,
-      text: isPaid
-        ? `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đã được thanh toán thành công!\nTổng tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)} từ ${departurePlace}.\n\nCảm ơn bạn đã lựa chọn TravelERP!`
-        : `Kính chào ${recipientName},\n\nĐơn đặt tour #${booking.booking_id} (${booking.tour_name}) của bạn đang được giữ chỗ tạm thời (10 phút) chờ thanh toán!\nTổng tiền cần thanh toán: ${formatVND(totalAmount)}\nNội dung chuyển khoản: ${transferContent}\n\nVui lòng hoàn tất thanh toán để nhận vé điện tử chính thức.`,
+      text: mailText,
       html: htmlContent
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-
-    console.log(`✅ [EmailService] Đã gửi email xác nhận đặt tour #${booking.booking_id} tới <${recipientEmail}> (MsgID: ${info.messageId})`);
-    if (previewUrl) {
-      console.log(`🔗 [EmailService] Xem trước Email (Ethereal Preview): ${previewUrl}`);
-    }
-
-    return { success: true, messageId: info.messageId, previewUrl, recipient: recipientEmail };
+    console.log(`✅ [EmailService] Đã gửi email xác nhận đặt tour #${booking.booking_id} tới <${recipientEmail}> (${sendRes.method})`);
+    return { success: true, messageId: sendRes.messageId, method: sendRes.method, recipient: recipientEmail };
   } catch (error) {
     console.error(`❌ [EmailService] Lỗi khi gửi email xác nhận đặt tour #${bookingId}:`, error);
     return { success: false, error: error.message };
@@ -657,7 +759,7 @@ async function sendPaymentSuccessEmail(bookingId) {
             </div>
 
             <div style="text-align: center; margin-top: 28px; margin-bottom: 12px;">
-              <a href="http://localhost:5173/my-bookings" 
+              <a href="${FRONTEND_URL}/my-bookings" 
                  style="display: inline-block; background: #16a34a; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
                 Mở Vé Điện Tử & Mã QR Check-in
               </a>
@@ -676,23 +778,15 @@ async function sendPaymentSuccessEmail(bookingId) {
       </html>
     `;
 
-    const transporter = await getTransporter();
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <doantram0901@gmail.com>',
+    const sendRes = await dispatchEmail({
       to: recipientEmail,
       subject: `[TravelERP] ✅ Xác nhận thanh toán & Vé điện tử #${booking.booking_id} - ${booking.tour_name}`,
       text: `Kính chào ${recipientName},\n\nĐơn hàng #${booking.booking_id} (${booking.tour_name}) đã được thanh toán thành công!\nSố tiền: ${formatVND(totalAmount)}\nKhởi hành: ${formatDateVN(booking.departure_date)}.\n\nChúc bạn có một chuyến đi tuyệt vời!`,
       html: htmlContent
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    console.log(`✅ [EmailService] Đã gửi email xác nhận thanh toán #${booking.booking_id} tới <${recipientEmail}> (MsgID: ${info.messageId})`);
-    if (previewUrl) {
-      console.log(`🔗 [EmailService] Xem trước Email (Ethereal Preview): ${previewUrl}`);
-    }
-
-    return { success: true, messageId: info.messageId, previewUrl, recipient: recipientEmail };
+    console.log(`✅ [EmailService] Đã gửi email xác nhận thanh toán #${booking.booking_id} tới <${recipientEmail}> (${sendRes.method})`);
+    return { success: true, messageId: sendRes.messageId, method: sendRes.method, recipient: recipientEmail };
   } catch (error) {
     console.error(`❌ [EmailService] Lỗi khi gửi email thanh toán #${bookingId}:`, error);
     return { success: false, error: error.message };
@@ -826,7 +920,7 @@ async function sendBookingCancelledUnpaidEmail(bookingId, cancelReason = 'Đơn 
 
             <!-- CTA BUTTON -->
             <div style="text-align: center; margin-top: 28px; margin-bottom: 12px;">
-              <a href="http://localhost:5173/my-bookings" 
+              <a href="${FRONTEND_URL}/my-bookings" 
                  style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
                 Xem Lại Đơn Hàng & Đặt Lại Tour
               </a>
@@ -848,23 +942,15 @@ async function sendBookingCancelledUnpaidEmail(bookingId, cancelReason = 'Đơn 
       </html>
     `;
 
-    const transporter = await getTransporter();
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || '"TravelERP Du Lịch" <doantram0901@gmail.com>',
+    const sendRes = await dispatchEmail({
       to: recipientEmail,
       subject: `[TravelERP] ⚠️ Thông báo hủy đơn đặt tour ${orderCode} do chưa thanh toán - ${booking.tour_name}`,
-      text: `Kính chào ${recipientName},\n\nĐơn đặt tour ${orderCode} (${booking.tour_name}) của quý khách đã bị hủy do chưa hoàn tất thanh toán (${finalReason}).\nSố chỗ giữ tạm thời (${booking.num_people || 1} khách) đã được hoàn lại hệ thống.\n\nNếu quý khách vẫn có nhu cầu tham gia tour, vui lòng truy cập http://localhost:5173/my-bookings để đặt lại tour.\nHotline hỗ trợ: 1900 1800.`,
+      text: `Kính chào ${recipientName},\n\nĐơn đặt tour ${orderCode} (${booking.tour_name}) của quý khách đã bị hủy do chưa hoàn tất thanh toán (${finalReason}).\nSố chỗ giữ tạm thời (${booking.num_people || 1} khách) đã được hoàn lại hệ thống.\n\nNếu quý khách vẫn có nhu cầu tham gia tour, vui lòng truy cập ${FRONTEND_URL}/my-bookings để đặt lại tour.\nHotline hỗ trợ: 1900 1800.`,
       html: htmlContent
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    console.log(`✅ [EmailService] Đã gửi email thông báo hủy đơn chưa thanh toán ${orderCode} tới <${recipientEmail}> (MsgID: ${info.messageId})`);
-    if (previewUrl) {
-      console.log(`🔗 [EmailService] Xem trước Email Hủy Đơn (Ethereal Preview): ${previewUrl}`);
-    }
-
-    return { success: true, messageId: info.messageId, previewUrl, recipient: recipientEmail };
+    console.log(`✅ [EmailService] Đã gửi email thông báo hủy đơn chưa thanh toán ${orderCode} tới <${recipientEmail}> (${sendRes.method})`);
+    return { success: true, messageId: sendRes.messageId, method: sendRes.method, recipient: recipientEmail };
   } catch (error) {
     console.error(`❌ [EmailService] Lỗi khi gửi email hủy đơn chưa thanh toán #${bookingId}:`, error);
     return { success: false, error: error.message };
@@ -875,5 +961,7 @@ module.exports = {
   sendBookingConfirmationEmail,
   sendPaymentSuccessEmail,
   sendBookingCancelledUnpaidEmail,
+  sendTestEmailDirect,
+  dispatchEmail,
   getBookingFullDetails
 };

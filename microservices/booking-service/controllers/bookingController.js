@@ -1,7 +1,7 @@
 const https = require('https');
 const { calculateRooms } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
-const { sendBookingConfirmationEmail, sendPaymentSuccessEmail, sendBookingCancelledUnpaidEmail } = require('../utils/emailService');
+const { sendBookingConfirmationEmail, sendPaymentSuccessEmail, sendBookingCancelledUnpaidEmail, sendTestEmailDirect } = require('../utils/emailService');
 const { broadcastRealtime } = require('../../shared/realtimeNotifier');
 
 const notifyBookingEvent = (type, data = {}) => {
@@ -3612,6 +3612,43 @@ exports.getStaffDashboardStats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * GET /api/bookings/test-email?to=...
+ * Kiểm tra kết nối và gửi email trực tiếp từ server
+ */
+exports.testEmailDiagnostic = async (req, res) => {
+  const targetEmail = (req.query.to || req.body?.to || 'doanthitramyt2004@gmail.com').trim();
+  const startTime = Date.now();
+  try {
+    const result = await sendTestEmailDirect(targetEmail);
+    const latency = Date.now() - startTime;
+    return res.json({
+      success: true,
+      message: `Email kiểm tra đã được gửi thành công tới <${targetEmail}>!`,
+      details: {
+        target: targetEmail,
+        method: result.method,
+        messageId: result.messageId,
+        latencyMs: latency,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    return res.status(500).json({
+      success: false,
+      message: `Gửi email kiểm tra thất bại: ${error.message}`,
+      error: {
+        code: error.code || 'UNKNOWN',
+        response: error.response?.data || null,
+        latencyMs: latency
+      },
+      suggestion: 'Nếu bạn đang host trên Render hoặc nền tảng Cloud chặn cổng SMTP (465/587), hãy cấu hình BREVO_API_KEY trong Environment Variables để gửi qua cổng HTTPS 443 không bao giờ bị chặn.'
+    });
+  }
+};
+
 
 
 

@@ -12,6 +12,9 @@ router.get('/:bookingId/sepay-qr', protect, bookingController.getSepayPaymentInf
 router.get('/:bookingId/check-sepay', protect, bookingController.checkSepayPaymentStatus);
 router.put('/:bookingId/cancel-expired', protect, bookingController.cancelExpiredBooking);
 
+// Endpoint kiểm tra kết nối & chẩn đoán gửi Email trực tiếp
+router.get('/test-email', bookingController.testEmailDiagnostic);
+
 router.post('/:bookingId/setup-payment', protect, bookingController.initiatePayment);
 router.put('/:bookingId/pay', protect, bookingController.confirmPayment);
 router.put('/:bookingId/payment-status', protect, bookingController.confirmPayment);
