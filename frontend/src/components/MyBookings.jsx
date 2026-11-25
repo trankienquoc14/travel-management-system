@@ -458,6 +458,25 @@ const MyBookings = () => {
     const navigate = useNavigate();
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [requestType, setRequestType] = useState('Cancel');
+    const [resendingEmailId, setResendingEmailId] = useState(null);
+
+    const handleResendEmail = async (bookingId) => {
+        try {
+            setResendingEmailId(bookingId);
+            const token = localStorage.getItem('token');
+            const res = await axios.post(`${GATEWAY_URL}/api/bookings/${bookingId}/resend-email?type=payment`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setAlertMsg({ type: 'success', text: `✅ ${res.data.message || 'Đã gửi lại vé điện tử về email thành công!'}` });
+            }
+        } catch (err) {
+            const errMsg = err.response?.data?.message || err.message;
+            setAlertMsg({ type: 'error', text: `⚠️ Không thể gửi email: ${errMsg}. Vui lòng cấu hình API gửi thư (Brevo/Resend) trên máy chủ Cloud.` });
+        } finally {
+            setResendingEmailId(null);
+        }
+    };
     const [reason, setReason] = useState('');
     const [agreePolicy, setAgreePolicy] = useState(false);
     const [showPolicyTable, setShowPolicyTable] = useState(false);
@@ -1019,6 +1038,31 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                                     >
                                                         👁️ Xem Chi Tiết Đơn
                                                     </button>
+
+                                                    {/* Nút Gửi lại vé về Email khi đơn đã thanh toán */}
+                                                    {booking.payment_status === 'Paid' && (
+                                                        <button
+                                                            onClick={() => handleResendEmail(booking.booking_id)}
+                                                            disabled={resendingEmailId === booking.booking_id}
+                                                            title="Gửi lại vé điện tử chính thức về địa chỉ email của bạn"
+                                                            style={{
+                                                                padding: '10px 14px',
+                                                                backgroundColor: '#f0fdf4',
+                                                                color: '#166534',
+                                                                border: '1px solid #bbf7d0',
+                                                                borderRadius: '12px',
+                                                                cursor: resendingEmailId === booking.booking_id ? 'not-allowed' : 'pointer',
+                                                                fontWeight: '700',
+                                                                fontSize: '13px',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                        >
+                                                            {resendingEmailId === booking.booking_id ? '⏳ Đang gửi mail...' : '📧 Gửi lại vé về Email'}
+                                                        </button>
+                                                    )}
 
                                                     {/* Luồng chính 1: Khách hàng chọn tour có trạng thái "Đã hoàn thành" và nhấn nút "Đánh giá chuyến đi" */}
                                                     {isBookingCompleted(booking) && booking.booking_status !== 'Cancelled' && (
@@ -1590,9 +1634,18 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                 </button>
                             )}
                             {!detailBooking.isService && detailBooking.payment_status === 'Paid' && (
-                                <button onClick={() => setTicketBooking(detailBooking)} style={{ padding: '10px 24px', background: detailBooking.booking_status === 'Cancelled' ? '#ef4444' : '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <i className="fas fa-print"></i> {detailBooking.booking_status === 'Cancelled' ? 'Xem Vé (Đã Hủy)' : 'In Vé Điện Tử'}
-                                </button>
+                                <>
+                                    <button onClick={() => setTicketBooking(detailBooking)} style={{ padding: '10px 24px', background: detailBooking.booking_status === 'Cancelled' ? '#ef4444' : '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="fas fa-print"></i> {detailBooking.booking_status === 'Cancelled' ? 'Xem Vé (Đã Hủy)' : 'In Vé Điện Tử'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleResendEmail(detailBooking.booking_id)}
+                                        disabled={resendingEmailId === detailBooking.booking_id}
+                                        style={{ padding: '10px 20px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        {resendingEmailId === detailBooking.booking_id ? '⏳ Đang gửi mail...' : '📧 Gửi lại vé về Email'}
+                                    </button>
+                                </>
                             )}
                             <button onClick={() => setDetailBooking(null)} style={{ padding: '10px 24px', background: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
                                 Đóng cửa sổ
