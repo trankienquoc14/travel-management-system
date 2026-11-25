@@ -5,6 +5,7 @@ import html2pdf from 'html2pdf.js';
 import CustomerNavbar from './CustomerNavbar';
 import CustomerFooter from './CustomerFooter';
 import SepayPaymentModal from './SepayPaymentModal';
+import ReschedulePaymentModal from './ReschedulePaymentModal';
 import TourReviewModal from './TourReviewModal';
 import { Star } from 'lucide-react';
 import { useRealtime } from '../services/realtimeService';
@@ -276,32 +277,32 @@ const calculatePolicyDetails = (booking, reqType) => {
 
     if (reqType === 'Cancel') {
         if (days >= 30) {
-            feePercentage = 10;
-            tierLabel = 'Trước ngày đi ≥ 30 ngày (Khấu trừ 10%)';
+            feePercentage = 0;
+            tierLabel = 'Trước ngày đi ≥ 30 ngày (Miễn phí 0% - Hoàn 100%)';
             color = '#15803d';
             bgColor = '#f0fdf4';
             borderColor = '#bbf7d0';
         } else if (days >= 15) {
             feePercentage = 30;
-            tierLabel = 'Trước ngày đi 15 - 29 ngày (Khấu trừ 30%)';
+            tierLabel = 'Từ 15 – 30 ngày (Khấu trừ 30% - Hoàn 70%)';
             color = '#ca8a04';
             bgColor = '#fefce8';
             borderColor = '#fef08a';
         } else if (days >= 7) {
             feePercentage = 50;
-            tierLabel = 'Trước ngày đi 7 - 14 ngày (Khấu trừ 50%)';
+            tierLabel = 'Từ 7 – 14 ngày (Khấu trừ 50% - Hoàn 50%)';
             color = '#d97706';
             bgColor = '#fffbeb';
             borderColor = '#fde68a';
         } else if (days >= 3) {
             feePercentage = 75;
-            tierLabel = 'Trước ngày đi 3 - 6 ngày (Khấu trừ 75%)';
+            tierLabel = 'Từ 3 – 6 ngày (Khấu trừ 75% - Hoàn 25%)';
             color = '#ea580c';
             bgColor = '#fff7ed';
             borderColor = '#ffedd5';
         } else {
             feePercentage = 100;
-            tierLabel = 'Dưới 3 ngày trước khởi hành (Không hoàn tiền)';
+            tierLabel = 'Dưới 3 ngày trước khởi hành (Không hoàn tiền - 100%)';
             color = '#dc2626';
             bgColor = '#fef2f2';
             borderColor = '#fecaca';
@@ -326,25 +327,25 @@ const calculatePolicyDetails = (booking, reqType) => {
         let canReschedule = true;
         if (days >= 30) {
             feePercentage = 0;
-            tierLabel = 'Trước ngày đi ≥ 30 ngày (Miễn phí 1 lần)';
+            tierLabel = 'Trước ngày đi ≥ 30 ngày (Miễn phí 0%)';
             color = '#15803d';
             bgColor = '#f0fdf4';
             borderColor = '#bbf7d0';
         } else if (days >= 15) {
-            feePercentage = 10;
-            tierLabel = 'Trước ngày đi 15 - 29 ngày (Phí đổi 10%)';
+            feePercentage = 15;
+            tierLabel = 'Từ 15 – 30 ngày (Phí đổi 15%)';
             color = '#ca8a04';
             bgColor = '#fefce8';
             borderColor = '#fef08a';
         } else if (days >= 7) {
-            feePercentage = 20;
-            tierLabel = 'Trước ngày đi 7 - 14 ngày (Phí đổi 20%)';
+            feePercentage = 30;
+            tierLabel = 'Từ 7 – 14 ngày (Phí đổi 30%)';
             color = '#d97706';
             bgColor = '#fffbeb';
             borderColor = '#fde68a';
         } else if (days >= 3) {
-            feePercentage = 40;
-            tierLabel = 'Trước ngày đi 3 - 6 ngày (Phí đổi 40%)';
+            feePercentage = 45;
+            tierLabel = 'Từ 3 – 6 ngày (Phí đổi 45%)';
             color = '#ea580c';
             bgColor = '#fff7ed';
             borderColor = '#ffedd5';
@@ -484,6 +485,8 @@ const MyBookings = () => {
     const [availableDepartures, setAvailableDepartures] = useState([]);
     const [selectedNewDepartureId, setSelectedNewDepartureId] = useState('');
     const [loadingDepartures, setLoadingDepartures] = useState(false);
+    const [reschedulePayMethod, setReschedulePayMethod] = useState('QR'); // 'QR' hoặc 'Cash'
+    const [rescheduleModalBookingId, setRescheduleModalBookingId] = useState(null);
 
     const loadDeparturesForBooking = async (booking) => {
         if (!booking || !booking.tour_id) return;
@@ -653,21 +656,38 @@ const MyBookings = () => {
                 booking_id: selectedBooking.booking_id,
                 request_type: requestType,
                 reason: fullReason,
-                new_departure_id: requestType === 'Reschedule' ? selectedNewDepartureId : null
+                new_departure_id: requestType === 'Reschedule' ? selectedNewDepartureId : null,
+                payment_method: requestType === 'Reschedule' ? reschedulePayMethod : undefined
             };
             const res = await axios.post(`${GATEWAY_URL}/api/bookings/change-requests`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             if (res.data && res.data.success) {
-                setAlertMsg({ type: 'success', text: res.data.message || '🎉 Thao tác xử lý yêu cầu thành công!' });
+                const bId = selectedBooking.booking_id;
                 setSelectedBooking(null);
                 setReason('');
                 setAgreePolicy(false);
                 setRefundBankInfo({ bankName: '', accountNumber: '', accountHolder: '' });
                 setSelectedNewDepartureId('');
                 setAvailableDepartures([]);
-                fetchMyBookings();
+
+                if (requestType === 'Reschedule') {
+                    if (res.data.auto_approved) {
+                        setAlertMsg({ type: 'success', text: res.data.message || '🎉 Đã đổi lịch trình thành công (Miễn phí 100%)!' });
+                        fetchMyBookings();
+                    } else if (reschedulePayMethod === 'QR') {
+                        setAlertMsg({ type: 'info', text: 'Quý khách vui lòng quét mã VietQR để hệ thống tự động đổi lịch ngay lập tức!' });
+                        setRescheduleModalBookingId(bId);
+                        fetchMyBookings();
+                    } else {
+                        setAlertMsg({ type: 'success', text: res.data.message || 'Đã gửi yêu cầu đổi lịch! Quý khách vui lòng đến quầy văn phòng công ty để nộp phí bằng tiền mặt.' });
+                        fetchMyBookings();
+                    }
+                } else {
+                    setAlertMsg({ type: 'success', text: res.data.message || '🎉 Thao tác xử lý yêu cầu thành công!' });
+                    fetchMyBookings();
+                }
             }
         } catch (error) {
             console.error("Lỗi gửi yêu cầu hủy/đổi lịch:", error);
@@ -948,7 +968,15 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                                         </h3>
                                                     </div>
 
-                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                        {Number(booking.reschedule_count || 0) >= 1 && (
+                                                            <span style={{
+                                                                padding: '4px 10px', background: '#eff6ff', color: '#1d4ed8',
+                                                                border: '1px solid #bfdbfe', borderRadius: '12px', fontSize: '12px', fontWeight: '800'
+                                                            }}>
+                                                                🔄 Đã đổi lịch (1/1 lần)
+                                                            </span>
+                                                        )}
                                                         {renderStatusBadge(booking.booking_status, booking)}
                                                         {renderPaymentBadge(booking.payment_status)}
                                                     </div>
@@ -1096,20 +1124,44 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                                     {/* Nút Hủy / Đổi Lịch: Chỉ hiển thị cho những đơn tour còn thời gian hủy/đổi (trước khởi hành >= 3 ngày và chưa hoàn thành/chưa hủy) */}
                                                     {allowCancelOrReschedule ? (
                                                         booking.change_request_status === 'Pending' ? (
-                                                            <span style={{ 
-                                                                padding: '8px 14px', 
-                                                                background: '#fef3c7', 
-                                                                color: '#b45309', 
-                                                                border: '1px solid #fde68a', 
-                                                                borderRadius: '12px', 
-                                                                fontWeight: '700', 
-                                                                fontSize: '12.5px',
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                gap: '6px'
-                                                            }}>
-                                                                ⏳ Chờ duyệt {booking.change_request_type === 'Cancel' ? 'Hủy tour' : 'Đổi lịch'}
-                                                            </span>
+                                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                                <span style={{ 
+                                                                    padding: '8px 14px', 
+                                                                    background: '#fef3c7', 
+                                                                    color: '#b45309', 
+                                                                    border: '1px solid #fde68a', 
+                                                                    borderRadius: '12px', 
+                                                                    fontWeight: '700', 
+                                                                    fontSize: '12.5px',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '6px'
+                                                                }}>
+                                                                    ⏳ Chờ {booking.change_request_type === 'Cancel' ? 'quyết toán Hủy tour' : 'hoàn tất Đổi lịch'}
+                                                                </span>
+                                                                {booking.change_request_type === 'Reschedule' && Number(booking.change_request_fee_amount || 0) > 0 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setRescheduleModalBookingId(booking.booking_id)}
+                                                                        style={{
+                                                                            padding: '8px 14px',
+                                                                            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                                                            color: '#ffffff',
+                                                                            borderRadius: '12px',
+                                                                            border: 'none',
+                                                                            fontWeight: '800',
+                                                                            fontSize: '12.5px',
+                                                                            cursor: 'pointer',
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '6px',
+                                                                            boxShadow: '0 4px 12px rgba(37,99,235,0.25)'
+                                                                        }}
+                                                                    >
+                                                                        <span>💳 Quét Mã QR Phí Đổi Lịch ({Number(booking.change_request_fee_amount).toLocaleString('vi-VN')} ₫)</span>
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         ) : (
                                                             <button
                                                                 onClick={() => {
@@ -1994,34 +2046,73 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                             </div>
 
                             {/* Tab chuyển Loại Yêu Cầu */}
-                            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => { setRequestType('Cancel'); setAgreePolicy(false); }}
-                                    style={{
-                                        flex: 1, padding: '12px', border: `2px solid ${requestType === 'Cancel' ? '#ef4444' : '#e2e8f0'}`,
-                                        borderRadius: '14px', cursor: 'pointer', textAlign: 'center', fontWeight: '800', fontSize: '14px',
-                                        color: requestType === 'Cancel' ? '#dc2626' : '#64748b',
-                                        backgroundColor: requestType === 'Cancel' ? '#fef2f2' : '#ffffff',
-                                        transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                    }}
-                                >
-                                    <span>❌ Xin Hủy Tour</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { setRequestType('Reschedule'); setAgreePolicy(false); loadDeparturesForBooking(selectedBooking); }}
-                                    style={{
-                                        flex: 1, padding: '12px', border: `2px solid ${requestType === 'Reschedule' ? '#2563eb' : '#e2e8f0'}`,
-                                        borderRadius: '14px', cursor: 'pointer', textAlign: 'center', fontWeight: '800', fontSize: '14px',
-                                        color: requestType === 'Reschedule' ? '#2563eb' : '#64748b',
-                                        backgroundColor: requestType === 'Reschedule' ? '#eff6ff' : '#ffffff',
-                                        transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                    }}
-                                >
-                                    <span>🔄 Xin Đổi Ngày Đi</span>
-                                </button>
-                            </div>
+                            {(() => {
+                                const hasRescheduled = Number(selectedBooking.reschedule_count || 0) >= 1;
+                                return (
+                                    <>
+                                        <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setRequestType('Cancel'); setAgreePolicy(false); }}
+                                                style={{
+                                                    flex: 1, padding: '12px', border: `2px solid ${requestType === 'Cancel' ? '#ef4444' : '#e2e8f0'}`,
+                                                    borderRadius: '14px', cursor: 'pointer', textAlign: 'center', fontWeight: '800', fontSize: '14px',
+                                                    color: requestType === 'Cancel' ? '#dc2626' : '#64748b',
+                                                    backgroundColor: requestType === 'Cancel' ? '#fef2f2' : '#ffffff',
+                                                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                                }}
+                                            >
+                                                <span>❌ Xin Hủy Tour</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={hasRescheduled}
+                                                onClick={() => {
+                                                    if (hasRescheduled) return;
+                                                    setRequestType('Reschedule');
+                                                    setAgreePolicy(false);
+                                                    loadDeparturesForBooking(selectedBooking);
+                                                }}
+                                                style={{
+                                                    flex: 1, padding: '12px',
+                                                    border: `2px solid ${hasRescheduled ? '#e2e8f0' : (requestType === 'Reschedule' ? '#2563eb' : '#e2e8f0')}`,
+                                                    borderRadius: '14px',
+                                                    cursor: hasRescheduled ? 'not-allowed' : 'pointer',
+                                                    textAlign: 'center', fontWeight: '800', fontSize: '14px',
+                                                    color: hasRescheduled ? '#94a3b8' : (requestType === 'Reschedule' ? '#2563eb' : '#64748b'),
+                                                    backgroundColor: hasRescheduled ? '#f8fafc' : (requestType === 'Reschedule' ? '#eff6ff' : '#ffffff'),
+                                                    opacity: hasRescheduled ? 0.6 : 1,
+                                                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                                    flexDirection: 'column'
+                                                }}
+                                                title={hasRescheduled ? 'Đơn hàng này đã đổi lịch 1 lần. Theo quy định công ty, mỗi đơn chỉ được đổi lịch tối đa 1 lần duy nhất.' : ''}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span>🔄 Xin Đổi Ngày Đi</span>
+                                                </div>
+                                                {hasRescheduled && (
+                                                    <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>
+                                                        (Đã dùng 1 lần duy nhất)
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        {hasRescheduled && (
+                                            <div style={{
+                                                backgroundColor: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: '12px',
+                                                padding: '12px 16px', marginBottom: '18px', color: '#be123c', fontSize: '13px',
+                                                display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.5
+                                            }}>
+                                                <span style={{ fontSize: '22px' }}>⚠️</span>
+                                                <div>
+                                                    <strong>Thông báo quy định:</strong> Đơn hàng này đã thực hiện đổi lịch 1 lần trước đó. Theo chính sách công ty, <strong>mỗi đơn tour chỉ được phép đổi lịch 1 lần duy nhất</strong>. Nếu quý khách không thể tham gia, vui lòng chọn <strong>"Xin Hủy Tour"</strong> để được xử lý hoàn tiền theo quy định.
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
 
                             {/* FORM TÍNH TIỀN & CẢNH BÁO TÀI CHÍNH TỰ ĐỘNG */}
                             <div style={{
@@ -2143,33 +2234,33 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                             <tbody>
                                                 <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: policy.daysLeft >= 30 ? '#f0fdf4' : '#fff' }}>
                                                     <td style={{ padding: '10px 12px', fontWeight: '600' }}>Trước ≥ 30 ngày</td>
-                                                    <td style={{ padding: '10px 12px', color: '#dc2626', fontWeight: '700' }}>10%</td>
-                                                    <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Hoàn 90%</td>
-                                                    <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Miễn phí 0%</td>
+                                                    <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Free (0%)</td>
+                                                    <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Hoàn 100%</td>
+                                                    <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>0 (Miễn phí)</td>
                                                 </tr>
                                                 <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: (policy.daysLeft >= 15 && policy.daysLeft < 30) ? '#fefce8' : '#fafafa' }}>
-                                                    <td style={{ padding: '10px 12px', fontWeight: '600' }}>Từ 15 – 29 ngày</td>
+                                                    <td style={{ padding: '10px 12px', fontWeight: '600' }}>Từ 15 – 30 ngày</td>
                                                     <td style={{ padding: '10px 12px', color: '#dc2626', fontWeight: '700' }}>30%</td>
                                                     <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Hoàn 70%</td>
-                                                    <td style={{ padding: '10px 12px', color: '#2563eb', fontWeight: '700' }}>10%</td>
+                                                    <td style={{ padding: '10px 12px', color: '#2563eb', fontWeight: '700' }}>15%</td>
                                                 </tr>
                                                 <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: (policy.daysLeft >= 7 && policy.daysLeft < 15) ? '#fffbeb' : '#fff' }}>
                                                     <td style={{ padding: '10px 12px', fontWeight: '600' }}>Từ 7 – 14 ngày</td>
                                                     <td style={{ padding: '10px 12px', color: '#dc2626', fontWeight: '700' }}>50%</td>
                                                     <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Hoàn 50%</td>
-                                                    <td style={{ padding: '10px 12px', color: '#2563eb', fontWeight: '700' }}>20%</td>
+                                                    <td style={{ padding: '10px 12px', color: '#2563eb', fontWeight: '700' }}>30%</td>
                                                 </tr>
                                                 <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: (policy.daysLeft >= 3 && policy.daysLeft < 7) ? '#fff7ed' : '#fafafa' }}>
                                                     <td style={{ padding: '10px 12px', fontWeight: '600' }}>Từ 3 – 6 ngày</td>
                                                     <td style={{ padding: '10px 12px', color: '#dc2626', fontWeight: '700' }}>75%</td>
                                                     <td style={{ padding: '10px 12px', color: '#16a34a', fontWeight: '700' }}>Hoàn 25%</td>
-                                                    <td style={{ padding: '10px 12px', color: '#2563eb', fontWeight: '700' }}>40%</td>
+                                                    <td style={{ padding: '10px 12px', color: '#2563eb', fontWeight: '700' }}>45%</td>
                                                 </tr>
                                                 <tr style={{ backgroundColor: (policy.daysLeft !== null && policy.daysLeft < 3) ? '#fef2f2' : '#fff' }}>
                                                     <td style={{ padding: '10px 12px', fontWeight: '600' }}>Dưới 3 ngày (&lt; 72h)</td>
                                                     <td style={{ padding: '10px 12px', color: '#b91c1c', fontWeight: '800' }}>100%</td>
-                                                    <td style={{ padding: '10px 12px', color: '#b91c1c', fontWeight: '800' }}>Không hoàn tiền</td>
-                                                    <td style={{ padding: '10px 12px', color: '#64748b' }}>Không hỗ trợ đổi</td>
+                                                    <td style={{ padding: '10px 12px', color: '#b91c1c', fontWeight: '800' }}>0% (Không hoàn)</td>
+                                                    <td style={{ padding: '10px 12px', color: '#64748b', fontWeight: '700' }}>100 / Không hỗ trợ</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -2251,15 +2342,86 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                     </div>
                                 )}
 
+                                {/* HƯỚNG DẪN / PHƯƠNG THỨC THANH TOÁN CHO ĐỔI LỊCH */}
+                                {requestType === 'Reschedule' && policy.feeAmount === 0 && (
+                                    <div style={{
+                                        backgroundColor: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '14px',
+                                        padding: '14px 18px', marginBottom: '20px', color: '#166534', fontSize: '13.5px', lineHeight: 1.5
+                                    }}>
+                                        ✨ <strong>Đổi lịch miễn phí 100%:</strong> Đơn hàng gửi yêu cầu trước ngày khởi hành ≥ 30 ngày nên hoàn toàn <strong>miễn phí phụ thu (0 ₫)</strong>. Sau khi xác nhận, hệ thống sẽ <strong>tự động đổi lịch ngay lập tức</strong> mà không cần nhân viên duyệt!
+                                    </div>
+                                )}
+
+                                {requestType === 'Reschedule' && policy.feeAmount > 0 && (
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '13.5px', color: '#1e293b', marginBottom: '8px' }}>
+                                            💳 Chọn Hình Thức Thanh Toán Phí Đổi Lịch ({formatCurrency(policy.feeAmount)}):
+                                        </label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div
+                                                onClick={() => setReschedulePayMethod('QR')}
+                                                style={{
+                                                    padding: '14px', borderRadius: '14px', cursor: 'pointer',
+                                                    border: `2px solid ${reschedulePayMethod === 'QR' ? '#2563eb' : '#e2e8f0'}`,
+                                                    backgroundColor: reschedulePayMethod === 'QR' ? '#eff6ff' : '#ffffff',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                                    <input
+                                                        type="radio"
+                                                        name="reschedulePayMethod"
+                                                        checked={reschedulePayMethod === 'QR'}
+                                                        onChange={() => setReschedulePayMethod('QR')}
+                                                        style={{ accentColor: '#2563eb' }}
+                                                    />
+                                                    <strong style={{ fontSize: '13.5px', color: reschedulePayMethod === 'QR' ? '#1d4ed8' : '#1e293b' }}>
+                                                        ⚡ Thanh toán QR (Tự động 24/7)
+                                                    </strong>
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4, paddingLeft: '22px' }}>
+                                                    Quét mã VietQR. Hệ thống SePay nhận tiền và <strong>tự động đổi lịch ngay lập tức</strong>, không cần nhân viên duyệt.
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                onClick={() => setReschedulePayMethod('Cash')}
+                                                style={{
+                                                    padding: '14px', borderRadius: '14px', cursor: 'pointer',
+                                                    border: `2px solid ${reschedulePayMethod === 'Cash' ? '#d97706' : '#e2e8f0'}`,
+                                                    backgroundColor: reschedulePayMethod === 'Cash' ? '#fffbeb' : '#ffffff',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                                    <input
+                                                        type="radio"
+                                                        name="reschedulePayMethod"
+                                                        checked={reschedulePayMethod === 'Cash'}
+                                                        onChange={() => setReschedulePayMethod('Cash')}
+                                                        style={{ accentColor: '#d97706' }}
+                                                    />
+                                                    <strong style={{ fontSize: '13.5px', color: reschedulePayMethod === 'Cash' ? '#b45309' : '#1e293b' }}>
+                                                        🏢 Nộp tiền mặt tại văn phòng
+                                                    </strong>
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4, paddingLeft: '22px' }}>
+                                                    Đến văn phòng công ty nộp tiền mặt. Nhân viên xác nhận thu tiền và hoàn tất đổi lịch (hoặc hủy yêu cầu nếu đổi ý).
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* LÝ DO CHI TIẾT */}
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', fontWeight: '700', fontSize: '14px', color: '#334155', marginBottom: '8px' }}>
-                                        {requestType === 'Cancel' ? 'Lý do hủy tour chi tiết:' : 'Ngày khởi hành mong muốn mới & Lý do đổi:'}
+                                        {requestType === 'Cancel' ? 'Lý do hủy tour chi tiết:' : 'Ghi chú thêm về yêu cầu đổi lịch:'}
                                     </label>
                                     <textarea
                                         rows={3}
                                         required
-                                        placeholder={requestType === 'Cancel' ? 'Nhập lý do bạn muốn hủy chuyến đi...' : 'Ví dụ: Tôi muốn dời lịch sang ngày 25/11 do có việc bận đột xuất...'}
+                                        placeholder={requestType === 'Cancel' ? 'Nhập lý do bạn muốn hủy chuyến đi...' : 'Ví dụ: Tôi muốn dời lịch sang ngày mới do có việc bận đột xuất...'}
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
                                         style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
@@ -2277,7 +2439,7 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                                 style={{ marginTop: '3px', width: '18px', height: '18px', accentColor: '#0f172a', cursor: 'pointer' }}
                                             />
                                             <span>
-                                                <strong>Tôi xác nhận đã đọc, hiểu rõ mức phí khấu trừ {policy.feePercentage}% ({formatCurrency(policy.feeAmount)})</strong> và đồng ý với chính sách xử lý của công ty du lịch.
+                                                <strong>Tôi xác nhận đã đọc, hiểu rõ mức phí {policy.feePercentage}% ({formatCurrency(policy.feeAmount)})</strong> và đồng ý với chính sách xử lý của công ty du lịch.
                                             </span>
                                         </label>
                                     </div>
@@ -2308,7 +2470,13 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                         {submitting ? 'Đang gửi...' : (
                                             requestType === 'Cancel'
                                                 ? `Xác Nhận Hủy Tour ${policy.refundAmount > 0 ? `(Hoàn ${formatCurrency(policy.refundAmount)})` : ''}`
-                                                : 'Xác Nhận Gửi Yêu Cầu Đổi Lịch'
+                                                : (policy.feeAmount === 0
+                                                    ? '🚀 Xác Nhận Đổi Lịch Ngay (Miễn Phí 0 ₫)'
+                                                    : (reschedulePayMethod === 'QR'
+                                                        ? `💳 Quét Mã QR & Đổi Lịch Tự Động (${formatCurrency(policy.feeAmount)})`
+                                                        : `🏢 Xác Nhận Đến Văn Phòng Nộp Tiền Mặt (${formatCurrency(policy.feeAmount)})`
+                                                      )
+                                                  )
                                         )}
                                     </button>
                                 </div>
@@ -2320,6 +2488,63 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
 
             {/* MODAL 5: CỔNG THANH TOÁN REALTIME SEPAY */}
             {sepayModalData && (
+                <SepayPaymentModal
+                    bookingId={sepayModalData.bookingId}
+                    type={sepayModalData.type}
+                    onClose={() => {
+                        setSepayModalData(null);
+                        fetchMyBookings();
+                        fetchMyServices();
+                    }}
+                    onSuccess={() => {
+                        setAlertMsg({
+                            type: 'success',
+                            text: `🎉 Thanh toán thành công qua SePay Realtime! Đơn hàng #${sepayModalData.bookingId} đã được tự động xác nhận.`
+                        });
+                        fetchMyBookings();
+                        fetchMyServices();
+                    }}
+                    onViewTicket={async (bId) => {
+                        setSepayModalData(null);
+                        try {
+                            const token = localStorage.getItem('token');
+                            const res = await axios.get(`${GATEWAY_URL}/api/bookings/my-bookings`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (res.data?.success) {
+                                const found = res.data.data.find(b => String(b.booking_id) === String(bId));
+                                if (found) setSelectedTicket(found);
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }}
+                    onViewDetail={(bId) => {
+                        setSepayModalData(null);
+                        const found = bookings.find(b => String(b.booking_id) === String(bId));
+                        if (found) setSelectedDetailBooking(found);
+                    }}
+                />
+            )}
+
+            {/* MODAL 6: CỔNG THANH TOÁN PHỤ THU ĐỔI LỊCH TOUR SEPAY VIETQR */}
+            {rescheduleModalBookingId && (
+                <ReschedulePaymentModal
+                    bookingId={rescheduleModalBookingId}
+                    onClose={() => {
+                        setRescheduleModalBookingId(null);
+                        fetchMyBookings();
+                    }}
+                    onSuccess={() => {
+                        setAlertMsg({
+                            type: 'success',
+                            text: `🎉 Thanh toán phí đổi lịch thành công! Hệ thống đã tự động cập nhật ngày khởi hành mới cho đơn hàng #${rescheduleModalBookingId}.`
+                        });
+                        setRescheduleModalBookingId(null);
+                        fetchMyBookings();
+                    }}
+                />
+            )}
                 <SepayPaymentModal
                     bookingId={sepayModalData.bookingId}
                     type={sepayModalData.type}

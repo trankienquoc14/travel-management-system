@@ -294,6 +294,11 @@ exports.getMyBookings = async (req, res) => {
         (SELECT fee_amount FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_fee_amount,
         (SELECT refund_amount FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_refund_amount,
         (SELECT days_before_departure FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_days,
+        (SELECT COUNT(*) FROM booking_change_requests WHERE booking_id = b.booking_id AND request_type = 'Reschedule' AND status = 'Approved') AS reschedule_count,
+        (SELECT change_id FROM booking_change_requests WHERE booking_id = b.booking_id AND status = 'Pending' LIMIT 1) AS pending_change_request_id,
+        (SELECT request_type FROM booking_change_requests WHERE booking_id = b.booking_id AND status = 'Pending' LIMIT 1) AS pending_change_request_type,
+        (SELECT new_departure_id FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_new_departure_id,
+        (SELECT staff_note FROM booking_change_requests WHERE booking_id = b.booking_id ORDER BY change_id DESC LIMIT 1) AS change_request_staff_note,
         
         COALESCE(t.tour_id, d.tour_id) AS tour_id,
         (SELECT review_id FROM reviews WHERE booking_id = b.booking_id OR (customer_id = b.customer_id AND tour_id = COALESCE(t.tour_id, d.tour_id)) LIMIT 1) AS reviewed_id,
@@ -916,16 +921,148 @@ exports.confirmCashByStaff = async (req, res) => {
 // QUẢN LÝ YÊU CẦU HỦY / ĐỔI LỊCH (BOOKING CHANGE REQUESTS)
 // =========================================================================
 
+// Helper thực hiện đổi lịch tour tự động & cập nhật trạng thái
+const applyRescheduleBooking = async ({ bookingId, changeId, newDepartureId, paymentCode, txAmount, staffId = null, note = '' }) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const [bkRows] = await sequelize.query(`
+      SELECT b.booking_id, b.customer_id, b.departure_id, b.num_people, b.total_amount,
+             COALESCE(t.tour_name, CONCAT('Tour ', cr.destination), 'Tour du lịch') AS tour_name
+      FROM bookings b
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+      WHERE b.booking_id = ?
+    `, { replacements: [bookingId], transaction });
+
+    if (bkRows.length === 0) {
+      await transaction.rollback();
+      throw new Error(`Không tìm thấy đơn hàng #${bookingId}`);
+    }
+
+    const bk = bkRows[0];
+    const oldDepId = bk.departure_id;
+    const numPeople = Number(bk.num_people || 1);
+
+    // Kiểm tra đợt khởi hành mới
+    const [targetDep] = await sequelize.query(`
+      SELECT departure_id, departure_date, available_slots, max_slots, status 
+      FROM departures WHERE departure_id = ?
+    `, { replacements: [newDepartureId], transaction });
+
+    if (targetDep.length === 0 || targetDep[0].status !== 'Open') {
+      await transaction.rollback();
+      throw new Error('Đợt khởi hành mới không tồn tại hoặc đã đóng bán!');
+    }
+
+    if (Number(targetDep[0].available_slots || 0) < numPeople) {
+      await transaction.rollback();
+      throw new Error(`Đợt khởi hành mới chỉ còn ${targetDep[0].available_slots} chỗ trống, không đủ cho ${numPeople} khách!`);
+    }
+
+    // Cập nhật booking sang đợt mới
+    await sequelize.query(`
+      UPDATE bookings SET departure_id = ? WHERE booking_id = ?
+    `, { replacements: [newDepartureId, bookingId], transaction });
+
+    // Hoàn trả chỗ cho đợt cũ
+    if (oldDepId && String(oldDepId) !== String(newDepartureId)) {
+      await sequelize.query(`
+        UPDATE departures SET available_slots = LEAST(max_slots, available_slots + ?) WHERE departure_id = ?
+      `, { replacements: [numPeople, oldDepId], transaction });
+    }
+
+    // Trừ chỗ của đợt mới
+    if (String(oldDepId) !== String(newDepartureId)) {
+      await sequelize.query(`
+        UPDATE departures SET available_slots = GREATEST(0, available_slots - ?) WHERE departure_id = ?
+      `, { replacements: [numPeople, newDepartureId], transaction });
+    }
+
+    // Cập nhật hoặc ghi nhận booking_change_requests
+    const finalNote = note || (paymentCode 
+      ? `Đã thanh toán VietQR tự động qua SePay (${paymentCode}) - Hệ thống tự động đổi lịch thành công` 
+      : 'Hệ thống tự động đổi lịch thành công');
+
+    if (changeId) {
+      await sequelize.query(`
+        UPDATE booking_change_requests 
+        SET status = 'Approved', new_departure_id = ?, staff_note = ?, processed_by = ?
+        WHERE change_id = ?
+      `, { replacements: [newDepartureId, finalNote, staffId, changeId], transaction });
+    } else {
+      await sequelize.query(`
+        INSERT INTO booking_change_requests (booking_id, request_type, reason, new_departure_id, status, staff_note, fee_percentage, fee_amount, refund_amount, processed_by, created_at)
+        VALUES (?, 'Reschedule', 'Đổi lịch tự động', ?, 'Approved', ?, 0, ?, 0, ?, NOW())
+      `, { replacements: [bookingId, newDepartureId, finalNote, txAmount || 0, staffId], transaction });
+    }
+
+    // Ghi nhận thanh toán vào payments nếu có giao dịch chuyển khoản
+    if (paymentCode && txAmount > 0) {
+      await sequelize.query(`
+        INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status, payment_date)
+        VALUES (?, 'VNPAY_QR', ?, ?, 'Success', NOW())
+      `, { replacements: [bookingId, txAmount, paymentCode], transaction });
+    }
+
+    await transaction.commit();
+
+    // Tạo thông báo realtime cho khách hàng
+    try {
+      const depDateStr = new Date(targetDep[0].departure_date).toLocaleDateString('vi-VN');
+      await sequelize.query(`
+        INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
+        VALUES (?, '✅ Đã đổi lịch tour thành công!', ?, 'CHANGE_REQUEST_RESULT', 'CUSTOMER', 0, '/my-bookings', NOW())
+      `, {
+        replacements: [
+          bk.customer_id,
+          `Đơn hàng #${bookingId} (${bk.tour_name}) đã được đổi sang ngày khởi hành mới: ${depDateStr}. Chúc bạn có chuyến đi thật tuyệt vời!`
+        ]
+      });
+    } catch (notifErr) {
+      console.error('Lỗi tạo notification reschedule:', notifErr);
+    }
+
+    notifyBookingEvent('create_change_request', { bookingId });
+    return { success: true, bookingId, newDepartureId, departureDate: targetDep[0].departure_date };
+  } catch (err) {
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+    throw err;
+  }
+};
+
 // 1. Khách hàng gửi yêu cầu Hủy hoặc Đổi Lịch (hoặc Nhân viên tiếp nhận tại quầy)
 exports.createChangeRequest = async (req, res) => {
   try {
-    const { booking_id, request_type, reason, new_departure_id, auto_approve, staff_note } = req.body;
+    const { booking_id, request_type, reason, new_departure_id, auto_approve, staff_note, payment_method } = req.body;
     const userRole = (req.user?.role || '').toUpperCase();
     const isStaffOrAdmin = userRole === 'STAFF' || userRole === 'ADMIN' || userRole === 'MANAGER';
     const currentUserId = req.user?.id || req.user?.user_id || req.user?.userId;
 
     if (!booking_id || !request_type) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã đơn hàng và loại yêu cầu!' });
+    }
+
+    // QUY TẮC BẮT BUỘC: MỖI ĐƠN HÀNG CHỈ ĐƯỢC PHÉP ĐỔI LỊCH 1 LẦN DUY NHẤT
+    if (request_type === 'Reschedule') {
+      const [approvedReschedules] = await sequelize.query(`
+        SELECT COUNT(*) AS count FROM booking_change_requests 
+        WHERE booking_id = ? AND request_type = 'Reschedule' AND status = 'Approved'
+      `, { replacements: [booking_id] });
+
+      if (Number(approvedReschedules[0]?.count || 0) >= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Đơn hàng này đã thực hiện đổi lịch 1 lần trước đó. Theo chính sách của công ty, mỗi đơn tour chỉ được phép đổi lịch 1 lần duy nhất!'
+        });
+      }
+
+      if (!new_departure_id) {
+        return res.status(400).json({ success: false, message: 'Vui lòng chọn đợt khởi hành mới bạn muốn chuyển sang!' });
+      }
     }
 
     // Kiểm tra đơn hàng: khách hàng chỉ xem đơn của mình, Nhân viên/Admin được phép tiếp nhận tại quầy cho mọi đơn
@@ -981,7 +1118,6 @@ exports.createChangeRequest = async (req, res) => {
     const isPaid = booking.payment_status === 'Paid';
 
     // Chặn yêu cầu hủy / đổi lịch nếu đã hết thời gian hủy/đổi theo quy định (< 3 ngày trước ngày khởi hành hoặc đã khởi hành)
-    // Đối với nhân viên tại quầy: Vẫn cho phép tiếp nhận hủy (theo biểu phí 100%) nhưng chặn đổi lịch nếu < 3 ngày
     if (daysBeforeDeparture !== null && daysBeforeDeparture < 3) {
       if (!isStaffOrAdmin) {
         return res.status(400).json({
@@ -1008,8 +1144,14 @@ exports.createChangeRequest = async (req, res) => {
     } else {
       const days = daysBeforeDeparture !== null ? daysBeforeDeparture : 0;
       if (request_type === 'Cancel') {
+        // BIỂU PHÍ HỦY TOUR MỚI:
+        // Trước 30 ngày: Free 0% (Hoàn 100%)
+        // Từ 15 – 30 ngày: 30% (Hoàn 70%)
+        // Từ 7 – 14 ngày: 50% (Hoàn 50%)
+        // Từ 3 – 6 ngày: 75% (Hoàn 25%)
+        // Dưới 3 ngày (< 72h): 100% (Hoàn 0%)
         if (days >= 30) {
-          feePercentage = 10;
+          feePercentage = 0;
         } else if (days >= 15) {
           feePercentage = 30;
         } else if (days >= 7) {
@@ -1022,24 +1164,29 @@ exports.createChangeRequest = async (req, res) => {
         feeAmount = Math.round(totalAmount * (feePercentage / 100));
         refundAmount = Math.max(0, totalAmount - feeAmount);
       } else {
-        // Reschedule
+        // BIỂU PHÍ ĐỔI LỊCH TOUR MỚI:
+        // Trước 30 ngày: 0% (Miễn phí đổi lịch)
+        // Từ 15 – 30 ngày: 15%
+        // Từ 7 – 14 ngày: 30%
+        // Từ 3 – 6 ngày: 45%
+        // Dưới 3 ngày (< 72h): 100% / Không hỗ trợ
         if (days >= 30) {
           feePercentage = 0;
         } else if (days >= 15) {
-          feePercentage = 10;
+          feePercentage = 15;
         } else if (days >= 7) {
-          feePercentage = 20;
+          feePercentage = 30;
         } else if (days >= 3) {
-          feePercentage = 40;
+          feePercentage = 45;
         } else {
-          feePercentage = 100; // Cận ngày không hỗ trợ đổi lịch
+          feePercentage = 100;
         }
         feeAmount = Math.round(totalAmount * (feePercentage / 100));
         refundAmount = 0;
       }
     }
 
-    // ĐẶC BIỆT: Nếu khách xin HỦY đơn chưa thanh toán (Unpaid / Pending) -> Tự động hủy ngay lập tức và giải phóng vé
+    // ĐẶC BIỆT 1: Nếu khách xin HỦY đơn chưa thanh toán (Unpaid / Pending) -> Tự động hủy ngay lập tức và giải phóng vé
     if (request_type === 'Cancel' && !isPaid) {
       await sequelize.query(`
         UPDATE bookings SET booking_status = 'Cancelled' WHERE booking_id = ?
@@ -1075,10 +1222,73 @@ exports.createChangeRequest = async (req, res) => {
       });
     }
 
+    // ĐẶC BIỆT 2: ĐỔI LỊCH TOUR MIỄN PHÍ TRƯỚC ≥ 30 NGÀY (Phí = 0đ) -> TỰ ĐỘNG ĐỔI LỊCH NGAY KHÔNG CẦN DUYỆT
+    if (request_type === 'Reschedule' && feeAmount === 0) {
+      const autoRes = await applyRescheduleBooking({
+        bookingId: booking_id,
+        changeId: null,
+        newDepartureId: new_departure_id,
+        paymentCode: null,
+        txAmount: 0,
+        staffId: isStaffOrAdmin ? currentUserId : null,
+        note: 'Miễn phí đổi lịch 100% (trước ≥ 30 ngày). Hệ thống tự động chuyển ngày khởi hành thành công.'
+      });
+
+      return res.status(200).json({
+        success: true,
+        auto_approved: true,
+        data: {
+          fee_percentage: 0,
+          fee_amount: 0,
+          refund_amount: 0,
+          days_before_departure: daysBeforeDeparture,
+          new_departure_id: new_departure_id
+        },
+        message: '🎉 Đã đổi lịch trình thành công! Đơn hàng của bạn đã được chuyển sang ngày khởi hành mới mà không mất bất kỳ khoản phí nào.'
+      });
+    }
+
     // Kiểm tra xem đã có yêu cầu nào đang chờ xử lý hay chưa
     const [existing] = await sequelize.query(`
-      SELECT change_id FROM booking_change_requests WHERE booking_id = ? AND status = 'Pending'
+      SELECT change_id, request_type, status FROM booking_change_requests WHERE booking_id = ? AND status = 'Pending'
     `, { replacements: [booking_id] });
+
+    if (existing.length > 0) {
+      // Nếu là yêu cầu đổi lịch và khách đang gửi lại cập nhật
+      if (request_type === 'Reschedule' && existing[0].request_type === 'Reschedule') {
+        const existingChangeId = existing[0].change_id;
+        const updatedReason = `${reason || ''}\n[Hình thức: ${payment_method === 'Cash' ? 'Nộp tiền mặt tại văn phòng công ty' : 'Thanh toán QR VietQR/SePay'}]`.trim();
+        const updatedStaffNote = payment_method === 'Cash' 
+          ? `Khách chọn nộp phí đổi lịch bằng tiền mặt tại văn phòng công ty (${feeAmount.toLocaleString('vi-VN')} ₫). Đang chờ khách đến quầy.`
+          : `Chờ khách quét mã VietQR (${feeAmount.toLocaleString('vi-VN')} ₫) để hệ thống tự động đổi lịch.`;
+
+        await sequelize.query(`
+          UPDATE booking_change_requests 
+          SET new_departure_id = ?, reason = ?, fee_percentage = ?, fee_amount = ?, refund_amount = ?, days_before_departure = ?, staff_note = ?
+          WHERE change_id = ?
+        `, {
+          replacements: [new_departure_id, updatedReason, feePercentage, feeAmount, refundAmount, daysBeforeDeparture, updatedStaffNote, existingChangeId]
+        });
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            change_id: existingChangeId,
+            fee_percentage: feePercentage,
+            fee_amount: feeAmount,
+            refund_amount: refundAmount,
+            days_before_departure: daysBeforeDeparture,
+            payment_method: payment_method || 'QR',
+            transfer_content: `DOILICH${booking_id}`
+          },
+          message: payment_method === 'Cash'
+            ? `Đã cập nhật yêu cầu đổi lịch! Quý khách vui lòng đến quầy văn phòng công ty để nộp phí đổi lịch (${feeAmount.toLocaleString('vi-VN')} ₫) bằng tiền mặt.`
+            : `Vui lòng quét mã VietQR để hoàn tất đổi lịch tự động.`
+        });
+      }
+
+      return res.status(400).json({ success: false, message: 'Đơn hàng này đã có yêu cầu đang chờ xử lý!' });
+    }
 
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Đơn hàng này đã có yêu cầu đang chờ nhân viên xử lý!' });
@@ -1197,12 +1407,23 @@ exports.createChangeRequest = async (req, res) => {
       });
     }
 
-    // TẠO YÊU CẦU Ở TRẠNG THÁI PENDING (CHỜ DUYỆT)
+    // TẠO YÊU CẦU Ở TRẠNG THÁI PENDING (CHỜ DUYỆT HOẶC CHỜ THANH TOÁN QR / TIỀN MẶT)
+    const isReschedule = request_type === 'Reschedule';
+    const finalReason = isReschedule 
+      ? `${reason || ''}\n[Hình thức: ${payment_method === 'Cash' ? 'Nộp tiền mặt tại văn phòng công ty' : 'Thanh toán QR trực tiếp'}]`.trim()
+      : (reason || null);
+
+    const initialStaffNote = isReschedule
+      ? (payment_method === 'Cash'
+          ? `Khách chọn nộp phí đổi lịch bằng tiền mặt tại văn phòng công ty (${feeAmount.toLocaleString('vi-VN')} ₫). Đang chờ khách đến quầy.`
+          : `Chờ khách quét mã VietQR (${feeAmount.toLocaleString('vi-VN')} ₫) để hệ thống tự động đổi lịch.`)
+      : null;
+
     const [insertResult] = await sequelize.query(`
-      INSERT INTO booking_change_requests (booking_id, request_type, reason, new_departure_id, status, fee_percentage, fee_amount, refund_amount, days_before_departure, created_at)
-      VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, NOW())
+      INSERT INTO booking_change_requests (booking_id, request_type, reason, new_departure_id, status, staff_note, fee_percentage, fee_amount, refund_amount, days_before_departure, created_at)
+      VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?, NOW())
     `, {
-      replacements: [booking_id, request_type, reason || null, new_departure_id || null, feePercentage, feeAmount, refundAmount, daysBeforeDeparture]
+      replacements: [booking_id, request_type, finalReason, new_departure_id || null, initialStaffNote, feePercentage, feeAmount, refundAmount, daysBeforeDeparture]
     });
 
     // Tạo thông báo realtime cho khách hàng
@@ -1211,7 +1432,9 @@ exports.createChangeRequest = async (req, res) => {
       const notifTitle = isCancel ? '📝 Đã gửi yêu cầu Hủy Tour & Hoàn tiền' : '📝 Đã gửi yêu cầu Đổi Lịch khởi hành';
       const notifContent = isCancel
         ? `Yêu cầu hủy đơn tour #${booking_id} đã được gửi thành công. Mức phí khấu trừ: ${feePercentage}%. Số tiền hoàn lại dự kiến: ${new Intl.NumberFormat('vi-VN').format(refundAmount)}đ. CSKH sẽ liên hệ sớm nhất!`
-        : `Yêu cầu đổi lịch cho đơn tour #${booking_id} đã được gửi thành công. Nhân viên sẽ liên hệ và xử lý cho bạn trong thời gian sớm nhất.`;
+        : (payment_method === 'Cash'
+            ? `Yêu cầu đổi lịch cho đơn tour #${booking_id} đã được tiếp nhận. Quý khách vui lòng đến quầy văn phòng công ty để nộp tiền mặt ${new Intl.NumberFormat('vi-VN').format(feeAmount)}đ.`
+            : `Đã tạo mã thanh toán QR phí đổi lịch (${new Intl.NumberFormat('vi-VN').format(feeAmount)}đ) cho đơn #${booking_id}. Vui lòng chuyển khoản để hệ thống tự động đổi lịch ngay!`);
 
       await sequelize.query(`
         INSERT INTO notifications (user_id, title, content, type, target_role, is_read, action_url, created_at)
@@ -1227,7 +1450,7 @@ exports.createChangeRequest = async (req, res) => {
       `, {
         replacements: [
           `📝 Yêu cầu ${isCancel ? 'Hủy tour' : 'Đổi lịch'} mới cho đơn #${booking_id}`,
-          `Khách hàng vừa gửi yêu cầu ${isCancel ? 'hủy tour & hoàn tiền' : 'đổi lịch'} cho đơn tour #${booking_id}. Vui lòng kiểm tra và xử lý!`
+          `Khách hàng vừa gửi yêu cầu ${isCancel ? 'hủy tour & hoàn tiền' : 'đổi lịch'}${isReschedule && payment_method === 'Cash' ? ' (Nộp tiền mặt tại VP)' : ''} cho đơn tour #${booking_id}. Vui lòng kiểm tra và xử lý!`
         ]
       });
     } catch (notifErr) {
@@ -1243,11 +1466,15 @@ exports.createChangeRequest = async (req, res) => {
         fee_percentage: feePercentage,
         fee_amount: feeAmount,
         refund_amount: refundAmount,
-        days_before_departure: daysBeforeDeparture
+        days_before_departure: daysBeforeDeparture,
+        payment_method: payment_method || (isReschedule ? 'QR' : undefined),
+        transfer_content: isReschedule ? `DOILICH${booking_id}` : undefined
       },
       message: request_type === 'Cancel' 
         ? `Đã gửi yêu cầu Hủy Tour & Hoàn tiền! Mức phí khấu trừ theo quy định là ${feePercentage}% (${feeAmount.toLocaleString('vi-VN')} ₫). Số tiền dự kiến hoàn lại: ${refundAmount.toLocaleString('vi-VN')} ₫. CSKH sẽ liên hệ và giải quyết trong thời gian sớm nhất.` 
-        : `Đã gửi yêu cầu Đổi Lịch khởi hành! Phí đổi lịch theo quy định: ${feePercentage}% (${feeAmount.toLocaleString('vi-VN')} ₫). Nhân viên CSKH sẽ liên hệ hỗ trợ bạn.`
+        : (payment_method === 'Cash'
+            ? `Đã gửi yêu cầu đổi lịch! Quý khách vui lòng đến quầy văn phòng công ty trước ngày khởi hành để nộp phí đổi lịch (${feeAmount.toLocaleString('vi-VN')} ₫) bằng tiền mặt.`
+            : `Vui lòng quét mã VietQR để thanh toán phí phụ thu (${feeAmount.toLocaleString('vi-VN')} ₫) và tự động hoàn tất đổi lịch ngay lập tức.`)
     });
 
   } catch (error) {
@@ -1357,6 +1584,17 @@ exports.processChangeRequest = async (req, res) => {
           `, { replacements: [bk[0].num_people || 1, bk[0].departure_id], transaction });
         }
       } else if (request.request_type === 'Reschedule') {
+        // KIỂM TRA QUY TẮC CHỈ ĐỔI LỊCH 1 LẦN DUY NHẤT
+        const [prevApproved] = await sequelize.query(`
+          SELECT COUNT(*) AS count FROM booking_change_requests 
+          WHERE booking_id = ? AND request_type = 'Reschedule' AND status = 'Approved' AND change_id != ?
+        `, { replacements: [request.booking_id, id], transaction });
+
+        if (Number(prevApproved[0]?.count || 0) >= 1) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Đơn hàng này đã đổi lịch 1 lần trước đó. Không thể duyệt đổi lịch lần thứ hai!' });
+        }
+
         // Đổi sang ngày khởi hành mới (bắt buộc nhân viên phải chọn đợt khởi hành mới hợp lệ)
         const finalNewDepartureId = (new_departure_id !== undefined && new_departure_id !== null && String(new_departure_id).trim() !== '')
           ? new_departure_id 
@@ -1627,7 +1865,7 @@ exports.updateBookingStatus = async (req, res) => {
 
       if (isPaid) {
         const days = daysLeft !== null ? daysLeft : 0;
-        if (days >= 30) feePercentage = 10;
+        if (days >= 30) feePercentage = 0; // Miễn phí hủy trước ≥ 30 ngày (Hoàn 100%)
         else if (days >= 15) feePercentage = 30;
         else if (days >= 7) feePercentage = 50;
         else if (days >= 3) feePercentage = 75;
@@ -2360,6 +2598,188 @@ exports.checkSepayPaymentStatus = async (req, res) => {
     }
 };
 
+// 2.2. Lấy thông tin thanh toán VietQR phí đổi lịch tour
+// GET /api/bookings/:bookingId/reschedule-qr
+exports.getReschedulePaymentInfo = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const [crRows] = await sequelize.query(`
+            SELECT cr.change_id, cr.booking_id, cr.new_departure_id, cr.fee_amount, cr.fee_percentage, cr.status, cr.staff_note,
+                   b.num_people, b.total_amount,
+                   COALESCE(t.tour_name, CONCAT('Tour ', ctr.destination), 'Tour du lịch') AS tour_name,
+                   d.departure_date AS current_departure_date,
+                   nd.departure_date AS requested_departure_date
+            FROM booking_change_requests cr
+            JOIN bookings b ON cr.booking_id = b.booking_id
+            LEFT JOIN departures d ON b.departure_id = d.departure_id
+            LEFT JOIN tours t ON d.tour_id = t.tour_id
+            LEFT JOIN departures nd ON cr.new_departure_id = nd.departure_id
+            LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+            LEFT JOIN custom_tour_requests ctr ON q.request_id = ctr.request_id
+            WHERE cr.booking_id = ? AND cr.request_type = 'Reschedule'
+            ORDER BY cr.change_id DESC LIMIT 1
+        `, { replacements: [bookingId] });
+
+        if (crRows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu đổi lịch cho đơn này!' });
+        }
+
+        const cr = crRows[0];
+        const feeAmount = Math.round(Number(cr.fee_amount || 0));
+        const transferContent = `DOILICH${bookingId}`;
+        const sepayQrUrl = `https://qr.sepay.vn/img?acc=${SEPAY_CONFIG.accountNumber}&bank=${SEPAY_CONFIG.bankName}&amount=${feeAmount}&des=${encodeURIComponent(transferContent)}&template=compact`;
+        const vietQrUrl = `https://img.vietqr.io/image/${SEPAY_CONFIG.bankCode}-${SEPAY_CONFIG.accountNumber}-compact2.png?amount=${feeAmount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(SEPAY_CONFIG.accountName)}`;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                change_id: cr.change_id,
+                booking_id: Number(bookingId),
+                tour_name: cr.tour_name,
+                fee_amount: feeAmount,
+                fee_percentage: Number(cr.fee_percentage || 0),
+                current_departure_date: cr.current_departure_date,
+                requested_departure_date: cr.requested_departure_date,
+                transfer_content: transferContent,
+                status: cr.status,
+                bank: {
+                    bankName: SEPAY_CONFIG.bankName,
+                    bankCode: SEPAY_CONFIG.bankCode,
+                    accountNumber: SEPAY_CONFIG.accountNumber,
+                    accountName: SEPAY_CONFIG.accountName
+                },
+                qr_url: sepayQrUrl,
+                vietqr_url: vietQrUrl
+            }
+        });
+    } catch (error) {
+        console.error('Lỗi getReschedulePaymentInfo:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 2.3. Polling kiểm tra trạng thái thanh toán phí đổi lịch từ SePay (Tự động đổi lịch ngay khi nhận được tiền)
+// GET /api/bookings/:bookingId/check-reschedule-sepay
+exports.checkReschedulePaymentStatus = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const simulate = req.query.simulate === 'true';
+
+        // 1. Kiểm tra yêu cầu đổi lịch gần nhất của booking
+        const [requests] = await sequelize.query(`
+            SELECT change_id, booking_id, request_type, new_departure_id, fee_amount, status, staff_note
+            FROM booking_change_requests
+            WHERE booking_id = ? AND request_type = 'Reschedule'
+            ORDER BY change_id DESC LIMIT 1
+        `, { replacements: [bookingId] });
+
+        if (requests.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu đổi lịch nào cho đơn hàng này!' });
+        }
+
+        const cr = requests[0];
+        const expectedFee = Math.round(Number(cr.fee_amount || 0));
+
+        // Nếu đã được duyệt (Approved) -> Trả về paid = true ngay
+        if (cr.status === 'Approved') {
+            return res.status(200).json({
+                success: true,
+                paid: true,
+                source: 'database',
+                message: '🎉 Yêu cầu đổi lịch đã được xử lý và chuyển ngày thành công!',
+                data: cr
+            });
+        }
+
+        if (cr.status === 'Rejected') {
+            return res.status(200).json({
+                success: false,
+                paid: false,
+                is_rejected: true,
+                message: 'Yêu cầu đổi lịch này đã bị từ chối hoặc hủy bỏ.'
+            });
+        }
+
+        // Hỗ trợ mô phỏng thanh toán thành công (Dành cho kiểm thử)
+        if (simulate) {
+            const fakeRef = 'TEST' + Date.now().toString().slice(-6);
+            await applyRescheduleBooking({
+                bookingId: Number(bookingId),
+                changeId: cr.change_id,
+                newDepartureId: cr.new_departure_id,
+                paymentCode: `DOILICH${bookingId} (Demo #${fakeRef})`,
+                txAmount: expectedFee,
+                note: `Mô phỏng thanh toán VietQR thành công (${fakeRef}) - Hệ thống tự động đổi lịch`
+            });
+            return res.status(200).json({
+                success: true,
+                paid: true,
+                source: 'simulation',
+                message: '🎉 Mô phỏng thanh toán VietQR thành công! Hệ thống đã tự động chuyển lịch trình cho đơn hàng.'
+            });
+        }
+
+        // 2. Tra cứu lịch sử giao dịch từ ngân hàng qua SePay API
+        const transactions = await fetchSepayTransactions(30);
+        const pattern = new RegExp(`(?:DOILICH|DL)0*${bookingId}(?!\\d)`, 'i');
+
+        // Lấy danh sách mã tham chiếu đã được dùng để tránh trùng lặp
+        const [usedPayments] = await sequelize.query(`SELECT transaction_code FROM payments WHERE payment_status = 'Success'`);
+        const usedRefs = new Set();
+        usedPayments.forEach(p => {
+            const code = String(p.transaction_code || '');
+            const m = code.match(/SePay #([a-zA-Z0-9_-]+)/i);
+            if (m && m[1]) usedRefs.add(m[1].toLowerCase());
+        });
+
+        const matchedTx = transactions.find(tx => {
+            const amountIn = Number(tx.amount_in || 0);
+            if (amountIn <= 0) return false;
+
+            const refNumber = String(tx.reference_number || tx.id || '').toLowerCase();
+            if (refNumber && usedRefs.has(refNumber)) return false;
+
+            const rawContent = String(tx.transaction_content || tx.content || '');
+            const cleanContent = rawContent.replace(/[^a-zA-Z0-9]/g, '');
+            const isCodeMatched = pattern.test(cleanContent) || cleanContent.includes(`DOILICH${bookingId}`) || cleanContent.includes(`DL${bookingId}`);
+            if (!isCodeMatched) return false;
+
+            const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT !== 'false';
+            return (amountIn >= expectedFee) || (allowDemo && amountIn >= 1000);
+        });
+
+        if (matchedTx) {
+            await applyRescheduleBooking({
+                bookingId: Number(bookingId),
+                changeId: cr.change_id,
+                newDepartureId: cr.new_departure_id,
+                paymentCode: `DOILICH${bookingId} (SePay #${matchedTx.reference_number || matchedTx.id})`,
+                txAmount: Number(matchedTx.amount_in || expectedFee),
+                note: `Đã thanh toán VietQR tự động qua SePay (GD: SePay #${matchedTx.reference_number || matchedTx.id}) - Hệ thống tự động đổi lịch thành công`
+            });
+
+            return res.status(200).json({
+                success: true,
+                paid: true,
+                source: 'sepay_realtime_api',
+                message: '🎉 Hệ thống SePay đã nhận khoản chuyển khoản phí đổi lịch! Đơn hàng đã được tự động cập nhật lịch trình mới.',
+                transaction: matchedTx
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            paid: false,
+            expected_amount: expectedFee,
+            expected_content: `DOILICH${bookingId}`
+        });
+
+    } catch (error) {
+        console.error('Lỗi checkReschedulePaymentStatus:', error);
+        res.status(200).json({ success: true, paid: false, warning: error.message });
+    }
+};
+
 // 3. Webhook nhận thông báo đẩy trực tiếp từ SePay (Dành cho môi trường Hosting / Production)
 // POST /api/bookings/sepay-webhook
 exports.sepayWebhook = async (req, res) => {
@@ -2391,7 +2811,7 @@ exports.sepayWebhook = async (req, res) => {
         const cleanContent = rawContent.replace(/[^a-zA-Z0-9]/g, '');
         const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT !== 'false';
 
-        // Kiểm tra xem có phải đơn Dịch vụ lẻ (THANHTOANSRV{id} / SRV{id}) không
+        // 1. Kiểm tra đơn Dịch vụ lẻ (THANHTOANSRV{id} / SRV{id})
         const srvMatch = cleanContent.match(/(?:THANHTOANSRV|SRV)0*(\d+)/i);
         if (srvMatch && srvMatch[1]) {
             const serviceBookingId = Number(srvMatch[1]);
@@ -2414,7 +2834,34 @@ exports.sepayWebhook = async (req, res) => {
             return res.status(200).json({ success: true, message: `Processed service booking #${serviceBookingId}` });
         }
 
-        // Kiểm tra đơn Tour (THANHTOAN{id} / DATTOUR{id} / BOOKING{id} / TOUR{id} / BKG{id} / DH{id} / TT{id})
+        // 2. Kiểm tra thanh toán phí ĐỔI LỊCH TOUR (DOILICH{id} / DL{id}) -> TỰ ĐỘNG ĐỔI LỊCH NGAY
+        const rescheduleMatch = cleanContent.match(/(?:DOILICH|DL)0*(\d+)/i);
+        if (rescheduleMatch && rescheduleMatch[1]) {
+            const tourBookingId = Number(rescheduleMatch[1]);
+            const [crRows] = await sequelize.query(`
+                SELECT change_id, booking_id, new_departure_id, fee_amount, status 
+                FROM booking_change_requests 
+                WHERE booking_id = ? AND request_type = 'Reschedule' AND status = 'Pending' 
+                ORDER BY change_id DESC LIMIT 1
+            `, { replacements: [tourBookingId] });
+
+            if (crRows.length > 0 && crRows[0].new_departure_id) {
+                const expectedFee = Math.round(Number(crRows[0].fee_amount || 0));
+                if ((transferAmount >= expectedFee) || (allowDemo && transferAmount >= 1000)) {
+                    await applyRescheduleBooking({
+                        bookingId: tourBookingId,
+                        changeId: crRows[0].change_id,
+                        newDepartureId: crRows[0].new_departure_id,
+                        paymentCode: `DOILICH${tourBookingId} (SePay #${referenceCode})`,
+                        txAmount: transferAmount,
+                        note: `Đã thanh toán VietQR tự động qua SePay (GD: ${referenceCode}) - Hệ thống tự động đổi lịch thành công`
+                    });
+                    return res.status(200).json({ success: true, message: `Auto-approved and processed reschedule for booking #${tourBookingId}` });
+                }
+            }
+        }
+
+        // 3. Kiểm tra đơn Tour (THANHTOAN{id} / DATTOUR{id} / BOOKING{id} / TOUR{id} / BKG{id} / DH{id} / TT{id})
         const tourMatch = cleanContent.match(/(?:THANHTOAN|DATTOUR|BOOKING|TOUR|BKG|DH|TT)0*(\d+)/i);
         if (tourMatch && tourMatch[1]) {
             const tourBookingId = Number(tourMatch[1]);

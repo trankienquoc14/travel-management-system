@@ -100,7 +100,7 @@ const StaffChangeRequestManager = () => {
 
     let feePercent = 0;
     if (reqType === 'Cancel') {
-      if (days >= 30) feePercent = 10;
+      if (days >= 30) feePercent = 0; // Free 0% (Hoàn 100%)
       else if (days >= 15) feePercent = 30;
       else if (days >= 7) feePercent = 50;
       else if (days >= 3) feePercent = 75;
@@ -109,10 +109,10 @@ const StaffChangeRequestManager = () => {
       const refundAmt = Math.max(0, totalAmount - feeAmt);
       return { days, feePercent, feeAmt, refundAmt, isPaid: true };
     } else {
-      if (days >= 30) feePercent = 0;
-      else if (days >= 15) feePercent = 10;
-      else if (days >= 7) feePercent = 20;
-      else if (days >= 3) feePercent = 40;
+      if (days >= 30) feePercent = 0; // 0%
+      else if (days >= 15) feePercent = 15;
+      else if (days >= 7) feePercent = 30;
+      else if (days >= 3) feePercent = 45;
       else feePercent = 100; // Không áp dụng đổi lịch khi < 3 ngày
       const feeAmt = Math.round(totalAmount * (feePercent / 100));
       return { days, feePercent, feeAmt, refundAmt: 0, isPaid: true };
@@ -1218,6 +1218,7 @@ const StaffChangeRequestManager = () => {
         const isCancel = selectedReq.request_type === 'Cancel';
         const isPending = selectedReq.status === 'Pending';
         const isApproved = selectedReq.status === 'Approved';
+        const isCashReschedule = !isCancel && ((selectedReq.reason && selectedReq.reason.includes('tiền mặt')) || (selectedReq.staff_note && selectedReq.staff_note.includes('tiền mặt')));
 
         return (
           <div style={{ 
@@ -1285,6 +1286,23 @@ const StaffChangeRequestManager = () => {
                   }}>
                     1. Thông Tin Yêu Cầu
                   </div>
+
+                  {isCashReschedule && isPending && (
+                    <div style={{
+                      backgroundColor: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '8px',
+                      padding: '12px 16px', marginBottom: '14px', color: '#b45309', fontSize: '13px',
+                      display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.5
+                    }}>
+                      <span style={{ fontSize: '24px' }}>💵</span>
+                      <div>
+                        <strong>Yêu cầu nộp tiền mặt tại văn phòng:</strong> Khách hàng chọn đến trực tiếp quầy văn phòng để nộp phí đổi lịch <strong>{Number(selectedReq.fee_amount || 0).toLocaleString('vi-VN')} ₫</strong>.
+                        <br />
+                        • Khách đến quầy nộp tiền: Nhấn nút <strong>"Xác nhận thu tiền mặt & Đổi lịch"</strong> để hoàn tất.
+                        <br />
+                        • Khách không đến hoặc đổi ý: Nhấn <strong>"Hủy yêu cầu nhận tiền mặt"</strong> (đơn giữ nguyên ngày đi ban đầu).
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ 
                     display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', 
@@ -1559,11 +1577,11 @@ const StaffChangeRequestManager = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Trước ≥ 30 ngày</td><td>10%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 90%</td><td>Miễn phí (0%)</td></tr>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Từ 15 – 29 ngày</td><td>30%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 70%</td><td>10%</td></tr>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Từ 7 – 14 ngày</td><td>50%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 50%</td><td>20%</td></tr>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Từ 3 – 6 ngày</td><td>75%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 25%</td><td>40%</td></tr>
-                            <tr><td style={{ padding: '6px 12px' }}>Dưới 3 ngày (&lt; 72 giờ)</td><td style={{ color: '#b91c1c', fontWeight: '600' }}>100%</td><td style={{ color: '#b91c1c', fontWeight: '600' }}>Không hoàn</td><td>Không áp dụng đổi</td></tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Trước ≥ 30 ngày</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Free (0%)</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 100%</td><td style={{ color: '#15803d', fontWeight: '600' }}>0 (Miễn phí)</td></tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Từ 15 – 30 ngày</td><td>30%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 70%</td><td style={{ color: '#2563eb', fontWeight: '700' }}>15%</td></tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Từ 7 – 14 ngày</td><td>50%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 50%</td><td style={{ color: '#2563eb', fontWeight: '700' }}>30%</td></tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 12px' }}>Từ 3 – 6 ngày</td><td>75%</td><td style={{ color: '#15803d', fontWeight: '600' }}>Hoàn 25%</td><td style={{ color: '#2563eb', fontWeight: '700' }}>45%</td></tr>
+                            <tr><td style={{ padding: '6px 12px' }}>Dưới 3 ngày (&lt; 72 giờ)</td><td style={{ color: '#b91c1c', fontWeight: '700' }}>100%</td><td style={{ color: '#b91c1c', fontWeight: '700' }}>Không hoàn (0%)</td><td style={{ color: '#64748b' }}>100 / Không hỗ trợ</td></tr>
                           </tbody>
                         </table>
                       </div>
@@ -1627,18 +1645,28 @@ const StaffChangeRequestManager = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm(`Xác nhận từ chối yêu cầu của khách hàng ${selectedReq.customer_name}?`)) {
-                          handleProcess('Rejected');
+                        const confirmPrompt = isCashReschedule
+                          ? `Xác nhận hủy yêu cầu đổi lịch bằng tiền mặt của khách hàng ${selectedReq.customer_name}?\nĐơn hàng #${selectedReq.booking_id} sẽ giữ nguyên đợt khởi hành hiện tại.`
+                          : `Xác nhận từ chối yêu cầu của khách hàng ${selectedReq.customer_name}?`;
+                        if (window.confirm(confirmPrompt)) {
+                          handleProcess(
+                            'Rejected',
+                            isCashReschedule 
+                              ? (staffNote ? staffNote : 'Nhân viên hủy yêu cầu do khách hàng không đến nộp tiền mặt hoặc đổi ý.')
+                              : undefined
+                          );
                         }
                       }}
                       disabled={isSubmitting}
                       style={{ 
-                        padding: '8px 18px', backgroundColor: '#ffffff', color: '#dc2626', 
+                        padding: '8px 18px', 
+                        backgroundColor: isCashReschedule ? '#fff1f2' : '#ffffff', 
+                        color: '#dc2626', 
                         border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', 
                         fontWeight: '600', fontSize: '13.5px', transition: 'all 0.15s ease' 
                       }}
                     >
-                      {isSubmitting ? 'Đang xử lý...' : 'Từ chối yêu cầu'}
+                      {isSubmitting ? 'Đang xử lý...' : (isCashReschedule ? '❌ Hủy yêu cầu nhận tiền mặt' : 'Từ chối yêu cầu')}
                     </button>
 
                     <button
@@ -1662,19 +1690,35 @@ const StaffChangeRequestManager = () => {
                         }
                         const confirmMsg = isCancel
                           ? `Xác nhận phê duyệt hủy đơn hàng #${selectedReq.booking_id} và hoàn trả ${Number(selectedReq.refund_amount || 0).toLocaleString('vi-VN')} ₫ cho khách hàng ${selectedReq.customer_name}?`
-                          : `Xác nhận phê duyệt đổi lịch đơn hàng #${selectedReq.booking_id} sang đợt khởi hành mới?`;
+                          : (isCashReschedule
+                              ? `Xác nhận đã thu ${Number(selectedReq.fee_amount || 0).toLocaleString('vi-VN')} ₫ tiền mặt tại quầy từ khách hàng ${selectedReq.customer_name} và hoàn tất chuyển lịch tour sang ngày mới?`
+                              : `Xác nhận phê duyệt đổi lịch đơn hàng #${selectedReq.booking_id} sang đợt khởi hành mới?`);
                         if (window.confirm(confirmMsg)) {
-                          handleProcess('Approved', undefined, selectedNewDepForReview);
+                          handleProcess(
+                            'Approved',
+                            isCashReschedule 
+                              ? (staffNote ? staffNote : 'Đã thu tiền mặt tại quầy văn phòng và hoàn tất đổi lịch tour.')
+                              : undefined,
+                            selectedNewDepForReview
+                          );
                         }
                       }}
                       disabled={isSubmitting}
                       style={{ 
-                        padding: '8px 22px', backgroundColor: '#0f172a', color: '#ffffff', 
+                        padding: '8px 22px', 
+                        backgroundColor: isCashReschedule ? '#059669' : '#0f172a', 
+                        color: '#ffffff', 
                         border: 'none', borderRadius: '6px', cursor: 'pointer', 
                         fontWeight: '600', fontSize: '13.5px', transition: 'all 0.15s ease' 
                       }}
                     >
-                      {isSubmitting ? 'Đang xử lý...' : (isCancel ? 'Xác nhận quyết toán' : 'Xác nhận duyệt đổi lịch')}
+                      {isSubmitting 
+                        ? 'Đang xử lý...' 
+                        : (isCancel 
+                            ? 'Xác nhận quyết toán' 
+                            : (isCashReschedule 
+                                ? `💵 Xác nhận thu tiền mặt & Đổi lịch (${Number(selectedReq.fee_amount || 0).toLocaleString('vi-VN')} ₫)` 
+                                : 'Xác nhận duyệt đổi lịch'))}
                     </button>
                   </>
                 )}

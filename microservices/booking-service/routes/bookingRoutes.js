@@ -32,6 +32,8 @@ router.post('/change-requests', protect, bookingController.createChangeRequest);
 router.post('/change-request', protect, bookingController.createChangeRequest);
 router.get('/admin/change-requests', protect, bookingController.getAllChangeRequests);
 router.put('/admin/change-requests/:id/process', protect, bookingController.processChangeRequest);
+router.get('/:bookingId/reschedule-qr', protect, bookingController.getReschedulePaymentInfo);
+router.get('/:bookingId/check-reschedule-sepay', protect, bookingController.checkReschedulePaymentStatus);
 
 // Quản lý Đặt Dịch Vụ (Standalone Services)
 router.post('/service', protect, bookingController.bookStandaloneService);

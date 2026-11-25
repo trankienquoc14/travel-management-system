@@ -35,8 +35,8 @@ const calculatePolicyForBooking = (booking) => {
   let tierLabel = '';
 
   if (days >= 30) {
-    feePercentage = 10;
-    tierLabel = 'Trước ngày đi ≥ 30 ngày (Khấu trừ 10%)';
+    feePercentage = 0;
+    tierLabel = 'Trước ngày đi ≥ 30 ngày (Miễn phí 0% - Hoàn 100%)';
   } else if (days >= 15) {
     feePercentage = 30;
     tierLabel = 'Trước ngày đi 15 - 29 ngày (Khấu trừ 30%)';
@@ -970,7 +970,7 @@ const StaffBookingManagement = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 10px' }}>Trước ≥ 30 ngày</td><td style={{ color: '#dc2626', fontWeight: '700' }}>10%</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Hoàn 90%</td></tr>
+                        <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 10px' }}>Trước ≥ 30 ngày</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Free (0%)</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Hoàn 100%</td></tr>
                         <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 10px' }}>Từ 15 – 29 ngày</td><td style={{ color: '#dc2626', fontWeight: '700' }}>30%</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Hoàn 70%</td></tr>
                         <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 10px' }}>Từ 7 – 14 ngày</td><td style={{ color: '#dc2626', fontWeight: '700' }}>50%</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Hoàn 50%</td></tr>
                         <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '6px 10px' }}>Từ 3 – 6 ngày</td><td style={{ color: '#dc2626', fontWeight: '700' }}>75%</td><td style={{ color: '#16a34a', fontWeight: '700' }}>Hoàn 25%</td></tr>
