@@ -11,7 +11,6 @@ const ServiceRequestList = () => {
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('ALL');
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [filterCreatedFrom, setFilterCreatedFrom] = useState('');
     const [filterCreatedTo, setFilterCreatedTo] = useState('');
@@ -98,12 +97,12 @@ const ServiceRequestList = () => {
         return <span style={{ background: '#f1f5f9', color: '#475569', ...badgeStyle }}>{status}</span>;
     };
 
-    // Filters
+    // Filters - Chỉ quản lý các yêu cầu cung cấp dịch vụ chính
     let filtered = groups.filter(g => {
+        if (g.request_type === 'SUPPLEMENT') return false;
         const term = searchTerm.toLowerCase();
         if (term && !g.code.toLowerCase().includes(term) && !g.tour_name.toLowerCase().includes(term)) return false;
         
-        if (filterType !== 'ALL' && g.request_type !== filterType) return false;
         if (filterStatus !== 'ALL') {
             const s = g.status ? g.status.toUpperCase() : '';
             if (filterStatus === 'PENDING' && s !== 'PROCESSING' && s !== 'PENDING') return false;
@@ -140,11 +139,12 @@ const ServiceRequestList = () => {
     });
 
     // Stats
+    const initialGroups = groups.filter(g => g.request_type !== 'SUPPLEMENT');
     const stats = {
-        total: groups.length,
-        processing: groups.filter(g => g.status === 'PROCESSING' || g.status === 'PENDING').length,
-        completed: groups.filter(g => g.status === 'COMPLETED' || g.status === 'ACCEPTED').length,
-        supplement: groups.filter(g => g.request_type === 'SUPPLEMENT').length
+        total: initialGroups.length,
+        processing: initialGroups.filter(g => g.status === 'PROCESSING' || g.status === 'PENDING').length,
+        completed: initialGroups.filter(g => g.status === 'COMPLETED' || g.status === 'ACCEPTED').length,
+        rejected: initialGroups.filter(g => g.status === 'REJECTED').length
     };
 
     // Pagination
@@ -153,7 +153,6 @@ const ServiceRequestList = () => {
 
     const resetFilters = () => {
         setSearchTerm('');
-        setFilterType('ALL');
         setFilterStatus('ALL');
         setFilterCreatedFrom('');
         setFilterCreatedTo('');
@@ -180,8 +179,8 @@ const ServiceRequestList = () => {
                     <div style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginTop: '8px' }}>{stats.completed}</div>
                 </div>
                 <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                    <div style={{ color: '#d97706', fontSize: '13px', fontWeight: '600' }}>🟠 Bổ sung</div>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginTop: '8px' }}>{stats.supplement}</div>
+                    <div style={{ color: '#dc2626', fontSize: '13px', fontWeight: '600' }}>🔴 Đã từ chối</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginTop: '8px' }}>{stats.rejected}</div>
                 </div>
             </div>
 
@@ -205,15 +204,6 @@ const ServiceRequestList = () => {
                         <option value="PENDING">Đang/Chờ xử lý</option>
                         <option value="ACCEPTED">Đã hoàn tất</option>
                         <option value="REJECTED">Đã từ chối</option>
-                    </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={filterLabelStyle}>Loại YC</label>
-                    <select value={filterType} onChange={e => setFilterType(e.target.value)} style={filterSelectStyle}>
-                        <option value="ALL">Tất cả</option>
-                        <option value="INITIAL">Yêu cầu chính</option>
-                        <option value="SUPPLEMENT">Yêu cầu bổ sung</option>
                     </select>
                 </div>
 
@@ -252,15 +242,14 @@ const ServiceRequestList = () => {
                             <th style={{ padding: '12px', fontWeight: '600' }}>Tour</th>
                             <th style={{ padding: '12px', fontWeight: '600' }}>Khởi hành</th>
                             <th style={{ padding: '12px', fontWeight: '600' }}>Ngày tạo</th>
-                            <th style={{ padding: '12px', fontWeight: '600' }}>Loại</th>
                             <th style={{ padding: '12px', fontWeight: '600' }}>Tiến độ phản hồi</th>
                             <th style={{ padding: '12px', fontWeight: '600' }}>Trạng thái</th>
                             <th style={{ padding: '12px', fontWeight: '600' }}>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px' }}>Đang tải...</td></tr> : 
-                        paginated.length === 0 ? <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px' }}>Không có dữ liệu.</td></tr> :
+                        {loading ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: '24px' }}>Đang tải...</td></tr> : 
+                        paginated.length === 0 ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: '24px' }}>Không có dữ liệu.</td></tr> :
                         paginated.map(g => {
                             const isNew = !viewedRequests.includes(g.id);
                             
@@ -290,17 +279,6 @@ const ServiceRequestList = () => {
                                     <td style={{ padding: '12px', color: '#475569', whiteSpace: 'nowrap' }}>
                                         <div>{new Date(g.created_at).toLocaleDateString('vi-VN')}</div>
                                         <div style={{ fontSize: '11px' }}>{new Date(g.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</div>
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
-                                        {g.request_type === 'INITIAL' ? (
-                                            <span style={{ color: '#0369a1', fontWeight: '600' }}>🔵 Yêu cầu chính</span>
-                                        ) : (
-                                            <div>
-                                                <span style={{ color: '#d97706', fontWeight: '600' }}>🟣 Yêu cầu bổ sung</span>
-                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Gốc: {g.parent_code}</div>
-                                            </div>
-                                        )}
                                     </td>
                                     
                                     <td style={{ padding: '12px', minWidth: '150px' }}>
@@ -357,11 +335,6 @@ const ServiceRequestList = () => {
                             <div>
                                 <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '800', color: '#0f172a' }}>{groupDetails ? groupDetails.code : 'Đang tải...'}</h3>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    {groupDetails?.request_type === 'INITIAL' ? (
-                                        <span style={{ color: '#0369a1', fontWeight: '600', fontSize: '13px' }}>🔵 Yêu cầu chính</span>
-                                    ) : (
-                                        <span style={{ color: '#d97706', fontWeight: '600', fontSize: '13px' }}>🟣 Yêu cầu bổ sung</span>
-                                    )}
                                     {getStatusBadge(groupDetails?.status)}
                                 </div>
                             </div>

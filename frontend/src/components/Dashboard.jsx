@@ -608,9 +608,6 @@ const Dashboard = () => {
                       <li className={activeTab === 'create_request' ? 'active' : ''} onClick={() => setActiveTab('create_request')}>
                         ➕ Tạo yêu cầu cung cấp dịch vụ
                       </li>
-                      <li className={activeTab === 'create_supplement_request' ? 'active' : ''} onClick={() => setActiveTab('create_supplement_request')}>
-                        ➕ Tạo yêu cầu bổ sung
-                      </li>
                     </>
                   )}
                 </>
