@@ -468,13 +468,18 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
       { dest: 'Hà Giang', regex: /(ha giang|quan ba|nho que)/ }
     ].find((d) => d.regex.test(normQ));
 
+    const userPrice = extractBudgetFromText(question);
     const tourRes = await executeErpTool(pool, 'searchTours', {
       destination: matchedDest ? matchedDest.dest : undefined
     });
 
-    if (tourRes.count > 0) {
-      const tour = tourRes.tours[0];
-      const basePrice = Number(tour.base_price_vnd || 0);
+    if (tourRes.count > 0 || userPrice) {
+      const tour = tourRes.tours?.[0] || {
+        tour_name: `Tour du lịch ${matchedDest ? matchedDest.dest : 'Đà Lạt'}`,
+        detail_path: '/tours',
+        destination: matchedDest ? matchedDest.dest : 'Đà Lạt'
+      };
+      const basePrice = userPrice || Number(tour.base_price_vnd || 0);
       let total = 0;
       const lines = [];
 
@@ -492,16 +497,16 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
         let group = '';
         if (age < 2) {
           rate = 0;
-          group = `Em bé ${age} tuổi (Dưới 2 tuổi - Miễn phí 100%)`;
+          group = `Em bé (Dưới 2 tuổi - Miễn phí 100%)`;
         } else if (age < 5) {
           rate = 0.5;
-          group = `Trẻ nhỏ ${age} tuổi (2 - 4 tuổi - 50%)`;
+          group = `Trẻ nhỏ ${Math.round(age)} tuổi (2 - 4 tuổi - 50%)`;
         } else if (age < 12) {
           rate = 0.7;
-          group = `Trẻ em ${age} tuổi (5 - 11 tuổi - 70%)`;
+          group = `Trẻ em ${Math.round(age)} tuổi (5 - 11 tuổi - 70%)`;
         } else {
           rate = 1.0;
-          group = `Trẻ ${age} tuổi (Từ 12 tuổi trở lên - 100%)`;
+          group = `Trẻ ${Math.round(age)} tuổi (Từ 12 tuổi trở lên - 100%)`;
         }
 
         const pricePerChild = Math.round(basePrice * rate);
@@ -581,7 +586,9 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
   }
 
   // 2. Cancellation & Refund Policy with Specific Days
-  const isCancelRefundQuery = /(huy tour|hoan tien|doi lich|chinh sach huy|huy don|hoan phi|mat phi|tra tien|huy ve|khong di duoc|doi ngay)/.test(normQ);
+  const isCancelRefundQuery =
+    /(huy tour|hoan tien|doi lich|chinh sach huy|huy don|hoan phi|mat phi|tra tien|huy ve|khong di duoc|doi ngay)/.test(normQ) ||
+    (/(huy|hoan|mat coc|lay lai coc|hoan lai)/.test(normQ) && /(tour|ve|coc|dat|khoi hanh|tien|ngay|phan tram|bao nhieu)/.test(normQ));
   if (isCancelRefundQuery) {
     const daysMatch = question.match(/(\d+)\s*(?:ngày|ngay)/i);
     if (daysMatch) {
