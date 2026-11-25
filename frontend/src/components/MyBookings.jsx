@@ -2511,63 +2511,6 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                             const res = await axios.get(`${GATEWAY_URL}/api/bookings/my-bookings`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
-                            if (res.data?.success) {
-                                const found = res.data.data.find(b => String(b.booking_id) === String(bId));
-                                if (found) setSelectedTicket(found);
-                            }
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    }}
-                    onViewDetail={(bId) => {
-                        setSepayModalData(null);
-                        const found = bookings.find(b => String(b.booking_id) === String(bId));
-                        if (found) setSelectedDetailBooking(found);
-                    }}
-                />
-            )}
-
-            {/* MODAL 6: CỔNG THANH TOÁN PHỤ THU ĐỔI LỊCH TOUR SEPAY VIETQR */}
-            {rescheduleModalBookingId && (
-                <ReschedulePaymentModal
-                    bookingId={rescheduleModalBookingId}
-                    onClose={() => {
-                        setRescheduleModalBookingId(null);
-                        fetchMyBookings();
-                    }}
-                    onSuccess={() => {
-                        setAlertMsg({
-                            type: 'success',
-                            text: `🎉 Thanh toán phí đổi lịch thành công! Hệ thống đã tự động cập nhật ngày khởi hành mới cho đơn hàng #${rescheduleModalBookingId}.`
-                        });
-                        setRescheduleModalBookingId(null);
-                        fetchMyBookings();
-                    }}
-                />
-            )}
-                <SepayPaymentModal
-                    bookingId={sepayModalData.bookingId}
-                    type={sepayModalData.type}
-                    onClose={() => {
-                        setSepayModalData(null);
-                        fetchMyBookings();
-                        fetchMyServices();
-                    }}
-                    onSuccess={() => {
-                        setAlertMsg({
-                            type: 'success',
-                            text: `🎉 Thanh toán thành công qua SePay Realtime! Đơn hàng #${sepayModalData.bookingId} đã được tự động xác nhận.`
-                        });
-                        fetchMyBookings();
-                        fetchMyServices();
-                    }}
-                    onViewTicket={async (bId) => {
-                        setSepayModalData(null);
-                        try {
-                            const token = localStorage.getItem('token');
-                            const res = await axios.get(`${GATEWAY_URL}/api/bookings/my-bookings`, {
-                                headers: { Authorization: `Bearer ${token}` }
-                            });
                             const list = res.data?.data || [];
                             setBookings(list);
                             const found = list.find(b => Number(b.booking_id) === Number(bId));
@@ -2600,6 +2543,25 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                         } catch (e) {
                             console.error('Lỗi mở chi tiết đơn hàng:', e);
                         }
+                    }}
+                />
+            )}
+
+            {/* MODAL 6: CỔNG THANH TOÁN PHỤ THU ĐỔI LỊCH TOUR SEPAY VIETQR */}
+            {rescheduleModalBookingId && (
+                <ReschedulePaymentModal
+                    bookingId={rescheduleModalBookingId}
+                    onClose={() => {
+                        setRescheduleModalBookingId(null);
+                        fetchMyBookings();
+                    }}
+                    onSuccess={() => {
+                        setAlertMsg({
+                            type: 'success',
+                            text: `🎉 Thanh toán phí đổi lịch thành công! Hệ thống đã tự động cập nhật ngày khởi hành mới cho đơn hàng #${rescheduleModalBookingId}.`
+                        });
+                        setRescheduleModalBookingId(null);
+                        fetchMyBookings();
                     }}
                 />
             )}
