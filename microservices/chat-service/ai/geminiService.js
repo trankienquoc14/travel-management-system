@@ -187,6 +187,14 @@ function shouldSuggestHandoff(replyText = '', toolResults = []) {
 function extractBudgetFromText(rawText = '') {
   const text = rawText.toLowerCase();
 
+  // Pattern A0: "4 củ rưỡi", "3 triệu rưỡi", "2tr rưỡi", "1 củ rưỡi"
+  const ruoiRegex = /(\d+)\s*(?:tr|trieu|triệu|củ|cu)?\s*(?:rưỡi|ruoi|nửa|nua)\b/i;
+  const ruoiMatch = text.match(ruoiRegex);
+  if (ruoiMatch) {
+    const main = parseInt(ruoiMatch[1], 10);
+    return Math.round((main + 0.5) * 1000000);
+  }
+
   // Pattern A: "3tr5", "3 củ 5", "3tr2", "3cu5" -> 3.5M, 3.2M
   const compoundRegex = /(\d+)\s*(?:tr|trieu|triệu|củ|cu)\s*(\d+)\b/i;
   const compMatch = text.match(compoundRegex);
@@ -338,7 +346,16 @@ function extractFamilyComposition(rawText = '', normQ = '') {
     adultCount = parseInt(adultMatch[1], 10);
   }
 
+  // Nhận diện "vợ chồng", "2 vợ chồng", "ông/bà"
+  if (/(2\s*vợ\s*chồng|hai\s*vợ\s*chồng|vợ\s*chồng|vo\s*chong)/i.test(text)) {
+    adultCount = (adultCount || 0) + 2;
+  }
+  if (/(1\s*bà|bà\s*ngoại|bà\s*nội|1\s*ông|ông\s*ngoại|ông\s*nội|người\s*già|người\s*cao\s*tuổi)/i.test(text)) {
+    adultCount = (adultCount || 0) + 1;
+  }
+
   const children = [];
+  // 1. Nhận diện theo tuổi (năm)
   const childRegex = /(\d+)?\s*(?:bé|be|trẻ\s*em|tre\s*em|trẻ\s*nhỏ|tre\s*nho|trẻ|tre|cháu|chau|con|em\s*bé|em\s*be)\s*(\d+(?:[.,]\d+)?)\s*(?:tuổi|tuoi|\bt\b)/gi;
   let match;
   while ((match = childRegex.exec(text)) !== null) {
@@ -349,10 +366,21 @@ function extractFamilyComposition(rawText = '', normQ = '') {
     }
   }
 
+  // 2. Nhận diện theo tháng tuổi (VD: 15 tháng tuổi)
+  const monthRegex = /(\d+)?\s*(?:bé|be|trẻ\s*em|tre\s*em|trẻ\s*nhỏ|tre\s*nho|trẻ|tre|cháu|chau|con|em\s*bé|em\s*be)\s*(\d+(?:[.,]\d+)?)\s*(?:tháng|thang)\b/gi;
+  let mMatch;
+  while ((mMatch = monthRegex.exec(text)) !== null) {
+    const count = mMatch[1] ? parseInt(mMatch[1], 10) : 1;
+    const months = parseFloat(mMatch[2].replace(',', '.'));
+    if (!isNaN(months)) {
+      children.push({ count, age: months / 12 });
+    }
+  }
+
   return {
     adultCount,
     children,
-    hasFamilyCalculation: adultCount !== null && (children.length > 0 || /(tính tiền|tổng tiền|tổng chi phí|hết bao nhiêu|tất cả bao nhiêu)/.test(normQ))
+    hasFamilyCalculation: (adultCount !== null || children.length > 0) && (children.length > 0 || /(tính tiền|tổng tiền|tổng chi phí|hết bao nhiêu|tất cả bao nhiêu)/.test(normQ))
   };
 }
 
