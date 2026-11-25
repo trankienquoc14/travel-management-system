@@ -22,7 +22,11 @@ const PartnerServiceSummary = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                setSummaries(res.data.data);
+                const cleaned = (res.data.data || []).map(s => ({
+                    ...s,
+                    requests: (s.requests || []).filter(r => r.request_type !== 'SUPPLEMENT')
+                }));
+                setSummaries(cleaned);
                 setPartnerType(res.data.partnerType);
             }
         } catch (err) {
@@ -307,7 +311,6 @@ const PartnerServiceSummary = () => {
                                     <tr>
                                         <th style={{ padding: '12px 16px', fontWeight: '600' }}>Mã YC</th>
                                         <th style={{ padding: '12px 16px', fontWeight: '600' }}>Ngày gửi</th>
-                                        <th style={{ padding: '12px 16px', fontWeight: '600' }}>Loại</th>
                                         <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Số lượng</th>
                                         <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Trạng thái</th>
                                     </tr>
@@ -319,15 +322,8 @@ const PartnerServiceSummary = () => {
                                             <td style={{ padding: '12px 16px', color: '#475569' }}>
                                                 {new Date(hist.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
                                             </td>
-                                            <td style={{ padding: '12px 16px' }}>
-                                                {hist.request_type === 'INITIAL' ? (
-                                                    <span style={{ color: '#2563eb', fontWeight: '600' }}>Chính</span>
-                                                ) : (
-                                                    <span style={{ color: '#ea580c', fontWeight: '600' }}>Bổ sung</span>
-                                                )}
-                                            </td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: hist.request_type === 'INITIAL' ? '#0f172a' : '#ea580c' }}>
-                                                {hist.request_type === 'INITIAL' ? hist.quantity : `+${hist.quantity}`}
+                                            <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#0f172a' }}>
+                                                {hist.quantity}
                                                 {partnerType === 'HOTEL' && <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '400' }}>{hist.items?.[0]?.service_name}</div>}
                                             </td>
                                             <td style={{ padding: '12px 16px', textAlign: 'center' }}>

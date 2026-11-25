@@ -7,7 +7,6 @@ const PartnerServiceRequests = () => {
     
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('ALL');
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [filterTime, setFilterTime] = useState('ALL');
     const [sortBy, setSortBy] = useState('NEWEST');
@@ -79,28 +78,28 @@ const PartnerServiceRequests = () => {
 
     const resetFilters = () => {
         setSearchTerm('');
-        setFilterType('ALL');
         setFilterStatus('ALL');
         setFilterTime('ALL');
         setSortBy('NEWEST');
         setCurrentPage(1);
     };
 
-    // Derived states (Stats & Filtering)
+    // Derived states (Stats & Filtering - Chỉ quản lý yêu cầu chính)
+    const initialRequests = requests.filter(r => r.request_type !== 'SUPPLEMENT');
     const stats = {
-        pending: requests.filter(r => r.status === 'Pending').length,
-        accepted: requests.filter(r => r.status === 'Accepted').length,
-        rejected: requests.filter(r => r.status === 'Rejected').length,
-        total: requests.length
+        pending: initialRequests.filter(r => r.status === 'Pending').length,
+        accepted: initialRequests.filter(r => r.status === 'Accepted').length,
+        rejected: initialRequests.filter(r => r.status === 'Rejected').length,
+        total: initialRequests.length
     };
 
     let filtered = requests.filter(req => {
+        // Loại bỏ hoàn toàn các yêu cầu bổ sung
+        if (req.request_type === 'SUPPLEMENT') return false;
+
         // Search
         const term = searchTerm.toLowerCase();
         if (term && !req.group_code.toLowerCase().includes(term) && !req.tour_name.toLowerCase().includes(term)) return false;
-        
-        // Type
-        if (filterType !== 'ALL' && req.request_type !== filterType) return false;
         
         // Status
         if (filterStatus !== 'ALL' && req.status !== filterStatus) return false;
@@ -170,12 +169,6 @@ const PartnerServiceRequests = () => {
                     style={{ flex: '1 1 250px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                 />
                 
-                <select value={filterType} onChange={e => setFilterType(e.target.value)} style={filterSelectStyle}>
-                    <option value="ALL">Loại YC: Tất cả</option>
-                    <option value="INITIAL">Yêu cầu chính</option>
-                    <option value="SUPPLEMENT">Yêu cầu bổ sung</option>
-                </select>
-                
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={filterSelectStyle}>
                     <option value="ALL">Trạng thái: Tất cả</option>
                     <option value="Pending">Chờ xử lý</option>
@@ -208,7 +201,6 @@ const PartnerServiceRequests = () => {
                     <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
                             <th style={{ padding: '12px 8px', fontWeight: '600' }}>Mã YC</th>
-                            <th style={{ padding: '12px 8px', fontWeight: '600' }}>Loại</th>
                             <th style={{ padding: '12px 8px', fontWeight: '600' }}>Tour</th>
                             <th style={{ padding: '12px 8px', fontWeight: '600' }}>Khởi hành</th>
                             <th style={{ padding: '12px 8px', fontWeight: '600' }}>Ngày tạo</th>
@@ -218,8 +210,8 @@ const PartnerServiceRequests = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px' }}>Đang tải dữ liệu...</td></tr> : 
-                        paginated.length === 0 ? <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px' }}>Không tìm thấy yêu cầu nào phù hợp.</td></tr> :
+                        {loading ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: '24px' }}>Đang tải dữ liệu...</td></tr> : 
+                        paginated.length === 0 ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: '24px' }}>Không tìm thấy yêu cầu nào phù hợp.</td></tr> :
                         paginated.map(req => {
                             const content = req.request_content;
                             const isNew = req.status === 'Pending';
@@ -229,16 +221,6 @@ const PartnerServiceRequests = () => {
                                     <td style={{ padding: '12px 8px', fontWeight: '600', color: '#0f172a' }}>
                                         {req.group_code}
                                         {isNew && <span style={{ marginLeft: '8px', background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: '12px', fontSize: '10px' }}>🆕 Mới</span>}
-                                    </td>
-                                    <td style={{ padding: '12px 8px' }}>
-                                        {req.request_type === 'INITIAL' ? (
-                                            <span style={{ color: '#0369a1', fontWeight: '500' }}>🔵 Chính</span>
-                                        ) : (
-                                            <div>
-                                                <span style={{ color: '#d97706', fontWeight: '500' }}>🟠 Bổ sung</span>
-                                                <div style={{ fontSize: '11px', color: '#64748b' }}>Gốc: {req.parent_code}</div>
-                                            </div>
-                                        )}
                                     </td>
                                     <td style={{ padding: '12px 8px', maxWidth: '180px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={req.tour_name}>
                                         {req.tour_name}
@@ -325,11 +307,6 @@ const PartnerServiceRequests = () => {
                             <div>
                                 <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '800', color: '#0f172a' }}>{detailModal.group_code}</h3>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    {detailModal.request_type === 'INITIAL' ? (
-                                        <span style={{ color: '#0369a1', fontWeight: '600', fontSize: '13px' }}>🔵 Yêu cầu chính</span>
-                                    ) : (
-                                        <span style={{ color: '#d97706', fontWeight: '600', fontSize: '13px' }}>🟠 Yêu cầu bổ sung</span>
-                                    )}
                                     <span style={{ 
                                         background: detailModal.status === 'Accepted' ? '#dcfce7' : detailModal.status === 'Rejected' ? '#fee2e2' : '#fef9c3', 
                                         color: detailModal.status === 'Accepted' ? '#166534' : detailModal.status === 'Rejected' ? '#991b1b' : '#854d0e', 
@@ -362,13 +339,6 @@ const PartnerServiceRequests = () => {
 
                         {/* 3. YÊU CẦU DỊCH VỤ */}
                         <div style={{ padding: '24px' }}>
-                            {detailModal.request_type === 'SUPPLEMENT' && (
-                                <div style={{ marginBottom: '20px', padding: '12px', background: '#fffbeb', borderLeft: '4px solid #f59e0b', borderRadius: '4px' }}>
-                                    <div style={{ fontSize: '12px', color: '#b45309', fontWeight: '600', marginBottom: '4px' }}>YÊU CẦU GỐC</div>
-                                    <div style={{ fontWeight: '700', color: '#92400e' }}>{detailModal.parent_code}</div>
-                                </div>
-                            )}
-
                             <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: detailModal.service_type === 'HOTEL' ? '#0369a1' : '#b45309', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                 {detailModal.service_type === 'HOTEL' ? '🏨 KHÁCH SẠN' : '🍽 NHÀ HÀNG'}
                             </h4>
@@ -387,7 +357,7 @@ const PartnerServiceRequests = () => {
                                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                                                         <div><div style={{color: '#64748b', fontSize: '12px'}}>Check-in</div><div style={{fontWeight: '600', color: '#334155'}}>{item.checkIn ? new Date(item.checkIn).toLocaleDateString('vi-VN') : ''}</div></div>
                                                         <div><div style={{color: '#64748b', fontSize: '12px'}}>Check-out</div><div style={{fontWeight: '600', color: '#334155'}}>{item.checkOut ? new Date(item.checkOut).toLocaleDateString('vi-VN') : ''}</div></div>
-                                                        <div><div style={{color: '#64748b', fontSize: '12px'}}>{detailModal.request_type === 'SUPPLEMENT' ? 'Phòng (bổ sung)' : 'Số phòng'}</div><div style={{fontWeight: '700', color: '#0369a1'}}>{detailModal.quantity}</div></div>
+                                                        <div><div style={{color: '#64748b', fontSize: '12px'}}>Số phòng</div><div style={{fontWeight: '700', color: '#0369a1'}}>{detailModal.quantity}</div></div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -409,7 +379,7 @@ const PartnerServiceRequests = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '4px' }}>{detailModal.request_type === 'SUPPLEMENT' ? 'Số lượng bổ sung' : 'Số lượng'}</div>
+                                            <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '4px' }}>Số lượng</div>
                                             <div style={{ fontWeight: '700', color: '#0369a1', fontSize: '16px' }}>{detailModal.request_content?.rooms || detailModal.quantity} phòng</div>
                                         </div>
                                     </>
@@ -422,7 +392,7 @@ const PartnerServiceRequests = () => {
                                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                                                         <div><div style={{color: '#64748b', fontSize: '12px'}}>Bữa</div><div style={{fontWeight: '600', color: '#334155'}}>{item.mealType}</div></div>
                                                         <div><div style={{color: '#64748b', fontSize: '12px'}}>Ngày ăn</div><div style={{fontWeight: '600', color: '#334155'}}>{item.date ? new Date(item.date).toLocaleDateString('vi-VN') : ''}</div></div>
-                                                        <div><div style={{color: '#64748b', fontSize: '12px'}}>{detailModal.request_type === 'SUPPLEMENT' ? 'Suất (bổ sung)' : 'Số suất'}</div><div style={{fontWeight: '700', color: '#b45309'}}>{detailModal.quantity}</div></div>
+                                                        <div><div style={{color: '#64748b', fontSize: '12px'}}>Số suất</div><div style={{fontWeight: '700', color: '#b45309'}}>{detailModal.quantity}</div></div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -444,7 +414,7 @@ const PartnerServiceRequests = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '4px' }}>{detailModal.request_type === 'SUPPLEMENT' ? 'Số suất bổ sung' : 'Số suất'}</div>
+                                            <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '4px' }}>Số suất</div>
                                             <div style={{ fontWeight: '700', color: '#b45309', fontSize: '16px' }}>{detailModal.quantity} suất</div>
                                         </div>
                                     </>
