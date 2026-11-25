@@ -1645,28 +1645,28 @@ const StaffChangeRequestManager = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const confirmPrompt = isCashReschedule
-                          ? `Xác nhận hủy yêu cầu đổi lịch bằng tiền mặt của khách hàng ${selectedReq.customer_name}?\nĐơn hàng #${selectedReq.booking_id} sẽ giữ nguyên đợt khởi hành hiện tại.`
-                          : `Xác nhận từ chối yêu cầu của khách hàng ${selectedReq.customer_name}?`;
+                        const confirmPrompt = isCancel
+                          ? `Xác nhận từ chối yêu cầu của khách hàng ${selectedReq.customer_name}?`
+                          : `Xác nhận hủy yêu cầu đổi lịch của khách hàng ${selectedReq.customer_name}?\nĐơn hàng #${selectedReq.booking_id} sẽ giữ nguyên đợt khởi hành hiện tại và không làm mất lượt đổi lịch của khách.`;
                         if (window.confirm(confirmPrompt)) {
                           handleProcess(
                             'Rejected',
-                            isCashReschedule 
-                              ? (staffNote ? staffNote : 'Nhân viên hủy yêu cầu do khách hàng không đến nộp tiền mặt hoặc đổi ý.')
-                              : undefined
+                            isCancel
+                              ? undefined
+                              : (staffNote ? staffNote : 'Nhân viên hủy yêu cầu đổi lịch theo nguyện vọng của khách hàng tại quầy văn phòng.')
                           );
                         }
                       }}
                       disabled={isSubmitting}
                       style={{ 
                         padding: '8px 18px', 
-                        backgroundColor: isCashReschedule ? '#fff1f2' : '#ffffff', 
+                        backgroundColor: '#fff1f2', 
                         color: '#dc2626', 
                         border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', 
                         fontWeight: '600', fontSize: '13.5px', transition: 'all 0.15s ease' 
                       }}
                     >
-                      {isSubmitting ? 'Đang xử lý...' : (isCashReschedule ? '❌ Hủy yêu cầu nhận tiền mặt' : 'Từ chối yêu cầu')}
+                      {isSubmitting ? 'Đang xử lý...' : (isCancel ? 'Từ chối yêu cầu' : '❌ Hủy yêu cầu đổi lịch')}
                     </button>
 
                     <button

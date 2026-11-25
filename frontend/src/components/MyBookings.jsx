@@ -657,7 +657,7 @@ const MyBookings = () => {
                 request_type: requestType,
                 reason: fullReason,
                 new_departure_id: requestType === 'Reschedule' ? selectedNewDepartureId : null,
-                payment_method: requestType === 'Reschedule' ? reschedulePayMethod : undefined
+                payment_method: requestType === 'Reschedule' ? 'QR' : undefined
             };
             const res = await axios.post(`${GATEWAY_URL}/api/bookings/change-requests`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -676,12 +676,9 @@ const MyBookings = () => {
                     if (res.data.auto_approved) {
                         setAlertMsg({ type: 'success', text: res.data.message || '🎉 Đã đổi lịch trình thành công (Miễn phí 100%)!' });
                         fetchMyBookings();
-                    } else if (reschedulePayMethod === 'QR') {
+                    } else {
                         setAlertMsg({ type: 'info', text: 'Quý khách vui lòng quét mã VietQR để hệ thống tự động đổi lịch ngay lập tức!' });
                         setRescheduleModalBookingId(bId);
-                        fetchMyBookings();
-                    } else {
-                        setAlertMsg({ type: 'success', text: res.data.message || 'Đã gửi yêu cầu đổi lịch! Quý khách vui lòng đến quầy văn phòng công ty để nộp phí bằng tiền mặt.' });
                         fetchMyBookings();
                     }
                 } else {
@@ -2353,61 +2350,22 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                 )}
 
                                 {requestType === 'Reschedule' && policy.feeAmount > 0 && (
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '13.5px', color: '#1e293b', marginBottom: '8px' }}>
-                                            💳 Chọn Hình Thức Thanh Toán Phí Đổi Lịch ({formatCurrency(policy.feeAmount)}):
-                                        </label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                            <div
-                                                onClick={() => setReschedulePayMethod('QR')}
-                                                style={{
-                                                    padding: '14px', borderRadius: '14px', cursor: 'pointer',
-                                                    border: `2px solid ${reschedulePayMethod === 'QR' ? '#2563eb' : '#e2e8f0'}`,
-                                                    backgroundColor: reschedulePayMethod === 'QR' ? '#eff6ff' : '#ffffff',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                                    <input
-                                                        type="radio"
-                                                        name="reschedulePayMethod"
-                                                        checked={reschedulePayMethod === 'QR'}
-                                                        onChange={() => setReschedulePayMethod('QR')}
-                                                        style={{ accentColor: '#2563eb' }}
-                                                    />
-                                                    <strong style={{ fontSize: '13.5px', color: reschedulePayMethod === 'QR' ? '#1d4ed8' : '#1e293b' }}>
-                                                        ⚡ Thanh toán QR (Tự động 24/7)
-                                                    </strong>
-                                                </div>
-                                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4, paddingLeft: '22px' }}>
-                                                    Quét mã VietQR. Hệ thống SePay nhận tiền và <strong>tự động đổi lịch ngay lập tức</strong>, không cần nhân viên duyệt.
-                                                </p>
-                                            </div>
-
-                                            <div
-                                                onClick={() => setReschedulePayMethod('Cash')}
-                                                style={{
-                                                    padding: '14px', borderRadius: '14px', cursor: 'pointer',
-                                                    border: `2px solid ${reschedulePayMethod === 'Cash' ? '#d97706' : '#e2e8f0'}`,
-                                                    backgroundColor: reschedulePayMethod === 'Cash' ? '#fffbeb' : '#ffffff',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                                    <input
-                                                        type="radio"
-                                                        name="reschedulePayMethod"
-                                                        checked={reschedulePayMethod === 'Cash'}
-                                                        onChange={() => setReschedulePayMethod('Cash')}
-                                                        style={{ accentColor: '#d97706' }}
-                                                    />
-                                                    <strong style={{ fontSize: '13.5px', color: reschedulePayMethod === 'Cash' ? '#b45309' : '#1e293b' }}>
-                                                        🏢 Nộp tiền mặt tại văn phòng
-                                                    </strong>
-                                                </div>
-                                                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4, paddingLeft: '22px' }}>
-                                                    Đến văn phòng công ty nộp tiền mặt. Nhân viên xác nhận thu tiền và hoàn tất đổi lịch (hoặc hủy yêu cầu nếu đổi ý).
-                                                </p>
+                                    <div style={{
+                                        backgroundColor: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: '14px',
+                                        padding: '16px 18px', marginBottom: '20px', fontSize: '13px', lineHeight: 1.6
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: '800', fontSize: '14px', marginBottom: '8px' }}>
+                                            <span>💳 Hình Thức Thanh Toán: Chuyển Khoản Qua Mã VietQR (Tự Động 24/7)</span>
+                                        </div>
+                                        <div style={{ color: '#334155' }}>
+                                            • Phí phụ thu đổi lịch: <strong style={{ color: '#dc2626', fontSize: '14.5px' }}>{formatCurrency(policy.feeAmount)}</strong> ({policy.feePercentage}% giá trị tour).
+                                            <br />
+                                            • Sau khi nhấn xác nhận, hệ thống sẽ mở mã VietQR động để bạn quét chuyển khoản bằng ứng dụng ngân hàng.
+                                            <br />
+                                            • <strong>Hệ thống tự động đổi lịch ngay tức thì</strong> sau khi nhận được chuyển khoản mà không cần chờ nhân viên duyệt.
+                                            <br />
+                                            <div style={{ marginTop: '8px', padding: '8px 12px', background: '#fffbeb', border: '1px solid #fef08a', borderRadius: '8px', color: '#b45309', fontSize: '12.5px' }}>
+                                                ⚠️ <em>Lưu ý: Hệ thống chỉ thực hiện đổi ngày khởi hành sau khi hoàn tất thanh toán chuyển khoản. Quý khách không thể thanh toán trực tuyến hoặc muốn hủy yêu cầu, vui lòng đến trực tiếp văn phòng công ty để nhờ nhân viên hỗ trợ xử lý.</em>
                                             </div>
                                         </div>
                                     </div>
@@ -2472,10 +2430,7 @@ const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
                                                 ? `Xác Nhận Hủy Tour ${policy.refundAmount > 0 ? `(Hoàn ${formatCurrency(policy.refundAmount)})` : ''}`
                                                 : (policy.feeAmount === 0
                                                     ? '🚀 Xác Nhận Đổi Lịch Ngay (Miễn Phí 0 ₫)'
-                                                    : (reschedulePayMethod === 'QR'
-                                                        ? `💳 Quét Mã QR & Đổi Lịch Tự Động (${formatCurrency(policy.feeAmount)})`
-                                                        : `🏢 Xác Nhận Đến Văn Phòng Nộp Tiền Mặt (${formatCurrency(policy.feeAmount)})`
-                                                      )
+                                                    : `💳 Xác Nhận & Quét Mã QR Phí Đổi Lịch (${formatCurrency(policy.feeAmount)})`
                                                   )
                                         )}
                                     </button>
