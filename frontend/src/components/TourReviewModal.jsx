@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Star, Upload, X, AlertCircle, CheckCircle2, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { notifySuccess } from '../context/NotificationContext';
 
-const GATEWAY_URL = 'http://localhost:5000';
+const GATEWAY_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 const STAR_LABELS = {
     1: 'Rất không hài lòng (1 sao)',
@@ -13,6 +15,7 @@ const STAR_LABELS = {
 };
 
 const TourReviewModal = ({ isOpen, onClose, tour, booking, onReviewSubmitted }) => {
+    const navigate = useNavigate();
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [guideRating, setGuideRating] = useState(5);
@@ -186,13 +189,32 @@ const TourReviewModal = ({ isOpen, onClose, tour, booking, onReviewSubmitted }) 
             });
 
             if (res.data.success) {
-                // Luồng chính 6: Thông báo chuẩn theo đặc tả
-                setSuccessMsg(res.data.message || 'Cảm ơn bạn đã gửi đánh giá! Ý kiến của bạn giúp chúng tôi cải thiện chất lượng dịch vụ.');
+                // Luồng chính 6: Thông báo chuẩn theo đúng đặc tả yêu cầu
+                const successText = res.data.message || 'Cảm ơn bạn đã gửi đánh giá! Ý kiến của bạn giúp chúng tôi cải thiện chất lượng dịch vụ';
+                setSuccessMsg(successText);
+
+                try {
+                    notifySuccess('⭐ Gửi đánh giá thành công!', successText);
+                } catch (e) {
+                    console.warn('Lỗi gọi notifySuccess:', e);
+                }
                 
                 setTimeout(() => {
                     if (onReviewSubmitted) onReviewSubmitted(res.data.data);
                     onClose();
-                }, 1600);
+
+                    // Điều hướng đến trang chi tiết tour tại mục đánh giá
+                    const targetTourId = tourId || res.data?.data?.tour_id;
+                    if (targetTourId) {
+                        navigate(`/tour/${targetTourId}#reviews`);
+                        setTimeout(() => {
+                            const el = document.getElementById('reviews') || document.querySelector('.tour-reviews-section');
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 200);
+                    }
+                }, 1500);
             }
         } catch (err) {
             console.error('Lỗi khi gửi đánh giá:', err);

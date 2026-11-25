@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import CustomerFooter from './CustomerFooter';
 import CustomerNavbar from './CustomerNavbar';
@@ -156,6 +156,7 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
 const TourDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [tour, setTour] = useState(null);
     const [destinations, setDestinations] = useState([]);
     const [selectedDeparture, setSelectedDeparture] = useState('');
@@ -169,6 +170,24 @@ const TourDetail = () => {
     const [canReview, setCanReview] = useState(false);
     const [userReviewed, setUserReviewed] = useState(false);
     const [reviewBookingId, setReviewBookingId] = useState(null);
+
+    // Tự động cuộn đến phần đánh giá nếu URL có hash #reviews
+    useEffect(() => {
+        if (location.hash === '#reviews' || window.location.hash === '#reviews') {
+            const scrollToReviews = () => {
+                const el = document.getElementById('reviews') || document.querySelector('.tour-reviews-section');
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            };
+            const t1 = setTimeout(scrollToReviews, 400);
+            const t2 = setTimeout(scrollToReviews, 900);
+            return () => {
+                clearTimeout(t1);
+                clearTimeout(t2);
+            };
+        }
+    }, [location.hash, id, tour]);
 
     const fetchReviews = async () => {
         try {
@@ -861,7 +880,7 @@ const TourDetail = () => {
                     {/* ========================================================================= */}
                     {/* HỆ THỐNG ĐÁNH GIÁ & NHẬN XÉT TỪ KHÁCH HÀNG (CUSTOMER REVIEWS & RATINGS) */}
                     {/* ========================================================================= */}
-                    <div className="tour-reviews-section" style={{ marginTop: '40px', background: '#ffffff', borderRadius: '24px', padding: '36px', boxShadow: '0 4px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                    <div id="reviews" className="tour-reviews-section" style={{ marginTop: '40px', background: '#ffffff', borderRadius: '24px', padding: '36px', boxShadow: '0 4px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '28px', borderBottom: '2px solid #f1f5f9', paddingBottom: '16px' }}>
                             <div>
                                 <h2 style={{ margin: '0 0 6px 0', fontSize: '24px', fontWeight: '800', color: '#0f172a' }}>
