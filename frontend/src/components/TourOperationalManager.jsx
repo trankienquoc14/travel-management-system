@@ -456,6 +456,10 @@ const TourOperationalManager = () => {
     const [baseCost, setBaseCost] = useState(0);
     const [basePrice, setBasePrice] = useState(0);
     const [activeTourTab, setActiveTourTab] = useState('fixed'); // 'fixed' | 'custom'
+    const [addDepartureModalMonth, setAddDepartureModalMonth] = useState(null);
+    const [modalSearchTerm, setModalSearchTerm] = useState('');
+    const [modalDestinationFilter, setModalDestinationFilter] = useState('all');
+    const [modalStatusFilter, setModalStatusFilter] = useState('all'); // 'all' | 'needs_schedule' | 'has_schedule'
     const _currentDate = new Date();
     const _currentMonthStr = `${_currentDate.getFullYear()}-${String(_currentDate.getMonth() + 1).padStart(2, '0')}`;
     const [selectedMonth, setSelectedMonth] = useState(_currentMonthStr); // default to current month instead of 'all'
@@ -1047,6 +1051,24 @@ const TourOperationalManager = () => {
         });
     };
 
+    const getTourDeparturesCountInMonth = (t, m) => {
+        if (!m) return 0;
+        const tourIdNum = Number(t.tour_id);
+        if (selectedTour && Number(selectedTour.tour_id) === tourIdNum) {
+            return (departures || []).filter(dep => checkDateMatchesMonthYear(dep.departure_date, m)).length;
+        }
+        const fromGuide = (guideSchedules || []).filter(sch => 
+            Number(sch.tour_id) === tourIdNum && checkDateMatchesMonthYear(sch.departure_date, m)
+        ).length;
+        if (fromGuide > 0) return fromGuide;
+        if (t.departure_dates) {
+            return String(t.departure_dates).split(',').filter(dStr => 
+                checkDateMatchesMonthYear(dStr.trim(), m)
+            ).length;
+        }
+        return 0;
+    };
+
     // Xác định các tháng cần hiển thị
     const monthsToRender = selectedMonth === 'all' 
         ? Array.from({ length: 12 }, (_, i) => i + 1)
@@ -1132,21 +1154,17 @@ const TourOperationalManager = () => {
                                     </h3>
                                     
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                        {/* Dropdown Chọn Nhanh Tour để mở đợt bán mới */}
-                                        <select 
-                                            value="" 
-                                            onChange={async (e) => {
-                                                const tourId = Number(e.target.value);
-                                                if (!tourId) return;
-                                                const t = tours.find(x => x.tour_id === tourId);
-                                                if (t) {
-                                                    await handleSelectTour(t);
-                                                    const monthStr = `${currentYear}-${String(m).padStart(2, '0')}`;
-                                                    handleAddNewDeparture(t, monthStr);
-                                                }
+                                        {/* Nút Mở Giao diện Chọn Tour Chuyên nghiệp */}
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                setAddDepartureModalMonth(m);
+                                                setModalSearchTerm('');
+                                                setModalDestinationFilter('all');
+                                                setModalStatusFilter('all');
                                             }}
                                             style={{
-                                                padding: '7px 14px',
+                                                padding: '7px 16px',
                                                 fontSize: '13px',
                                                 fontWeight: '700',
                                                 color: '#0284c7',
@@ -1154,20 +1172,18 @@ const TourOperationalManager = () => {
                                                 border: '1.5px solid #0284c7',
                                                 borderRadius: '10px',
                                                 cursor: 'pointer',
-                                                outline: 'none',
-                                                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.1)'
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.1)',
+                                                transition: 'all 0.2s ease'
                                             }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.borderColor = '#0369a1'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f9ff'; e.currentTarget.style.borderColor = '#0284c7'; }}
+                                            title={`Mở bảng chọn tour có tìm kiếm và bộ lọc điểm đến cho Tháng ${m}`}
                                         >
-                                            <option value="">➕ Chọn Tour để mở đợt bán mới trong Tháng {m}...</option>
-                                            {filteredTours
-                                                .filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (t.is_custom === 0 || !t.is_custom))
-                                                .map(t => (
-                                                    <option key={t.tour_id} value={t.tour_id}>
-                                                        🚩 {t.tour_name} ({t.destination || 'Nhiều tỉnh'} - {t.duration_days}N)
-                                                    </option>
-                                                ))
-                                            }
-                                        </select>
+                                            <span style={{ fontSize: '14px', color: '#0284c7' }}>➕</span> Chọn Tour để mở đợt bán mới trong Tháng {m}...
+                                        </button>
 
                                         <span style={{ background: monthSchedulesCount > 0 ? '#0284c7' : '#94a3b8', color: '#ffffff', padding: '4px 14px', borderRadius: '14px', fontSize: '12px', fontWeight: '800' }}>
                                             🚀 {monthSchedulesCount} đợt khởi hành ({toursInMonth.length} tour)
@@ -1775,6 +1791,333 @@ const TourOperationalManager = () => {
                         );
                     })}
                 </div>
+
+                {/* MODAL CHỌN TOUR CHUYÊN NGHIỆP ĐỂ MỞ ĐỢT BÁN */}
+                {addDepartureModalMonth !== null && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                            backdropFilter: 'blur(4px)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px'
+                        }}
+                        onClick={() => setAddDepartureModalMonth(null)}
+                    >
+                        <div 
+                            style={{
+                                background: '#ffffff',
+                                borderRadius: '24px',
+                                width: '100%',
+                                maxWidth: '880px',
+                                maxHeight: '90vh',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                overflow: 'hidden',
+                                border: '1px solid #e2e8f0'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* MODAL HEADER */}
+                            <div style={{
+                                padding: '20px 24px',
+                                borderBottom: '1px solid #f1f5f9',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)'
+                            }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '19px', fontWeight: '800', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span>➕</span> Chọn Tour Mở Đợt Khởi Hành - Tháng {addDepartureModalMonth} / {currentYear}
+                                    </h3>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                                        Tìm kiếm, lọc điểm đến và chọn tour phù hợp để tạo đợt chạy mới cho Tháng {addDepartureModalMonth}.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setAddDepartureModalMonth(null)}
+                                    style={{
+                                        background: '#ffffff',
+                                        border: '1px solid #e2e8f0',
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '50%',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#64748b',
+                                        fontSize: '16px',
+                                        fontWeight: '700',
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#ef4444'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#64748b'; }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* FILTER & SEARCH BAR */}
+                            <div style={{ padding: '16px 24px', background: '#ffffff', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                    {/* Search Input */}
+                                    <div style={{ flex: '1 1 300px', position: 'relative' }}>
+                                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>🔍</span>
+                                        <input 
+                                            type="text"
+                                            placeholder="Tìm kiếm theo tên tour, điểm đến..."
+                                            value={modalSearchTerm}
+                                            onChange={(e) => setModalSearchTerm(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 14px 10px 38px',
+                                                borderRadius: '12px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '14px',
+                                                outline: 'none',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
+                                        {modalSearchTerm && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setModalSearchTerm('')}
+                                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontWeight: '700' }}
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Destination Filter */}
+                                    <select
+                                        value={modalDestinationFilter}
+                                        onChange={(e) => setModalDestinationFilter(e.target.value)}
+                                        style={{
+                                            padding: '10px 14px',
+                                            borderRadius: '12px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            color: '#1e293b',
+                                            background: '#f8fafc',
+                                            cursor: 'pointer',
+                                            outline: 'none',
+                                            minWidth: '170px'
+                                        }}
+                                    >
+                                        <option value="all">📍 Tất cả điểm đến</option>
+                                        {uniqueDestinations.map(d => (
+                                            <option key={d} value={d}>📍 {d}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Status Chips Filter */}
+                                {(() => {
+                                    const availableTours = tours.filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (!t.is_custom || t.is_custom === 0));
+                                    const needCount = availableTours.filter(t => getTourDeparturesCountInMonth(t, addDepartureModalMonth) === 0).length;
+                                    const hasCount = availableTours.filter(t => getTourDeparturesCountInMonth(t, addDepartureModalMonth) > 0).length;
+
+                                    return (
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setModalStatusFilter('all')}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    border: modalStatusFilter === 'all' ? '1px solid #0284c7' : '1px solid #e2e8f0',
+                                                    background: modalStatusFilter === 'all' ? '#e0f2fe' : '#ffffff',
+                                                    color: modalStatusFilter === 'all' ? '#0369a1' : '#64748b',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s'
+                                                }}
+                                            >
+                                                Tất cả ({availableTours.length})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setModalStatusFilter('needs_schedule')}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    border: modalStatusFilter === 'needs_schedule' ? '1px solid #f59e0b' : '1px solid #e2e8f0',
+                                                    background: modalStatusFilter === 'needs_schedule' ? '#fef3c7' : '#ffffff',
+                                                    color: modalStatusFilter === 'needs_schedule' ? '#b45309' : '#64748b',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s'
+                                                }}
+                                            >
+                                                ⚠️ Chưa có lịch Tháng {addDepartureModalMonth} ({needCount})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setModalStatusFilter('has_schedule')}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    border: modalStatusFilter === 'has_schedule' ? '1px solid #10b981' : '1px solid #e2e8f0',
+                                                    background: modalStatusFilter === 'has_schedule' ? '#ecfdf5' : '#ffffff',
+                                                    color: modalStatusFilter === 'has_schedule' ? '#047857' : '#64748b',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s'
+                                                }}
+                                            >
+                                                ✅ Đã có lịch Tháng {addDepartureModalMonth} ({hasCount})
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* TOUR CARDS LIST */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {(() => {
+                                    const filteredModalTours = tours
+                                        .filter(t => activeTourTab === 'custom' ? t.is_custom === 1 : (!t.is_custom || t.is_custom === 0))
+                                        .filter(t => {
+                                            if (modalDestinationFilter !== 'all' && t.destination !== modalDestinationFilter) return false;
+                                            if (modalSearchTerm.trim()) {
+                                                const term = modalSearchTerm.toLowerCase().trim();
+                                                const matchName = (t.tour_name || '').toLowerCase().includes(term);
+                                                const matchDest = (t.destination || '').toLowerCase().includes(term);
+                                                if (!matchName && !matchDest) return false;
+                                            }
+                                            const countInMonth = getTourDeparturesCountInMonth(t, addDepartureModalMonth);
+                                            if (modalStatusFilter === 'needs_schedule' && countInMonth > 0) return false;
+                                            if (modalStatusFilter === 'has_schedule' && countInMonth === 0) return false;
+                                            return true;
+                                        });
+
+                                    if (filteredModalTours.length === 0) {
+                                        return (
+                                            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                                                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔎</div>
+                                                <div style={{ fontWeight: '700', fontSize: '15px', color: '#1e293b' }}>Không tìm thấy tour phù hợp</div>
+                                                <p style={{ fontSize: '13px', margin: '4px 0 0 0' }}>Vui lòng thử từ khóa tìm kiếm khác hoặc bỏ bớt bộ lọc.</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return filteredModalTours.map(t => {
+                                        const countInMonth = getTourDeparturesCountInMonth(t, addDepartureModalMonth);
+
+                                        return (
+                                            <div 
+                                                key={t.tour_id}
+                                                style={{
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '16px',
+                                                    padding: '14px 18px',
+                                                    background: '#ffffff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    gap: '16px',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(2, 132, 199, 0.08)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; }}
+                                            >
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
+                                                            🚩 {t.tour_name}
+                                                        </h4>
+                                                        {countInMonth === 0 ? (
+                                                            <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+                                                                Chưa có lịch T{addDepartureModalMonth}
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ background: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+                                                                {countInMonth} đợt trong T{addDepartureModalMonth}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#64748b', fontWeight: '500', flexWrap: 'wrap' }}>
+                                                        <span>🕒 {t.duration_days} Ngày</span>
+                                                        <span>📍 {t.destination || 'Nhiều tỉnh'}</span>
+                                                        <span style={{ color: '#0284c7', fontWeight: '700' }}>💵 Tỷ suất: {t.markup_percent}%</span>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        const monthStr = `${currentYear}-${String(addDepartureModalMonth).padStart(2, '0')}`;
+                                                        setAddDepartureModalMonth(null);
+                                                        await handleSelectTour(t);
+                                                        handleAddNewDeparture(t, monthStr);
+                                                    }}
+                                                    style={{
+                                                        padding: '9px 18px',
+                                                        borderRadius: '12px',
+                                                        border: 'none',
+                                                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                                        color: '#ffffff',
+                                                        fontSize: '13px',
+                                                        fontWeight: '700',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                                                        whiteSpace: 'nowrap',
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(2, 132, 199, 0.35)'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(2, 132, 199, 0.25)'; }}
+                                                >
+                                                    <span>➕</span> Chọn & Mở Đợt Bán
+                                                </button>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+
+                            {/* MODAL FOOTER */}
+                            <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setAddDepartureModalMonth(null)}
+                                    style={{
+                                        padding: '8px 18px',
+                                        background: '#ffffff',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '10px',
+                                        color: '#475569',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
             </div>
         </div>
