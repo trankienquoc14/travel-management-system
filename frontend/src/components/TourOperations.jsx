@@ -73,8 +73,7 @@ const TourOperations = () => {
 
     const isNeedsReview = (dep) => {
         if (dep.days_until <= 0) return false;
-        if (dep.days_until <= 14 && dep.days_until > 7 && dep.operational_status === 'Pending' && dep.status === 'Open') return true;
-        if (dep.days_until <= 7 && dep.days_until > 0 && dep.status === 'Open') return true;
+        if (dep.days_until <= 30 && dep.status === 'Open' && (dep.operational_status === 'Pending' || dep.operational_status === 'Reviewing')) return true;
         return false;
     };
 
@@ -87,22 +86,14 @@ const TourOperations = () => {
             let milestoneValue = 'DEPARTED';
             let milestoneDesc = 'Đã khởi hành';
 
-            if (dep.days_until > 21) { 
-                milestoneLabel = 'T-21'; 
-                milestoneValue = 'PRE_T21'; 
+            if (dep.days_until > 30) { 
+                milestoneLabel = 'Mở bán'; 
+                milestoneValue = 'PRE_T30'; 
                 milestoneDesc = `Còn ${dep.days_until} ngày`;
-            } else if (dep.days_until <= 21 && dep.days_until > 14) { 
-                milestoneLabel = 'T-21'; 
-                milestoneValue = 'T21'; 
-                milestoneDesc = `Còn ${dep.days_until} ngày`;
-            } else if (dep.days_until <= 14 && dep.days_until > 7) { 
-                milestoneLabel = 'T-14'; 
-                milestoneValue = 'T14'; 
-                milestoneDesc = 'Cần xem xét';
-            } else if (dep.days_until <= 7 && dep.days_until > 0) { 
-                milestoneLabel = 'T-7'; 
-                milestoneValue = 'T7'; 
-                milestoneDesc = 'Đóng booking';
+            } else if (dep.days_until <= 30 && dep.days_until > 0) { 
+                milestoneLabel = 'Mốc T-30'; 
+                milestoneValue = 'T30'; 
+                milestoneDesc = 'Đến hạn xem xét';
             }
 
             let opStatus = dep.operational_status;
@@ -199,36 +190,33 @@ const TourOperations = () => {
 
     const renderTimeline = (dep) => {
         const steps = [
-            { id: 'T21', label: 'T-21', desc: 'Chuẩn bị' },
-            { id: 'T14', label: 'T-14', desc: 'Xem xét' },
-            { id: 'T7', label: 'T-7', desc: 'Đóng booking' },
+            { id: 'PRE_T30', label: 'Mở bán', desc: '> 30 ngày' },
+            { id: 'T30', label: 'Mốc T-30', desc: 'Phán quyết Chạy/Hủy' },
             { id: 'DEP', label: 'Khởi hành', desc: 'Chạy tour' }
         ];
 
         let activeIdx = 0;
-        if (dep.days_until <= 0) activeIdx = 3;
-        else if (dep.days_until <= 7) activeIdx = 2;
-        else if (dep.days_until <= 14) activeIdx = 1;
-        else if (dep.days_until <= 21) activeIdx = 0;
-        else activeIdx = -1;
+        if (dep.days_until <= 0) activeIdx = 2;
+        else if (dep.days_until <= 30) activeIdx = 1;
+        else activeIdx = 0;
 
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '20px 0', position: 'relative' }}>
-                <div style={{ position: 'absolute', top: '12px', left: '10%', right: '10%', height: '2px', background: '#e2e8f0', zIndex: 0 }}></div>
-                <div style={{ position: 'absolute', top: '12px', left: '10%', right: `${100 - ((Math.max(0, activeIdx)/3)*80 + 10)}%`, height: '2px', background: '#0194f3', zIndex: 1, transition: 'all 0.3s' }}></div>
+                <div style={{ position: 'absolute', top: '12px', left: '15%', right: '15%', height: '2px', background: '#e2e8f0', zIndex: 0 }}></div>
+                <div style={{ position: 'absolute', top: '12px', left: '15%', right: `${100 - ((Math.max(0, activeIdx)/2)*70 + 15)}%`, height: '2px', background: '#0194f3', zIndex: 1, transition: 'all 0.3s' }}></div>
                 
                 {steps.map((s, i) => {
                     const isActive = i <= activeIdx;
                     const isCurrent = i === activeIdx;
                     return (
-                        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, width: '80px' }}>
+                        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, width: '110px' }}>
                             <div style={{
-                                width: '24px', height: '24px', borderRadius: '50%',
+                                width: '26px', height: '26px', borderRadius: '50%',
                                 background: isActive ? '#0194f3' : '#fff',
                                 border: `2px solid ${isActive ? '#0194f3' : '#cbd5e1'}`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 color: isActive ? '#fff' : 'transparent',
-                                fontSize: '12px', fontWeight: 'bold'
+                                fontSize: '13px', fontWeight: 'bold'
                             }}>
                                 {isActive && '✓'}
                             </div>
@@ -350,6 +338,12 @@ const TourOperations = () => {
                         <option value="Confirmed">Đã xác nhận vận hành</option>
                         <option value="Cancelled">Đã đóng / Hủy</option>
                     </select>
+                    <select className="ops-filter-select" value={filterMilestone} onChange={e => setFilterMilestone(e.target.value)}>
+                        <option value="ALL">Mốc: Tất cả</option>
+                        <option value="PRE_T30">Mở bán (&gt; 30 ngày)</option>
+                        <option value="T30">Mốc T-30 (&le; 30 ngày)</option>
+                        <option value="DEPARTED">Đã khởi hành</option>
+                    </select>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', color: '#b45309', background: '#fffbeb', padding: '8px 12px', borderRadius: '8px' }}>
                         <input type="checkbox" checked={onlyNeedsReview} onChange={e => setOnlyNeedsReview(e.target.checked)} />
                         ⚠️ Chỉ tour cần xử lý
@@ -431,7 +425,7 @@ const TourOperations = () => {
                                                 <td>{renderBadge('booking', dep.status)}</td>
                                                 <td>{renderBadge('op', dep.ui_op_status)}</td>
                                                 <td>
-                                                    <div style={{ fontWeight: '600', fontSize: '12px', color: dep.days_until <= 14 && dep.days_until > 0 ? '#dc2626' : '#475569' }}>
+                                                    <div style={{ fontWeight: '600', fontSize: '12px', color: dep.days_until <= 30 && dep.days_until > 0 ? '#dc2626' : '#475569' }}>
                                                         {dep.milestoneLabel}
                                                     </div>
                                                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
@@ -498,48 +492,62 @@ const TourOperations = () => {
                             </div>
                         </div>
 
-                        {selectedDep.days_until <= 14 && selectedDep.days_until > 7 && selectedDep.status === 'Open' && selectedDep.ui_op_status === 'Pending' && (
+                        {selectedDep.days_until <= 30 && selectedDep.days_until > 0 && selectedDep.status === 'Open' && (selectedDep.ui_op_status === 'Pending' || selectedDep.ui_op_status === 'Reviewing') && (
                             <div style={{ marginBottom: '24px', border: '1px solid #fcd34d', background: '#fffbeb', padding: '20px', borderRadius: '12px' }}>
-                                <h4 style={{ margin: '0 0 12px 0', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-                                    ⚠️ Đã đến hạn xem xét vận hành (T-14)
+                                <h4 style={{ margin: '0 0 10px 0', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
+                                    ⚠️ Đã đến hạn xem xét vận hành (Mốc T-30 - Còn {selectedDep.days_until} ngày)
                                 </h4>
+                                
+                                {selectedDep.current_pax >= selectedDep.ui_min_pax ? (
+                                    <div style={{ fontSize: '13px', color: '#065f46', background: '#d1fae5', border: '1px solid #a7f3d0', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', lineHeight: '1.5' }}>
+                                        ✓ <strong>Đã đạt điều kiện hòa vốn</strong> ({selectedDep.current_pax}/{selectedDep.ui_min_pax} khách). 
+                                        Khuyến nghị: <strong>Xác nhận vận hành</strong> để chốt chạy tour và triển khai các dịch vụ đối tác.
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '13px', color: '#991b1b', background: '#fee2e2', border: '1px solid #fecaca', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', lineHeight: '1.5' }}>
+                                        ⚠️ <strong>Chưa đạt số khách tối thiểu</strong> ({selectedDep.current_pax}/{selectedDep.ui_min_pax} khách, còn thiếu {selectedDep.ui_min_pax - selectedDep.current_pax} khách). 
+                                        Cân nhắc: <strong>Đóng / Hủy tour sớm</strong> trước 30 ngày để tránh phát sinh chi phí phạt cọc đối tác và hỗ trợ khách hàng đổi tour kịp thời.
+                                    </div>
+                                )}
+
                                 <input 
                                     type="text" 
-                                    placeholder="Nhập ghi chú quyết định..." 
+                                    placeholder="Nhập ghi chú quyết định (vd: Đủ khách chốt chạy / Thiếu khách hủy đợt)..." 
                                     value={actionNote} 
                                     onChange={e => setActionNote(e.target.value)}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', marginBottom: '16px', outline: 'none', fontSize: '13px' }}
                                 />
                                 <div style={{ display: 'flex', gap: '12px' }}>
-                                    {selectedDep.current_pax >= selectedDep.ui_min_pax ? (
-                                        <button onClick={() => handleAction('Xác nhận vận hành')} style={{ flex: 1, padding: '10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>✓ Xác nhận vận hành</button>
-                                    ) : (
-                                        <button onClick={() => handleAction('Tiếp tục vận hành')} style={{ flex: 1, padding: '10px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>⏳ Tiếp tục vận hành</button>
-                                    )}
-                                    <button onClick={() => handleAction('Đóng tour')} style={{ flex: 1, padding: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>✖ Đóng / Hủy tour</button>
+                                    <button 
+                                        onClick={() => handleAction('Xác nhận vận hành')} 
+                                        style={{ flex: 1, padding: '12px', background: selectedDep.current_pax >= selectedDep.ui_min_pax ? '#10b981' : '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                                    >
+                                        ✓ Xác nhận vận hành
+                                    </button>
+                                    <button 
+                                        onClick={() => handleAction('Đóng / Hủy tour')} 
+                                        style={{ flex: 1, padding: '12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                                    >
+                                        ✖ Đóng / Hủy tour
+                                    </button>
                                 </div>
                             </div>
                         )}
 
-                        {selectedDep.days_until <= 7 && selectedDep.days_until > 0 && selectedDep.status === 'Open' && (
-                            <div style={{ marginBottom: '24px', border: '1px solid #fca5a5', background: '#fef2f2', padding: '20px', borderRadius: '12px' }}>
-                                <h4 style={{ margin: '0 0 12px 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-                                    🚨 Đã đến hạn đóng booking (T-7)
-                                </h4>
-                                <p style={{ fontSize: '13px', color: '#7f1d1d', marginBottom: '16px', lineHeight: '1.5' }}>
-                                    Đã đến hạn chốt số khách cuối cùng ({selectedDep.current_pax} khách). 
-                                    Sau khi đóng, không thể nhận thêm booking mới. Nếu số khách tăng so với dự kiến trước đó, hãy chuyển sang Yêu cầu Dịch vụ để bổ sung.
-                                </p>
-                                <input 
-                                    type="text" 
-                                    placeholder="Ghi chú đóng tour..." 
-                                    value={actionNote} 
-                                    onChange={e => setActionNote(e.target.value)}
-                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', marginBottom: '16px', outline: 'none', fontSize: '13px' }}
-                                />
-                                <button onClick={() => handleAction('Đóng booking')} style={{ width: '100%', padding: '12px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
-                                    🔒 Đóng Booking
-                                </button>
+                        {selectedDep.status === 'Open' && selectedDep.ui_op_status === 'Confirmed' && (
+                            <div style={{ marginBottom: '24px', border: '1px solid #bae6fd', background: '#f0f9ff', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ color: '#0369a1', fontWeight: '600', fontSize: '14px' }}>✓ Đợt khởi hành đã được xác nhận vận hành</div>
+                                        <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>Tour đang tiếp tục mở bán để lấp đầy các chỗ trống còn lại ({selectedDep.current_pax}/{selectedDep.max_slots} chỗ).</div>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleAction('Đóng booking')}
+                                        style={{ padding: '8px 14px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                                    >
+                                        🔒 Đóng booking sớm
+                                    </button>
+                                </div>
                             </div>
                         )}
 

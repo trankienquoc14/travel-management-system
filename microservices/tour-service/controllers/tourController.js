@@ -1066,9 +1066,9 @@ exports.getOperationalDepartures = async (req, res) => {
             const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
             let milestone = null;
-            if (daysUntil <= 7 && daysUntil > 0) milestone = 'T-7';
-            else if (daysUntil <= 14 && daysUntil > 7) milestone = 'T-14';
-            else if (daysUntil <= 21 && daysUntil > 14) milestone = 'T-21';
+            if (daysUntil <= 0) milestone = 'DEP';
+            else if (daysUntil <= 30) milestone = 'T-30';
+            else milestone = 'PRE_T30';
             
             let decHistory = [];
             if (r.decision_history) {
@@ -1115,7 +1115,7 @@ exports.makeOperationalDecision = async (req, res) => {
             newOperationalStatus = 'Confirmed';
         } else if (action === 'Tiếp tục xem xét' || action === 'Tiếp tục vận hành') {
             newOperationalStatus = 'Reviewing';
-        } else if (action === 'Đóng tour') {
+        } else if (action === 'Đóng tour' || action === 'Hủy tour' || action === 'Đóng / Hủy tour') {
             newOperationalStatus = 'Cancelled';
             newStatus = 'Closed';
         } else if (action === 'Đóng booking') {
