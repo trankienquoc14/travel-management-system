@@ -12,11 +12,20 @@ const notifyTourEvent = (type, data = {}) => {
 const syncExpiredDeparturesStatus = async (transaction = null) => {
   try {
     const opts = transaction ? { transaction } : {};
+    // Đóng nhận khách cho các đợt đã hoặc đang khởi hành
     await sequelize.query(`
       UPDATE departures 
       SET status = 'Closed' 
-      WHERE (return_date < CURDATE() OR (available_slots <= 0 AND departure_date <= CURDATE()))
+      WHERE (departure_date <= CURDATE() OR return_date < CURDATE())
         AND status = 'Open'
+    `, opts);
+
+    // Chuyển sang Hoàn tất cho các đợt đã qua ngày về
+    await sequelize.query(`
+      UPDATE departures 
+      SET status = 'Completed' 
+      WHERE return_date < CURDATE() 
+        AND status = 'Closed'
     `, opts);
   } catch (error) {
     console.error("Auto sync departures status error:", error);
@@ -48,7 +57,7 @@ exports.getTourById = async (req, res) => {
     if (!tour.length) return res.status(404).json({ success: false, message: 'Không tìm thấy tour' });
 
     const [itineraries] = await sequelize.query(`SELECT * FROM itineraries WHERE tour_id = ${tourId} ORDER BY day_number ASC`);
-    const [departures] = await sequelize.query(`SELECT * FROM departures WHERE tour_id = ${tourId} AND status = 'Open' AND available_slots > 0 AND return_date >= CURDATE() ORDER BY departure_date ASC`);
+    const [departures] = await sequelize.query(`SELECT * FROM departures WHERE tour_id = ${tourId} AND status = 'Open' AND available_slots > 0 AND departure_date > CURDATE() ORDER BY departure_date ASC`);
 
     res.status(200).json({ success: true, data: { ...tour[0], itineraries, departures } });
   } catch (error) {
@@ -291,10 +300,27 @@ exports.saveTourOperationalSchedule = async (req, res) => {
 
       // C. LƯU ĐỢT KHỞI HÀNH & PHÂN CÔNG HƯỚNG DẪN VIÊN
       const keepDepIds = departures.map(d => d.departure_id).filter(id => id);
+
+      // Kiểm tra nếu có đợt bị xóa mà đợt đó đã có khách đặt chỗ
+      const [existingDepsWithBookings] = await sequelize.query(`
+        SELECT departure_id, departure_date, (max_slots - available_slots) as booked 
+        FROM departures 
+        WHERE tour_id = ? AND available_slots < max_slots ${keepDepIds.length > 0 ? 'AND departure_id NOT IN (?)' : ''}
+      `, { replacements: keepDepIds.length > 0 ? [targetTourId, keepDepIds] : [targetTourId], transaction });
+
+      if (existingDepsWithBookings.length > 0) {
+        await transaction.rollback();
+        const depWarn = existingDepsWithBookings.map(d => `#${d.departure_id} (ngày ${String(d.departure_date).substring(0, 10)}: ${d.booked} khách)`).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `⚠️ Không thể xóa các đợt khởi hành đã có khách đặt cọc: ${depWarn}. Vui lòng chuyển trạng thái sang KHÓA (CLOSED) thay vì xóa!`
+        });
+      }
+
       if (keepDepIds.length > 0) {
-          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND status != 'Closed' AND status != 'Completed' AND return_date >= CURDATE() AND departure_id NOT IN (?)`, { replacements: [targetTourId, keepDepIds], transaction });
+          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND status != 'Closed' AND status != 'Completed' AND departure_id NOT IN (?)`, { replacements: [targetTourId, keepDepIds], transaction });
       } else {
-          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND status != 'Closed' AND status != 'Completed' AND return_date >= CURDATE()`, { replacements: [targetTourId], transaction });
+          await sequelize.query(`DELETE FROM departures WHERE tour_id=? AND available_slots = max_slots AND status != 'Closed' AND status != 'Completed'`, { replacements: [targetTourId], transaction });
       }
 
       const todayStr = new Date().toISOString().split('T')[0];
