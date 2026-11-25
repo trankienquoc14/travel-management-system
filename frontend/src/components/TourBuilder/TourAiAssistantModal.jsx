@@ -39,6 +39,7 @@ const TourAiAssistantModal = ({
   const [selectedDestIds, setSelectedDestIds] = useState([]);
   const [daysCountInput, setDaysCountInput] = useState(days.length || 3);
   const [applySuccess, setApplySuccess] = useState(false);
+  const [suggestAttempt, setSuggestAttempt] = useState(0);
 
   // Tự động nhận diện Nơi Khởi Hành và Tuyến Điểm Đến từ dữ liệu tour hiện tại
   useEffect(() => {
@@ -183,11 +184,16 @@ const TourAiAssistantModal = ({
     }
   };
 
-  // Gửi yêu cầu AI Gợi ý Lịch trình Chuẩn
-  const handleRunSuggest = async () => {
+  // Gửi yêu cầu AI Gợi ý Lịch trình Chuẩn (có hỗ trợ đổi phương án mới)
+  const handleRunSuggest = async (isRegenerate = false) => {
     if (selectedDestIds.length === 0) {
       alert('Vui lòng chọn ít nhất một điểm đến du lịch!');
       return;
+    }
+
+    const nextAttempt = isRegenerate ? suggestAttempt + 1 : suggestAttempt;
+    if (isRegenerate) {
+      setSuggestAttempt(nextAttempt);
     }
 
     try {
@@ -200,7 +206,10 @@ const TourAiAssistantModal = ({
         daysCount: Number(daysCountInput || 3),
         days: days,
         availablePlaces: relevantPlaces.length > 0 ? relevantPlaces : allPlaces,
-        availableHotels: relevantHotels.length > 0 ? relevantHotels : allServices
+        availableHotels: relevantHotels.length > 0 ? relevantHotels : allServices,
+        attempt: nextAttempt,
+        shuffle: isRegenerate,
+        randomSeed: Date.now()
       });
 
       if (res.data && res.data.success) {
@@ -493,14 +502,16 @@ const TourAiAssistantModal = ({
                     </div>
                   </div>
 
-                  {/* Nút Tạo Gợi Ý */}
+                  {/* Nút Tạo Gợi Ý / Đổi Phương Án */}
                   <button
-                    onClick={handleRunSuggest}
+                    onClick={() => handleRunSuggest(Boolean(suggestResult))}
                     disabled={loading}
                     style={{
                       padding: '10px 20px',
                       borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                      background: suggestResult 
+                        ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' 
+                        : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                       color: '#fff',
                       border: 'none',
                       fontWeight: '700',
@@ -513,8 +524,8 @@ const TourAiAssistantModal = ({
                       height: '40px'
                     }}
                   >
-                    <Sparkles size={16} />
-                    <span>{loading ? 'Đang tạo...' : 'Tạo Lịch Trình Chuẩn'}</span>
+                    {suggestResult ? <RotateCcw size={16} /> : <Sparkles size={16} />}
+                    <span>{loading ? 'Đang xử lý...' : (suggestResult ? 'Đổi Phương Án Khác' : 'Tạo Lịch Trình Chuẩn')}</span>
                   </button>
                 </div>
 
@@ -680,26 +691,52 @@ const TourAiAssistantModal = ({
                       </p>
                     </div>
 
-                    <button
-                      onClick={handleApplySuggestion}
-                      style={{
-                        padding: '9px 18px',
-                        borderRadius: '8px',
-                        background: '#10b981',
-                        color: '#fff',
-                        border: 'none',
-                        fontWeight: '700',
-                        fontSize: '13.5px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                    >
-                      <Check size={16} />
-                      <span>Áp Dụng Vào Bản Thiết Kế</span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRunSuggest(true)}
+                        disabled={loading}
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          background: '#fff',
+                          color: '#4f46e5',
+                          border: '1.5px solid #c7d2fe',
+                          fontWeight: '700',
+                          fontSize: '13px',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}
+                        title="Tạo phương án lịch trình khác với các điểm tham quan mới"
+                      >
+                        <RotateCcw size={15} />
+                        <span>{loading ? 'Đang tạo...' : 'Đổi Phương Án Khác'}</span>
+                      </button>
+
+                      <button
+                        onClick={handleApplySuggestion}
+                        style={{
+                          padding: '9px 18px',
+                          borderRadius: '8px',
+                          background: '#10b981',
+                          color: '#fff',
+                          border: 'none',
+                          fontWeight: '700',
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                        }}
+                      >
+                        <Check size={16} />
+                        <span>Áp Dụng Vào Bản Thiết Kế</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* DANH SÁCH CÁC NGÀY GỢI Ý */}
@@ -780,8 +817,31 @@ const TourAiAssistantModal = ({
                     ))}
                   </div>
 
-                  {/* NÚT ÁP DỤNG CUỐI MODAL */}
-                  <div style={{ marginTop: '16px', textAlign: 'right' }}>
+                  {/* NÚT THAO TÁC CUỐI MODAL */}
+                  <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleRunSuggest(true)}
+                      disabled={loading}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '8px',
+                        background: '#fff',
+                        color: '#4f46e5',
+                        border: '1.5px solid #c7d2fe',
+                        fontWeight: '700',
+                        fontSize: '13.5px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      <RotateCcw size={16} />
+                      <span>{loading ? 'Đang tạo...' : 'Đổi Phương Án Khác (Gợi Ý Lại)'}</span>
+                    </button>
+
                     <button
                       onClick={handleApplySuggestion}
                       style={{
@@ -793,10 +853,14 @@ const TourAiAssistantModal = ({
                         fontWeight: '700',
                         fontSize: '14px',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
                         boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
                       }}
                     >
-                      ✓ Áp Dụng Toàn Bộ Lịch Trình Vào Tour
+                      <Check size={18} />
+                      <span>Áp Dụng Toàn Bộ Lịch Trình Vào Tour</span>
                     </button>
                   </div>
                 </div>

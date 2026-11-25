@@ -444,7 +444,7 @@ app.get('/api/chat/ai/health', (req, res) => {
 
 app.post('/api/chat/ai/tour-copilot', async (req, res) => {
   try {
-    const { action, destinationName, destinationsList, departureDestination, daysCount, days, availablePlaces, availableHotels } = req.body || {};
+    const { action, destinationName, destinationsList, departureDestination, daysCount, days, availablePlaces, availableHotels, attempt, shuffle, randomSeed } = req.body || {};
     const result = await copilotTourDesign({
       action: action || 'audit',
       destinationName,
@@ -453,7 +453,10 @@ app.post('/api/chat/ai/tour-copilot', async (req, res) => {
       daysCount: Number(daysCount || 3),
       days: Array.isArray(days) ? days : [],
       availablePlaces: Array.isArray(availablePlaces) ? availablePlaces : [],
-      availableHotels: Array.isArray(availableHotels) ? availableHotels : []
+      availableHotels: Array.isArray(availableHotels) ? availableHotels : [],
+      attempt: Number(attempt || 0),
+      shuffle: Boolean(shuffle),
+      randomSeed: randomSeed || null
     });
     res.json({
       success: true,
