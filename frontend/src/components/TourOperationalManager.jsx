@@ -566,14 +566,21 @@ const TourOperationalManager = () => {
                     tourReqServiceId === 2
                 );
 
-                const loadedDepartures = (d.departures || []).map(dep => ({
-                    ...dep,
-                    guide_id: (dep.guide_id && guides.some(g => g.user_id === Number(dep.guide_id))) ? Number(dep.guide_id) : null,
-                    driver_id: tourIsFlight ? null : ((dep.driver_id && drivers.some(drv => drv.user_id === Number(dep.driver_id))) ? Number(dep.driver_id) : null),
-                    vehicle_number: tourIsFlight ? '' : (dep.vehicle_number || ''),
-                    original_max_slots: dep.max_slots,
-                    original_available_slots: dep.available_slots
-                }));
+                const loadedDepartures = (d.departures || []).map(dep => {
+                    let origM = null;
+                    if (dep.departure_date) {
+                        origM = new Date(dep.departure_date).getMonth() + 1;
+                    }
+                    return {
+                        ...dep,
+                        _originalMonth: origM,
+                        guide_id: (dep.guide_id && guides.some(g => g.user_id === Number(dep.guide_id))) ? Number(dep.guide_id) : null,
+                        driver_id: tourIsFlight ? null : ((dep.driver_id && drivers.some(drv => drv.user_id === Number(dep.driver_id))) ? Number(dep.driver_id) : null),
+                        vehicle_number: tourIsFlight ? '' : (dep.vehicle_number || ''),
+                        original_max_slots: dep.max_slots,
+                        original_available_slots: dep.available_slots
+                    };
+                });
 
                 setDepartures(loadedDepartures);
                 
@@ -988,15 +995,19 @@ const TourOperationalManager = () => {
 
         let defaultDepDate = todayStr;
         const duration = Number(targetTour.duration_days || 1);
+        let origM = null;
 
         if (targetMonth && targetMonth !== 'all') {
             const parts = targetMonth.split('-');
             const yearNum = parts[0] || currentYear;
             const monthNum = parts[1] || String(new Date().getMonth() + 1).padStart(2, '0');
+            origM = Number(monthNum);
             const candidateDate = `${yearNum}-${monthNum}-15`;
             if (candidateDate >= todayStr) {
                 defaultDepDate = candidateDate;
             }
+        } else {
+            origM = new Date().getMonth() + 1;
         }
 
         let defaultRetDate = defaultDepDate;
@@ -1013,7 +1024,8 @@ const TourOperationalManager = () => {
             guide_id: null,
             driver_id: null,
             vehicle_number: '',
-            status: 'Open'
+            status: 'Open',
+            _originalMonth: origM
         };
 
         setDepartures(prev => [...prev, newDep]);
@@ -1067,7 +1079,7 @@ const TourOperationalManager = () => {
             // 1. Nếu tour này đang mở trong selectedTour, kiểm tra departures đang có trong state
             if (selectedTour && Number(selectedTour.tour_id) === tourIdNum) {
                 const hasInCurrentDepartures = (departures || []).some(dep => 
-                    checkDateMatchesMonthYear(dep.departure_date, m)
+                    checkDateMatchesMonthYear(dep.departure_date, m) || dep._originalMonth === m
                 );
                 if (hasInCurrentDepartures) return true;
             }
@@ -1302,7 +1314,7 @@ const TourOperationalManager = () => {
                                                                         const depMonth = d.getMonth() + 1;
                                                                         const depYear = d.getFullYear();
 
-                                                                        return (depYear === currentYear && depMonth === m);
+                                                                        return (depYear === currentYear && depMonth === m) || (dep._originalMonth === m);
                                                                     });
 
                                                                 if (monthDepartures.length === 0) {
@@ -1570,6 +1582,20 @@ const TourOperationalManager = () => {
                                                                                         <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
                                                                                             Ngày về: <span style={{ color: dep.return_date ? '#374151' : '#9ca3af', fontWeight: '600' }}>{dep.return_date ? formatDateStr(dep.return_date) : '...'}</span>
                                                                                         </div>
+                                                                                        {(() => {
+                                                                                            if (!dep.departure_date) return null;
+                                                                                            const d = new Date(dep.departure_date);
+                                                                                            const actualM = d.getMonth() + 1;
+                                                                                            const actualY = d.getFullYear();
+                                                                                            if (actualM !== m || actualY !== currentYear) {
+                                                                                                return (
+                                                                                                    <div style={{ fontSize: '11px', color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', padding: '3px 8px', marginTop: '6px', fontWeight: '700', lineHeight: '1.3' }}>
+                                                                                                        🗓️ Thuộc Tháng {actualM}/{actualY} (sẽ chuyển sang mục Tháng {actualM} sau khi lưu)
+                                                                                                    </div>
+                                                                                                );
+                                                                                            }
+                                                                                            return null;
+                                                                                        })()}
                                                                                     </div>
 
                                                                                     {/* KHÁCH HÀNG & SLOT */}
