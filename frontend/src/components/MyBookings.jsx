@@ -26,12 +26,36 @@ const getDaysLeftBeforeDeparture = (depDateStr) => {
 const isBookingCompleted = (booking) => {
     if (!booking) return false;
     if (booking.booking_status === 'Completed') return true;
+    if (booking.booking_status === 'Cancelled') return false;
+    
+    // Kiểm tra ngày về return_date so với hiện tại
     if (booking.return_date) {
         const retDate = new Date(booking.return_date);
         const now = new Date();
+        now.setHours(0, 0, 0, 0);
         if (!isNaN(retDate.getTime()) && retDate < now) return true;
     }
+
+    // Kiểm tra ngày khởi hành + số ngày tour
+    if (booking.departure_date) {
+        const depDate = new Date(booking.departure_date);
+        const duration = Number(booking.duration_days || 1);
+        const endDate = new Date(depDate.getTime() + duration * 24 * 60 * 60 * 1000);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        if (!isNaN(endDate.getTime()) && endDate <= now) return true;
+    }
     return false;
+};
+
+// Xác định trạng thái chuẩn xác của đơn hàng (nếu tour đã kết thúc và đã thanh toán thì hiển thị là Completed)
+const getEffectiveBookingStatus = (booking) => {
+    if (!booking) return 'Pending';
+    if (booking.booking_status === 'Cancelled') return 'Cancelled';
+    if (booking.booking_status === 'Completed' || (isBookingCompleted(booking) && booking.payment_status === 'Paid')) {
+        return 'Completed';
+    }
+    return booking.booking_status || 'Pending';
 };
 
 const isBankTransferBooking = (booking) => {
@@ -660,14 +684,15 @@ const MyBookings = () => {
         .filter(b => b.booking_status !== 'Cancelled' && new Date(b.departure_date) >= new Date())
         .sort((a, b) => new Date(a.departure_date) - new Date(b.departure_date))[0];
 
-    // Filtered bookings list
+    // Filtered bookings list (Chuẩn hóa bộ lọc theo trạng thái thực tế getEffectiveBookingStatus)
     const filteredBookings = bookings.filter(b => {
+        const effStatus = getEffectiveBookingStatus(b);
         if (filterStatus === 'All') return true;
-        if (filterStatus === 'Completed') return b.booking_status === 'Completed' || (b.return_date && new Date(b.return_date) < new Date());
-        if (filterStatus === 'Confirmed') return b.booking_status === 'Confirmed';
-        if (filterStatus === 'Pending') return b.booking_status === 'Pending';
+        if (filterStatus === 'Completed') return effStatus === 'Completed';
+        if (filterStatus === 'Confirmed') return effStatus === 'Confirmed';
+        if (filterStatus === 'Pending') return effStatus === 'Pending';
         if (filterStatus === 'Paid') return b.payment_status === 'Paid';
-        if (filterStatus === 'Cancelled') return b.booking_status === 'Cancelled';
+        if (filterStatus === 'Cancelled') return effStatus === 'Cancelled';
         return true;
     });
 
@@ -682,9 +707,10 @@ const MyBookings = () => {
     });
 
     
-const renderTimeline = (bookingStatus, paymentStatus) => {
+const renderTimeline = (bookingStatus, paymentStatus, booking = null) => {
     let currentStep = 2; // Mặc định là đã xác nhận
     let isCancelled = bookingStatus === 'Cancelled';
+    const isCompleted = bookingStatus === 'Completed' || (booking && getEffectiveBookingStatus(booking) === 'Completed');
 
     if (isCancelled) {
         // Special render for cancelled
@@ -700,7 +726,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
         );
     }
     if (paymentStatus === 'Paid') currentStep = 3;
-    if (bookingStatus === 'Completed') currentStep = 4;
+    if (isCompleted) currentStep = 4;
 
     // Steps definition
     const steps = [
@@ -714,13 +740,13 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 40px', width: '100%', boxSizing: 'border-box' }}>
             {steps.map((step, index) => {
                 const stepNum = index + 1;
-                const isCompleted = currentStep >= stepNum;
+                const isStepActive = currentStep >= stepNum;
                 const isPastCompleted = currentStep > stepNum;
                 
                 return (
                     <React.Fragment key={index}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', zIndex: 2, width: '80px' }}>
-                            {isCompleted ? (
+                            {isStepActive ? (
                                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#588b6b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', boxShadow: '0 0 0 6px #eefdf4' }}>
                                     ✓
                                 </div>
@@ -729,7 +755,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                     {stepNum}
                                 </div>
                             )}
-                            <span style={{ color: isCompleted ? '#588b6b' : '#94a3b8', fontWeight: '700', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: isStepActive ? '#588b6b' : '#94a3b8', fontWeight: '700', fontSize: '13px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                 {step.label}
                             </span>
                         </div>
@@ -743,8 +769,9 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
     );
 };
 
-    const renderStatusBadge = (status) => {
-        switch (status) {
+    const renderStatusBadge = (status, booking = null) => {
+        const finalStatus = booking ? getEffectiveBookingStatus(booking) : status;
+        switch (finalStatus) {
             case 'Confirmed':
                 return <span style={{ padding: '6px 14px', borderRadius: '20px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', fontSize: '13px', fontWeight: '700' }}>✅ Đã xác nhận</span>;
             case 'Pending':
@@ -754,7 +781,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
             case 'Cancelled':
                 return <span style={{ padding: '6px 14px', borderRadius: '20px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '13px', fontWeight: '700' }}>❌ Đã hủy</span>;
             default:
-                return <span style={{ padding: '6px 14px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', fontSize: '13px', fontWeight: '700' }}>{status}</span>;
+                return <span style={{ padding: '6px 14px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', fontSize: '13px', fontWeight: '700' }}>{finalStatus}</span>;
         }
     };
 
@@ -903,7 +930,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                                     </div>
 
                                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                                        {renderStatusBadge(booking.booking_status)}
+                                                        {renderStatusBadge(booking.booking_status, booking)}
                                                         {renderPaymentBadge(booking.payment_status)}
                                                     </div>
                                                 </div>
@@ -1110,10 +1137,16 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                                 ✕
                             </button>
 
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: detailBooking.isService ? '#fde68a' : '#38bdf8', textTransform: 'uppercase' }}>
-                                MÃ ĐƠN HÀNG: #{detailBooking.isService ? 'SRV' : 'BKG'}-{detailBooking.booking_id.toString().padStart(4, '0')}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: detailBooking.isService ? '#fde68a' : '#38bdf8', textTransform: 'uppercase' }}>
+                                    MÃ ĐƠN HÀNG: #{detailBooking.isService ? 'SRV' : 'BKG'}-{detailBooking.booking_id.toString().padStart(4, '0')}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {renderStatusBadge(detailBooking.isService ? detailBooking.status : detailBooking.booking_status, detailBooking.isService ? null : detailBooking)}
+                                    {renderPaymentBadge(detailBooking.payment_status)}
+                                </div>
                             </div>
-                            <h3 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '800' }}>
+                            <h3 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: '800' }}>
                                 {detailBooking.isService ? detailBooking.service_name : detailBooking.tour_name}
                             </h3>
                         </div>
@@ -1123,7 +1156,7 @@ const renderTimeline = (bookingStatus, paymentStatus) => {
                             
                             {/* Status Bar Timeline */}
                             <div style={{ background: '#ffffff', borderRadius: '16px', marginBottom: '24px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                {renderTimeline(detailBooking.isService ? detailBooking.status : detailBooking.booking_status, detailBooking.payment_status)}
+                                {renderTimeline(detailBooking.isService ? detailBooking.status : detailBooking.booking_status, detailBooking.payment_status, detailBooking.isService ? null : detailBooking)}
                             </div>
 
                             {/* 2-Column Info Sections */}

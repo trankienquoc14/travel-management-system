@@ -210,6 +210,37 @@ if (typeof autoCancelInterval.unref === 'function') {
   autoCancelInterval.unref();
 }
 
+/**
+ * Tự động chuyển các đơn tour đã hoàn thành (ngày kết thúc tour < thời điểm hiện tại và đã thanh toán)
+ * sang trạng thái 'Completed'
+ */
+const autoCompleteFinishedBookings = async (customerId = null) => {
+  try {
+    const customerFilter = customerId ? 'AND b.customer_id = ?' : '';
+    const replacements = customerId ? [customerId] : [];
+
+    await sequelize.query(`
+      UPDATE bookings b
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+      SET b.booking_status = 'Completed'
+      WHERE b.booking_status = 'Confirmed'
+        AND b.payment_status = 'Paid'
+        AND (
+          (d.return_date IS NOT NULL AND d.return_date < CURDATE())
+          OR (cr.return_date IS NOT NULL AND cr.return_date < CURDATE())
+          OR (d.departure_date IS NOT NULL AND DATE_ADD(d.departure_date, INTERVAL COALESCE(t.duration_days, 1) DAY) <= CURDATE())
+          OR (cr.departure_date IS NOT NULL AND DATE_ADD(cr.departure_date, INTERVAL COALESCE(DATEDIFF(cr.return_date, cr.departure_date) + 1, 3) DAY) <= CURDATE())
+        )
+        ${customerFilter}
+    `, { replacements });
+  } catch (error) {
+    console.error('⚠️ [autoCompleteFinishedBookings] Lỗi tự động hoàn thành đơn tour:', error.message);
+  }
+};
+
 // 2. Lấy danh sách đơn hàng của khách hàng (HỖ TRỢ CẢ TOUR TRỌN GÓI VÀ TOUR THIẾT KẾ RIÊNG)
 exports.getMyBookings = async (req, res) => {
   try {
@@ -222,13 +253,27 @@ exports.getMyBookings = async (req, res) => {
     // Tự động hủy các đơn chuyển khoản (CK) chưa thanh toán đã quá hạn 10 phút trước khi trả danh sách
     await autoCancelExpiredTransferBookings(customer_id);
 
+    // Tự động cập nhật các đơn tour đã hoàn thành chuyến đi sang trạng thái 'Completed'
+    await autoCompleteFinishedBookings(customer_id);
+
     // Dùng LEFT JOIN và COALESCE để lấy thông tin toàn diện cho cả 2 loại tour
     const [bookings] = await sequelize.query(`
       SELECT 
         b.booking_id, 
         b.num_people, 
         b.total_amount, 
-        b.booking_status, 
+        CASE
+          WHEN b.booking_status = 'Cancelled' THEN 'Cancelled'
+          WHEN b.booking_status = 'Completed' OR (
+            b.payment_status = 'Paid' AND (
+              (d.return_date IS NOT NULL AND d.return_date < CURDATE())
+              OR (cr.return_date IS NOT NULL AND cr.return_date < CURDATE())
+              OR (d.departure_date IS NOT NULL AND DATE_ADD(d.departure_date, INTERVAL COALESCE(t.duration_days, 1) DAY) <= CURDATE())
+              OR (cr.departure_date IS NOT NULL AND DATE_ADD(cr.departure_date, INTERVAL COALESCE(DATEDIFF(cr.return_date, cr.departure_date) + 1, 3) DAY) <= CURDATE())
+            )
+          ) THEN 'Completed'
+          ELSE b.booking_status
+        END AS booking_status,
         b.payment_status,
         b.booking_date,
         GREATEST(0, TIMESTAMPDIFF(SECOND, b.booking_date, NOW())) AS elapsed_seconds,
@@ -1438,13 +1483,25 @@ exports.processChangeRequest = async (req, res) => {
 exports.getAllBookings = async (req, res) => {
   try {
     await autoCancelExpiredTransferBookings();
+    await autoCompleteFinishedBookings();
     const [bookings] = await sequelize.query(`
       SELECT 
         b.booking_id, 
         b.customer_id,
         b.num_people, 
         b.total_amount, 
-        b.booking_status, 
+        CASE
+          WHEN b.booking_status = 'Cancelled' THEN 'Cancelled'
+          WHEN b.booking_status = 'Completed' OR (
+            b.payment_status = 'Paid' AND (
+              (d.return_date IS NOT NULL AND d.return_date < CURDATE())
+              OR (cr.return_date IS NOT NULL AND cr.return_date < CURDATE())
+              OR (d.departure_date IS NOT NULL AND DATE_ADD(d.departure_date, INTERVAL COALESCE(t.duration_days, 1) DAY) <= CURDATE())
+              OR (cr.departure_date IS NOT NULL AND DATE_ADD(cr.departure_date, INTERVAL COALESCE(DATEDIFF(cr.return_date, cr.departure_date) + 1, 3) DAY) <= CURDATE())
+            )
+          ) THEN 'Completed'
+          ELSE b.booking_status
+        END AS booking_status,
         b.payment_status,
         b.booking_date,
         b.notes,

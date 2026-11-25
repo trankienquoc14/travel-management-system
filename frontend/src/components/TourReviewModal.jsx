@@ -273,7 +273,7 @@ const TourReviewModal = ({ isOpen, onClose, tour, booking, onReviewSubmitted }) 
                     background: 'linear-gradient(to right, #f8fafc, #ffffff)'
                 }}>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                             <span style={{
                                 background: '#fef3c7',
                                 color: '#b45309',
@@ -286,6 +286,17 @@ const TourReviewModal = ({ isOpen, onClose, tour, booking, onReviewSubmitted }) 
                                 gap: '4px'
                             }}>
                                 <Sparkles size={14} /> {isExistingReview ? 'CẬP NHẬT ĐÁNH GIÁ' : 'ĐÁNH GIÁ TOUR'}
+                            </span>
+                            <span style={{
+                                background: '#f0f9ff',
+                                color: '#0284c7',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                border: '1px solid #bae6fd'
+                            }}>
+                                🎉 Đã hoàn thành
                             </span>
                             {booking?.booking_id && (
                                 <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
