@@ -515,33 +515,45 @@ const TourListPage = () => {
 
             {/* 2. PAGE HEADER BANNER + INLINE SEARCH */}
             <div style={{
-                padding: '54px 24px 64px 24px',
-                background: 'linear-gradient(135deg, rgba(16, 42, 67, 0.84) 0%, rgba(22, 139, 235, 0.72) 100%), url(https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2000) center/cover no-repeat',
-                marginBottom: '36px'
+                padding: '48px 20px 56px 20px',
+                background: 'linear-gradient(135deg, rgba(16, 42, 67, 0.88) 0%, rgba(22, 139, 235, 0.78) 100%), url(https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2000) center/cover no-repeat',
+                marginBottom: '32px',
+                position: 'relative'
             }}>
                 <div className="tt-container" style={{ textAlign: 'center', color: '#ffffff' }}>
                     <span style={{
-                        background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(8px)',
+                        background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
                         padding: '6px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: '700',
                         display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '14px',
-                        border: '1px solid rgba(255,255,255,0.28)'
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                     }}>
                         <Compass size={14} color="#FF9852" /> Khám phá hành trình TravelVN ERP
                     </span>
-                    <h1 style={{ fontSize: '36px', fontWeight: '900', margin: '0 0 10px 0', letterSpacing: '-0.5px', color: '#ffffff' }}>
+                    <h1 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: '900', margin: '0 0 10px 0', letterSpacing: '-0.5px', color: '#ffffff', lineHeight: 1.25 }}>
                         Khám Phá Tất Cả Tour Du Lịch
                     </h1>
-                    <p style={{ fontSize: '15.5px', color: '#D9E2EC', margin: '0 auto 26px auto', maxWidth: '620px' }}>
-                        Tìm kiếm và lọc nhanh theo điểm đến, thời lượng, ngân sách và sở thích của bạn.
+                    <p style={{ fontSize: 'clamp(13.5px, 2.5vw, 15.5px)', color: '#D9E2EC', margin: '0 auto 22px auto', maxWidth: '620px', lineHeight: 1.5 }}>
+                        Tìm kiếm và lọc nhanh theo điểm đến, thời lượng, ngân sách và sở thích cá nhân hóa.
                     </p>
 
                     {/* INLINE SEARCH BAR */}
-                    <div style={{ maxWidth: '720px', margin: '0 auto', background: '#ffffff', borderRadius: '14px', padding: '8px', display: 'flex', gap: '8px', boxShadow: '0 16px 36px rgba(16, 42, 67, 0.22)' }}>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '10px' }}>
-                            <Search size={18} color="#829AB1" />
+                    <div style={{ 
+                        maxWidth: '720px', 
+                        margin: '0 auto', 
+                        background: '#ffffff', 
+                        borderRadius: '16px', 
+                        padding: '6px', 
+                        display: 'flex', 
+                        gap: '8px', 
+                        boxShadow: '0 16px 36px rgba(16, 42, 67, 0.25)',
+                        border: '1px solid rgba(255,255,255,0.4)'
+                    }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '12px', minWidth: 0 }}>
+                            <Search size={19} color="#829AB1" style={{ flexShrink: 0 }} />
                             <input
                                 type="text"
-                                placeholder="Tìm theo tên tour, điểm đến (Đà Nẵng, Phú Quốc, Sapa...)"
+                                placeholder="Tìm điểm đến, tên tour (Đà Nẵng, Phú Quốc, Sapa...)"
                                 value={searchLocation}
                                 onChange={(e) => {
                                     setSearchLocation(e.target.value);
@@ -553,44 +565,254 @@ const TourListPage = () => {
                             {searchLocation && (
                                 <button
                                     onClick={() => { setSearchLocation(''); setPreferences(prev => ({ ...prev, searchTerm: '' })); }}
-                                    style={{ border: 'none', background: 'transparent', color: '#829AB1', cursor: 'pointer', padding: '4px' }}
+                                    style={{ border: 'none', background: 'transparent', color: '#829AB1', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
                                     aria-label="Xóa tìm kiếm"
                                 >
                                     <X size={16} />
                                 </button>
                             )}
                         </div>
-                        <button onClick={handleApplyFloatingSearch} className="tt-btn tt-btn-primary" style={{ borderRadius: '10px', padding: '10px 20px' }}>
+                        <button 
+                            onClick={handleApplyFloatingSearch} 
+                            className="tt-btn tt-btn-primary" 
+                            style={{ 
+                                borderRadius: '12px', 
+                                padding: '10px 22px',
+                                fontWeight: '700',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                background: 'linear-gradient(135deg, #168BEB 0%, #0c6cbd 100%)',
+                                boxShadow: '0 4px 12px rgba(22, 139, 235, 0.35)'
+                            }}
+                        >
                             Tìm kiếm
                         </button>
+                    </div>
+
+                    {/* QUICK DESTINATION PILLS */}
+                    <div style={{ 
+                        maxWidth: '720px', 
+                        margin: '14px auto 0 auto', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        flexWrap: 'wrap', 
+                        justifyContent: 'center',
+                        fontSize: '12.5px' 
+                    }}>
+                        <span style={{ color: '#BAC7D5', fontWeight: '600' }}>Gợi ý:</span>
+                        {[
+                            { name: 'Đà Nẵng', label: '🌉 Đà Nẵng' },
+                            { name: 'Phú Quốc', label: '🏝️ Phú Quốc' },
+                            { name: 'Đà Lạt', label: '🌲 Đà Lạt' },
+                            { name: 'Hạ Long', label: '🛳️ Hạ Long' },
+                            { name: 'Sapa', label: '🏔️ Sapa' },
+                            { name: 'Hà Nội', label: '⛩️ Hà Nội' }
+                        ].map(dest => {
+                            const isSelected = preferences.destinations?.includes(dest.name) || searchLocation.includes(dest.name);
+                            return (
+                                <button
+                                    key={dest.name}
+                                    onClick={() => {
+                                        const current = preferences.destinations || [];
+                                        const exists = current.includes(dest.name);
+                                        const updated = exists ? current.filter(d => d !== dest.name) : [...current, dest.name];
+                                        setPreferences(prev => ({ ...prev, destinations: updated }));
+                                    }}
+                                    style={{
+                                        border: isSelected ? '1px solid #FF9852' : '1px solid rgba(255,255,255,0.25)',
+                                        background: isSelected ? 'rgba(255, 152, 82, 0.25)' : 'rgba(255,255,255,0.12)',
+                                        color: isSelected ? '#FF9852' : '#ffffff',
+                                        padding: '4px 10px',
+                                        borderRadius: '999px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: isSelected ? '700' : '500',
+                                        backdropFilter: 'blur(4px)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {dest.label}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
 
             <section ref={showcaseRef} className="tt-container" style={{ marginBottom: '56px' }}>
-                {/* MOBILE FILTER BAR TOGGLE */}
-                <div className="tt-mobile-only" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '10px' }}>
+                {/* MOBILE FILTER TRIGGER & ACTIVE SUMMARY BAR */}
+                <div className="tt-mobile-only" style={{ marginBottom: '16px', gap: '10px', alignItems: 'center' }}>
                     <button
-                        onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
-                        className="tt-btn tt-btn-outline"
-                        style={{ flex: 1 }}
+                        onClick={() => setMobileFilterOpen(true)}
+                        className="tt-btn tt-btn-primary"
+                        style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            gap: '8px',
+                            padding: '12px 18px',
+                            borderRadius: '12px',
+                            fontWeight: '700',
+                            fontSize: '14px',
+                            background: 'linear-gradient(135deg, #102A43 0%, #168BEB 100%)',
+                            boxShadow: '0 4px 14px rgba(16, 42, 67, 0.2)'
+                        }}
                     >
-                        <SlidersHorizontal size={16} />
-                        {mobileFilterOpen ? 'Ẩn bộ lọc' : 'Bộ lọc nâng cao'}
+                        <SlidersHorizontal size={17} />
+                        Bộ lọc tiêu chí
+                        {(preferences.destinations?.length > 0 || preferences.duration !== 'All' || preferences.budgetRange !== 'All') && (
+                            <span style={{
+                                background: '#FF9852',
+                                color: '#ffffff',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                padding: '2px 7px',
+                                borderRadius: '999px',
+                                marginLeft: '4px'
+                            }}>
+                                {(preferences.destinations?.length || 0) + (preferences.duration !== 'All' ? 1 : 0) + (preferences.budgetRange !== 'All' ? 1 : 0)}
+                            </span>
+                        )}
                     </button>
-                    <button onClick={handleResetFilters} className="tt-btn tt-btn-ghost">
-                        <RotateCcw size={15} /> Đặt lại
+                    <button 
+                        onClick={handleResetFilters} 
+                        className="tt-btn tt-btn-ghost"
+                        style={{
+                            padding: '12px 14px',
+                            borderRadius: '12px',
+                            border: '1.5px solid #D9E2EC',
+                            background: '#ffffff',
+                            fontWeight: '700',
+                            color: '#486581'
+                        }}
+                    >
+                        <RotateCcw size={15} />
                     </button>
                 </div>
 
-                {/* MOBILE COLLAPSIBLE FILTER */}
+                {/* MOBILE FILTER DRAWER (MODAL BOTTOM SHEET / SLIDE OVER) */}
                 {mobileFilterOpen && (
-                    <div className="tt-mobile-only" style={{ marginBottom: '20px', width: '100%' }}>
-                        <div style={{ width: '100%' }}>
-                            <TravelPreferenceSidebar
-                                preferences={preferences}
-                                onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
-                            />
+                    <div style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 9999,
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }}>
+                        {/* Backdrop Click */}
+                        <div 
+                            style={{ flex: 1 }} 
+                            onClick={() => setMobileFilterOpen(false)}
+                        />
+
+                        {/* Drawer Content */}
+                        <div style={{
+                            background: '#ffffff',
+                            borderTopLeftRadius: '24px',
+                            borderTopRightRadius: '24px',
+                            maxHeight: '85vh',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.25)',
+                            overflow: 'hidden'
+                        }}>
+                            {/* Drawer Header */}
+                            <div style={{
+                                padding: '16px 20px',
+                                borderBottom: '1.5px solid #f1f5f9',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: '#ffffff'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '20px' }}>🎛️</span>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Bộ Lọc Tiêu Chí</h3>
+                                        <span style={{ fontSize: '12px', color: '#64748b' }}>Tìm chuyến đi chuẩn gu bạn</span>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <button
+                                        onClick={handleResetFilters}
+                                        style={{
+                                            border: 'none',
+                                            background: '#fef2f2',
+                                            color: '#ef4444',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            padding: '6px 10px',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Đặt lại
+                                    </button>
+                                    <button
+                                        onClick={() => setMobileFilterOpen(false)}
+                                        style={{
+                                            border: 'none',
+                                            background: '#f1f5f9',
+                                            color: '#475569',
+                                            borderRadius: '50%',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer'
+                                        }}
+                                        aria-label="Đóng bộ lọc"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Drawer Body - Scrollable */}
+                            <div style={{
+                                padding: '16px 20px',
+                                overflowY: 'auto',
+                                flex: 1,
+                                WebkitOverflowScrolling: 'touch'
+                            }}>
+                                <TravelPreferenceSidebar
+                                    preferences={preferences}
+                                    onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
+                                    isDrawer={true}
+                                />
+                            </div>
+
+                            {/* Drawer Footer - Sticky Action */}
+                            <div style={{
+                                padding: '14px 20px',
+                                borderTop: '1.5px solid #f1f5f9',
+                                background: '#ffffff',
+                                display: 'flex',
+                                gap: '12px',
+                                boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.04)'
+                            }}>
+                                <button
+                                    onClick={() => setMobileFilterOpen(false)}
+                                    className="tt-btn tt-btn-primary"
+                                    style={{
+                                        width: '100%',
+                                        justifyContent: 'center',
+                                        padding: '13px',
+                                        fontSize: '15px',
+                                        fontWeight: '800',
+                                        borderRadius: '12px',
+                                        background: 'linear-gradient(135deg, #168BEB 0%, #0c6cbd 100%)',
+                                        boxShadow: '0 4px 14px rgba(22, 139, 235, 0.35)'
+                                    }}
+                                >
+                                    Xem {filteredTours.length} chuyến đi phù hợp
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -619,17 +841,29 @@ const TourListPage = () => {
                             </div>
 
                             {/* TAB SORTING */}
-                            <div style={{ display: 'flex', gap: '6px', background: '#ffffff', padding: '5px', borderRadius: '12px', border: '1px solid #D9E2EC', flexWrap: 'wrap' }}>
+                            <div className="tour-sort-tabs-container" style={{ 
+                                display: 'flex', 
+                                gap: '6px', 
+                                background: '#ffffff', 
+                                padding: '5px', 
+                                borderRadius: '12px', 
+                                border: '1px solid #D9E2EC', 
+                                overflowX: 'auto',
+                                WebkitOverflowScrolling: 'touch',
+                                maxWidth: '100%'
+                            }}>
                                 {['Tất cả', 'Ưu đãi đặc quyền', 'Bán chạy', 'Giá tốt'].map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setTrendingTab(tab)}
                                         style={{
-                                            padding: '7px 14px', borderRadius: '8px', border: 'none',
+                                            padding: '8px 16px', borderRadius: '8px', border: 'none',
                                             background: trendingTab === tab ? '#168BEB' : 'transparent',
                                             color: trendingTab === tab ? '#ffffff' : '#486581',
                                             fontWeight: trendingTab === tab ? '700' : '600', fontSize: '13px',
-                                            cursor: 'pointer', transition: 'all 0.2s'
+                                            cursor: 'pointer', transition: 'all 0.2s',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0
                                         }}
                                     >
                                         {tab}
@@ -750,15 +984,14 @@ const TourListPage = () => {
             {/* SECTION TỰ THIẾT KẾ TOUR BANNER */}
             <section className="tt-container" style={{ marginBottom: '64px' }}>
                 <div className="custom-tour-banner" style={{
-                    borderRadius: '18px',
+                    borderRadius: '20px',
                     overflow: 'hidden',
                     padding: '36px 40px',
                     background: 'linear-gradient(135deg, #102A43 0%, #168BEB 100%)',
                     color: '#ffffff',
                     boxShadow: '0 18px 40px rgba(16, 42, 67, 0.16)',
                     display: 'grid',
-                    gridTemplateColumns: '1.4fr 1fr',
-                    gap: '36px',
+                    gap: '32px',
                     alignItems: 'center'
                 }}>
                     <div style={{ textAlign: 'left' }}>

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { ChevronDown, ChevronUp, RotateCcw, Sliders, Check } from 'lucide-react';
 
-const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
+const TravelPreferenceSidebar = ({ preferences, onPreferenceChange, isDrawer = false, onCloseDrawer, resultCount = 0 }) => {
     const [openSections, setOpenSections] = useState({
         destinations: true,
         duration: true,
         budget: true,
-        purposes: true,
+        purposes: false,
         companions: false,
         interests: false,
         transport: false,
@@ -166,56 +167,62 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
     return (
         <aside style={{
             background: '#ffffff',
-            borderRadius: '20px',
-            border: '1.5px solid #e2e8f0',
-            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
-            padding: '20px',
+            borderRadius: isDrawer ? '0' : '20px',
+            border: isDrawer ? 'none' : '1.5px solid #e2e8f0',
+            boxShadow: isDrawer ? 'none' : '0 10px 30px rgba(15, 23, 42, 0.06)',
+            padding: isDrawer ? '0' : '20px',
             fontFamily: '"Outfit", "Inter", sans-serif',
-            position: 'sticky',
-            top: '90px',
-            maxHeight: 'calc(100vh - 110px)',
-            overflowY: 'auto'
+            position: isDrawer ? 'static' : 'sticky',
+            top: isDrawer ? 'auto' : '90px',
+            maxHeight: isDrawer ? 'none' : 'calc(100vh - 110px)',
+            overflowY: isDrawer ? 'visible' : 'auto'
         }}>
             {/* SIDEBAR HEADER */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingBottom: '14px',
-                marginBottom: '14px',
-                borderBottom: '1.5px solid #f1f5f9'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '20px' }}>🎛️</span>
-                    <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>Bộ Lọc Tiêu Chí</h3>
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>Tùy chọn chuyến đi phù hợp</span>
+            {!isDrawer && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingBottom: '14px',
+                    marginBottom: '14px',
+                    borderBottom: '1.5px solid #f1f5f9'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>🎛️</span>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>Bộ Lọc Tiêu Chí</h3>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>Tùy chọn chuyến đi phù hợp</span>
+                        </div>
                     </div>
-                </div>
 
-                {countSelected > 0 && (
-                    <button 
-                        onClick={handleReset}
-                        style={{
-                            border: 'none',
-                            background: '#fef2f2',
-                            color: '#ef4444',
-                            fontSize: '11.5px',
-                            fontWeight: '700',
-                            padding: '4px 10px',
-                            borderRadius: '10px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        🔄 Đặt lại
-                    </button>
-                )}
-            </div>
+                    {countSelected > 0 && (
+                        <button 
+                            onClick={handleReset}
+                            style={{
+                                border: 'none',
+                                background: '#fef2f2',
+                                color: '#ef4444',
+                                fontSize: '11.5px',
+                                fontWeight: '700',
+                                padding: '4px 10px',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                            }}
+                        >
+                            <RotateCcw size={12} /> Đặt lại
+                        </button>
+                    )}
+                </div>
+            )}
 
             {countSelected > 0 && (
                 <div style={{
-                    background: '#e0f2fe',
+                    background: '#f0f9ff',
+                    border: '1px solid #bae6fd',
                     color: '#0284c7',
                     padding: '8px 12px',
                     borderRadius: '12px',
@@ -227,7 +234,21 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
                     justifyContent: 'space-between'
                 }}>
                     <span>Đã chọn {countSelected} tiêu chí</span>
-                    <span style={{ fontSize: '10px', background: '#0284c7', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>Active</span>
+                    <button 
+                        onClick={handleReset}
+                        style={{
+                            border: 'none',
+                            background: '#0284c7',
+                            color: '#ffffff',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Xóa tất cả
+                    </button>
                 </div>
             )}
 
@@ -235,10 +256,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('destinations')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>📍 Điểm đến yêu thích</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.destinations ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>📍 Điểm đến yêu thích</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.destinations ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.destinations && (
@@ -270,10 +293,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('duration')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>⏱️ Thời lượng chuyến đi</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.duration ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>⏱️ Thời lượng chuyến đi</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.duration ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.duration && (
@@ -303,10 +328,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('budget')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>💰 Mức ngân sách / người</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.budget ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>💰 Mức ngân sách / người</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.budget ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.budget && (
@@ -336,10 +363,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('purposes')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>🎯 Mục đích chuyến đi</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.purposes ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>🎯 Mục đích chuyến đi</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.purposes ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.purposes && (
@@ -371,10 +400,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('companions')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>👥 Đối tượng đi cùng</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.companions ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>👥 Đối tượng đi cùng</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.companions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.companions && (
@@ -406,10 +437,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('interests')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>🎨 Trải nghiệm & Sở thích</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.interests ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>🎨 Trải nghiệm & Sở thích</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.interests ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.interests && (
@@ -441,10 +474,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('transport')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>✈️ Phương tiện di chuyển</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.transport ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>✈️ Phương tiện di chuyển</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.transport ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.transport && (
@@ -476,10 +511,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('pace')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>⏱️ Nhịp độ lịch trình</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.pace ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>⏱️ Nhịp độ lịch trình</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.pace ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.pace && (
@@ -509,10 +546,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div 
                     onClick={() => toggleSection('accommodation')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>🏨 Hạng Khách sạn</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.accommodation ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>🏨 Hạng Khách sạn</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.accommodation ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.accommodation && (
@@ -542,10 +581,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange }) => {
             <div style={{ marginBottom: '8px' }}>
                 <div 
                     onClick={() => toggleSection('priorities')}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '6px 0', userSelect: 'none' }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>⭐ Ưu tiên quan trọng</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{openSections.priorities ? '▼' : '▶'}</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>⭐ Ưu tiên quan trọng</span>
+                    <span style={{ color: '#94a3b8' }}>
+                        {openSections.priorities ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                 </div>
 
                 {openSections.priorities && (

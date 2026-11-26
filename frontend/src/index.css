@@ -3157,6 +3157,29 @@ body {
     grid-template-columns: 1fr !important;
     gap: 20px !important;
   }
+  .tt-tour-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .tour-list-hero {
+    padding: 36px 16px 44px 16px !important;
+    border-radius: 0 0 24px 24px !important;
+  }
+  .tour-search-box {
+    flex-direction: column !important;
+    padding: 10px !important;
+  }
+  .tour-search-box button {
+    width: 100% !important;
+  }
+  .custom-tour-banner {
+    grid-template-columns: 1fr !important;
+    padding: 24px 18px !important;
+    gap: 20px !important;
+  }
+  .custom-tour-visual-card {
+    height: 180px !important;
+  }
 
   /* 11. Giao diện Chi Tiết Tour (TourDetail) */
   .detail-hero {
