@@ -12,7 +12,7 @@ try {
 const { KNOWLEDGE_CHUNKS, retrieveKnowledge, normalizeVi } = require('./knowledgeBase');
 const { GEMINI_TOOL_DECLARATIONS, executeErpTool } = require('./erpTools');
 const { processAIQuery: legacyBotQuery } = require('../aiBotEngine');
-const { analyzeDayLegs, getPlaceCoordinates, calculateRouteDistance } = require('./placesCoordinates');
+const { analyzeDayLegs, getPlaceCoordinates, calculateRouteDistance, sortPlacesByProximity } = require('./placesCoordinates');
 
 const CANDIDATE_MODELS = [
   process.env.GEMINI_MODEL,
@@ -1201,7 +1201,12 @@ async function copilotTourDesign({
   availableHotels = [],
   attempt = 0,
   shuffle = false,
-  randomSeed = null
+  randomSeed = null,
+  isCustomTour = false,
+  customerPlaces = [],
+  customerHotel = null,
+  customerTransport = null,
+  clientPrefs = null
 }) {
   const normDest = normalizeVi(destinationName || '');
   const activeDestList = Array.isArray(destinationsList) && destinationsList.length > 0
@@ -1355,6 +1360,33 @@ async function copilotTourDesign({
       }
     });
 
+    // Kiểm tra tính đầy đủ cho Tour Riêng (Custom Tour): Đảm bảo không bỏ sót điểm khách đã chọn và chốt báo giá
+    if (isCustomTour && Array.isArray(customerPlaces) && customerPlaces.length > 0) {
+      const allTimelineActNames = [];
+      days.forEach(d => {
+        (d.activities || []).forEach(a => {
+          if (a.name) allTimelineActNames.push(normalizeVi(a.name));
+        });
+      });
+
+      customerPlaces.forEach(cp => {
+        const cpName = cp.name || cp.place_name || cp.auto_text || '';
+        const normCpName = normalizeVi(cpName);
+        if (normCpName) {
+          const isIncluded = allTimelineActNames.some(actName => actName.includes(normCpName) || normCpName.includes(actName));
+          if (!isIncluded) {
+            issues.push({
+              dayIndex: 0,
+              severity: 'warning',
+              type: 'customer_place_missing',
+              title: 'Chưa xếp điểm khách đã chọn',
+              message: `Khách hàng đã chọn và chốt báo giá điểm "${cpName}", nhưng hiện chưa thấy xuất hiện trong lịch trình các ngày.`
+            });
+          }
+        }
+      });
+    }
+
     let aiReviewText = '';
     const ai = createGeminiClient();
     if (ai) {
@@ -1465,6 +1497,297 @@ Hãy nhận xét súc tích về tính khả thi, khoảng cách di chuyển gi�
         currentDayIndex++;
       }
     });
+
+    // =========================================================================
+    // PHÂN HỆ A: THIẾT KẾ TOUR RIÊNG (CUSTOM TOUR)
+    // Giữ nguyên 100% các điểm tham quan, khách sạn & xe khách đã chốt báo giá.
+    // Tự động tối ưu thứ tự di chuyển theo cự ly gần nhất (Nearest Neighbor) & phân bổ vào các ngày.
+    // =========================================================================
+    if (isCustomTour && Array.isArray(customerPlaces) && customerPlaces.length > 0) {
+      const cleanCustomerPlaces = customerPlaces.map(p => ({
+        place_id: p.place_id || null,
+        destination_id: p.destination_id || null,
+        name: p.auto_text || p.name || p.place_name || '',
+        price: Number(p.price || p.estimated_price || 0)
+      })).filter(p => p.name.trim().length > 0);
+
+      const isFoodItem = (p) => {
+        const name = normalizeVi(p.name || '');
+        return /(nem nuong|hai san|quan an|nha hang|quan lau|bun ca|bun bo|lau bo|lau ga|bun quay|banh can|banh canh|cafe|ca phe)/i.test(name);
+      };
+
+      const isNightItem = (p) => {
+        const name = normalizeVi(p.name || '');
+        return /(cho dem|pho di bo|am phu)/i.test(name);
+      };
+
+      const custNightPlaces = cleanCustomerPlaces.filter(isNightItem);
+      const custFoodPlaces = cleanCustomerPlaces.filter(isFoodItem);
+      const custSightseeingPlaces = cleanCustomerPlaces.filter(p => !isFoodItem(p) && !isNightItem(p));
+
+      // Sắp xếp các điểm tham quan theo cự ly gần nhất (Nearest Neighbor)
+      const reverseDirection = Boolean(shuffle && attempt % 2 === 1);
+      const sortedSightseeing = sortPlacesByProximity(
+        custSightseeingPlaces,
+        activeDestList[0]?.destination_name || destinationName,
+        reverseDirection
+      );
+
+      // Khách sạn lưu trú đã chốt trong báo giá
+      let lockedHotel = null;
+      if (customerHotel && (customerHotel.name || customerHotel.service_name)) {
+        lockedHotel = {
+          service_id: customerHotel.service_id || customerHotel.id || null,
+          name: `${customerHotel.name || customerHotel.service_name} (hoặc tương đương)`,
+          price: Number(customerHotel.price || customerHotel.base_cost || 0)
+        };
+      } else if (availableHotels.length > 0) {
+        const destHotel = availableHotels.find(h => !activeDestList[0]?.destination_id || String(h.destination_id) === String(activeDestList[0].destination_id)) || availableHotels[0];
+        lockedHotel = {
+          service_id: destHotel.service_id,
+          name: `${destHotel.service_name} (hoặc tương đương)`,
+          price: Number(destHotel.base_cost || 900000)
+        };
+      }
+
+      // Phân bổ danh sách sightseeing places vào các ngày
+      const numDays = daysPlan.length;
+      const daySightseeingBuckets = Array.from({ length: numDays }, () => []);
+
+      if (numDays === 1) {
+        daySightseeingBuckets[0] = [...sortedSightseeing];
+      } else {
+        const pool = [...sortedSightseeing];
+        if (pool.length <= numDays) {
+          // Ít điểm: phân đều từ ngày 1 trở đi, ưu tiên các ngày giữa
+          for (let d = 0; d < numDays && pool.length > 0; d++) {
+            daySightseeingBuckets[d].push(pool.shift());
+          }
+        } else {
+          // Phân phối cân bằng:
+          // Ngày 1: nhận 1 - 2 điểm
+          const d1Count = Math.min(2, Math.max(1, Math.floor(pool.length / numDays)));
+          daySightseeingBuckets[0] = pool.splice(0, d1Count);
+
+          // Ngày cuối: nhận 1 điểm nếu còn đủ điểm cho ngày giữa
+          const lastCount = pool.length >= (numDays - 1) ? 1 : 0;
+          const lastDayPlaces = pool.splice(pool.length - lastCount, lastCount);
+
+          // Các điểm còn lại chia đều cho các ngày giữa (từ index 1 đến numDays - 2)
+          let midIdx = 1;
+          while (pool.length > 0) {
+            daySightseeingBuckets[midIdx].push(pool.shift());
+            if (numDays > 2) {
+              midIdx++;
+              if (midIdx >= numDays - 1) midIdx = 1;
+            }
+          }
+
+          if (lastDayPlaces.length > 0) {
+            daySightseeingBuckets[numDays - 1].push(...lastDayPlaces);
+          }
+        }
+      }
+
+      let foodPtr = 0;
+      let nightPtr = 0;
+
+      const suggestedDays = [];
+      daysPlan.forEach((dp, dayIdx) => {
+        const dayActs = [];
+        const isOvernight = !dp.isLastDayOfTour;
+
+        if (dp.isFirstDayOfTour) {
+          // Ngày 1: Đón khách, di chuyển, ăn trưa, nhận phòng
+          if (dp.depDest) {
+            dayActs.push({ type: 'Di chuyển', name: `Xe & HDV đón Quý khách tại ${dp.depDest.destination_name}, khởi hành đi ${dp.destName}` });
+            dayActs.push({ type: 'Ăn sáng', name: 'Dừng chân dùng điểm tâm sáng trên cung đường di chuyển' });
+            dayActs.push({ type: 'Ăn trưa', name: `Đến ${dp.destName}, dùng bữa trưa tại nhà hàng địa phương` });
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng và nghỉ ngơi thư giãn` });
+          } else {
+            dayActs.push({ type: 'Di chuyển', name: `Đón khách và khởi hành đến ${dp.destName}` });
+            dayActs.push({ type: 'Ăn sáng', name: 'Dùng bữa sáng tại điểm hẹn' });
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương ở ${dp.destName}` });
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng và nghỉ ngơi` });
+          }
+
+          const dayPlaces = daySightseeingBuckets[dayIdx] || [];
+          dayPlaces.forEach(p => {
+            dayActs.push({
+              type: 'Tham quan',
+              name: p.name,
+              place_id: p.place_id,
+              price: p.price
+            });
+          });
+
+          if (foodPtr < custFoodPlaces.length) {
+            const fItem = custFoodPlaces[foodPtr++];
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực ${fItem.name}`, price: fItem.price });
+          } else {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          }
+
+          if (nightPtr < custNightPlaces.length) {
+            const nItem = custNightPlaces[nightPtr++];
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo ${nItem.name}, khám phá phố đi bộ và ngắm cảnh ${dp.destName} về đêm` });
+          } else {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo chợ đêm, phố đi bộ và khám phá vẻ đẹp ${dp.destName} về đêm` });
+          }
+
+        } else if (dp.isLastDayOfTour && dp.dayIndex > 1) {
+          // Ngày cuối: Ăn sáng, trả phòng, tham quan sáng, mua sắm đặc sản, ăn trưa & tiễn khách
+          dayActs.push({ type: 'Ăn sáng', name: `Dùng điểm tâm sáng tại khách sạn ${dp.destName} và làm thủ tục trả phòng` });
+
+          const dayPlaces = daySightseeingBuckets[dayIdx] || [];
+          dayPlaces.forEach(p => {
+            dayActs.push({
+              type: 'Tham quan',
+              name: p.name,
+              place_id: p.place_id,
+              price: p.price
+            });
+          });
+
+          dayActs.push({ type: 'Tham quan', name: `Ghé trung tâm đặc sản hoặc chợ địa phương tham quan và mua sắm quà lưu niệm ${dp.destName}` });
+
+          if (dp.depDest) {
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương trước khi khởi hành` });
+            dayActs.push({ type: 'Di chuyển', name: `Lên xe khởi hành về lại ${dp.depDest.destination_name}` });
+            dayActs.push({ type: 'Di chuyển', name: `Về đến ${dp.depDest.destination_name}, xe đưa Quý khách về điểm đón ban đầu, kết thúc chuyến đi tốt đẹp` });
+          } else {
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng` });
+            dayActs.push({ type: 'Di chuyển', name: `Xe đưa Quý khách ra sân bay/bến xe, chia tay và hẹn gặp lại Quý khách` });
+          }
+
+        } else if (dp.isTransferDay && dp.prevDest) {
+          // Ngày chuyển tỉnh
+          dayActs.push({ type: 'Ăn sáng', name: `Dùng bữa sáng tại khách sạn ${dp.prevDest.destination_name} và làm thủ tục trả phòng` });
+          dayActs.push({ type: 'Di chuyển', name: `Khởi hành từ ${dp.prevDest.destination_name} di chuyển đến ${dp.destName}` });
+          dayActs.push({ type: 'Ăn trưa', name: `Đến ${dp.destName}, dùng bữa trưa tại nhà hàng địa phương` });
+          dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng và nghỉ ngơi ngắn` });
+
+          const dayPlaces = daySightseeingBuckets[dayIdx] || [];
+          dayPlaces.forEach(p => {
+            dayActs.push({
+              type: 'Tham quan',
+              name: p.name,
+              place_id: p.place_id,
+              price: p.price
+            });
+          });
+
+          if (foodPtr < custFoodPlaces.length) {
+            const fItem = custFoodPlaces[foodPtr++];
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực ${fItem.name}`, price: fItem.price });
+          } else {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          }
+
+          if (nightPtr < custNightPlaces.length) {
+            const nItem = custNightPlaces[nightPtr++];
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo ${nItem.name}, ngắm cảnh đêm lung linh tại ${dp.destName}` });
+          } else {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo phố, ngắm cảnh đêm lung linh tại ${dp.destName}` });
+          }
+
+        } else {
+          // Ngày trọn vẹn ở điểm đến
+          dayActs.push({ type: 'Ăn sáng', name: 'Dùng bữa sáng buffet tại khách sạn' });
+
+          const dayPlaces = daySightseeingBuckets[dayIdx] || [];
+          if (dayPlaces.length >= 2) {
+            dayActs.push({
+              type: 'Tham quan',
+              name: dayPlaces[0].name,
+              place_id: dayPlaces[0].place_id,
+              price: dayPlaces[0].price
+            });
+
+            if (foodPtr < custFoodPlaces.length) {
+              const fItem = custFoodPlaces[foodPtr++];
+              dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa thưởng thức đặc sản ${fItem.name}`, price: fItem.price });
+            } else {
+              dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương, thưởng thức đặc sản ${dp.destName}` });
+            }
+            dayActs.push({ type: 'Nghỉ ngơi', name: 'Nghỉ ngơi ngắn tại nhà hàng hoặc xe du lịch' });
+
+            for (let pIdx = 1; pIdx < dayPlaces.length; pIdx++) {
+              dayActs.push({
+                type: 'Tham quan',
+                name: dayPlaces[pIdx].name,
+                place_id: dayPlaces[pIdx].place_id,
+                price: dayPlaces[pIdx].price
+              });
+            }
+          } else if (dayPlaces.length === 1) {
+            dayActs.push({
+              type: 'Tham quan',
+              name: dayPlaces[0].name,
+              place_id: dayPlaces[0].place_id,
+              price: dayPlaces[0].price
+            });
+
+            if (foodPtr < custFoodPlaces.length) {
+              const fItem = custFoodPlaces[foodPtr++];
+              dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa thưởng thức đặc sản ${fItem.name}`, price: fItem.price });
+            } else {
+              dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương, thưởng thức đặc sản ${dp.destName}` });
+            }
+            dayActs.push({ type: 'Nghỉ ngơi', name: 'Nghỉ ngơi ngắn tại nhà hàng hoặc xe du lịch' });
+          } else {
+            dayActs.push({ type: 'Tham quan', name: `Khám phá các cảnh quan thiên nhiên và trải nghiệm tự do tại ${dp.destName}` });
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương, thưởng thức đặc sản ${dp.destName}` });
+            dayActs.push({ type: 'Nghỉ ngơi', name: 'Nghỉ ngơi ngắn tại khách sạn' });
+          }
+
+          if (foodPtr < custFoodPlaces.length) {
+            const fItem = custFoodPlaces[foodPtr++];
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực ${fItem.name}`, price: fItem.price });
+          } else {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức bữa tối ấm cúng tại nhà hàng địa phương ${dp.destName}` });
+          }
+
+          if (nightPtr < custNightPlaces.length) {
+            const nItem = custNightPlaces[nightPtr++];
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo ${nItem.name}, thưởng thức cà phê và ngắm cảnh ${dp.destName} về đêm` });
+          } else {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo chợ đêm, phố đi bộ hoặc thưởng thức cà phê và ngắm cảnh ${dp.destName} về đêm` });
+          }
+        }
+
+        suggestedDays.push({
+          dayIndex: dp.dayIndex,
+          start_destination_id: dp.startDestId,
+          end_destination_id: dp.endDestId,
+          route_title: dp.routeTitle,
+          activities: dayActs,
+          accommodation: isOvernight ? lockedHotel : null
+        });
+      });
+
+      // Tính toán cự ly & thời gian di chuyển ước tính cho các ngày gợi ý
+      const dayDistances = suggestedDays.map(d => {
+        const dest = activeDestList.find(x => String(x.destination_id) === String(d.end_destination_id)) || activeDestList[0];
+        const legAnalysis = analyzeDayLegs(d.activities, dest?.destination_name || routeLabel, depDest?.destination_name || '');
+        return {
+          dayIndex: d.dayIndex,
+          totalKm: legAnalysis.totalKm,
+          totalMinutes: legAnalysis.totalMinutes,
+          intercityTransfer: legAnalysis.intercityTransfer,
+          legs: legAnalysis.legs
+        };
+      });
+
+      return {
+        action: 'suggest',
+        isCustomTour: true,
+        tourName: `Tour Riêng: ${routeLabel} ${daysCount}N${Math.max(1, daysCount - 1)}Đ`,
+        tourDescription: `Hành trình du lịch thiết kế riêng cho Quý khách theo đúng các điểm tham quan và dịch vụ đã chốt báo giá. Cung đường di chuyển được AI sắp xếp tối ưu, thuận tiện nhất.`,
+        suggestedDays,
+        dayDistances
+      };
+    }
 
     const ai = createGeminiClient();
     let suggestedResult = null;

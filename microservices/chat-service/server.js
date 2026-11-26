@@ -444,7 +444,24 @@ app.get('/api/chat/ai/health', (req, res) => {
 
 app.post('/api/chat/ai/tour-copilot', async (req, res) => {
   try {
-    const { action, destinationName, destinationsList, departureDestination, daysCount, days, availablePlaces, availableHotels, attempt, shuffle, randomSeed } = req.body || {};
+    const {
+      action,
+      destinationName,
+      destinationsList,
+      departureDestination,
+      daysCount,
+      days,
+      availablePlaces,
+      availableHotels,
+      attempt,
+      shuffle,
+      randomSeed,
+      isCustomTour,
+      customerPlaces,
+      customerHotel,
+      customerTransport,
+      clientPrefs
+    } = req.body || {};
     const result = await copilotTourDesign({
       action: action || 'audit',
       destinationName,
@@ -456,7 +473,12 @@ app.post('/api/chat/ai/tour-copilot', async (req, res) => {
       availableHotels: Array.isArray(availableHotels) ? availableHotels : [],
       attempt: Number(attempt || 0),
       shuffle: Boolean(shuffle),
-      randomSeed: randomSeed || null
+      randomSeed: randomSeed || null,
+      isCustomTour: Boolean(isCustomTour),
+      customerPlaces: Array.isArray(customerPlaces) ? customerPlaces : [],
+      customerHotel: customerHotel || null,
+      customerTransport: customerTransport || null,
+      clientPrefs: clientPrefs || null
     });
     res.json({
       success: true,

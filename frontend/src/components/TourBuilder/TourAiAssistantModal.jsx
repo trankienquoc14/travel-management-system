@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { 
   Sparkles, AlertTriangle, CheckCircle, Info, X, 
@@ -40,6 +40,75 @@ const TourAiAssistantModal = ({
   const [daysCountInput, setDaysCountInput] = useState(days.length || 3);
   const [applySuccess, setApplySuccess] = useState(false);
   const [suggestAttempt, setSuggestAttempt] = useState(0);
+
+  // Nhận diện xem đây có phải là Phòng Thiết Kế Tour Riêng (Custom Tour) theo yêu cầu khách không
+  const isCustomTourMode = Boolean(
+    requestData && (requestData.request_id || requestData.preferences || requestData.proposed_itinerary)
+  );
+
+  const customTourInfo = useMemo(() => {
+    if (!isCustomTourMode) return null;
+
+    let prefs = {};
+    if (typeof requestData.preferences === 'string') {
+      try { prefs = JSON.parse(requestData.preferences); } catch (e) {}
+    } else if (typeof requestData.preferences === 'object') {
+      prefs = requestData.preferences || {};
+    }
+
+    let propItin = null;
+    const rawProp = requestData.proposed_itinerary || requestData.itinerary || requestData.proposed_plan;
+    if (typeof rawProp === 'string') {
+      try { propItin = JSON.parse(rawProp); } catch (e) {}
+    } else if (typeof rawProp === 'object') {
+      propItin = rawProp;
+    }
+    const propServ = propItin?.proposedServices || propItin || {};
+
+    // 1. Trích xuất danh sách điểm tham quan khách đã chọn và chốt báo giá
+    let rawPlaces = [];
+    if (Array.isArray(propServ.selectedPlaces) && propServ.selectedPlaces.length > 0) {
+      rawPlaces = propServ.selectedPlaces;
+    } else if (Array.isArray(propServ.places) && propServ.places.length > 0) {
+      rawPlaces = propServ.places;
+    } else if (Array.isArray(prefs.selectedPlaces) && prefs.selectedPlaces.length > 0) {
+      rawPlaces = prefs.selectedPlaces;
+    } else if (Array.isArray(prefs.activities) && prefs.activities.length > 0) {
+      rawPlaces = prefs.activities.map(actId => {
+        const matched = (allPlaces || []).find(p => String(p.place_id) === String(actId));
+        return matched ? {
+          place_id: matched.place_id,
+          name: matched.auto_text || matched.place_name,
+          price: matched.estimated_price || 0,
+          destination_id: matched.destination_id
+        } : null;
+      }).filter(Boolean);
+    }
+
+    // Lọc bỏ các điểm bị đánh dấu isRemoved
+    const places = (rawPlaces || []).filter(p => !p.isRemoved).map(p => ({
+      place_id: p.place_id || null,
+      name: p.name || p.auto_text || p.place_name || '',
+      price: Number(p.price || p.estimated_price || 0),
+      destination_id: p.destination_id || null
+    })).filter(p => p.name.trim().length > 0);
+
+    // 2. Khách sạn đã chốt
+    const hotel = propServ.hotel || prefs.hotel || (prefs.hotelName ? { name: prefs.hotelName } : null);
+
+    // 3. Phương tiện đã chốt
+    const transport = propServ.transport || prefs.transport || (prefs.transportName ? { name: prefs.transportName } : null);
+
+    return {
+      customerName: requestData.customer_name || 'Khách hàng',
+      destination: requestData.destination || '',
+      departureLocation: requestData.departure_location || requestData.start_location || prefs.pickup_location || '',
+      places,
+      hotel,
+      transport,
+      prefs
+    };
+  }, [requestData, allPlaces, isCustomTourMode]);
 
   // Tự động nhận diện Nơi Khởi Hành và Tuyến Điểm Đến từ dữ liệu tour hiện tại
   useEffect(() => {
@@ -96,6 +165,13 @@ const TourAiAssistantModal = ({
 
     if (days && days.length > 0) {
       setDaysCountInput(days.length);
+    } else if (requestData && requestData.departure_date && requestData.return_date) {
+      const d1 = new Date(requestData.departure_date);
+      const d2 = new Date(requestData.return_date);
+      const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+      if (diffDays > 0) {
+        setDaysCountInput(diffDays);
+      }
     }
   }, [days, destinations, requestData]);
 
@@ -165,7 +241,12 @@ const TourAiAssistantModal = ({
         daysCount: days.length,
         days: days,
         availablePlaces: allPlaces.length > 0 ? allPlaces : relevantPlaces,
-        availableHotels: relevantHotels.length > 0 ? relevantHotels : allServices
+        availableHotels: relevantHotels.length > 0 ? relevantHotels : allServices,
+        isCustomTour: isCustomTourMode,
+        customerPlaces: customTourInfo?.places || [],
+        customerHotel: customTourInfo?.hotel || null,
+        customerTransport: customTourInfo?.transport || null,
+        clientPrefs: customTourInfo?.prefs || null
       });
 
       if (res.data && res.data.success) {
@@ -212,7 +293,12 @@ const TourAiAssistantModal = ({
         availableHotels: relevantHotels.length > 0 ? relevantHotels : allServices,
         attempt: Number(nextAttempt || 0),
         shuffle: Boolean(shouldRegenerate),
-        randomSeed: Date.now()
+        randomSeed: Date.now(),
+        isCustomTour: isCustomTourMode,
+        customerPlaces: customTourInfo?.places || [],
+        customerHotel: customTourInfo?.hotel || null,
+        customerTransport: customTourInfo?.transport || null,
+        clientPrefs: customTourInfo?.prefs || null
       });
 
       if (res.data && res.data.success) {
@@ -430,6 +516,68 @@ const TourAiAssistantModal = ({
             </div>
           )}
 
+          {/* BANNER THIẾT KẾ TOUR RIÊNG (CUSTOM TOUR) */}
+          {isCustomTourMode && customTourInfo && (
+            <div style={{
+              background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
+              border: '1.5px solid #93c5fd',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '18px',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.03)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ fontWeight: '700', fontSize: '14px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🎯</span>
+                  <span>Thiết Kế Tour Riêng Theo Yêu Cầu: {customTourInfo.customerName} - {customTourInfo.destination}</span>
+                </div>
+                <span style={{ fontSize: '11.5px', background: '#dcfce7', color: '#166534', padding: '3px 10px', borderRadius: '12px', fontWeight: '700', border: '1px solid #86efac' }}>
+                  ✓ Đã Chốt Báo Giá Với Khách
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: '#334155', fontSize: '13px', marginBottom: '10px' }}>
+                <div>
+                  <strong>🏨 Khách sạn chốt:</strong> <span style={{ color: '#0369a1', fontWeight: '600' }}>{customTourInfo.hotel?.name || 'Theo yêu cầu'}</span>
+                </div>
+                <div>
+                  <strong>🚗 Xe du lịch:</strong> <span style={{ color: '#0369a1', fontWeight: '600' }}>{customTourInfo.transport?.name || 'Theo yêu cầu'}</span>
+                </div>
+                <div>
+                  <strong>📍 Nơi đón:</strong> <span style={{ color: '#0369a1', fontWeight: '600' }}>{customTourInfo.departureLocation || 'Tại điểm hẹn'}</span>
+                </div>
+              </div>
+
+              {customTourInfo.places.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    Danh sách địa điểm tham quan khách đã chọn ({customTourInfo.places.length} điểm):
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {customTourInfo.places.map((p, idx) => (
+                      <span key={idx} style={{
+                        background: '#fff',
+                        border: '1px solid #cbd5e1',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        fontSize: '12.5px',
+                        color: '#0f172a',
+                        fontWeight: '600',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                      }}>
+                        🏷️ {p.name || p.place_name} {Number(p.price) > 0 ? <span style={{ color: '#059669', fontSize: '11.5px' }}>({Number(p.price).toLocaleString('vi-VN')} đ)</span> : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: '10px', fontSize: '12px', color: '#047857', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🔒</span> <strong>Nguyên tắc AI:</strong> Giữ nguyên 100% các địa điểm, khách sạn & xe theo báo giá. AI tự động tối ưu thứ tự di chuyển gần nhất (thuận đường, không đi lòng vòng zig-zag) và chia đều các ngày.
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: AI GỢI Ý LỊCH TRÌNH */}
           {activeTab === 'suggest' && (
             <div>
@@ -512,9 +660,9 @@ const TourAiAssistantModal = ({
                     style={{
                       padding: '10px 20px',
                       borderRadius: '8px',
-                      background: suggestResult 
-                        ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' 
-                        : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                      background: isCustomTourMode
+                        ? (suggestResult ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)')
+                        : (suggestResult ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'),
                       color: '#fff',
                       border: 'none',
                       fontWeight: '700',
@@ -523,12 +671,18 @@ const TourAiAssistantModal = ({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      boxShadow: '0 2px 6px rgba(99, 102, 241, 0.35)',
+                      boxShadow: isCustomTourMode ? '0 2px 6px rgba(16, 185, 129, 0.35)' : '0 2px 6px rgba(99, 102, 241, 0.35)',
                       height: '40px'
                     }}
                   >
                     {suggestResult ? <RotateCcw size={16} /> : <Sparkles size={16} />}
-                    <span>{loading ? 'Đang xử lý...' : (suggestResult ? 'Đổi Phương Án Khác' : 'Tạo Lịch Trình Chuẩn')}</span>
+                    <span>
+                      {loading 
+                        ? 'Đang xử lý...' 
+                        : (suggestResult 
+                            ? (isCustomTourMode ? 'Đảo Chiều Cung Đường' : 'Đổi Phương Án Khác') 
+                            : (isCustomTourMode ? 'AI Tối Ưu Cung Đường Khách Chọn' : 'Tạo Lịch Trình Chuẩn'))}
+                    </span>
                   </button>
                 </div>
 

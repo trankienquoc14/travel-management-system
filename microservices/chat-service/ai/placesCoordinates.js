@@ -467,11 +467,73 @@ function analyzeDayLegs(activities, destinationName = '', departureName = '') {
   };
 }
 
+/**
+ * Sắp xếp danh sách các điểm tham quan theo cự ly gần nhất (Nearest Neighbor)
+ * nhằm tối ưu cung đường tham quan liền mạch, không đi lòng vòng zig-zag.
+ * @param {Array} places Danh sách các địa điểm
+ * @param {string} destinationName Tên điểm đến (tỉnh/thành phố)
+ * @param {boolean} reverseDirection Đảo chiều cung đường (dùng khi nhân viên bấm đổi phương án)
+ * @returns {Array} Danh sách đã sắp xếp tối ưu
+ */
+function sortPlacesByProximity(places = [], destinationName = '', reverseDirection = false) {
+  if (!Array.isArray(places) || places.length <= 1) return places || [];
+
+  const itemsWithCoords = places.map((p, origIdx) => {
+    const pName = p.name || p.auto_text || p.place_name || '';
+    const coords = getPlaceCoordinates(pName, destinationName);
+    return {
+      raw: p,
+      name: pName,
+      coords,
+      origIdx
+    };
+  });
+
+  const located = itemsWithCoords.filter(item => item.coords !== null);
+  const unlocated = itemsWithCoords.filter(item => item.coords === null);
+
+  if (located.length <= 1) {
+    return places;
+  }
+
+  // Thuật toán Nearest Neighbor:
+  // Chọn điểm cực Bắc (vĩ độ cao nhất) hoặc cực Nam làm mốc bắt đầu
+  let remaining = [...located];
+  remaining.sort((a, b) => b.coords.lat - a.coords.lat);
+
+  const ordered = [];
+  let current = remaining.shift();
+  ordered.push(current);
+
+  while (remaining.length > 0) {
+    let nearestIdx = 0;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const dist = haversineStraightDistanceKm(current.coords, remaining[i].coords);
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearestIdx = i;
+      }
+    }
+
+    current = remaining.splice(nearestIdx, 1)[0];
+    ordered.push(current);
+  }
+
+  if (reverseDirection) {
+    ordered.reverse();
+  }
+
+  return [...ordered.map(item => item.raw), ...unlocated.map(item => item.raw)];
+}
+
 module.exports = {
   CITY_COORDINATES,
   PLACE_COORDINATES,
   getPlaceCoordinates,
   haversineStraightDistanceKm,
   calculateRouteDistance,
-  analyzeDayLegs
+  analyzeDayLegs,
+  sortPlacesByProximity
 };
