@@ -23,6 +23,8 @@ router.delete('/customers/:id', protect, restrictTo(1, 2, 3, 4), hrController.de
 // Tuyến đường điểm danh / Chấm công GPS Realtime dành cho TOÀN BỘ nhân sự (trừ Khách hàng)
 router.post('/attendance/gps-checkin', protect, hrController.gpsCheckIn);
 router.get('/attendance/my-status', protect, hrController.getMyAttendanceStatus);
+router.get('/attendance/face-profile', protect, hrController.getMyFaceProfile);
+router.post('/attendance/face-profile', protect, hrController.updateMyFaceProfile);
 
 // Các tuyến đường chấm công nhân sự
 router.get('/attendance/history', protect, hrController.getAttendanceHistory);

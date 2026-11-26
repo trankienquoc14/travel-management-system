@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { 
+  detectFaceInCanvas, 
+  extractFaceDescriptor, 
+  compareFaceDescriptors, 
+  loadFaceDescriptorFromImage 
+} from '../utils/faceIdEngine';
 
 const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -12,16 +18,33 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
   const [showModal, setShowModal] = useState(false);
 
-  // States cho tính năng Quét Khuôn Mặt (Camera Face Verification)
+  // States cho tính năng FaceID Biometrics (Sinh trắc học nhận diện khuôn mặt)
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
-  const [faceSnapshot, setFaceSnapshot] = useState(null);
-  const [confidenceScore, setConfidenceScore] = useState(98.5);
+  const [faceProfile, setFaceProfile] = useState(null); // { avatar, full_name, email, has_face_profile }
+  const [profileDescriptor, setProfileDescriptor] = useState(null); // Descriptor khuôn mặt gốc
+  const [faceSnapshot, setFaceSnapshot] = useState(null); // Ảnh chụp từ camera
+  const [faceVerified, setFaceVerified] = useState(false); // Đã xác thực đúng mặt chính chủ chưa
+  const [confidenceScore, setConfidenceScore] = useState(0); // Tỷ lệ phần trăm khớp
+  const [scanStatus, setScanStatus] = useState({
+    status: 'IDLE', // 'IDLE' | 'SCANNING' | 'DETECTED' | 'MATCHED' | 'MISMATCHED' | 'NO_FACE' | 'NO_PROFILE'
+    message: 'Bật camera để nhận diện FaceID',
+    box: null,
+    metrics: null
+  });
+
+  // Modal Đăng ký khuôn mặt mẫu FaceID
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const scanIntervalRef = useRef(null);
+  const regVideoRef = useRef(null);
+  const regStreamRef = useRef(null);
 
   // Cập nhật đồng hồ thời gian thực
   useEffect(() => {
@@ -29,27 +52,34 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Nạp trạng thái chấm công cá nhân
+  // Nạp trạng thái chấm công, hồ sơ FaceID và vị trí GPS
   useEffect(() => {
     fetchMyStatus();
+    fetchMyFaceProfile();
     getGPSLocation();
   }, []);
 
-  // 🚀 ĐẢM BẢO GẮN STREAM VÀO PHẦN TỬ <VIDEO> KHI REACT MOUNT
+  // Gắn stream vào video element khi cameraActive thay đổi
   useEffect(() => {
     if (cameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(err => console.warn("Lỗi tự động phát video camera:", err));
+      videoRef.current.play().catch(err => console.warn("Lỗi phát video camera:", err));
+      startLiveScanningLoop();
+    } else {
+      stopLiveScanningLoop();
     }
   }, [cameraActive]);
 
-  // Tự động giải phóng camera khi unmount
+  // Giải phóng camera khi unmount
   useEffect(() => {
     return () => {
       stopCamera();
+      stopLiveScanningLoop();
+      stopRegCamera();
     };
   }, []);
 
+  // Tải trạng thái chấm công cá nhân hôm nay
   const fetchMyStatus = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -59,7 +89,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       if (res.data.success && res.data.data) {
         setAttendanceStatus(res.data.data);
         if (res.data.data.face_image_url) {
-          setFaceSnapshot(res.data.data.face_image_url.startsWith('http') ? res.data.data.face_image_url : `http://localhost:5000${res.data.data.face_image_url}`);
+          const imgUrl = res.data.data.face_image_url.startsWith('http') 
+            ? res.data.data.face_image_url 
+            : `http://localhost:5000${res.data.data.face_image_url}`;
+          setFaceSnapshot(imgUrl);
         }
       }
     } catch (err) {
@@ -67,7 +100,32 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
-  // 🚀 QUÉT VỊ TRÍ GPS REALTIME
+  // Tải hồ sơ khuôn mặt FaceID mẫu của nhân viên
+  const fetchMyFaceProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/hr/attendance/face-profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success && res.data.data) {
+        const data = res.data.data;
+        setFaceProfile(data);
+        if (data.avatar) {
+          const avatarFullUrl = data.avatar.startsWith('http') 
+            ? data.avatar 
+            : `http://localhost:5000${data.avatar}`;
+          const descriptor = await loadFaceDescriptorFromImage(avatarFullUrl);
+          if (descriptor) {
+            setProfileDescriptor(descriptor);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi tải hồ sơ FaceID mẫu:', err);
+    }
+  };
+
+  // QUÉT VỊ TRÍ GPS REALTIME
   const getGPSLocation = () => {
     setGpsLoading(true);
     setGpsError('');
@@ -108,23 +166,31 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     );
   };
 
-  // 📷 BẬT CAMERA WEBCAM
+  // BẬT CAMERA WEBCAM
   const startCamera = async () => {
     setCameraError('');
+    setAlertMsg({ type: '', text: '' });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
       });
       streamRef.current = stream;
       setCameraActive(true);
+      setScanStatus({
+        status: 'SCANNING',
+        message: '👁️ Đang quét khuôn mặt trước camera...',
+        box: null,
+        metrics: null
+      });
     } catch (err) {
       console.error("Lỗi bật camera:", err);
       setCameraError('Không thể truy cập Camera. Vui lòng kiểm tra webcam hoặc cấp quyền camera!');
     }
   };
 
-  // ⏹️ TẮT CAMERA
+  // TẮT CAMERA
   const stopCamera = () => {
+    stopLiveScanningLoop();
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -132,99 +198,161 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     setCameraActive(false);
   };
 
-  // 📸 CHỤP ẢNH SNAPSHOT TỪ VIDEO CANVAS & ĐÁNH GIÁ ĐỘ SÁNG THỰC TẾ
-  const captureFaceSnapshot = () => {
-    if (!videoRef.current || !canvasRef.current) return { dataUrl: null, isBlack: true };
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+  // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG
+  const startLiveScanningLoop = () => {
+    stopLiveScanningLoop();
+    // Chạy kiểm tra mỗi 450ms để bắt chuẩn cử chỉ và vị trí mặt người
+    scanIntervalRef.current = setInterval(() => {
+      runFaceVerificationStep();
+    }, 450);
+  };
 
-    const width = video.videoWidth || 320;
-    const height = video.videoHeight || 240;
-
-    if (width === 0 || height === 0) {
-      return { dataUrl: null, isBlack: true };
-    }
-
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    
-    // Lật ngang video để giống gương
-    ctx.save();
-    ctx.translate(width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, width, height);
-    ctx.restore();
-
-    // Kiểm tra độ sáng hình ảnh (Phát hiện camera đen / che camera)
-    try {
-      const imgData = ctx.getImageData(0, 0, width, height);
-      const data = imgData.data;
-      let totalBrightness = 0;
-      const sampleStep = 16;
-      for (let i = 0; i < data.length; i += sampleStep) {
-        totalBrightness += (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
-      }
-      const avgBrightness = totalBrightness / (data.length / sampleStep);
-
-      // Nếu độ sáng trung bình < 12/255 -> Ảnh hoàn toàn bị tối đen
-      if (avgBrightness < 12) {
-        return { dataUrl: null, isBlack: true, avgBrightness };
-      }
-
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      return { dataUrl, isBlack: false, avgBrightness };
-    } catch (e) {
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      return { dataUrl, isBlack: false, avgBrightness: 100 };
+  const stopLiveScanningLoop = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
     }
   };
 
-  // 🚀 THỰC HIỆN ĐIỂM DANH GPS + KHUÔN MẶT REALTIME (BẮT BUỘC ĐÚNG CAMERA TRỰC TIẾP)
+  // BƯỚC ĐỐI SOÁT SINH TRẮC HỌC TỪNG KHUNG HÌNH (FACEID SCAN STEP)
+  const runFaceVerificationStep = () => {
+    if (!videoRef.current || !canvasRef.current || !cameraActive) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    if (w === 0 || h === 0) return;
+
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    // Lật ngang video để giống gương
+    ctx.save();
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.restore();
+
+    // 1. Phát hiện khuôn mặt trong khung hình
+    const detection = detectFaceInCanvas(canvas);
+
+    if (!detection.detected) {
+      setFaceVerified(false);
+      setScanStatus({
+        status: 'NO_FACE',
+        message: detection.message || '⚠️ Không phát hiện khuôn mặt trước camera',
+        box: null,
+        metrics: null
+      });
+      return;
+    }
+
+    // 2. Kiểm tra hồ sơ nhân viên đã có khuôn mặt mẫu (FaceID profile) chưa
+    if (!profileDescriptor) {
+      setFaceVerified(false);
+      setScanStatus({
+        status: 'NO_PROFILE',
+        message: '⚠️ Chưa có khuôn mặt mẫu trong hồ sơ. Vui lòng bấm [Đăng ký FaceID]!',
+        box: detection.box,
+        metrics: null
+      });
+      return;
+    }
+
+    // 3. Trích xuất đặc trưng sinh trắc học từ khuôn mặt camera trực tiếp
+    const liveDescriptor = extractFaceDescriptor(canvas, detection.box);
+
+    // 4. Đối soát sinh trắc học với ảnh khuôn mặt gốc đã đăng ký
+    const matchResult = compareFaceDescriptors(liveDescriptor, profileDescriptor);
+    setConfidenceScore(matchResult.confidence);
+
+    const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+    if (matchResult.matched) {
+      // ✅ ĐÚNG KHUÔN MẶT CHÍNH CHỦ
+      setFaceVerified(true);
+      setFaceSnapshot(liveDataUrl);
+      setScanStatus({
+        status: 'MATCHED',
+        message: `✅ KHUÔN MẶT CHÍNH CHỦ: Đã khớp ${matchResult.confidence}% (Đạt chuẩn)`,
+        box: detection.box,
+        metrics: matchResult.metrics,
+        confidence: matchResult.confidence
+      });
+    } else {
+      // ❌ SAI KHUÔN MẶT / NGƯỜI KHÁC QUÉT
+      setFaceVerified(false);
+      setScanStatus({
+        status: 'MISMATCHED',
+        message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${matchResult.confidence}% (Yêu cầu >= 70%)`,
+        box: detection.box,
+        metrics: matchResult.metrics,
+        confidence: matchResult.confidence
+      });
+    }
+  };
+
+  // CHỤP SNAPSHOT VÀ BUỘC KIỂM TRA THỦ CÔNG
+  const handleManualScan = () => {
+    runFaceVerificationStep();
+  };
+
+  // THỰC HIỆN ĐIỂM DANH GPS + FACEID CHÍNH CHỦ
   const handleGPSCheckIn = async () => {
-    setActionLoading(true);
     setAlertMsg({ type: '', text: '' });
+
+    // Bắt buộc camera phải bật
+    if (!cameraActive) {
+      setAlertMsg({
+        type: 'error',
+        text: '⚠️ Vui lòng bấm [Bật Camera FaceID] và quét khuôn mặt trước khi bấm điểm danh!'
+      });
+      startCamera();
+      return;
+    }
+
+    // Thực hiện quét ngay lập tức
+    runFaceVerificationStep();
+
+    // 🔒 KIỂM TRA BẢO MẬT NGHIÊM NGẶT: ĐÚNG MẶT MỚI GHI NHẬN
+    if (!profileDescriptor) {
+      setAlertMsg({
+        type: 'error',
+        text: '⚠️ Bạn chưa đăng ký khuôn mặt FaceID mẫu vào hồ sơ. Vui lòng bấm nút [Đăng ký FaceID] bên dưới trước!'
+      });
+      return;
+    }
+
+    if (!faceVerified || confidenceScore < 70.0) {
+      setAlertMsg({
+        type: 'error',
+        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 70.0%). Hệ thống từ chối ghi nhận chấm công cho người này!`
+      });
+      return;
+    }
+
+    if (!faceSnapshot) {
+      setAlertMsg({
+        type: 'error',
+        text: '⚠️ Chưa thể chụp được ảnh khuôn mặt rõ nét. Vui lòng đứng trước ánh sáng và thử lại!'
+      });
+      return;
+    }
+
+    setActionLoading(true);
     try {
-      let faceData = null;
-
-      if (!cameraActive) {
-        // Tự động bật camera nếu chưa bật
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
-          });
-          streamRef.current = stream;
-          if (videoRef.current) videoRef.current.srcObject = stream;
-          setCameraActive(true);
-          await new Promise(r => setTimeout(r, 600));
-        } catch (camErr) {
-          console.warn("Không mở được camera tự động:", camErr);
-        }
-      }
-
-      const snap = captureFaceSnapshot();
-
-      if (!snap || snap.isBlack || !snap.dataUrl) {
-        setAlertMsg({ 
-          type: 'error', 
-          text: '⚠️ Yêu cầu quét khuôn mặt bằng Camera trực tiếp! Vui lòng cho phép quyền Camera trên trình duyệt và đứng trước ánh sáng.' 
-        });
-        setActionLoading(false);
-        return;
-      }
-
-      faceData = snap.dataUrl;
-      setFaceSnapshot(snap.dataUrl);
-
       const token = localStorage.getItem('token');
       const payload = {
         latitude: location ? location.lat : null,
         longitude: location ? location.lng : null,
         location_address: address || (location ? `Lat: ${location.lat}, Lng: ${location.lng}` : 'Vị trí GPS thời gian thực'),
-        device_info: `Browser AI Live Camera • ${navigator.userAgent.slice(0, 40)}`,
-        face_image: faceData,
+        device_info: `Live FaceID Biometrics (${confidenceScore.toFixed(1)}%) • ${navigator.userAgent.slice(0, 40)}`,
+        face_image: faceSnapshot,
+        face_verified: true,
         match_confidence: confidenceScore,
-        notes: location ? `Xác thực AI khuôn mặt camera trực tiếp (${confidenceScore}%) + GPS ±${location.accuracy}m` : 'Xác thực camera trực tiếp + GPS'
+        notes: location ? `Xác thực FaceID thành công (${confidenceScore.toFixed(1)}%) + GPS ±${location.accuracy}m` : `Xác thực FaceID thành công (${confidenceScore.toFixed(1)}%)`
       };
 
       const res = await axios.post('http://localhost:5000/api/hr/attendance/gps-checkin', payload, {
@@ -234,26 +362,109 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       if (res.data.success) {
         setAlertMsg({ type: 'success', text: res.data.message });
         stopCamera();
-        if (res.data.data && res.data.data.face_image_url) {
-          setFaceSnapshot(res.data.data.face_image_url.startsWith('http') ? res.data.data.face_image_url : `http://localhost:5000${res.data.data.face_image_url}`);
-        }
         fetchMyStatus();
         if (onCheckInSuccess) onCheckInSuccess();
       } else {
         setAlertMsg({ type: 'error', text: res.data.message || 'Điểm danh thất bại!' });
       }
     } catch (err) {
-      console.error('Lỗi khi gửi điểm danh GPS & Face:', err);
-      setAlertMsg({ type: 'error', text: err.response?.data?.message || 'Có lỗi xảy ra khi chấm công!' });
+      console.error('Lỗi khi gửi điểm danh GPS & FaceID:', err);
+      const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi chấm công!';
+      setAlertMsg({ type: 'error', text: errMsg });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // ==========================================
+  // XỬ LÝ ĐĂNG KÝ KHUÔN MẶT MẪU FACEID VÀO HỒ SƠ
+  // ==========================================
+  const startRegCamera = async () => {
+    setRegError('');
+    setRegSuccess('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+      });
+      regStreamRef.current = stream;
+      if (regVideoRef.current) {
+        regVideoRef.current.srcObject = stream;
+        regVideoRef.current.play().catch(e => console.warn(e));
+      }
+    } catch (err) {
+      console.error("Lỗi bật camera đăng ký:", err);
+      setRegError('Không thể mở camera để đăng ký FaceID!');
+    }
+  };
+
+  const stopRegCamera = () => {
+    if (regStreamRef.current) {
+      regStreamRef.current.getTracks().forEach(t => t.stop());
+      regStreamRef.current = null;
+    }
+  };
+
+  const captureAndSaveFaceProfile = async () => {
+    if (!regVideoRef.current) return;
+    setRegLoading(true);
+    setRegError('');
+    setRegSuccess('');
+
+    try {
+      const video = regVideoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      // Kiểm tra có khuôn mặt người rõ ràng trước khi đăng ký
+      const detection = detectFaceInCanvas(canvas);
+      if (!detection.detected) {
+        setRegError('⚠️ ' + (detection.message || 'Không phát hiện khuôn mặt rõ ràng để lưu hồ sơ!'));
+        setRegLoading(false);
+        return;
+      }
+
+      const photoData = canvas.toDataURL('image/jpeg', 0.9);
+      const token = localStorage.getItem('token');
+
+      const res = await axios.post('http://localhost:5000/api/hr/attendance/face-profile', {
+        face_image: photoData
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.success) {
+        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID thành công!');
+        stopRegCamera();
+        // Cập nhật lại hồ sơ FaceID ngay lập tức
+        await fetchMyFaceProfile();
+        setTimeout(() => {
+          setShowRegisterModal(false);
+          setRegSuccess('');
+        }, 1200);
+      } else {
+        setRegError(res.data.message || 'Lỗi khi lưu khuôn mặt mẫu!');
+      }
+    } catch (err) {
+      console.error('Lỗi đăng ký khuôn mặt:', err);
+      setRegError(err.response?.data?.message || 'Có lỗi khi lưu khuôn mặt FaceID!');
+    } finally {
+      setRegLoading(false);
     }
   };
 
   const isCheckedIn = attendanceStatus && attendanceStatus.check_in;
   const isCheckedOut = attendanceStatus && attendanceStatus.check_out;
 
-  // COMPACT BUTTON HIỂN THỊ Ở HEADER DÀNH CHO NHÂN VIÊN
+  // ==========================================
+  // COMPACT BUTTON CHO HEADER NAVBAR
+  // ==========================================
   if (compact) {
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
@@ -278,21 +489,21 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             transition: 'all 0.2s ease'
           }}
-          title="Bấm để Chấm công GPS & Quét khuôn mặt AI"
+          title="Chấm công FaceID & GPS"
         >
-          <span>👤📍</span>
+          <span>👁️‍🗨️</span>
           <span>
             {isCheckedOut 
               ? '✅ Đã Check-out' 
               : isCheckedIn 
-                ? '🏁 Check-out GPS' 
-                : '🚀 Chấm Công GPS & Face'}
+                ? '🏁 Check-out FaceID' 
+                : '🚀 Chấm Công FaceID'}
           </span>
         </button>
 
         {showModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px', width: '520px', maxWidth: '94%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px', width: '540px', maxWidth: '94%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
               <button 
                 onClick={() => { stopCamera(); setShowModal(false); }}
                 style={{ position: 'absolute', top: '16px', right: '16px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold', color: '#64748b' }}
@@ -314,7 +525,9 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     );
   }
 
-  // FULL CARD WIDGET HIỂN THỊ Ở TRANG CHẤM CÔNG CÁ NHÂN
+  // ==========================================
+  // FULL CARD WIDGET TẠI TRANG CHẤM CÔNG CÁ NHÂN
+  // ==========================================
   return (
     <div style={{
       background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
@@ -324,16 +537,17 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
       fontFamily: "'Inter', sans-serif"
     }}>
+      {/* Canvas ẩn dùng để xử lý trích xuất đặc trưng hình ảnh */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {/* HEADER CARD */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
         <div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-            🛰️ GPS REALTIME + AI FACE SCANNING
+            🛡️ SINH TRẮC HỌC FACE ID & ĐỊNH VỊ GPS REALTIME
           </div>
           <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>👤📍</span> Điểm Danh Khuôn Mặt & GPS
+            <span>👤👁️‍🗨️</span> Chấm Công Quét Mặt FaceID
           </h3>
         </div>
 
@@ -347,7 +561,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         </div>
       </div>
 
-      {/* ALERT THÔNG BÁO */}
+      {/* THÔNG BÁO ALERT */}
       {alertMsg.text && (
         <div style={{
           padding: '12px 16px',
@@ -357,29 +571,104 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           fontWeight: '700',
           backgroundColor: alertMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
           color: alertMsg.type === 'success' ? '#15803d' : '#b91c1c',
-          border: `1px solid ${alertMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+          border: `1px solid ${alertMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          {alertMsg.text}
+          <span>{alertMsg.type === 'success' ? '✅' : '⚠️'}</span>
+          <span>{alertMsg.text}</span>
         </div>
       )}
 
-      {/* KHUNG WEBCAM QUÉT KHUÔN MẶT REALTIME (FACE SCANNER BOX) */}
+      {/* BANNER TRẠNG THÁI HỒ SƠ FACE ID MẪU CỦA NHÂN VIÊN */}
       <div style={{
-        background: '#0f172a',
-        borderRadius: '16px',
+        background: profileDescriptor ? '#f0fdf4' : '#fffbeb',
+        border: `1px solid ${profileDescriptor ? '#bbf7d0' : '#fef3c7'}`,
+        borderRadius: '12px',
+        padding: '10px 14px',
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontSize: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {faceProfile?.avatar ? (
+            <img 
+              src={faceProfile.avatar.startsWith('http') ? faceProfile.avatar : `http://localhost:5000${faceProfile.avatar}`} 
+              alt="Hồ sơ gốc" 
+              style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
+            />
+          ) : (
+            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#f59e0b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>!</div>
+          )}
+          <div>
+            <div style={{ fontWeight: '700', color: profileDescriptor ? '#166534' : '#92400e' }}>
+              {profileDescriptor ? '✅ Đã kích hoạt hồ sơ FaceID' : '⚠️ Chưa đăng ký khuôn mặt mẫu'}
+            </div>
+            <div style={{ color: '#64748b', fontSize: '11px' }}>
+              {profileDescriptor ? 'Hệ thống sẽ đối soát khuôn mặt camera trực tiếp với ảnh gốc' : 'Cần chụp khuôn mặt chính chủ để hệ thống đối soát'}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setShowRegisterModal(true);
+            setTimeout(() => startRegCamera(), 200);
+          }}
+          style={{
+            background: profileDescriptor ? '#ffffff' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            color: profileDescriptor ? '#0f766e' : '#ffffff',
+            border: profileDescriptor ? '1px solid #cbd5e1' : 'none',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            fontWeight: '700',
+            fontSize: '11px',
+            cursor: 'pointer'
+          }}
+        >
+          {profileDescriptor ? '🔄 Đổi ảnh mẫu' : '📸 Đăng ký FaceID'}
+        </button>
+      </div>
+
+      {/* KHUNG CAMERA QUÉT FACEID REALTIME (LIVE FACE SCANNER BOX) */}
+      <div style={{
+        background: '#090d16',
+        borderRadius: '18px',
         padding: '16px',
-        marginBottom: '20px',
+        marginBottom: '18px',
         textAlign: 'center',
         position: 'relative',
-        boxShadow: '0 8px 20px rgba(15,23,42,0.2)',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.35)',
         overflow: 'hidden'
       }}>
-        <div style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
-          <span>👁️‍🗨️</span> XÁC THỰC AI KHUÔN MẶT CHÍNH CHỦ
+        {/* TIÊU ĐỀ KHUNG SCAN */}
+        <div style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+          <span>👁️‍🗨️</span> MÁY QUÉT SINH TRẮC HỌC KHUÔN MẶT
         </div>
 
         {cameraActive ? (
-          <div style={{ position: 'relative', width: '220px', height: '220px', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #38bdf8', boxShadow: '0 0 25px rgba(56, 189, 248, 0.4)' }}>
+          <div style={{
+            position: 'relative',
+            width: '240px',
+            height: '240px',
+            margin: '0 auto',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: faceVerified 
+              ? '4px solid #10b981' 
+              : scanStatus.status === 'MISMATCHED' 
+                ? '4px solid #ef4444' 
+                : '4px solid #38bdf8',
+            boxShadow: faceVerified 
+              ? '0 0 30px rgba(16, 185, 129, 0.6)' 
+              : scanStatus.status === 'MISMATCHED' 
+                ? '0 0 30px rgba(239, 68, 68, 0.6)' 
+                : '0 0 25px rgba(56, 189, 248, 0.4)',
+            transition: 'border 0.3s ease, box-shadow 0.3s ease'
+          }}>
             <video 
               ref={videoRef} 
               autoPlay 
@@ -387,39 +676,94 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               muted 
               style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} 
             />
-            {/* VÙNG KHUNG QUÉT KHUÔN MẶT (TARGET RETICLE OVERLAY) */}
+
+            {/* VÙNG KHUNG ELIP VÀ TIA LASER QUÉT SINH TRẮC HỌC */}
             <div style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '150px',
-              height: '150px',
-              border: '2px dashed #10b981',
+              width: '160px',
+              height: '180px',
+              border: faceVerified ? '2px solid #10b981' : scanStatus.status === 'MISMATCHED' ? '2px dashed #ef4444' : '2px dashed #38bdf8',
               borderRadius: '50%',
-              pointerEvents: 'none',
-              animation: 'pulse 1.5s infinite'
+              pointerEvents: 'none'
             }} />
-            <div style={{ position: 'absolute', bottom: '10px', left: '0', right: '0', background: 'rgba(16,185,129,0.85)', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '3px 0' }}>
-              🎯 ĐANG QUÉT KHUÔN MẶT (98.5%)
+
+            {/* TIA LASER QUÉT */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              background: faceVerified 
+                ? 'linear-gradient(90deg, transparent, #10b981, transparent)' 
+                : 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
+              boxShadow: '0 0 10px #38bdf8',
+              animation: 'scanLine 2s linear infinite'
+            }} />
+
+            {/* BADGE TRẠNG THÁI HIỂN THỊ TRỰC TIẾP TRÊN VIDEO */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: faceVerified 
+                ? 'rgba(16, 185, 129, 0.95)' 
+                : scanStatus.status === 'MISMATCHED' 
+                  ? 'rgba(239, 68, 68, 0.95)' 
+                  : 'rgba(15, 23, 42, 0.85)',
+              color: '#ffffff',
+              fontSize: '11px',
+              fontWeight: '800',
+              padding: '6px 4px',
+              letterSpacing: '0.3px'
+            }}>
+              {faceVerified 
+                ? `🎯 ĐÃ KHỚP: ${confidenceScore.toFixed(1)}%` 
+                : scanStatus.status === 'MISMATCHED' 
+                  ? `❌ KHÔNG KHỚP: ${confidenceScore.toFixed(1)}%` 
+                  : scanStatus.status === 'NO_PROFILE'
+                    ? '⚠️ CHƯA ĐĂNG KÝ FACEID'
+                    : '🔍 ĐANG QUÉT MẶT...'}
             </div>
           </div>
         ) : faceSnapshot ? (
-          <div style={{ position: 'relative', width: '150px', height: '150px', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 0 20px rgba(16,185,129,0.4)' }}>
-            <img src={faceSnapshot} alt="Face Selfie Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', background: '#10b981', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '3px 0' }}>
-              ✅ ĐÃ XÁC THỰC
+          <div style={{ position: 'relative', width: '160px', height: '160px', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 0 20px rgba(16,185,129,0.4)' }}>
+            <img src={faceSnapshot} alt="Face Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#10b981', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '4px 0' }}>
+              ✅ ĐÃ CHỤP ẢNH XÁC THỰC
             </div>
           </div>
         ) : (
-          <div style={{ padding: '20px 10px', color: '#94a3b8' }}>
-            <div style={{ fontSize: '40px', marginBottom: '8px' }}>📸</div>
-            <div style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '600' }}>Bấm nút dưới để bật Camera hoặc chọn Ảnh Selfie</div>
+          <div style={{ padding: '24px 10px', color: '#94a3b8' }}>
+            <div style={{ fontSize: '44px', marginBottom: '10px' }}>👁️‍🗨️</div>
+            <div style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '600' }}>Bật camera để nhận diện sinh trắc học FaceID</div>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Hệ thống chỉ ghi nhận khi nhận diện đúng khuôn mặt chính chủ</div>
           </div>
         )}
 
-        {/* NÚT THAO TÁC CAMERA VÀ UPLOAD ẢNH */}
-        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {/* THÔNG ĐIỆP HƯỚNG DẪN KẾT QUẢ QUÉT */}
+        <div style={{
+          marginTop: '12px',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          fontWeight: '700',
+          background: faceVerified 
+            ? 'rgba(16, 185, 129, 0.15)' 
+            : scanStatus.status === 'MISMATCHED' 
+              ? 'rgba(239, 68, 68, 0.15)' 
+              : 'rgba(255, 255, 255, 0.05)',
+          color: faceVerified ? '#34d399' : scanStatus.status === 'MISMATCHED' ? '#f87171' : '#94a3b8'
+        }}>
+          {scanStatus.message}
+        </div>
+
+        {/* NÚT ĐIỀU KHIỂN CAMERA */}
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {!cameraActive ? (
             <button
               onClick={startCamera}
@@ -427,36 +771,62 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                 background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                 color: '#fff',
                 border: 'none',
-                padding: '8px 18px',
-                borderRadius: '20px',
-                fontSize: '12px',
+                padding: '10px 20px',
+                borderRadius: '24px',
+                fontSize: '13px',
                 fontWeight: '700',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
               }}
             >
-              📷 Mở Camera Trực Tiếp
+              <span>📷</span>
+              <span>Bật Camera Quét FaceID</span>
             </button>
           ) : (
-            <button
-              onClick={stopCamera}
-              style={{
-                background: '#dc2626',
-                color: '#fff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              ⏹️ Tắt Camera
-            </button>
+            <>
+              <button
+                onClick={handleManualScan}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '9px 16px',
+                  borderRadius: '24px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🎯</span>
+                <span>Quét & Đối Soát Ngay</span>
+              </button>
+              <button
+                onClick={stopCamera}
+                style={{
+                  background: '#334155',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '9px 16px',
+                  borderRadius: '24px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                ⏹️ Tắt Camera
+              </button>
+            </>
           )}
         </div>
 
         {cameraError && (
-          <div style={{ color: '#f87171', fontSize: '11px', fontWeight: '600', marginTop: '8px' }}>
+          <div style={{ color: '#f87171', fontSize: '11px', fontWeight: '600', marginTop: '10px' }}>
             ⚠️ {cameraError}
           </div>
         )}
@@ -467,7 +837,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         background: '#f1f5f9',
         borderRadius: '14px',
         padding: '14px 16px',
-        marginBottom: '20px',
+        marginBottom: '18px',
         border: '1px solid #e2e8f0'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -503,12 +873,12 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         )}
       </div>
 
-      {/* TRẠNG THÁI NGHỆP VỤ HÔM NAY */}
+      {/* TRẠNG THÁI CA LÀM VIỆC HÔM NAY */}
       <div style={{
         background: '#ffffff',
         borderRadius: '14px',
         padding: '14px',
-        marginBottom: '20px',
+        marginBottom: '18px',
         border: '1px solid #e2e8f0',
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
@@ -529,10 +899,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         </div>
       </div>
 
-      {/* NÚT ĐIỂM DANH KẾT HỢP GPS & FACE */}
+      {/* NÚT THỰC HIỆN CHẤM CÔNG GPS & FACEID */}
       <button
         onClick={handleGPSCheckIn}
-        disabled={actionLoading || gpsLoading}
+        disabled={actionLoading || gpsLoading || isCheckedOut}
         style={{
           width: '100%',
           padding: '14px 20px',
@@ -540,9 +910,11 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           border: 'none',
           background: isCheckedOut
             ? '#94a3b8'
-            : isCheckedIn
-              ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
-              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            : !faceVerified && cameraActive
+              ? 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
+              : isCheckedIn
+                ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
           color: '#ffffff',
           fontWeight: '800',
           fontSize: '15px',
@@ -558,14 +930,148 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         <span>{actionLoading ? '⏳' : isCheckedOut ? '✅' : isCheckedIn ? '🏁' : '🚀'}</span>
         <span>
           {actionLoading 
-            ? 'Đang xác thực AI & Tọa độ GPS...' 
+            ? 'Đang đối soát FaceID & Ghi nhận công...' 
             : isCheckedOut 
               ? 'Hôm nay bạn đã hoàn thành ca làm việc' 
-              : isCheckedIn 
-                ? '🏁 CHECK-OUT GPS & KHUÔN MẶT' 
-                : '🚀 CHẤM CÔNG GPS & QUÉT KHUÔN MẶT'}
+              : !faceVerified && cameraActive
+                ? '⚠️ CHỜ QUÉT ĐÚNG KHUÔN MẶT CHÍNH CHỦ...'
+                : isCheckedIn 
+                  ? '🏁 CHECK-OUT GPS & FACE ID' 
+                  : '🚀 CHẤM CÔNG GPS & QUÉT MẶT FACE ID'}
         </span>
       </button>
+
+      {/* ==================================================== */}
+      {/* MODAL ĐĂNG KÝ KHUÔN MẶT MẪU FACEID VÀO HỒ SƠ NHÂN VIÊN */}
+      {/* ==================================================== */}
+      {showRegisterModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            padding: '28px',
+            width: '480px',
+            maxWidth: '92%',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            position: 'relative',
+            textAlign: 'center'
+          }}>
+            <button 
+              onClick={() => { stopRegCamera(); setShowRegisterModal(false); }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold', color: '#64748b' }}
+            >
+              ✕
+            </button>
+
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span>📸</span> Đăng Ký Khuôn Mặt FaceID
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13px' }}>
+              Vui lòng nhìn thẳng vào camera, giữ khuôn mặt ngay ngắn giữa khung tròn để hệ thống lưu trữ sinh trắc học chính chủ.
+            </p>
+
+            {regError && (
+              <div style={{ padding: '10px', borderRadius: '8px', background: '#fef2f2', color: '#dc2626', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
+                {regError}
+              </div>
+            )}
+
+            {regSuccess && (
+              <div style={{ padding: '10px', borderRadius: '8px', background: '#f0fdf4', color: '#166534', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
+                {regSuccess}
+              </div>
+            )}
+
+            {/* KHUNG CAMERA ĐĂNG KÝ */}
+            <div style={{
+              width: '240px',
+              height: '240px',
+              margin: '0 auto 20px auto',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '4px solid #0284c7',
+              boxShadow: '0 0 25px rgba(2, 132, 199, 0.4)',
+              position: 'relative',
+              background: '#0f172a'
+            }}>
+              <video 
+                ref={regVideoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} 
+              />
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '160px',
+                height: '190px',
+                border: '2px dashed rgba(255,255,255,0.7)',
+                borderRadius: '50%',
+                pointerEvents: 'none'
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => { stopRegCamera(); setShowRegisterModal(false); }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: '#f1f5f9',
+                  border: 'none',
+                  color: '#475569',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={captureAndSaveFaceProfile}
+                disabled={regLoading}
+                style={{
+                  flex: 2,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  cursor: regLoading ? 'wait' : 'pointer'
+                }}
+              >
+                {regLoading ? '⏳ Đang phân tích & lưu...' : '📸 Chụp & Lưu Làm FaceID Gốc'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HIỆU ỨNG CSS LASER SCANNER */}
+      <style>{`
+        @keyframes scanLine {
+          0% { top: 0%; opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };

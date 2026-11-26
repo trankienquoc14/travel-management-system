@@ -26,6 +26,7 @@ const HRAttendance = () => {
   // States cho Modals
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showShiftModal, setShowShiftModal] = useState(false);
+  const [selectedFaceModal, setSelectedFaceModal] = useState(null);
 
   // Danh sách Ca làm việc (Khởi tạo từ localStorage)
   const [shifts, setShifts] = useState(() => {
@@ -571,13 +572,24 @@ const HRAttendance = () => {
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       {emp.face_image_url ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div 
+                          onClick={() => setSelectedFaceModal(emp)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: '#f8fafc', padding: '4px 10px', borderRadius: '20px', border: '1px solid #cbd5e1' }}
+                          title="Bấm để xem ảnh phóng to và chi tiết đối soát FaceID"
+                        >
                           <img 
                             src={emp.face_image_url.startsWith('http') ? emp.face_image_url : `http://localhost:5000${emp.face_image_url}`} 
                             alt="Selfie Checkin" 
                             style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
                           />
-                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534' }}>Khớp {emp.match_confidence || 98.5}%</span>
+                          <div>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#166534' }}>
+                              ✅ Khớp {emp.match_confidence || 98.5}%
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#0284c7', fontWeight: '600' }}>
+                              Xem ảnh 🔍
+                            </div>
+                          </div>
                         </div>
                       ) : (
                         <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>Chưa có ảnh</span>
@@ -795,6 +807,61 @@ const HRAttendance = () => {
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
               <button onClick={() => setShowShiftModal(false)} style={{ padding: '10px 20px', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Đóng</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL PREVIEW XÁC THỰC SINH TRẮC HỌC FACE ID CỦA NHÂN VIÊN */}
+      {selectedFaceModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+          <div style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', width: '440px', maxWidth: '92%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative', textAlign: 'center' }}>
+            <button 
+              onClick={() => setSelectedFaceModal(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold', color: '#64748b' }}
+            >
+              ✕
+            </button>
+
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+              <span>👁️‍🗨️</span> Ảnh Chấm Công FaceID
+            </h4>
+
+            {selectedFaceModal.face_image_url && (
+              <div style={{ width: '220px', height: '220px', margin: '0 auto 16px auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 8px 20px rgba(16,185,129,0.35)' }}>
+                <img 
+                  src={selectedFaceModal.face_image_url.startsWith('http') ? selectedFaceModal.face_image_url : `http://localhost:5000${selectedFaceModal.face_image_url}`} 
+                  alt="Full Selfie FaceID" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+            )}
+
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', fontSize: '13px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #e2e8f0' }}>
+              <div>👤 <strong>Nhân sự:</strong> <span style={{ fontWeight: '700', color: '#0f172a' }}>{selectedFaceModal.full_name}</span> ({selectedFaceModal.role_name})</div>
+              <div>📧 <strong>Email:</strong> {selectedFaceModal.email}</div>
+              <div>⏱️ <strong>Giờ Vào Ca:</strong> <span style={{ color: '#059669', fontWeight: '700' }}>{selectedFaceModal.check_in || '--:--'}</span> | <strong>Giờ Ra Ca:</strong> <span style={{ color: '#0284c7', fontWeight: '700' }}>{selectedFaceModal.check_out || '--:--'}</span></div>
+              <div>🎯 <strong>Độ khớp FaceID:</strong> <span style={{ color: '#166534', fontWeight: '800' }}>{selectedFaceModal.match_confidence || 98.5}% (Chính chủ hợp lệ)</span></div>
+              {selectedFaceModal.location_address && <div>🏠 <strong>Vị trí GPS:</strong> {selectedFaceModal.location_address}</div>}
+              {selectedFaceModal.latitude && selectedFaceModal.longitude && (
+                <div>
+                  📍 <a 
+                    href={`https://www.google.com/maps?q=${selectedFaceModal.latitude},${selectedFaceModal.longitude}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    style={{ color: '#0284c7', fontWeight: '600', textDecoration: 'none' }}
+                  >
+                    Xem tọa độ bản đồ Google Maps ↗
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setSelectedFaceModal(null)}
+              style={{ marginTop: '16px', width: '100%', padding: '10px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Đóng cửa sổ
+            </button>
           </div>
         </div>
       )}
