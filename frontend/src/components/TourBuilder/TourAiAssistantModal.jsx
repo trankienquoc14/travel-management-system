@@ -784,7 +784,7 @@ const TourAiAssistantModal = ({
                                     fontSize: '11px',
                                     fontWeight: '600'
                                   }}>
-                                    <span>✈️ Trung chuyển: {dayDist.intercityTransfer.fromCity} ➔ {dayDist.intercityTransfer.toCity} (~{dayDist.intercityTransfer.distanceKm} km)</span>
+                                    <span>{dayDist.intercityTransfer.isReturn ? '✈️ Chặng về:' : '✈️ Trung chuyển:'} {dayDist.intercityTransfer.fromCity} ➔ {dayDist.intercityTransfer.toCity} (~{dayDist.intercityTransfer.distanceKm} km)</span>
                                   </span>
                                 )}
                                 {dayDist.totalKm > 0 ? (
@@ -888,7 +888,7 @@ const TourAiAssistantModal = ({
                                     borderRadius: '4px',
                                     borderLeft: '3px solid #f59e0b'
                                   }}>
-                                    <span>✈️ Chặng di chuyển liên tỉnh: {dayDist.intercityTransfer.fromCity} ➔ {dayDist.intercityTransfer.toCity} (~{dayDist.intercityTransfer.distanceKm} km) • Đến nơi nhận phòng & chuẩn bị tham quan</span>
+                                    <span>✈️ {dayDist.intercityTransfer.isReturn ? 'Chặng di chuyển liên tỉnh trở về: ' : 'Chặng di chuyển liên tỉnh: '}{dayDist.intercityTransfer.fromCity} ➔ {dayDist.intercityTransfer.toCity} (~{dayDist.intercityTransfer.distanceKm} km){dayDist.intercityTransfer.isReturn ? ' • Khởi hành về lại điểm đón ban đầu & kết thúc chuyến đi tốt đẹp' : ' • Đến nơi nhận phòng & chuẩn bị tham quan'}</span>
                                   </div>
                                 )}
 
@@ -1108,7 +1108,7 @@ const TourAiAssistantModal = ({
                                 borderRadius: '4px',
                                 fontWeight: '600'
                               }}>
-                                ✈️ Liên tỉnh: {dd.intercityTransfer.fromCity} ➔ {dd.intercityTransfer.toCity} (~{dd.intercityTransfer.distanceKm} km)
+                                ✈️ {dd.intercityTransfer.isReturn ? 'Chặng về:' : 'Liên tỉnh:'} {dd.intercityTransfer.fromCity} ➔ {dd.intercityTransfer.toCity} (~{dd.intercityTransfer.distanceKm} km)
                               </div>
                             )}
                             {dd.legs && dd.legs.length > 0 ? (

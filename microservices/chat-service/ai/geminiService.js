@@ -1487,11 +1487,13 @@ DANH SÁCH KHÁCH SẠN CÓ THẬT TRONG CƠ SỞ DỮ LIỆU:
 ${JSON.stringify(availableHotels.slice(0, 20).map(h => ({ service_id: h.service_id, destination_id: h.destination_id, name: h.service_name, price: h.base_cost })), null, 2)}
 
 NGUYÊN TẮC THIẾT KẾ:
-1. Ngày 1: Hoạt động đầu tiên là đón khách tại ${depDest ? depDest.destination_name : 'điểm hẹn'}, di chuyển đến điểm du lịch đầu tiên. Buổi chiều bố trí 1 - 2 điểm tham quan, buổi tối khám phá ẩm thực và chợ đêm.
-2. Ngày giữa: Lịch trình đầy đặn, sống động, buổi sáng tham quan 1 - 2 điểm, buổi chiều tham quan 1 - 2 điểm, buổi tối dạo phố đi bộ / chợ đêm / ngắm cảnh đêm. Tránh lịch trình thưa thớt chỉ toàn ăn và ngủ.
+1. Ngày 1: Hoạt động đầu tiên là đón khách tại ${depDest ? depDest.destination_name : 'điểm hẹn'}, di chuyển đến điểm du lịch đầu tiên. Buổi chiều bố trí 1 - 2 điểm tham quan nhẹ nhàng trong đất liền, buổi tối khám phá ẩm thực và chợ đêm.
+2. Ngày giữa: Lịch trình đầy đặn, sống động, buổi sáng tham quan 1 - 2 điểm (ưu tiên hoạt động ngoài trời, biển đảo, danh thắng lớn), buổi chiều tham quan 1 - 2 điểm, buổi tối dạo phố đi bộ / chợ đêm / ngắm cảnh đêm.
 3. Ngày cuối: Hoạt động cuối cùng là đưa khách trở về lại ${depDest ? depDest.destination_name : 'điểm đón ban đầu'}, kết thúc tour. Ngày cuối không ghép khách sạn lưu trú (accommodation: null).
 4. Ngày nào ở điểm đến nào thì BẮT BUỘC chỉ chọn điểm tham quan và khách sạn thuộc điểm đến đó (theo destination_id tương ứng).
 5. TUYỆT ĐỐI KHÔNG TRÙNG LẶP: Mỗi điểm tham quan trong danh sách CHỈ ĐƯỢC XUẤT HIỆN DUY NHẤT 1 LẦN trong toàn bộ tour. Không được phép lặp lại điểm đã tham quan ở ngày trước.
+6. PHÂN BIỆT ẨM THỰC & THAM QUAN: Các quán ăn, quán hải sản, nem nướng, lẩu bò, quán ăn đặc sản PHẢI XẾP VÀO hoạt động 'Ăn trưa' hoặc 'Ăn tối', TUYỆT ĐỐI KHÔNG gán type là 'Tham quan' ban ngày.
+7. CHỢ ĐÊM & PHỐ ĐI BỘ: Chỉ được xếp vào hoạt động buổi tối (sau 18h00), TUYỆT ĐỐI KHÔNG xếp đi Chợ Đêm vào buổi sáng hoặc trước giờ ăn trưa.
 
 Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
 {
@@ -1572,13 +1574,39 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
         }
       });
 
-      // Hàm lấy danh sách điểm tham quan KHÔNG BỊ TRÙNG LẶP cho từng ngày
-      const getUniquePlacesForDay = (destId, count = 2) => {
+      // Bộ phân loại địa điểm thông minh: Tham quan ban ngày vs Ẩm thực vs Chợ đêm
+      const isFoodItem = (p) => {
+        const cat = normalizeVi(p.category || '');
+        const name = normalizeVi(p.auto_text || p.place_name || '');
+        return cat.includes('an uong') || /(nem nuong|hai san|quan an|nha hang|quan lau|bun ca|bun bo|lau bo|lau ga|bun quay|banh can|banh canh|cafe|ca phe)/i.test(name);
+      };
+
+      const isNightItem = (p) => {
+        const cat = normalizeVi(p.category || '');
+        const name = normalizeVi(p.auto_text || p.place_name || '');
+        return cat.includes('mua sam') || /(cho dem|pho di bo|am phu)/i.test(name);
+      };
+
+      const isOffshoreOrHeavy = (p) => {
+        const name = normalizeVi(p.auto_text || p.place_name || '');
+        return /(hon mun|lan bien|dao hon|vinwonders|safari|sun world|fansipan)/i.test(name);
+      };
+
+      // Hàm lấy danh sách điểm tham quan KHÔNG BỊ TRÙNG LẶP cho từng ngày (chỉ lấy điểm du lịch, không lấy quán ăn hay chợ đêm)
+      const getUniquePlacesForDay = (destId, count = 2, preferEasy = false) => {
         const candidates = [
           ...(placesByDest[String(destId)] || []),
           ...(placesByDest['all'] || []),
           ...(availablePlaces || [])
-        ];
+        ].filter(p => !isFoodItem(p) && !isNightItem(p));
+
+        if (preferEasy) {
+          candidates.sort((a, b) => {
+            const aH = isOffshoreOrHeavy(a) ? 1 : 0;
+            const bH = isOffshoreOrHeavy(b) ? 1 : 0;
+            return aH - bH;
+          });
+        }
 
         const picked = [];
         for (const p of candidates) {
@@ -1598,6 +1626,51 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
           });
         }
         return picked;
+      };
+
+      // Lấy địa điểm ẩm thực đặc sản để gợi ý vào bữa ăn trưa/tối
+      const getFoodPlace = (destId) => {
+        const candidates = [
+          ...(placesByDest[String(destId)] || []),
+          ...(availablePlaces || [])
+        ].filter(isFoodItem);
+
+        for (const p of candidates) {
+          const pId = String(p.place_id || '');
+          const pName = normalizeVi(p.auto_text || p.place_name || '').trim();
+          if (pId && usedPlaceIds.has(pId)) continue;
+          if (pName && usedPlaceNames.has(pName)) continue;
+          if (pId) usedPlaceIds.add(pId);
+          if (pName) usedPlaceNames.add(pName);
+          return {
+            name: p.auto_text || p.place_name,
+            place_id: p.place_id,
+            price: Number(p.estimated_price || 0)
+          };
+        }
+        return null;
+      };
+
+      // Lấy địa điểm chợ đêm / phố đi bộ cho buổi tối
+      const getNightPlace = (destId) => {
+        const candidates = [
+          ...(placesByDest[String(destId)] || []),
+          ...(availablePlaces || [])
+        ].filter(isNightItem);
+
+        for (const p of candidates) {
+          const pId = String(p.place_id || '');
+          const pName = normalizeVi(p.auto_text || p.place_name || '').trim();
+          if (pId && usedPlaceIds.has(pId)) continue;
+          if (pName && usedPlaceNames.has(pName)) continue;
+          if (pId) usedPlaceIds.add(pId);
+          if (pName) usedPlaceNames.add(pName);
+          return {
+            name: p.auto_text || p.place_name,
+            place_id: p.place_id
+          };
+        }
+        return null;
       };
 
       daysPlan.forEach((dp) => {
@@ -1627,23 +1700,34 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
             dayActs.push({ type: 'Nghỉ ngơi', name: `Về khách sạn tại ${dp.destName} nhận phòng và nghỉ ngơi` });
           }
 
-          // Buổi chiều: Lấy 1 - 2 điểm tham quan đặc trưng không trùng lặp
-          const day1Places = getUniquePlacesForDay(dp.destId, 2);
+          // Buổi chiều: Lấy 1 - 2 điểm tham quan nhẹ nhàng trong đất liền (preferEasy = true)
+          const day1Places = getUniquePlacesForDay(dp.destId, 2, true);
           if (day1Places.length > 0) {
             day1Places.forEach(p => dayActs.push(p));
           } else {
             dayActs.push({ type: 'Tham quan', name: `Tham quan và check-in các điểm biểu tượng tại ${dp.destName}` });
           }
 
-          dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
-          dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo chợ đêm, phố đi bộ và khám phá vẻ đẹp ${dp.destName} về đêm` });
+          const dinnerFood1 = getFoodPlace(dp.destId);
+          if (dinnerFood1) {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức đặc sản ẩm thực ${dinnerFood1.name}`, price: dinnerFood1.price });
+          } else {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          }
+
+          const nightSpot1 = getNightPlace(dp.destId);
+          if (nightSpot1) {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo ${nightSpot1.name}, khám phá phố đi bộ và ngắm cảnh ${dp.destName} về đêm` });
+          } else {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo chợ đêm, phố đi bộ và khám phá vẻ đẹp ${dp.destName} về đêm` });
+          }
 
         } else if (dp.isLastDayOfTour && dp.dayIndex > 1) {
           // NGÀY CUỐI: THAM QUAN BUỔI SÁNG, MUA SẮM ĐẶC SẢN & TIỄN KHÁCH VỀ
           dayActs.push({ type: 'Ăn sáng', name: `Dùng điểm tâm sáng tại khách sạn ${dp.destName} và làm thủ tục trả phòng` });
 
           // Buổi sáng ngày cuối: Lấy 1 điểm tham quan nhẹ nhàng
-          const lastDayPlaces = getUniquePlacesForDay(dp.destId, 1);
+          const lastDayPlaces = getUniquePlacesForDay(dp.destId, 1, true);
           if (lastDayPlaces.length > 0) {
             dayActs.push(lastDayPlaces[0]);
           } else {
@@ -1676,38 +1760,61 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
             dayActs.push({ type: 'Tham quan', name: `Khám phá các thắng cảnh nổi tiếng tại ${dp.destName}` });
           }
 
-          dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
-          dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo phố, ngắm cảnh đêm lung linh tại ${dp.destName}` });
+          const dinnerFoodTransfer = getFoodPlace(dp.destId);
+          if (dinnerFoodTransfer) {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản ${dinnerFoodTransfer.name}`, price: dinnerFoodTransfer.price });
+          } else {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức ẩm thực đặc sản tại ${dp.destName}` });
+          }
+
+          const nightSpotTransfer = getNightPlace(dp.destId);
+          if (nightSpotTransfer) {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo ${nightSpotTransfer.name}, ngắm cảnh đêm lung linh tại ${dp.destName}` });
+          } else {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo phố, ngắm cảnh đêm lung linh tại ${dp.destName}` });
+          }
 
         } else {
-          // NGÀY KHÁM PHÁ TRỌN VẸN (LỊCH TRÌNH ĐẦY ĐẶN: SÁNG 1-2 ĐIỂM, CHIỀU 1-2 ĐIỂM + CHỢ ĐÊM)
+          // NGÀY KHÁM PHÁ TRỌN VẸN (LỊCH TRÌNH ĐẦY ĐẶN: SÁNG 1-2 ĐIỂM, CHIỀU 1 ĐIỂM + ẨM THỰC CHUẨN)
           dayActs.push({ type: 'Ăn sáng', name: 'Dùng bữa sáng buffet tại khách sạn' });
 
-          // Lấy 2 - 3 điểm tham quan hoàn toàn mới cho ngày trọn vẹn
-          const fullDayPlaces = getUniquePlacesForDay(dp.destId, 3);
-          
-          // Sáng: 1 - 2 điểm tham quan
-          if (fullDayPlaces[0]) {
-            dayActs.push(fullDayPlaces[0]);
+          // Sáng: 1 - 2 điểm tham quan (cho phép hoạt động ngoài trời, đảo hoặc công viên lớn)
+          const morningPlaces = getUniquePlacesForDay(dp.destId, 2, false);
+          if (morningPlaces.length > 0) {
+            morningPlaces.forEach(p => dayActs.push(p));
           } else {
             dayActs.push({ type: 'Tham quan', name: `Khám phá danh thắng và di tích văn hóa nổi bật tại ${dp.destName}` });
           }
-          if (fullDayPlaces[1]) {
-            dayActs.push(fullDayPlaces[1]);
-          }
 
-          dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương, thưởng thức đặc sản ${dp.destName}` });
+          const lunchFood = getFoodPlace(dp.destId);
+          if (lunchFood) {
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa thưởng thức đặc sản ${lunchFood.name}`, price: lunchFood.price });
+          } else {
+            dayActs.push({ type: 'Ăn trưa', name: `Dùng bữa trưa tại nhà hàng địa phương, thưởng thức đặc sản ${dp.destName}` });
+          }
           dayActs.push({ type: 'Nghỉ ngơi', name: 'Nghỉ ngơi ngắn tại nhà hàng hoặc xe du lịch' });
 
-          // Chiều: 1 - 2 điểm tham quan, vui chơi hoặc bãi biển
-          if (fullDayPlaces[2]) {
-            dayActs.push(fullDayPlaces[2]);
+          // Chiều: 1 điểm tham quan
+          const afternoonPlaces = getUniquePlacesForDay(dp.destId, 1, false);
+          if (afternoonPlaces.length > 0) {
+            dayActs.push(afternoonPlaces[0]);
           } else {
             dayActs.push({ type: 'Tham quan', name: `Tham quan, check-in và ngắm cảnh hoàng hôn tuyệt đẹp tại ${dp.destName}` });
           }
 
-          dayActs.push({ type: 'Ăn tối', name: `Thưởng thức bữa tối ấm cúng tại nhà hàng địa phương ${dp.destName}` });
-          dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo chợ đêm, phố đi bộ hoặc thưởng thức cà phê và ngắm cảnh ${dp.destName} về đêm` });
+          const dinnerFood = getFoodPlace(dp.destId);
+          if (dinnerFood) {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức bữa tối tại ${dinnerFood.name}`, price: dinnerFood.price });
+          } else {
+            dayActs.push({ type: 'Ăn tối', name: `Thưởng thức bữa tối ấm cúng tại nhà hàng địa phương ${dp.destName}` });
+          }
+
+          const nightSpot = getNightPlace(dp.destId);
+          if (nightSpot) {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo ${nightSpot.name}, thưởng thức cà phê và ngắm cảnh ${dp.destName} về đêm` });
+          } else {
+            dayActs.push({ type: 'Nghỉ ngơi', name: `Tự do dạo chợ đêm, phố đi bộ hoặc thưởng thức cà phê và ngắm cảnh ${dp.destName} về đêm` });
+          }
         }
 
         suggestedDays.push({

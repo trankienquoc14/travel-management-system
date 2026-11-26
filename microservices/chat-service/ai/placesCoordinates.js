@@ -382,11 +382,14 @@ function analyzeDayLegs(activities, destinationName = '', departureName = '') {
         const transferRoute = calculateRouteDistance(actCoords, destCoords);
         // Nếu khoảng cách giữa nơi đón/trả và điểm đến > 50 km => Đây là chặng trung chuyển liên tỉnh
         if (transferRoute.distanceKm >= 50 && !intercityTransfer) {
+          const normAct = normalizeVi(act.name);
+          const isReturn = /(ve lai|tro ve|khoi hanh ve|ve den)/i.test(normAct);
           intercityTransfer = {
             activityIndex: idx,
             name: act.name,
-            fromCity: departureName || actCoords.matchedName || 'Nơi đón',
-            toCity: destinationName,
+            fromCity: isReturn ? destinationName : (departureName || actCoords.matchedName || 'Nơi đón'),
+            toCity: isReturn ? (departureName || actCoords.matchedName || 'Nơi đón') : destinationName,
+            isReturn,
             distanceKm: transferRoute.distanceKm,
             durationMinutes: transferRoute.durationMinutes,
             formattedDuration: transferRoute.formattedDuration
