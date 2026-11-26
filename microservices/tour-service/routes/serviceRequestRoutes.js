@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const serviceRequestController = require('../controllers/serviceRequestController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
 
-router.get('/groups', protect, serviceRequestController.getGroups);
-router.get('/groups/:id', protect, serviceRequestController.getGroupById);
-router.post('/groups', protect, serviceRequestController.createGroup);
-router.post('/groups/:id/supplement', protect, serviceRequestController.createSupplement);
+router.get('/groups', protect, restrictTo(1, 2, 3, 4), serviceRequestController.getGroups);
+router.get('/groups/:id', protect, restrictTo(1, 2, 3, 4), serviceRequestController.getGroupById);
+router.post('/groups', protect, restrictTo(1, 2, 3, 4), serviceRequestController.createGroup);
+router.post('/groups/:id/supplement', protect, restrictTo(1, 2, 3, 4), serviceRequestController.createSupplement);
 
 
 router.get('/partner/my-requests', protect, serviceRequestController.getMyPartnerRequests);

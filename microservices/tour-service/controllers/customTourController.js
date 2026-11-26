@@ -218,6 +218,14 @@ exports.getAllRequests = async (req, res) => {
 exports.getCustomerRequests = async (req, res) => {
     try {
         const { customerId } = req.params;
+        const userId = req.user?.id || req.user?.user_id;
+        const roleId = Number(req.user?.role_id || req.user?.role || 6);
+        const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
+
+        if (!isStaffOrAdmin && userId && String(customerId) !== String(userId)) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền xem yêu cầu tour của người khác!' });
+        }
+
         const [requests] = await sequelize.query(`
             SELECT 
                 -- 1. Láº¤Y Äáº¦Y Äá»¦ THĂ”NG TIN YĂU Cáº¦U Gá»C Cá»¦A KHĂCH HĂ€NG

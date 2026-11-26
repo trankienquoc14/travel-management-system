@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const customTourController = require('../controllers/customTourController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -24,7 +24,7 @@ const upload = multer({ storage: storage });
 
 // Route dành cho Khách hàng
 router.post('/request', protect, customTourController.createCustomRequest);
-router.get('/requests/pending/staff', protect, customTourController.getStaffPendingTours);
+router.get('/requests/pending/staff', protect, restrictTo(1, 2, 3, 4), customTourController.getStaffPendingTours);
 router.put('/requests/:id/customer-action', protect, customTourController.updateCustomerAction);
 router.put('/requests/:id/accept', protect, (req, res, next) => {
   req.body.action = 'Accept';
@@ -35,7 +35,7 @@ router.post('/quotes/:quoteId/book', protect, customTourController.bookCustomTou
 router.get('/my-quotes', protect, customTourController.getAllRequests);
 
 // Alias route cho Quotation creation từ test/API
-router.post('/quote', protect, (req, res, next) => {
+router.post('/quote', protect, restrictTo(1, 2, 3, 4), (req, res, next) => {
   req.params.id = req.body.request_id;
   req.body.quoted_price = req.body.total_amount;
   req.body.staff_note = req.body.quote_details;
@@ -43,27 +43,27 @@ router.post('/quote', protect, (req, res, next) => {
 });
 
 // Route dành cho Nhân viên/Quản lý
-router.get('/requests', protect, customTourController.getAllRequests);
-router.put('/requests/:id/quote', protect, customTourController.quoteRequest);
-router.put('/requests/:id/approve', protect, customTourController.approveRequest);
-router.put('/requests/:id/reject', protect, customTourController.rejectRequest);
-router.post('/requests/:id/send-notification', protect, customTourController.sendNotification);
+router.get('/requests', protect, restrictTo(1, 2, 3, 4), customTourController.getAllRequests);
+router.put('/requests/:id/quote', protect, restrictTo(1, 2, 3, 4), customTourController.quoteRequest);
+router.put('/requests/:id/approve', protect, restrictTo(1, 2, 3, 4), customTourController.approveRequest);
+router.put('/requests/:id/reject', protect, restrictTo(1, 2, 3, 4), customTourController.rejectRequest);
+router.post('/requests/:id/send-notification', protect, restrictTo(1, 2, 3, 4), customTourController.sendNotification);
 router.get('/services/:destination', customTourController.getDestinationExtraServices);
 router.get('/requests/customer/:customerId', protect, customTourController.getCustomerRequests);
 
 // --- NEW WORKFLOW ROUTES ---
-router.post('/requests/:id/initial-quote', protect, customTourController.sendInitialQuote);
-router.post('/requests/:id/quote-draft', protect, (req, res, next) => {
+router.post('/requests/:id/initial-quote', protect, restrictTo(1, 2, 3, 4), customTourController.sendInitialQuote);
+router.post('/requests/:id/quote-draft', protect, restrictTo(1, 2, 3, 4), (req, res, next) => {
   req.body.is_draft = true;
   return customTourController.sendInitialQuote(req, res, next);
 });
-router.post('/requests/:id/submit-manager-quote', protect, (req, res, next) => {
+router.post('/requests/:id/submit-manager-quote', protect, restrictTo(1, 2, 3, 4), (req, res, next) => {
   req.body.send_to_manager = true;
   return customTourController.sendInitialQuote(req, res, next);
 });
-router.put('/requests/:id/start-design', protect, customTourController.startDesigning);
-router.post('/requests/:id/submit-manager', protect, upload.any(), customTourController.submitToManager);
-router.post('/quotes/:quoteId/manager-review', protect, customTourController.managerReview);
-router.post('/quotes/:quoteId/send-to-customer', protect, customTourController.sendToCustomer);
+router.put('/requests/:id/start-design', protect, restrictTo(1, 2, 3, 4), customTourController.startDesigning);
+router.post('/requests/:id/submit-manager', protect, restrictTo(1, 2, 3, 4), upload.any(), customTourController.submitToManager);
+router.post('/quotes/:quoteId/manager-review', protect, restrictTo(1, 2, 3), customTourController.managerReview);
+router.post('/quotes/:quoteId/send-to-customer', protect, restrictTo(1, 2, 3, 4), customTourController.sendToCustomer);
 
 module.exports = router;

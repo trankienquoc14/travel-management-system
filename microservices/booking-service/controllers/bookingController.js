@@ -758,6 +758,25 @@ exports.confirmPayment = async (req, res) => {
     const { bookingId } = req.params;
     const paymentMethod = req.body?.payment_method || 'VNPAY_QR';
 
+    // Kiểm tra quyền sở hữu đơn hàng (Chống IDOR)
+    const [bkCheck] = await sequelize.query(`SELECT booking_id, customer_id FROM bookings WHERE booking_id = ?`, {
+      replacements: [bookingId],
+      transaction
+    });
+    if (!bkCheck || bkCheck.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+    }
+
+    const userId = req.user?.id || req.user?.user_id || req.user?.userId;
+    const roleId = Number(req.user?.role_id || req.user?.role || 6);
+    const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
+
+    if (!isStaffOrAdmin && userId && String(bkCheck[0].customer_id) !== String(userId)) {
+      await transaction.rollback();
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên đơn hàng của khách hàng khác!' });
+    }
+
     // Chuyển payments sang Success và cập nhật phương thức thanh toán
     await sequelize.query(`
       UPDATE payments 
@@ -3967,6 +3986,22 @@ exports.resendBookingEmail = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { type = 'confirmation' } = req.query; // 'confirmation' hoặc 'payment'
+
+    // Kiểm tra quyền sở hữu đơn hàng (Chống IDOR)
+    const [bkCheck] = await sequelize.query(`SELECT booking_id, customer_id FROM bookings WHERE booking_id = ?`, {
+      replacements: [bookingId]
+    });
+    if (!bkCheck || bkCheck.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+    }
+
+    const userId = req.user?.id || req.user?.user_id || req.user?.userId;
+    const roleId = Number(req.user?.role_id || req.user?.role || 6);
+    const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
+
+    if (!isStaffOrAdmin && userId && String(bkCheck[0].customer_id) !== String(userId)) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên đơn hàng của khách hàng khác!' });
+    }
 
     let result = null;
     if (type === 'payment') {

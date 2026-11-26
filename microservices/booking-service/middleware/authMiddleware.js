@@ -24,3 +24,20 @@ exports.protect = (req, res, next) => {
     return res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn' });
   }
 };
+
+// Phân quyền theo Role (RBAC)
+exports.restrictTo = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để thực hiện' });
+    }
+    const userRole = Number(req.user.role_id || req.user.role);
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Bạn không có quyền thực hiện hành động này!' 
+      });
+    }
+    next();
+  };
+};
