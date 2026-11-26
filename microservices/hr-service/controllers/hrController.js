@@ -1157,21 +1157,30 @@ exports.getMyFaceProfile = async (req, res) => {
 exports.updateMyFaceProfile = async (req, res) => {
   try {
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
-    const { face_image } = req.body;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại!' });
+    }
 
+    const { face_image } = req.body;
     if (!face_image || typeof face_image !== 'string' || !face_image.startsWith('data:image')) {
       return res.status(400).json({ success: false, message: 'Thiếu dữ liệu ảnh khuôn mặt FaceID hợp lệ!' });
     }
 
     const fs = require('fs');
     const path = require('path');
-    const uploadsDir = path.join(__dirname, '../../shared-uploads');
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    const sharedUploadsDir = path.join(__dirname, '../../shared-uploads');
+    if (!fs.existsSync(sharedUploadsDir)) fs.mkdirSync(sharedUploadsDir, { recursive: true });
+    const localUploadsDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(localUploadsDir)) fs.mkdirSync(localUploadsDir, { recursive: true });
 
     const base64Data = face_image.replace(/^data:image\/\w+;base64,/, "");
     const filename = `avatar_${userId}_${Date.now()}.jpg`;
-    const filepath = path.join(uploadsDir, filename);
-    fs.writeFileSync(filepath, base64Data, 'base64');
+
+    fs.writeFileSync(path.join(sharedUploadsDir, filename), base64Data, 'base64');
+    try {
+      fs.writeFileSync(path.join(localUploadsDir, filename), base64Data, 'base64');
+    } catch (e) {}
+
     const avatarUrl = `/uploads/${filename}`;
 
     await sequelize.query(`

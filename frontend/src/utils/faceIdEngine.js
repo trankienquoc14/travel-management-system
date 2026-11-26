@@ -97,8 +97,8 @@ export function detectFaceInCanvas(canvas) {
 
   const skinRatio = totalPixelsInOval > 0 ? (skinPixelsInOval / totalPixelsInOval) : 0;
 
-  // 2. Kiểm tra tỷ lệ màu da trong vùng tâm (Tối thiểu 14% diện tích oval phải là da)
-  if (skinRatio < 0.14) {
+  // 2. Kiểm tra tỷ lệ màu da trong vùng tâm (Tối thiểu 10% diện tích oval phải là da)
+  if (skinRatio < 0.10) {
     return {
       detected: false,
       reason: 'NO_FACE',
@@ -109,12 +109,12 @@ export function detectFaceInCanvas(canvas) {
   }
 
   // 3. Kiểm tra kích thước bounding box cụm khuôn mặt
-  const boxW = Math.max(40, maxX - minX);
-  const boxH = Math.max(40, maxY - minY);
+  const boxW = Math.max(35, maxX - minX);
+  const boxH = Math.max(35, maxY - minY);
   const aspectRatio = boxH / boxW;
 
-  // Khuôn mặt người có tỷ lệ dọc/ngang từ 0.75 đến 2.2
-  if (aspectRatio < 0.7 || aspectRatio > 2.3) {
+  // Khuôn mặt người có tỷ lệ dọc/ngang từ 0.65 đến 2.4
+  if (aspectRatio < 0.65 || aspectRatio > 2.4) {
     return {
       detected: false,
       reason: 'INVALID_FACE_SHAPE',
@@ -358,7 +358,10 @@ export function loadFaceDescriptorFromImage(imageUrl) {
     }
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Tránh set crossOrigin nếu là base64 data URL
+    if (typeof imageUrl === 'string' && !imageUrl.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');

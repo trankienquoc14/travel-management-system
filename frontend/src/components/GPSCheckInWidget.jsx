@@ -45,6 +45,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const scanIntervalRef = useRef(null);
   const regVideoRef = useRef(null);
   const regStreamRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Cập nhật đồng hồ thời gian thực
   useEffect(() => {
@@ -100,20 +101,59 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
-  // Tải hồ sơ khuôn mặt FaceID mẫu của nhân viên
+  // Tải hồ sơ khuôn mặt FaceID mẫu của nhân viên (Hỗ trợ đa nguồn: auth/me, hr/face-profile, localStorage)
   const fetchMyFaceProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/hr/attendance/face-profile', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success && res.data.data) {
-        const data = res.data.data;
-        setFaceProfile(data);
-        if (data.avatar) {
-          const avatarFullUrl = data.avatar.startsWith('http') 
-            ? data.avatar 
-            : `http://localhost:5000${data.avatar}`;
+      let userData = null;
+
+      // 1. Thử lấy từ /api/auth/me trước (endpoint chuẩn luôn sẵn sàng)
+      try {
+        const meRes = await axios.get('http://localhost:5000/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (meRes.data && meRes.data.success && meRes.data.data) {
+          userData = meRes.data.data;
+        }
+      } catch (meErr) {
+        // Fallback sang hr-service
+      }
+
+      // 2. Fallback sang /api/hr/attendance/face-profile
+      if (!userData) {
+        try {
+          const hrRes = await axios.get('http://localhost:5000/api/hr/attendance/face-profile', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (hrRes.data && hrRes.data.success && hrRes.data.data) {
+            userData = hrRes.data.data;
+          }
+        } catch (hrErr) {
+          // Fallback sang localStorage
+        }
+      }
+
+      // 3. Fallback sang localStorage
+      if (!userData) {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            userData = {
+              avatar: parsed.avatar,
+              full_name: parsed.fullName || parsed.full_name,
+              email: parsed.email
+            };
+          } catch (e) {}
+        }
+      }
+
+      if (userData) {
+        setFaceProfile(userData);
+        if (userData.avatar) {
+          const avatarFullUrl = (userData.avatar.startsWith('http') || userData.avatar.startsWith('data:'))
+            ? userData.avatar 
+            : `http://localhost:5000${userData.avatar}`;
           const descriptor = await loadFaceDescriptorFromImage(avatarFullUrl);
           if (descriptor) {
             setProfileDescriptor(descriptor);
@@ -121,7 +161,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         }
       }
     } catch (err) {
-      console.warn('Lỗi tải hồ sơ FaceID mẫu:', err);
+      console.warn('Lỗi tải hồ sơ FaceID:', err);
     }
   };
 
@@ -201,7 +241,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG
   const startLiveScanningLoop = () => {
     stopLiveScanningLoop();
-    // Chạy kiểm tra mỗi 450ms để bắt chuẩn cử chỉ và vị trí mặt người
     scanIntervalRef.current = setInterval(() => {
       runFaceVerificationStep();
     }, 450);
@@ -228,7 +267,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
 
-    // Lật ngang video để giống gương
     ctx.save();
     ctx.translate(w, 0);
     ctx.scale(-1, 1);
@@ -254,7 +292,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       setFaceVerified(false);
       setScanStatus({
         status: 'NO_PROFILE',
-        message: '⚠️ Chưa có khuôn mặt mẫu trong hồ sơ. Vui lòng bấm [Đăng ký FaceID]!',
+        message: '⚠️ Chưa có khuôn mặt mẫu trong hồ sơ. Vui lòng bấm [Đăng ký FaceID] bên dưới!',
         box: detection.box,
         metrics: null
       });
@@ -271,7 +309,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
     if (matchResult.matched) {
-      // ✅ ĐÚNG KHUÔN MẶT CHÍNH CHỦ
       setFaceVerified(true);
       setFaceSnapshot(liveDataUrl);
       setScanStatus({
@@ -282,7 +319,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         confidence: matchResult.confidence
       });
     } else {
-      // ❌ SAI KHUÔN MẶT / NGƯỜI KHÁC QUÉT
       setFaceVerified(false);
       setScanStatus({
         status: 'MISMATCHED',
@@ -303,24 +339,21 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const handleGPSCheckIn = async () => {
     setAlertMsg({ type: '', text: '' });
 
-    // Bắt buộc camera phải bật
     if (!cameraActive) {
       setAlertMsg({
         type: 'error',
-        text: '⚠️ Vui lòng bấm [Bật Camera FaceID] và quét khuôn mặt trước khi bấm điểm danh!'
+        text: '⚠️ Vui lòng bấm [Bật Camera Quét FaceID] và nhìn thẳng vào camera trước khi điểm danh!'
       });
       startCamera();
       return;
     }
 
-    // Thực hiện quét ngay lập tức
     runFaceVerificationStep();
 
-    // 🔒 KIỂM TRA BẢO MẬT NGHIÊM NGẶT: ĐÚNG MẶT MỚI GHI NHẬN
     if (!profileDescriptor) {
       setAlertMsg({
         type: 'error',
-        text: '⚠️ Bạn chưa đăng ký khuôn mặt FaceID mẫu vào hồ sơ. Vui lòng bấm nút [Đăng ký FaceID] bên dưới trước!'
+        text: '⚠️ Bạn chưa đăng ký khuôn mặt FaceID mẫu vào hồ sơ. Vui lòng bấm [Đăng ký FaceID] trước!'
       });
       return;
     }
@@ -328,7 +361,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     if (!faceVerified || confidenceScore < 70.0) {
       setAlertMsg({
         type: 'error',
-        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 70.0%). Hệ thống từ chối ghi nhận chấm công cho người này!`
+        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 70.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
       });
       return;
     }
@@ -393,7 +426,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       }
     } catch (err) {
       console.error("Lỗi bật camera đăng ký:", err);
-      setRegError('Không thể mở camera để đăng ký FaceID!');
+      setRegError('Không thể mở camera. Bạn có thể sử dụng nút "Chọn ảnh từ máy tính" bên dưới để tải ảnh chân dung!');
     }
   };
 
@@ -404,9 +437,90 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
+  // Lưu ảnh khuôn mặt FaceID vào CSDL (hỗ trợ cả auth-service và hr-service)
+  const handleSaveFaceData = async (photoData, detectedBox) => {
+    setRegLoading(true);
+    setRegError('');
+    setRegSuccess('');
+
+    try {
+      const token = localStorage.getItem('token');
+      let avatarUrl = '';
+      let saveSuccess = false;
+
+      // 1. Thử gọi PUT /api/auth/profile trước (luôn tồn tại trên auth-service)
+      try {
+        const authRes = await axios.put('http://localhost:5000/api/auth/profile', {
+          avatar: photoData
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (authRes.data && (authRes.data.success || authRes.status === 200)) {
+          avatarUrl = authRes.data.data?.avatar || photoData;
+          saveSuccess = true;
+        }
+      } catch (authErr) {
+        console.warn("Lưu qua auth-service thất bại, thử lưu qua hr-service:", authErr.message);
+      }
+
+      // 2. Nếu auth-service chưa phản hồi, fallback sang /api/hr/attendance/face-profile
+      if (!saveSuccess) {
+        try {
+          const hrRes = await axios.post('http://localhost:5000/api/hr/attendance/face-profile', {
+            face_image: photoData
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (hrRes.data && hrRes.data.success) {
+            avatarUrl = hrRes.data.data?.avatar || photoData;
+            saveSuccess = true;
+          }
+        } catch (hrErr) {
+          console.error("Lưu qua hr-service thất bại:", hrErr);
+          const msg = hrErr.response?.data?.message || hrErr.message || 'Lỗi kết nối máy chủ khi lưu ảnh khuôn mặt!';
+          throw new Error(msg);
+        }
+      }
+
+      if (saveSuccess) {
+        // Cập nhật ngay đặc trưng sinh trắc học và avatar vào state
+        setFaceProfile(prev => ({
+          ...(prev || {}),
+          avatar: avatarUrl,
+          has_face_profile: true
+        }));
+
+        // Trích xuất descriptor trực tiếp từ ảnh vừa chụp
+        const descriptor = await loadFaceDescriptorFromImage(photoData);
+        if (descriptor) {
+          setProfileDescriptor(descriptor);
+        }
+
+        // Cập nhật localStorage để đồng bộ toàn bộ app
+        try {
+          const stored = JSON.parse(localStorage.getItem('user') || '{}');
+          localStorage.setItem('user', JSON.stringify({ ...stored, avatar: avatarUrl }));
+        } catch (e) {}
+
+        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID thành công!');
+        stopRegCamera();
+        setTimeout(() => {
+          setShowRegisterModal(false);
+          setRegSuccess('');
+        }, 1200);
+      }
+    } catch (err) {
+      console.error('Lỗi đăng ký khuôn mặt:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Có lỗi khi lưu khuôn mặt FaceID!';
+      setRegError(errMsg);
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
+  // Xử lý chụp từ Camera đăng ký
   const captureAndSaveFaceProfile = async () => {
     if (!regVideoRef.current) return;
-    setRegLoading(true);
     setRegError('');
     setRegSuccess('');
 
@@ -422,41 +536,60 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      // Kiểm tra có khuôn mặt người rõ ràng trước khi đăng ký
+      // Kiểm tra có khuôn mặt người trước khi đăng ký
       const detection = detectFaceInCanvas(canvas);
       if (!detection.detected) {
-        setRegError('⚠️ ' + (detection.message || 'Không phát hiện khuôn mặt rõ ràng để lưu hồ sơ!'));
-        setRegLoading(false);
+        setRegError('⚠️ ' + (detection.message || 'Không phát hiện khuôn mặt rõ ràng để lưu hồ sơ! Vui lòng nhìn thẳng vào camera.'));
         return;
       }
 
-      const photoData = canvas.toDataURL('image/jpeg', 0.9);
-      const token = localStorage.getItem('token');
-
-      const res = await axios.post('http://localhost:5000/api/hr/attendance/face-profile', {
-        face_image: photoData
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.data.success) {
-        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID thành công!');
-        stopRegCamera();
-        // Cập nhật lại hồ sơ FaceID ngay lập tức
-        await fetchMyFaceProfile();
-        setTimeout(() => {
-          setShowRegisterModal(false);
-          setRegSuccess('');
-        }, 1200);
-      } else {
-        setRegError(res.data.message || 'Lỗi khi lưu khuôn mặt mẫu!');
-      }
+      const photoData = canvas.toDataURL('image/jpeg', 0.85);
+      await handleSaveFaceData(photoData, detection.box);
     } catch (err) {
-      console.error('Lỗi đăng ký khuôn mặt:', err);
-      setRegError(err.response?.data?.message || 'Có lỗi khi lưu khuôn mặt FaceID!');
-    } finally {
-      setRegLoading(false);
+      setRegError(err.message || 'Lỗi chụp ảnh khuôn mặt');
     }
+  };
+
+  // Xử lý chọn ảnh từ máy tính để đăng ký FaceID
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRegError('');
+    setRegSuccess('');
+
+    if (!file.type.startsWith('image/')) {
+      setRegError('⚠️ Vui lòng chọn tệp hình ảnh hợp lệ (JPG, PNG)!');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setRegError('⚠️ Dung lượng ảnh không được vượt quá 5MB!');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imgDataUrl = event.target.result;
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const detection = detectFaceInCanvas(canvas);
+        if (!detection.detected) {
+          setRegError('⚠️ Ảnh tải lên không phát hiện được khuôn mặt người rõ ràng. Vui lòng chọn ảnh chân dung nhìn thẳng!');
+          return;
+        }
+
+        const photoData = canvas.toDataURL('image/jpeg', 0.85);
+        await handleSaveFaceData(photoData, detection.box);
+      };
+      img.src = imgDataUrl;
+    };
+    reader.readAsDataURL(file);
   };
 
   const isCheckedIn = attendanceStatus && attendanceStatus.check_in;
@@ -537,7 +670,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
       fontFamily: "'Inter', sans-serif"
     }}>
-      {/* Canvas ẩn dùng để xử lý trích xuất đặc trưng hình ảnh */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {/* HEADER CARD */}
@@ -596,7 +728,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {faceProfile?.avatar ? (
             <img 
-              src={faceProfile.avatar.startsWith('http') ? faceProfile.avatar : `http://localhost:5000${faceProfile.avatar}`} 
+              src={(faceProfile.avatar.startsWith('http') || faceProfile.avatar.startsWith('data:')) ? faceProfile.avatar : `http://localhost:5000${faceProfile.avatar}`} 
               alt="Hồ sơ gốc" 
               style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
             />
@@ -644,7 +776,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         boxShadow: '0 10px 25px rgba(0,0,0,0.35)',
         overflow: 'hidden'
       }}>
-        {/* TIÊU ĐỀ KHUNG SCAN */}
         <div style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <span>👁️‍🗨️</span> MÁY QUÉT SINH TRẮC HỌC KHUÔN MẶT
         </div>
@@ -704,7 +835,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               animation: 'scanLine 2s linear infinite'
             }} />
 
-            {/* BADGE TRẠNG THÁI HIỂN THỊ TRỰC TIẾP TRÊN VIDEO */}
+            {/* BADGE TRẠNG THÁI TRÊN VIDEO */}
             <div style={{
               position: 'absolute',
               bottom: 0,
@@ -962,7 +1093,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             background: '#ffffff',
             borderRadius: '24px',
             padding: '28px',
-            width: '480px',
+            width: '500px',
             maxWidth: '92%',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
             position: 'relative',
@@ -979,26 +1110,26 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               <span>📸</span> Đăng Ký Khuôn Mặt FaceID
             </h3>
             <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13px' }}>
-              Vui lòng nhìn thẳng vào camera, giữ khuôn mặt ngay ngắn giữa khung tròn để hệ thống lưu trữ sinh trắc học chính chủ.
+              Chụp ảnh trực tiếp hoặc chọn ảnh chân dung rõ mặt để lưu làm khuôn mặt mẫu đối soát khi chấm công.
             </p>
 
             {regError && (
-              <div style={{ padding: '10px', borderRadius: '8px', background: '#fef2f2', color: '#dc2626', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
+              <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', fontSize: '12px', fontWeight: '700', marginBottom: '14px', textAlign: 'left', border: '1px solid #fecaca' }}>
                 {regError}
               </div>
             )}
 
             {regSuccess && (
-              <div style={{ padding: '10px', borderRadius: '8px', background: '#f0fdf4', color: '#166534', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
+              <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#f0fdf4', color: '#166534', fontSize: '12px', fontWeight: '700', marginBottom: '14px', textAlign: 'left', border: '1px solid #bbf7d0' }}>
                 {regSuccess}
               </div>
             )}
 
             {/* KHUNG CAMERA ĐĂNG KÝ */}
             <div style={{
-              width: '240px',
-              height: '240px',
-              margin: '0 auto 20px auto',
+              width: '230px',
+              height: '230px',
+              margin: '0 auto 18px auto',
               borderRadius: '50%',
               overflow: 'hidden',
               border: '4px solid #0284c7',
@@ -1018,45 +1149,88 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: '160px',
-                height: '190px',
+                width: '150px',
+                height: '180px',
                 border: '2px dashed rgba(255,255,255,0.7)',
                 borderRadius: '50%',
                 pointerEvents: 'none'
               }} />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            {/* INPUT FILE ẨN CHO TÍNH NĂNG TẢI ẢNH */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              accept="image/*" 
+              onChange={handleFileUpload} 
+              style={{ display: 'none' }} 
+            />
+
+            {/* CÁC NÚT THAO TÁC */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={captureAndSaveFaceProfile}
+                  disabled={regLoading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: regLoading ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>{regLoading ? '⏳' : '📸'}</span>
+                  <span>{regLoading ? 'Đang lưu...' : 'Chụp từ Camera'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={regLoading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    color: '#334155',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: regLoading ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📁</span>
+                  <span>Chọn ảnh từ máy</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => { stopRegCamera(); setShowRegisterModal(false); }}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: '#f1f5f9',
+                  padding: '10px',
+                  borderRadius: '10px',
+                  background: 'none',
                   border: 'none',
-                  color: '#475569',
-                  fontWeight: '700',
+                  color: '#64748b',
+                  fontWeight: '600',
+                  fontSize: '12px',
                   cursor: 'pointer'
                 }}
               >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={captureAndSaveFaceProfile}
-                disabled={regLoading}
-                style={{
-                  flex: 2,
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontWeight: '800',
-                  cursor: regLoading ? 'wait' : 'pointer'
-                }}
-              >
-                {regLoading ? '⏳ Đang phân tích & lưu...' : '📸 Chụp & Lưu Làm FaceID Gốc'}
+                Hủy đóng lại
               </button>
             </div>
           </div>
