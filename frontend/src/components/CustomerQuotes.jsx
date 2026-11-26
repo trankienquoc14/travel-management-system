@@ -238,9 +238,14 @@ const CustomerQuotes = () => {
         }
 
         try {
+            const token = localStorage.getItem('token');
+            const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
             const response = await axios.put(`http://localhost:5000/api/custom-tours/requests/${selectedQuote.request_id}/customer-action`, {
                 status: newStatus,
                 customer_note: note
+            }, {
+                headers: authHeader
             });
 
             if (response.data.success) {
@@ -256,9 +261,8 @@ const CustomerQuotes = () => {
                 if (userStr) {
                     const user = JSON.parse(userStr);
                     const userId = user.id || user.userId || user.user_id;
-                    const token = localStorage.getItem('token');
                     const fetchRes = await axios.get(`http://localhost:5000/api/custom-tours/requests/customer/${userId}`, {
-                        headers: { Authorization: `Bearer ${token}` }
+                        headers: authHeader
                     });
                     if (fetchRes.data.success) {
                         const newQuotes = fetchRes.data.data || [];
@@ -273,7 +277,8 @@ const CustomerQuotes = () => {
             }
         } catch (error) {
             console.error("Lỗi cập nhật:", error);
-            alert("Không thể cập nhật trạng thái. Vui lòng kiểm tra kết nối API.");
+            const msg = error.response?.data?.message || "Không thể cập nhật trạng thái. Vui lòng kiểm tra kết nối API.";
+            alert(msg);
         }
     };
     // THÊM HÀM NÀY VÀO DƯỚI handleCustomerAction

@@ -344,7 +344,7 @@ exports.updateCustomerAction = async (req, res) => {
             const roleId = Number(req.user?.role_id || req.user?.role || 6);
             const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
 
-            if (!isStaffOrAdmin && userId && latestQuote[0].customer_id && latestQuote[0].customer_id !== userId) {
+            if (!isStaffOrAdmin && userId && latestQuote[0].customer_id && String(latestQuote[0].customer_id) !== String(userId)) {
                 await transaction.rollback();
                 return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện thao tác trên yêu cầu tour của người khác!' });
             }
@@ -359,6 +359,26 @@ exports.updateCustomerAction = async (req, res) => {
             await sequelize.query(`
                 UPDATE custom_tour_requests SET status = ? WHERE request_id = ?
             `, { replacements: [finalStatus, targetReqId], transaction });
+        } else {
+            // Trường hợp chưa có bản quote nào trong custom_tour_quotes nhưng request có tồn tại
+            const [targetReq] = await sequelize.query(`
+                SELECT request_id, customer_id FROM custom_tour_requests WHERE request_id = ?
+            `, { replacements: [id], transaction });
+
+            if (targetReq.length > 0) {
+                const userId = req.user?.id || req.user?.user_id;
+                const roleId = Number(req.user?.role_id || req.user?.role || 6);
+                const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
+
+                if (!isStaffOrAdmin && userId && targetReq[0].customer_id && String(targetReq[0].customer_id) !== String(userId)) {
+                    await transaction.rollback();
+                    return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện thao tác trên yêu cầu tour của người khác!' });
+                }
+
+                await sequelize.query(`
+                    UPDATE custom_tour_requests SET status = ? WHERE request_id = ?
+                `, { replacements: [finalStatus, targetReq[0].request_id], transaction });
+            }
         }
 
         await transaction.commit();

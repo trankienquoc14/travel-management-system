@@ -20,6 +20,11 @@ axios.interceptors.request.use((config) => {
   if (config.url && config.url.startsWith('http://localhost:5000')) {
     config.url = config.url.replace('http://localhost:5000', PRODUCTION_GATEWAY);
   }
+  const token = localStorage.getItem('token');
+  if (token && (!config.headers || !config.headers.Authorization)) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 

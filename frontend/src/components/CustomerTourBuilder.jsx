@@ -690,17 +690,55 @@ const CustomerTourBuilder = () => {
         }
     };
 
+    const parseToDate = (dateStr) => {
+        if (!dateStr) return null;
+        if (dateStr instanceof Date && !isNaN(dateStr.getTime())) return dateStr;
+        const str = String(dateStr).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+            const parts = str.split('T')[0].split('-');
+            return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+        const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (dmy) {
+            return new Date(parseInt(dmy[3], 10), parseInt(dmy[2], 10) - 1, parseInt(dmy[1], 10));
+        }
+        const parsed = new Date(str);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    };
+
     const handleSubmit = async () => {
         try {
             const token = localStorage.getItem('token');
-            const selectedPlaceObjs = availablePlaces.filter(p => preferences.activities.includes(p.place_id));
-
-            let retDate = '';
-            if (formData.departure_date) {
-                const depDateObj = new Date(formData.departure_date);
-                depDateObj.setDate(depDateObj.getDate() + (formData.duration_days - 1));
-                retDate = depDateObj.toISOString().split('T')[0];
+            if (!token) {
+                alert("Vui lòng đăng nhập trước khi gửi yêu cầu thiết kế tour!");
+                return navigate('/login');
             }
+            if (!formData.destination) {
+                return alert("Vui lòng chọn Điểm đến mong muốn!");
+            }
+            if (!formData.departure_date) {
+                return alert("Vui lòng chọn ngày khởi hành dự kiến!");
+            }
+
+            const depDateObj = parseToDate(formData.departure_date);
+            let depDateFormatted = formData.departure_date;
+            let retDate = '';
+            if (depDateObj) {
+                const depY = depDateObj.getFullYear();
+                const depM = String(depDateObj.getMonth() + 1).padStart(2, '0');
+                const depD = String(depDateObj.getDate()).padStart(2, '0');
+                depDateFormatted = `${depY}-${depM}-${depD}`;
+
+                const days = Math.max(1, Number(formData.duration_days) || 1);
+                const retDateObj = new Date(depDateObj);
+                retDateObj.setDate(retDateObj.getDate() + (days - 1));
+                const retY = retDateObj.getFullYear();
+                const retM = String(retDateObj.getMonth() + 1).padStart(2, '0');
+                const retD = String(retDateObj.getDate()).padStart(2, '0');
+                retDate = `${retY}-${retM}-${retD}`;
+            }
+
+            const selectedPlaceObjs = (availablePlaces || []).filter(p => (preferences?.activities || []).includes(p.place_id));
 
             const activePriceInfo = getTransportCategoryPriceInfo(
                 transportMode === 'select' ? transportCategory : 'standard',
@@ -710,10 +748,10 @@ const CustomerTourBuilder = () => {
 
             const payload = {
                 destination: formData.destination,
-                departure_date: formData.departure_date,
+                departure_date: depDateFormatted,
                 return_date: retDate,
-                people_count: participants.adults + participants.children + (participants.toddlers || 0) + (participants.infants || 0),
-                budget: Number(formData.budget_estimate),
+                people_count: Number(totalPax) || 1,
+                budget: Number(formData.budget_estimate || 0),
                 
                 preferences: {
                     ...preferences,
@@ -756,19 +794,19 @@ const CustomerTourBuilder = () => {
                         name: place.place_name,
                         price: Number(place.estimated_price || 0)
                     })),
-                    note: preferences.note
+                    note: preferences?.note || ''
                 }
             };
 
-            await axios.post('http://localhost:5000/api/custom-tours/request', payload, {
+            const res = await axios.post('http://localhost:5000/api/custom-tours/request', payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            alert("🎉 Đã gửi yêu cầu thành công! Chuyên viên của chúng tôi sẽ liên hệ sớm nhất.");
+            alert(res.data?.message || "🎉 Đã gửi yêu cầu thành công! Chuyên viên của chúng tôi sẽ liên hệ sớm nhất.");
             navigate('/my-bookings');
         } catch (error) {
-            console.error(error);
-            alert(error.response?.data?.message || "Không thể gửi yêu cầu");
+            console.error('Lỗi khi gửi yêu cầu tour:', error);
+            alert(error.response?.data?.message || error.message || "Không thể gửi yêu cầu");
         }
     };
 
