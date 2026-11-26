@@ -12,6 +12,7 @@ try {
 const { KNOWLEDGE_CHUNKS, retrieveKnowledge, normalizeVi } = require('./knowledgeBase');
 const { GEMINI_TOOL_DECLARATIONS, executeErpTool } = require('./erpTools');
 const { processAIQuery: legacyBotQuery } = require('../aiBotEngine');
+const { analyzeDayLegs, getPlaceCoordinates, calculateRouteDistance } = require('./placesCoordinates');
 
 const CANDIDATE_MODELS = [
   process.env.GEMINI_MODEL,
@@ -1223,9 +1224,10 @@ async function copilotTourDesign({
     ...activeDestList.map(d => normalizeVi(d.destination_name))
   ];
 
-  // 1. RULE-BASED AUDIT ENGINE
+  // 1. RULE-BASED AUDIT ENGINE & DISTANCE MATRIX CALCULATION
   if (action === 'audit') {
     const issues = [];
+    const dayDistanceMetrics = [];
 
     // Danh sách từ khóa địa danh lớn để phát hiện lệch tỉnh thành
     const CITY_KEYWORDS = [
@@ -1250,6 +1252,30 @@ async function copilotTourDesign({
       const acts = Array.isArray(day.activities) ? day.activities : [];
       let tourDayEndDest = day.end_destination_id;
       let sightseeingCount = 0;
+
+      // Phân tích ma trận khoảng cách & thời gian di chuyển các chặng trong ngày
+      const dayDestObj = activeDestList.find(d => String(d.destination_id) === String(tourDayEndDest)) || activeDestList[0];
+      const legAnalysis = analyzeDayLegs(acts, dayDestObj?.destination_name || routeLabel);
+      dayDistanceMetrics.push({
+        dayIndex: dNum,
+        totalKm: legAnalysis.totalKm,
+        totalMinutes: legAnalysis.totalMinutes,
+        legs: legAnalysis.legs
+      });
+
+      // Cảnh báo nếu có chặng quá xa hoặc ngày di chuyển quá tải
+      if (legAnalysis.warnings && legAnalysis.warnings.length > 0) {
+        legAnalysis.warnings.forEach(w => {
+          issues.push({
+            dayIndex: dNum,
+            severity: 'warning',
+            type: 'distance_warning',
+            title: w.type === 'day_travel_overload' ? 'Quãng đường di chuyển trong ngày khá dài' : 'Cung đường di chuyển liên điểm xa',
+            message: w.message,
+            distanceKm: w.distanceKm || w.totalKm
+          });
+        });
+      }
 
       acts.forEach(act => {
         const actName = act.name || '';
@@ -1333,13 +1359,20 @@ async function copilotTourDesign({
     if (ai) {
       try {
         const prompt = `Bạn là Chuyên gia Điều hành & Thẩm định Thiết kế Tour tại TravelVN.
-Hãy đánh giá ngắn gọn lịch trình tour sau đây dành cho nhân viên văn phòng (tối đa 4 câu):
+Hãy đánh giá ngắn gọn lịch trình tour sau đây dành cho nhân viên điều hành tour (tối đa 4 câu):
 - Tuyến tour: ${routeLabel}
 - Số ngày: ${days.length} ngày
-- Lịch trình các ngày:
-${days.map(d => `Ngày ${d.dayIndex}: ${d.route_title || ''} (Khách sạn: ${d.accommodation?.name || 'Chưa chọn'}) - Các hoạt động: ${(d.activities || []).map(a => a.name).join(', ')}`).join('\n')}
+- Lịch trình các ngày và cự ly di chuyển ước tính:
+${days.map((d, idx) => {
+  const metric = dayDistanceMetrics[idx];
+  const distInfo = metric && metric.totalKm > 0 ? ` [Khoảng cách di chuyển: ~${metric.totalKm} km (~${metric.totalMinutes} phút ô tô)]` : '';
+  const legDetails = metric && metric.legs && metric.legs.length > 0
+    ? ` (Cung đường: ${metric.legs.map(l => `${l.fromName} ➔ ${l.toName}: ${l.distanceKm}km`).join(', ')})`
+    : '';
+  return `Ngày ${d.dayIndex}: ${d.route_title || ''}${distInfo} (Khách sạn: ${d.accommodation?.name || 'Chưa chọn'})\n- Hoạt động: ${(d.activities || []).map(a => a.name).join(', ')}${legDetails}`;
+}).join('\n')}
 
-Hãy nhận xét súc tích về tính khả thi, phân bổ thời gian giữa các tỉnh thành và các buổi sáng - chiều - tối, đưa ra lời khuyên tối ưu cho người thiết kế. Văn phong lịch sự, tích cực.`;
+Hãy nhận xét súc tích về tính khả thi, khoảng cách di chuyển giữa các điểm tham quan, phân bổ thời gian hợp lý và đưa ra lời khuyên tối ưu cung đường. Văn phong lịch sự, tích cực.`;
         
         const geminiRes = await callGeminiWithRetry(ai, {
           model: DEFAULT_MODEL,
@@ -1354,18 +1387,19 @@ Hãy nhận xét súc tích về tính khả thi, phân bổ thời gian giữa 
 
     if (!aiReviewText) {
       if (issues.length === 0) {
-        aiReviewText = `Lịch trình tour ${routeLabel} được phân bổ khoa học, các hoạt động tham quan và nghỉ ngơi cân đối giữa các tỉnh thành, đảm bảo trải nghiệm thư giãn cho du khách.`;
+        aiReviewText = `Lịch trình tour ${routeLabel} được phân bổ khoa học, cự ly di chuyển giữa các điểm tham quan hợp lý, đảm bảo sức khỏe và trải nghiệm thư giãn cho du khách.`;
       } else {
-        aiReviewText = `Hệ thống ghi nhận một số điểm cần điều chỉnh về địa phương hoặc thời lượng di chuyển. Nhân viên vui lòng xem chi tiết cảnh báo bên dưới để tối ưu trước khi gửi quản lý hoặc khách hàng.`;
+        aiReviewText = `Hệ thống ghi nhận một số điểm cần điều chỉnh về địa phương hoặc cự ly di chuyển. Nhân viên vui lòng xem chi tiết cảnh báo bên dưới để tối ưu trước khi gửi quản lý hoặc khách hàng.`;
       }
     }
 
     return {
       action: 'audit',
       overallStatus: issues.some(i => i.severity === 'error') ? 'error' : (issues.some(i => i.severity === 'warning') ? 'warning' : 'good'),
-      summary: issues.length === 0 ? 'Lịch trình rất tốt, không phát hiện lỗi xung đột!' : `Phát hiện ${issues.length} lưu ý cần xem xét trên lịch trình.`,
+      summary: issues.length === 0 ? 'Lịch trình rất tốt, cung đường tối ưu và không phát hiện lỗi!' : `Phát hiện ${issues.length} lưu ý về lịch trình & cự ly di chuyển.`,
       issues,
-      aiReview: aiReviewText
+      aiReview: aiReviewText,
+      dayDistances: dayDistanceMetrics
     };
   }
 
@@ -1692,9 +1726,22 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
       };
     }
 
+    // Tính toán cự ly & thời gian di chuyển ước tính cho các ngày gợi ý
+    const dayDistances = (suggestedResult.suggestedDays || []).map(d => {
+      const dest = activeDestList.find(x => String(x.destination_id) === String(d.end_destination_id)) || activeDestList[0];
+      const legAnalysis = analyzeDayLegs(d.activities, dest?.destination_name || routeLabel);
+      return {
+        dayIndex: d.dayIndex,
+        totalKm: legAnalysis.totalKm,
+        totalMinutes: legAnalysis.totalMinutes,
+        legs: legAnalysis.legs
+      };
+    });
+
     return {
       action: 'suggest',
-      ...suggestedResult
+      ...suggestedResult,
+      dayDistances
     };
   }
 

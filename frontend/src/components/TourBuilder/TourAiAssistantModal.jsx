@@ -741,7 +741,9 @@ const TourAiAssistantModal = ({
 
                   {/* DANH SÁCH CÁC NGÀY GỢI Ý */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {suggestResult.suggestedDays.map((d) => (
+                    {suggestResult.suggestedDays.map((d) => {
+                      const dayDist = (suggestResult.dayDistances || []).find(m => m.dayIndex === d.dayIndex);
+                      return (
                       <div key={d.dayIndex} style={{
                         border: '1px solid #e2e8f0',
                         borderRadius: '10px',
@@ -749,8 +751,8 @@ const TourAiAssistantModal = ({
                         background: '#fff',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <span style={{
                               background: '#6366f1',
                               color: '#fff',
@@ -764,6 +766,23 @@ const TourAiAssistantModal = ({
                             <span style={{ fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>
                               {d.route_title}
                             </span>
+                            {dayDist && dayDist.totalKm > 0 && (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: '#eff6ff',
+                                border: '1px solid #bfdbfe',
+                                color: '#1d4ed8',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11.5px',
+                                fontWeight: '600'
+                              }}>
+                                <Navigation size={11} color="#2563eb" />
+                                <span>~{dayDist.totalKm} km (~{dayDist.totalMinutes} phút xe)</span>
+                              </span>
+                            )}
                           </div>
 
                           {d.accommodation ? (
@@ -779,42 +798,65 @@ const TourAiAssistantModal = ({
                         </div>
 
                         {/* HOẠT ĐỘNG TRONG NGÀY */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {(d.activities || []).map((act, actIdx) => (
-                            <div key={actIdx} style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              background: '#f8fafc',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              fontSize: '12.5px'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{
-                                  background: act.type === 'Tham quan' ? '#dbeafe' : (act.type === 'Di chuyển' ? '#fef3c7' : '#f1f5f9'),
-                                  color: act.type === 'Tham quan' ? '#1d4ed8' : (act.type === 'Di chuyển' ? '#b45309' : '#475569'),
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  fontSize: '11px',
-                                  fontWeight: '600'
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {(d.activities || []).map((act, actIdx) => {
+                            const matchedLeg = dayDist?.legs?.find(l => l.fromIndex === actIdx);
+                            return (
+                              <React.Fragment key={actIdx}>
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  background: '#f8fafc',
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '12.5px'
                                 }}>
-                                  {act.type}
-                                </span>
-                                <span style={{ color: '#334155', fontWeight: act.type === 'Tham quan' ? '600' : '400' }}>
-                                  {act.name}
-                                </span>
-                              </div>
-                              {Number(act.price) > 0 && (
-                                <span style={{ color: '#059669', fontWeight: '600', fontSize: '11.5px' }}>
-                                  {Number(act.price).toLocaleString('vi-VN')} đ
-                                </span>
-                              )}
-                            </div>
-                          ))}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{
+                                      background: act.type === 'Tham quan' ? '#dbeafe' : (act.type === 'Di chuyển' ? '#fef3c7' : '#f1f5f9'),
+                                      color: act.type === 'Tham quan' ? '#1d4ed8' : (act.type === 'Di chuyển' ? '#b45309' : '#475569'),
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '11px',
+                                      fontWeight: '600'
+                                    }}>
+                                      {act.type}
+                                    </span>
+                                    <span style={{ color: '#334155', fontWeight: act.type === 'Tham quan' ? '600' : '400' }}>
+                                      {act.name}
+                                    </span>
+                                  </div>
+                                  {Number(act.price) > 0 && (
+                                    <span style={{ color: '#059669', fontWeight: '600', fontSize: '11.5px' }}>
+                                      {Number(act.price).toLocaleString('vi-VN')} đ
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* THÔNG TIN CHẶNG DI CHUYỂN GIỮA 2 ĐIỂM THAM QUAN */}
+                                {matchedLeg && (
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '2px 14px',
+                                    margin: '1px 0',
+                                    fontSize: '11px',
+                                    color: '#4f46e5',
+                                    fontWeight: '600'
+                                  }}>
+                                    <span style={{ borderLeft: '2px dashed #cbd5e1', height: '14px', marginLeft: '6px' }} />
+                                    <span>🚗 Di chuyển ~{matchedLeg.distanceKm} km ({matchedLeg.formattedDuration}) đến {matchedLeg.toName}</span>
+                                  </div>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* NÚT THAO TÁC CUỐI MODAL */}
@@ -960,6 +1002,67 @@ const TourAiAssistantModal = ({
                     </p>
                   </div>
 
+                  {/* THỐNG KÊ CỰ LY DI CHUYỂN THEO NGÀY */}
+                  {auditResult.dayDistances && auditResult.dayDistances.some(d => d.totalKm > 0) && (
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '14px 16px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <Navigation size={15} color="#4f46e5" />
+                        <span style={{ fontWeight: '700', fontSize: '13.5px', color: '#1e293b' }}>
+                          Cự Ly & Cung Đường Di Chuyển Dự Kiến:
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                        {auditResult.dayDistances.map(dd => (
+                          <div key={dd.dayIndex} style={{
+                            background: '#fff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            padding: '10px 12px',
+                            fontSize: '12px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+                              <span>Ngày {dd.dayIndex}</span>
+                              <span style={{
+                                color: dd.totalKm >= 90 ? '#c2410c' : '#4338ca',
+                                background: dd.totalKm >= 90 ? '#ffedd5' : '#e0e7ff',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11px'
+                              }}>
+                                ~{dd.totalKm} km (~{dd.totalMinutes}p)
+                              </span>
+                            </div>
+                            {dd.legs && dd.legs.length > 0 ? (
+                              <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                {dd.legs.map((leg, lIdx) => (
+                                  <div key={lIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }} title={`${leg.fromName} ➔ ${leg.toName}`}>
+                                      {leg.fromName} ➔ {leg.toName}
+                                    </span>
+                                    <span style={{ fontWeight: '600', color: leg.distanceKm >= 35 ? '#ea580c' : '#475569' }}>
+                                      {leg.distanceKm}km
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '11px' }}>
+                                Điểm tham quan tập trung gần nhau
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* DANH SÁCH LƯU Ý / CẢNH BÁO */}
                   {auditResult.issues && auditResult.issues.length > 0 ? (
                     <div>
@@ -970,8 +1073,8 @@ const TourAiAssistantModal = ({
                         {auditResult.issues.map((issue, idx) => (
                           <div key={idx} style={{
                             background: '#fff',
-                            border: `1px solid ${issue.severity === 'error' ? '#fecaca' : (issue.severity === 'warning' ? '#fed7aa' : '#e2e8f0')}`,
-                            borderLeft: `4px solid ${issue.severity === 'error' ? '#ef4444' : (issue.severity === 'warning' ? '#f97316' : '#6366f1')}`,
+                            border: `1px solid ${issue.severity === 'error' ? '#fecaca' : (issue.type === 'distance_warning' ? '#fdba74' : (issue.severity === 'warning' ? '#fed7aa' : '#e2e8f0'))}`,
+                            borderLeft: `4px solid ${issue.severity === 'error' ? '#ef4444' : (issue.type === 'distance_warning' ? '#f97316' : (issue.severity === 'warning' ? '#f59e0b' : '#6366f1'))}`,
                             borderRadius: '8px',
                             padding: '12px 14px'
                           }}>
@@ -984,10 +1087,11 @@ const TourAiAssistantModal = ({
                                 fontWeight: '700',
                                 padding: '2px 8px',
                                 borderRadius: '10px',
-                                background: issue.severity === 'error' ? '#fee2e2' : '#ffedd5',
-                                color: issue.severity === 'error' ? '#991b1b' : '#9a3412'
+                                background: issue.severity === 'error' ? '#fee2e2' : (issue.type === 'distance_warning' ? '#fff7ed' : '#ffedd5'),
+                                color: issue.severity === 'error' ? '#991b1b' : (issue.type === 'distance_warning' ? '#c2410c' : '#9a3412'),
+                                border: issue.type === 'distance_warning' ? '1px solid #ffedd5' : 'none'
                               }}>
-                                {issue.severity === 'error' ? 'Lỗi nghiêm trọng' : 'Khuyến nghị'}
+                                {issue.severity === 'error' ? 'Lỗi nghiêm trọng' : (issue.type === 'distance_warning' ? '🚗 Cự ly di chuyển' : 'Khuyến nghị')}
                               </span>
                             </div>
                             <p style={{ margin: 0, fontSize: '12.5px', color: '#475569', lineHeight: '1.4' }}>
