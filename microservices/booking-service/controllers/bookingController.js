@@ -3051,10 +3051,10 @@ const autoScanAndNotifyTourClosed = async () => {
     `);
 
     for (const dep of departures) {
-      // Kiểm tra xem đã có thông báo TOUR_CLOSED cho departure_id này chưa
+      // Kiểm tra xem đã có thông báo TOUR_T30_REVIEW (hoặc TOUR_CLOSED cũ) cho departure_id này chưa
       const [existing] = await sequelize.query(`
         SELECT notification_id FROM notifications 
-        WHERE type = 'TOUR_CLOSED' AND departure_id = ? 
+        WHERE (type = 'TOUR_T30_REVIEW' OR type = 'TOUR_CLOSED') AND departure_id = ? 
         LIMIT 1
       `, { replacements: [dep.departure_id] });
 
@@ -3072,7 +3072,7 @@ const autoScanAndNotifyTourClosed = async () => {
           INSERT INTO notifications (
             type, target_role, title, content, departure_id, tour_id, departure_date, num_booked, is_read, action_url, created_at
           ) VALUES (
-            'TOUR_CLOSED', 'MANAGER', ?, ?, ?, ?, ?, ?, 0, 'tour_operations', NOW()
+            'TOUR_T30_REVIEW', 'MANAGER', ?, ?, ?, ?, ?, ?, 0, 'tour_operations', NOW()
           )
         `, {
           replacements: [
@@ -3085,13 +3085,13 @@ const autoScanAndNotifyTourClosed = async () => {
           ]
         });
       } else {
-        // Cập nhật lại số lượng khách nếu có booking mới thay đổi
+        // Cập nhật lại số lượng khách và đảm bảo type là TOUR_T30_REVIEW cùng action_url là tour_operations
         await sequelize.query(`
           UPDATE notifications 
-          SET num_booked = ?, content = ?, action_url = 'tour_operations'
+          SET type = 'TOUR_T30_REVIEW', num_booked = ?, title = ?, content = ?, action_url = 'tour_operations'
           WHERE notification_id = ?
         `, {
-          replacements: [numBooked, content, existing[0].notification_id]
+          replacements: [numBooked, title, content, existing[0].notification_id]
         });
       }
 

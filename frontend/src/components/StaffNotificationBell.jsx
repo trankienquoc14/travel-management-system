@@ -155,8 +155,9 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
     let targetTab = notif.action_url;
     if (!targetTab) {
       switch (notif.type) {
+        case 'TOUR_T30_REVIEW':
         case 'TOUR_CLOSED':
-          targetTab = 'create_request';
+          targetTab = 'tour_operations';
           break;
         case 'GUIDE_ASSIGNED':
         case 'GUIDE_TOUR_UPCOMING':
@@ -216,8 +217,9 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
   // Icon, màu sắc và tiêu đề hành động theo từng loại thông báo
   const getNotificationMeta = (type) => {
     switch (type) {
+      case 'TOUR_T30_REVIEW':
       case 'TOUR_CLOSED':
-        return { icon: '🔒', badgeColor: '#ea580c', badgeBg: '#fff7ed', actionText: '🚀 Gửi yêu cầu NCC' };
+        return { icon: '⚠️', badgeColor: '#ea580c', badgeBg: '#fff7ed', actionText: '⚙️ Xem xét vận hành' };
       case 'GUIDE_ASSIGNED':
         return { icon: '🚩', badgeColor: '#0284c7', badgeBg: '#f0f9ff', actionText: '🚩 Xem tour phân công' };
       case 'GUIDE_TOUR_UPCOMING':
