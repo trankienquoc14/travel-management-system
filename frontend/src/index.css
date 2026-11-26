@@ -3172,14 +3172,6 @@ body {
   .tour-search-box button {
     width: 100% !important;
   }
-  .custom-tour-banner {
-    grid-template-columns: 1fr !important;
-    padding: 24px 18px !important;
-    gap: 20px !important;
-  }
-  .custom-tour-visual-card {
-    height: 180px !important;
-  }
 
   /* 11. Giao diện Chi Tiết Tour (TourDetail) */
   .detail-hero {
