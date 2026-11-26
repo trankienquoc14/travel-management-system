@@ -186,13 +186,16 @@ const TourAiAssistantModal = ({
 
   // Gửi yêu cầu AI Gợi ý Lịch trình Chuẩn (có hỗ trợ đổi phương án mới)
   const handleRunSuggest = async (isRegenerate = false) => {
+    // Đảm bảo isRegenerate là boolean thực sự, tránh trường hợp React synthetic event được truyền vào khi gắn onClick trực tiếp
+    const shouldRegenerate = isRegenerate === true;
+
     if (selectedDestIds.length === 0) {
       alert('Vui lòng chọn ít nhất một điểm đến du lịch!');
       return;
     }
 
-    const nextAttempt = isRegenerate ? suggestAttempt + 1 : suggestAttempt;
-    if (isRegenerate) {
+    const nextAttempt = shouldRegenerate ? suggestAttempt + 1 : suggestAttempt;
+    if (shouldRegenerate) {
       setSuggestAttempt(nextAttempt);
     }
 
@@ -207,8 +210,8 @@ const TourAiAssistantModal = ({
         days: days,
         availablePlaces: relevantPlaces.length > 0 ? relevantPlaces : allPlaces,
         availableHotels: relevantHotels.length > 0 ? relevantHotels : allServices,
-        attempt: nextAttempt,
-        shuffle: isRegenerate,
+        attempt: Number(nextAttempt || 0),
+        shuffle: Boolean(shouldRegenerate),
         randomSeed: Date.now()
       });
 
@@ -937,7 +940,7 @@ const TourAiAssistantModal = ({
                     Chọn nơi đón khách, tuyến du lịch và số ngày ở trên, sau đó bấm <strong>"Tạo Lịch Trình Chuẩn"</strong> để AI đề xuất.
                   </p>
                   <button
-                    onClick={handleRunSuggest}
+                    onClick={() => handleRunSuggest(false)}
                     style={{
                       padding: '8px 18px',
                       borderRadius: '8px',
