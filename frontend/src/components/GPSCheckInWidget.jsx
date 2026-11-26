@@ -47,6 +47,12 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const regStreamRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Refs hỗ trợ làm mịn điểm số và khóa trạng thái xác thực chống giật lag
+  const smoothedScoreRef = useRef(0);
+  const verifiedLockUntilRef = useRef(0);
+  const bestConfRef = useRef(0);
+  const mismatchCountRef = useRef(0);
+
   // Cập nhật đồng hồ thời gian thực
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -236,14 +242,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       streamRef.current = null;
     }
     setCameraActive(false);
+    smoothedScoreRef.current = 0;
+    verifiedLockUntilRef.current = 0;
+    bestConfRef.current = 0;
+    mismatchCountRef.current = 0;
   };
 
-  // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG
+  // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG (220ms/lần siêu mượt)
   const startLiveScanningLoop = () => {
     stopLiveScanningLoop();
     scanIntervalRef.current = setInterval(() => {
       runFaceVerificationStep();
-    }, 450);
+    }, 220);
   };
 
   const stopLiveScanningLoop = () => {
@@ -253,7 +263,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
-  // BƯỚC ĐỐI SOÁT SINH TRẮC HỌC TỪNG KHUNG HÌNH (FACEID SCAN STEP)
+  // BƯỚC ĐỐI SOÁT SINH TRẮC HỌC TỪNG KHUNG HÌNH (FACEID SCAN STEP KÈM BỘ LỌC CHỐNG NHẢY ĐIỂM)
   const runFaceVerificationStep = () => {
     if (!videoRef.current || !canvasRef.current || !cameraActive) return;
     const video = videoRef.current;
@@ -277,7 +287,12 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     const detection = detectFaceInCanvas(canvas);
 
     if (!detection.detected) {
+      // Nếu đã từng xác thực thành công trong 4 giây gần nhất, không đột ngột tắt báo lỗi do chớp mắt/nhấp nháy
+      if (Date.now() < verifiedLockUntilRef.current) {
+        return;
+      }
       setFaceVerified(false);
+      smoothedScoreRef.current = 0;
       setScanStatus({
         status: 'NO_FACE',
         message: detection.message || '⚠️ Không phát hiện khuôn mặt trước camera',
@@ -304,29 +319,62 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
     // 4. Đối soát sinh trắc học với ảnh khuôn mặt gốc đã đăng ký
     const matchResult = compareFaceDescriptors(liveDescriptor, profileDescriptor);
-    setConfidenceScore(matchResult.confidence);
+    const rawConf = matchResult.confidence;
 
+    // 🌟 BỘ LỌC LÀM MỊN ĐIỂM SỐ (EXPONENTIAL MOVING AVERAGE - EMA) ĐỂ CHỐNG NHẢY SỐ LIÊN TỤC
+    const prevSmoothed = smoothedScoreRef.current;
+    const smoothed = prevSmoothed > 0 ? (prevSmoothed * 0.70 + rawConf * 0.30) : rawConf;
+    smoothedScoreRef.current = smoothed;
+    const finalScore = parseFloat(smoothed.toFixed(1));
+
+    const isMatchNow = matchResult.matched || finalScore >= 65.0;
+    const isLockedVerified = Date.now() < verifiedLockUntilRef.current;
     const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-    if (matchResult.matched) {
+    if (isMatchNow) {
+      mismatchCountRef.current = 0;
+      // 🔒 KHÓA TRẠNG THÁI XÁC THỰC THÀNH CÔNG TRONG 8 GIÂY (LATCH LOCK)
+      verifiedLockUntilRef.current = Date.now() + 8000;
       setFaceVerified(true);
-      setFaceSnapshot(liveDataUrl);
+      setConfidenceScore(finalScore);
+
+      // Lưu snapshot có độ khớp tốt nhất để gửi lên HR
+      if (rawConf >= (bestConfRef.current || 0)) {
+        bestConfRef.current = rawConf;
+        setFaceSnapshot(liveDataUrl);
+      }
+
       setScanStatus({
         status: 'MATCHED',
-        message: `✅ KHUÔN MẶT CHÍNH CHỦ: Đã khớp ${matchResult.confidence}% (Đạt chuẩn)`,
+        message: `✅ KHUÔN MẶT CHÍNH CHỦ: Đã khớp ${finalScore}% (Đạt chuẩn - Sẵn sàng điểm danh)`,
         box: detection.box,
         metrics: matchResult.metrics,
-        confidence: matchResult.confidence
+        confidence: finalScore
       });
     } else {
-      setFaceVerified(false);
-      setScanStatus({
-        status: 'MISMATCHED',
-        message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${matchResult.confidence}% (Yêu cầu >= 70%)`,
-        box: detection.box,
-        metrics: matchResult.metrics,
-        confidence: matchResult.confidence
-      });
+      mismatchCountRef.current += 1;
+
+      // Nếu đang trong thời gian khóa nhận diện và chỉ mới trượt vài frame (nhấp nháy ánh sáng/chớp mắt): VẪN GIỮ NGUYÊN TRẠNG THÁI KHỚP
+      if (isLockedVerified && mismatchCountRef.current < 4) {
+        setConfidenceScore(finalScore);
+        setScanStatus(prev => ({
+          ...prev,
+          confidence: finalScore,
+          box: detection.box
+        }));
+      } else {
+        // Thực sự không khớp kéo dài
+        verifiedLockUntilRef.current = 0;
+        setFaceVerified(false);
+        setConfidenceScore(finalScore);
+        setScanStatus({
+          status: 'MISMATCHED',
+          message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${finalScore}% (Yêu cầu >= 65%)`,
+          box: detection.box,
+          metrics: matchResult.metrics,
+          confidence: finalScore
+        });
+      }
     }
   };
 
@@ -358,10 +406,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       return;
     }
 
-    if (!faceVerified || confidenceScore < 70.0) {
+    if (!faceVerified || confidenceScore < 65.0) {
       setAlertMsg({
         type: 'error',
-        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 70.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
+        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 65.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
       });
       return;
     }

@@ -1006,11 +1006,11 @@ exports.gpsCheckIn = async (req, res) => {
 
     const confidenceScore = match_confidence !== undefined && match_confidence !== null ? parseFloat(match_confidence) : 0;
 
-    // Ngưỡng bảo mật: khuôn mặt phải được hệ thống xác thực (face_verified === true) và độ khớp >= 70%
-    if (!face_verified || confidenceScore < 70.0) {
+    // Ngưỡng bảo mật: khuôn mặt phải được hệ thống xác thực (face_verified === true) và độ khớp >= 65%
+    if (!face_verified || confidenceScore < 65.0) {
       return res.status(400).json({
         success: false,
-        message: `Xác thực khuôn mặt thất bại! Khuôn mặt không trùng khớp với hồ sơ nhân viên (Độ khớp: ${confidenceScore.toFixed(1)}% < 70%). Hệ thống từ chối ghi nhận chấm công!`
+        message: `Xác thực khuôn mặt thất bại! Khuôn mặt không trùng khớp với hồ sơ nhân viên (Độ khớp: ${confidenceScore.toFixed(1)}% < 65%). Hệ thống từ chối ghi nhận chấm công!`
       });
     }
 

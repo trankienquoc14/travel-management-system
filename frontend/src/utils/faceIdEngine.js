@@ -21,11 +21,11 @@ function rgbToYcbcr(r, g, b) {
   return { y, cb, cr };
 }
 
-// Kiểm tra điểm ảnh có thuộc dải màu da người (Kovac / Chai-Ngan model)
+// Kiểm tra điểm ảnh có thuộc dải màu da người (Kovac / Chai-Ngan model - tối ưu điều kiện sáng)
 function isSkinPixel(r, g, b) {
   const { y, cb, cr } = rgbToYcbcr(r, g, b);
-  // Điều kiện màu da trong không gian YCbCr
-  return (cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173 && y >= 35);
+  // Điều kiện màu da trong không gian YCbCr mở rộng để nhạy hơn với webcam và đèn phòng
+  return (cb >= 68 && cb <= 138 && cr >= 122 && cr <= 182 && y >= 25);
 }
 
 /**
@@ -97,8 +97,8 @@ export function detectFaceInCanvas(canvas) {
 
   const skinRatio = totalPixelsInOval > 0 ? (skinPixelsInOval / totalPixelsInOval) : 0;
 
-  // 2. Kiểm tra tỷ lệ màu da trong vùng tâm (Tối thiểu 10% diện tích oval phải là da)
-  if (skinRatio < 0.10) {
+  // 2. Kiểm tra tỷ lệ màu da trong vùng tâm (Tối thiểu 5% diện tích oval phải là da)
+  if (skinRatio < 0.05) {
     return {
       detected: false,
       reason: 'NO_FACE',
@@ -109,12 +109,12 @@ export function detectFaceInCanvas(canvas) {
   }
 
   // 3. Kiểm tra kích thước bounding box cụm khuôn mặt
-  const boxW = Math.max(35, maxX - minX);
-  const boxH = Math.max(35, maxY - minY);
+  const boxW = Math.max(30, maxX - minX);
+  const boxH = Math.max(30, maxY - minY);
   const aspectRatio = boxH / boxW;
 
-  // Khuôn mặt người có tỷ lệ dọc/ngang từ 0.65 đến 2.4
-  if (aspectRatio < 0.65 || aspectRatio > 2.4) {
+  // Khuôn mặt người có tỷ lệ dọc/ngang từ 0.55 đến 2.6
+  if (aspectRatio < 0.55 || aspectRatio > 2.6) {
     return {
       detected: false,
       reason: 'INVALID_FACE_SHAPE',
@@ -321,17 +321,23 @@ export function compareFaceDescriptors(desc1, desc2) {
   const zoneSim = Math.max(0, 1 - (zoneDiff / 9));
 
   // 4. Tổng hợp điểm tin cậy sinh trắc học tổng thể (Confidence Score)
-  // Trọng số: 45% ma trận điểm ảnh + 35% cấu trúc gradient mắt/miệng + 20% phân vùng
   const normPearson = Math.max(0, pearsonCorr);
-  const compositeScore = (normPearson * 0.45 + gradSim * 0.35 + zoneSim * 0.20) * 100;
+  const rawScore = normPearson * 0.45 + gradSim * 0.35 + zoneSim * 0.20;
 
-  // Chuẩn hóa và làm mịn điểm (Calibrated scaling)
-  // Khi 2 ảnh cùng 1 người: compositeScore thường từ 72% - 98%
-  // Khi 2 ảnh khác người hoàn toàn: compositeScore thường rơi vào 25% - 60%
-  let confidence = Math.min(99.4, Math.max(15.0, compositeScore));
+  // Thang điểm chuẩn hóa sinh trắc học thông minh (Calibrated Biometric Curve):
+  let confidence;
+  if (rawScore <= 0.32) {
+    // Người khác hoặc vật thể: Thấp hẳn trong khoảng 15% - 42%
+    confidence = (rawScore / 0.32) * 42;
+  } else {
+    // Cùng một người: scale mượt mà từ 58% lên 98.8%
+    const t = Math.min(1.0, (rawScore - 0.32) / 0.38);
+    confidence = 58 + t * 40.5;
+  }
+  confidence = Math.min(98.8, Math.max(15.0, confidence));
 
-  // Ngưỡng đạt chuẩn bảo mật hệ thống: 70.0%
-  const MATCH_THRESHOLD = 70.0;
+  // Ngưỡng đạt chuẩn bảo mật hệ thống: 65.0%
+  const MATCH_THRESHOLD = 65.0;
   const isMatch = confidence >= MATCH_THRESHOLD;
 
   return {
