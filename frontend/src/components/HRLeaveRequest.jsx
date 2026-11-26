@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+const GATEWAY_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
+
 const HRLeaveRequest = ({ mode = 'my_requests' }) => {
   const [user, setUser] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState(mode === 'approval' ? 'approval' : 'my_requests');
@@ -73,9 +75,9 @@ const HRLeaveRequest = ({ mode = 'my_requests' }) => {
 
     setLoading(true);
     try {
-      let url = 'http://localhost:5000/api/hr/leave-requests/my-requests';
+      let url = `${GATEWAY_URL}/api/hr/leave-requests/my-requests`;
       if (activeSubTab === 'approval') {
-        url = `http://localhost:5000/api/hr/leave-requests/all?status=${filterStatus}&request_type=${filterType}`;
+        url = `${GATEWAY_URL}/api/hr/leave-requests/all?status=${filterStatus}&request_type=${filterType}`;
       }
 
       const response = await axios.get(url, {
@@ -153,7 +155,7 @@ const HRLeaveRequest = ({ mode = 'my_requests' }) => {
         data.append('attachment', formData.attachment);
       }
 
-      const response = await axios.post('http://localhost:5000/api/hr/leave-requests', data, {
+      const response = await axios.post(`${GATEWAY_URL}/api/hr/leave-requests`, data, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -198,16 +200,39 @@ const HRLeaveRequest = ({ mode = 'my_requests' }) => {
     setSubmitting(true);
     try {
       const response = await axios.put(
-        `http://localhost:5000/api/hr/leave-requests/${showReviewModal.request_id}/review`,
+        `${GATEWAY_URL}/api/hr/leave-requests/${showReviewModal.request_id}/review`,
         { status, manager_note: managerNote },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
-        alert(response.data.message);
+        alert(status === 'Approved' ? "Duyệt đơn thành công" : (response.data.message || "Đã từ chối đơn"));
         setShowReviewModal(null);
         setManagerNote('');
         fetchRequests();
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi duyệt đơn!');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleApproveFromDetail = async (requestId) => {
+    const token = localStorage.getItem('token');
+    setSubmitting(true);
+    try {
+      const response = await axios.put(
+        `${GATEWAY_URL}/api/hr/leave-requests/${requestId}/review`,
+        { status: 'Approved', manager_note: 'Đã duyệt' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data && response.data.success) {
+        alert("Duyệt đơn thành công");
+        setShowDetailModal(null);
+        fetchRequests();
+      } else {
+        alert(response.data?.message || 'Có lỗi xảy ra khi duyệt đơn!');
       }
     } catch (error) {
       alert(error.response?.data?.message || 'Có lỗi xảy ra khi duyệt đơn!');
@@ -221,7 +246,7 @@ const HRLeaveRequest = ({ mode = 'my_requests' }) => {
     const token = localStorage.getItem('token');
 
     try {
-      const response = await axios.delete(`http://localhost:5000/api/hr/leave-requests/${id}`, {
+      const response = await axios.delete(`${GATEWAY_URL}/api/hr/leave-requests/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -343,7 +368,7 @@ const HRLeaveRequest = ({ mode = 'my_requests' }) => {
         <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>Đang tải dữ liệu đơn...</div>
       ) : requests.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-          <p style={{ fontSize: '15px', color: '#64748b', margin: 0 }}>Chưa có đơn xin nghỉ phép hay giải trình nào được ghi nhận.</p>
+          <p style={{ fontSize: '15px', color: '#64748b', margin: 0 }}>Hiện tại chưa có đơn nào cần giải quyết.</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -660,25 +685,42 @@ const HRLeaveRequest = ({ mode = 'my_requests' }) => {
                 <div style={{ marginTop: '10px' }}>
                   <b>Ảnh minh chứng:</b>
                   <div style={{ marginTop: '6px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', maxHeight: '200px' }}>
-                    <img src={`http://localhost:5000${showDetailModal.attachment_url}`} alt="Minh chứng" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={`${GATEWAY_URL}${showDetailModal.attachment_url}`} alt="Minh chứng" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 </div>
               )}
 
+              <p style={{ marginTop: '10px' }}><b>Ngày gửi:</b> {formatDate(showDetailModal.created_at)}</p>
+
               <div style={{ marginTop: '12px', padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <p style={{ margin: 0 }}><b>Trạng thái:</b> {showDetailModal.status}</p>
+                <p style={{ margin: 0 }}><b>Trạng thái:</b> {showDetailModal.status === 'Pending' ? '⏳ Chờ duyệt' : (showDetailModal.status === 'Approved' ? '✅ Đã duyệt' : '❌ Từ chối')}</p>
                 {showDetailModal.manager_name && <p style={{ margin: '4px 0 0 0' }}><b>Người duyệt:</b> {showDetailModal.manager_name}</p>}
                 {showDetailModal.manager_note && <p style={{ margin: '4px 0 0 0', color: '#dc2626' }}><b>Ghi chú người duyệt:</b> {showDetailModal.manager_note}</p>}
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
               <button
+                type="button"
                 onClick={() => setShowDetailModal(null)}
-                style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '13px', cursor: 'pointer' }}
+                style={{ padding: '8px 18px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '13px', cursor: 'pointer', fontWeight: '600', color: '#475569' }}
               >
                 Đóng
               </button>
+              {isHRorAdmin && showDetailModal.status === 'Pending' && (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => handleApproveFromDetail(showDetailModal.request_id)}
+                  style={{
+                    padding: '8px 22px', borderRadius: '6px', border: 'none', background: '#10b981', color: '#fff',
+                    fontSize: '13px', fontWeight: '700', cursor: submitting ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  {submitting ? 'Đang duyệt...' : '✅ Duyệt'}
+                </button>
+              )}
             </div>
           </div>
         </div>
