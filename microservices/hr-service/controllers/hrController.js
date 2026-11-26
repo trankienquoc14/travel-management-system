@@ -993,8 +993,14 @@ exports.gpsCheckIn = async (req, res) => {
     }
 
     const { latitude, longitude, location_address, device_info, notes, face_image, match_confidence, face_verified } = req.body;
-    const today = new Date().toISOString().split('T')[0];
-    const nowTime = new Date().toTimeString().split(' ')[0]; // HH:mm:ss
+    
+    // Sử dụng ngày và giờ theo múi giờ địa phương Việt Nam (YYYY-MM-DD)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+    const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
 
     // 🔒 KIỂM TRA BẮT BUỘC: PHẢI CÓ ẢNH VÀ QUÉT ĐÚNG KHUÔN MẶT CHÍNH CHỦ
     if (!face_image || typeof face_image !== 'string' || !face_image.startsWith('data:image')) {
@@ -1030,6 +1036,10 @@ exports.gpsCheckIn = async (req, res) => {
       console.error("Lỗi lưu ảnh selfie khuôn mặt:", imgErr);
     }
 
+    // Cắt ngắn chuỗi an toàn chống lỗi ER_DATA_TOO_LONG (tối đa 245 ký tự)
+    const safeAddress = (location_address || 'Vị trí GPS thời gian thực').slice(0, 245);
+    const safeDevice = (device_info || req.headers['user-agent'] || 'Browser HTML5 Geolocation + Camera FaceID').slice(0, 245);
+
     // Kiểm tra xem hôm nay nhân viên đã có bản ghi chấm công nào chưa
     const [existing] = await sequelize.query(`
       SELECT * FROM timekeeping WHERE employee_id = ? AND work_date = ?
@@ -1038,7 +1048,7 @@ exports.gpsCheckIn = async (req, res) => {
     if (existing.length === 0) {
       // 🚀 CHƯA CHẤM CÔNG HÔM NAY -> CHECK-IN VÀO CA
       const status = nowTime <= '08:15:00' ? 'Present' : 'Late';
-      const defaultNote = notes || `Điểm danh FaceID chính chủ (${confidenceScore.toFixed(1)}%) Check-in lúc ${nowTime}`;
+      const defaultNote = (notes || `Điểm danh FaceID chính chủ (${confidenceScore.toFixed(1)}%) Check-in lúc ${nowTime}`).slice(0, 245);
 
       await sequelize.query(`
         INSERT INTO timekeeping (employee_id, work_date, status, check_in, latitude, longitude, location_address, device_info, face_image_url, face_verified, match_confidence, notes)
@@ -1047,8 +1057,8 @@ exports.gpsCheckIn = async (req, res) => {
         replacements: [
           userId, today, status, nowTime,
           latitude || null, longitude || null,
-          location_address || 'Vị trí GPS thời gian thực',
-          device_info || req.headers['user-agent'] || 'Browser HTML5 Geolocation + Camera FaceID',
+          safeAddress,
+          safeDevice,
           face_image_url,
           confidenceScore,
           defaultNote
@@ -1059,12 +1069,12 @@ exports.gpsCheckIn = async (req, res) => {
         success: true,
         type: 'check_in',
         message: `📍 Điểm danh FaceID & GPS thành công (${status === 'Present' ? 'Đúng giờ' : 'Đến muộn'} - Độ khớp ${confidenceScore.toFixed(1)}%)!`,
-        data: { work_date: today, check_in: nowTime, status, latitude, longitude, location_address, face_image_url, match_confidence: confidenceScore, face_verified: 1 }
+        data: { work_date: today, check_in: nowTime, status, latitude, longitude, location_address: safeAddress, face_image_url, match_confidence: confidenceScore, face_verified: 1 }
       });
 
     } else {
       // 🚀 ĐÃ CHẤM CÔNG VÀO CA -> CHECK-OUT RA CA
-      const defaultNote = notes || `Ra ca FaceID chính chủ (${confidenceScore.toFixed(1)}%) Check-out lúc ${nowTime}`;
+      const checkoutNote = (notes || `Ra ca FaceID chính chủ (${confidenceScore.toFixed(1)}%) Check-out lúc ${nowTime}`).slice(0, 245);
 
       await sequelize.query(`
         UPDATE timekeeping 
@@ -1076,17 +1086,17 @@ exports.gpsCheckIn = async (req, res) => {
             face_image_url = COALESCE(?, face_image_url),
             face_verified = 1,
             match_confidence = ?,
-            notes = CONCAT(COALESCE(notes, ''), ' | ', ?)
+            notes = SUBSTRING(CONCAT(COALESCE(notes, ''), ' | ', ?), 1, 245)
         WHERE timekeeping_id = ?
       `, {
         replacements: [
           nowTime,
           latitude || null, longitude || null,
-          location_address || null,
-          device_info || null,
+          safeAddress,
+          safeDevice,
           face_image_url,
           confidenceScore,
-          defaultNote,
+          checkoutNote,
           existing[0].timekeeping_id
         ]
       });
@@ -1108,7 +1118,11 @@ exports.gpsCheckIn = async (req, res) => {
 exports.getMyAttendanceStatus = async (req, res) => {
   try {
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
 
     const [rows] = await sequelize.query(`
       SELECT * FROM timekeeping WHERE employee_id = ? AND work_date = ?

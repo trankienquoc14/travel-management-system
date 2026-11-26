@@ -17,21 +17,21 @@ import {
   CalendarCheck
 } from 'lucide-react';
 
-const Login = () => {
+const Login = ({ defaultRegister = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
   const [isRegisterMode, setIsRegisterMode] = useState(() => {
     const params = new URLSearchParams(location.search);
-    return params.get('mode') === 'register';
+    return params.get('mode') === 'register' || location.pathname === '/register' || defaultRegister;
   });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    setIsRegisterMode(params.get('mode') === 'register');
+    setIsRegisterMode(params.get('mode') === 'register' || location.pathname === '/register' || defaultRegister);
     setError('');
     setSuccessMsg('');
-  }, [location.search]);
+  }, [location.search, location.pathname, defaultRegister]);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -153,6 +153,11 @@ const Login = () => {
     setIsRegisterMode(next);
     setError('');
     setSuccessMsg('');
+    if (next) {
+      navigate('/register', { replace: true });
+    } else {
+      navigate('/login', { replace: true });
+    }
   };
 
   return (

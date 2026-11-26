@@ -662,7 +662,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                     ) : (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <button onClick={() => navigate('/login')} className="btn-login-outline" style={{ padding: '8px 18px', borderRadius: '20px', border: '1px solid #0194f3', color: '#0194f3', background: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>Đăng nhập</button>
-                            <button onClick={() => navigate('/login')} className="btn-primary" style={{ padding: '8px 18px', borderRadius: '20px', border: 'none', background: '#0194f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>Đăng ký</button>
+                            <button onClick={() => navigate('/register')} className="btn-primary" style={{ padding: '8px 18px', borderRadius: '20px', border: 'none', background: '#0194f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>Đăng ký</button>
                         </div>
                     )}
 
@@ -843,7 +843,7 @@ const CustomerNavbar = ({ activeTab = 'home' }) => {
                                     Đăng nhập
                                 </button>
                                 <button 
-                                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                                    onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
                                     style={{ padding: '12px', borderRadius: '14px', border: 'none', background: '#0194f3', color: '#ffffff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
                                 >
                                     Đăng ký

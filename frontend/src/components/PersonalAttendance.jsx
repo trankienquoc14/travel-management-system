@@ -34,12 +34,22 @@ const PersonalAttendance = () => {
       });
 
       if (res.data.success) {
-        const myId = Number(currentUser?.user_id || currentUser?.id || currentUser?.userId);
-        const filtered = (res.data.data || []).filter(item => {
-          const itemUserId = Number(item.user_id || item.employee_id);
-          return itemUserId === myId || !myId; // Nếu không lọc được thì trả về tất cả cho tài khoản cá nhân
-        });
-        setMyHistory(filtered);
+        let userObj = null;
+        try {
+          userObj = JSON.parse(localStorage.getItem('user') || '{}');
+        } catch (e) {}
+        const myId = Number(userObj?.id || userObj?.user_id || userObj?.userId);
+        let list = res.data.data || [];
+        if (myId) {
+          const matching = list.filter(item => {
+            const itemUserId = Number(item.user_id || item.employee_id);
+            return itemUserId === myId;
+          });
+          if (matching.length > 0) {
+            list = matching;
+          }
+        }
+        setMyHistory(list);
       }
     } catch (err) {
       console.error('Lỗi tải lịch sử chấm công cá nhân:', err);

@@ -55,6 +55,9 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const mismatchCountRef = useRef(0);
   const hasAutoTriggeredRef = useRef(false);
 
+  const isCheckedIn = !!(attendanceStatus && attendanceStatus.check_in);
+  const isCheckedOut = !!(attendanceStatus && attendanceStatus.check_out);
+
   // Cập nhật đồng hồ thời gian thực
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -454,9 +457,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       if (res.data.success) {
         soundService.playSuccessChime();
         setAlertMsg({ type: 'success', text: `🎉 ${res.data.message}` });
-        stopCamera();
+        setScanStatus({
+          status: 'MATCHED',
+          message: `🎉 ĐÃ GHI NHẬN ĐIỂM DANH THÀNH CÔNG! (${scoreToUse.toFixed(1)}%)`,
+          box: null,
+          metrics: null,
+          confidence: scoreToUse
+        });
         await fetchMyStatus();
         if (onCheckInSuccess) onCheckInSuccess();
+        setTimeout(() => {
+          stopCamera();
+        }, 1200);
       } else {
         setAlertMsg({ type: 'error', text: res.data.message || 'Điểm danh thất bại!' });
       }
@@ -651,9 +663,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     };
     reader.readAsDataURL(file);
   };
-
-  const isCheckedIn = attendanceStatus && attendanceStatus.check_in;
-  const isCheckedOut = attendanceStatus && attendanceStatus.check_out;
 
   // ==========================================
   // COMPACT BUTTON CHO HEADER NAVBAR
