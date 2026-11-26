@@ -836,10 +836,10 @@ const TourListPage = () => {
                     </div>
                 )}
 
-                <div className="tour-list-layout-grid" style={{ display: 'grid', gridTemplateColumns: showSidebar ? 'minmax(260px, 290px) 1fr' : '1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="tour-list-layout-grid" style={{ display: 'grid', gridTemplateColumns: showSidebar ? 'minmax(260px, 290px) 1fr' : '1fr', gap: '28px', alignItems: 'stretch' }}>
                     {/* LEFT STICKY SIDEBAR FILTER (DESKTOP) */}
                     {showSidebar && (
-                        <div className="tt-desktop-only" style={{ display: 'block' }}>
+                        <div className="tt-desktop-only" style={{ display: 'flex', flexDirection: 'column' }}>
                             <TravelPreferenceSidebar
                                 preferences={preferences}
                                 onPreferenceChange={(newPrefs) => setPreferences(newPrefs)}
