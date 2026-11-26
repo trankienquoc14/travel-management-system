@@ -3064,15 +3064,15 @@ const autoScanAndNotifyTourClosed = async () => {
       const formattedDate = `${String(depDateObj.getDate()).padStart(2, '0')}/${String(depDateObj.getMonth() + 1).padStart(2, '0')}/${depDateObj.getFullYear()}`;
       const daysLeftText = dep.days_left > 0 ? `còn ${dep.days_left} ngày` : 'hôm nay';
 
-      const title = `🔒 Tour [${dep.tour_name}] đã khóa nhận khách`;
-      const content = `Đợt khởi hành ngày ${formattedDate} (${daysLeftText}) đã chính thức khóa nhận khách (đóng trước 30 ngày để chốt dịch vụ). Hiện có ${numBooked} khách đã đặt (${numOrders} đơn). Vui lòng tiến hành gửi yêu cầu dịch vụ (khách sạn, nhà hàng, xe...) cho nhà cung cấp!`;
+      const title = `⚠️ Tour [${dep.tour_name}] đã đến mốc T-30 (${daysLeftText})`;
+      const content = `Đợt khởi hành ngày ${formattedDate} (${daysLeftText}) đã chạm mốc xem xét vận hành T-30. Hiện có ${numBooked} khách đã đặt (${numOrders} đơn). Vui lòng vào Vận hành Tour để ra phán quyết Xác nhận / Tiếp tục xem xét hoặc Đóng tour!`;
 
       if (existing.length === 0) {
         await sequelize.query(`
           INSERT INTO notifications (
             type, target_role, title, content, departure_id, tour_id, departure_date, num_booked, is_read, action_url, created_at
           ) VALUES (
-            'TOUR_CLOSED', 'MANAGER', ?, ?, ?, ?, ?, ?, 0, 'create_request', NOW()
+            'TOUR_CLOSED', 'MANAGER', ?, ?, ?, ?, ?, ?, 0, 'tour_operations', NOW()
           )
         `, {
           replacements: [
@@ -3085,22 +3085,18 @@ const autoScanAndNotifyTourClosed = async () => {
           ]
         });
       } else {
-        // Cập nhật lại số lượng khách nếu có booking mới thay đổi trước khi khóa
+        // Cập nhật lại số lượng khách nếu có booking mới thay đổi
         await sequelize.query(`
           UPDATE notifications 
-          SET num_booked = ?, content = ?, action_url = 'create_request'
+          SET num_booked = ?, content = ?, action_url = 'tour_operations'
           WHERE notification_id = ?
         `, {
           replacements: [numBooked, content, existing[0].notification_id]
         });
       }
 
-      // Đổi status departure sang Closed nếu còn Open
-      if (dep.status === 'Open') {
-        await sequelize.query(`
-          UPDATE departures SET status = 'Closed' WHERE departure_id = ?
-        `, { replacements: [dep.departure_id] });
-      }
+      // LƯU Ý: Không tự động chuyển status = 'Closed' tại đây.
+      // Quyết định Đóng/Khóa tour hay Xác nhận chạy hoàn toàn do Quản lý Tour phán quyết tại trang Vận hành Tour (TourOperations).
     }
   } catch (error) {
     console.error('❌ Lỗi autoScanAndNotifyTourClosed:', error);
