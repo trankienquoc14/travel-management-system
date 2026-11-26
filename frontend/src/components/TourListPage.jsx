@@ -659,7 +659,7 @@ const TourListPage = () => {
                 </div>
             </div>
 
-            <section ref={showcaseRef} className="tt-container" style={{ marginBottom: '56px' }}>
+            <section ref={showcaseRef} className="tt-container" style={{ marginBottom: '40px' }}>
                 {/* MOBILE FILTER TRIGGER & ACTIVE SUMMARY BAR */}
                 <div className="tt-mobile-only" style={{ marginBottom: '16px', gap: '10px', alignItems: 'center' }}>
                     <button
@@ -1007,7 +1007,7 @@ const TourListPage = () => {
                                         justifyContent: 'center',
                                         alignItems: 'center',
                                         gap: '8px',
-                                        marginTop: '36px',
+                                        marginTop: '24px',
                                         flexWrap: 'wrap'
                                     }}>
                                         <button
@@ -1085,7 +1085,7 @@ const TourListPage = () => {
             </section>
 
             {/* SECTION TỰ THIẾT KẾ TOUR BANNER (ĐỒNG BỘ 100% VỚI TRANG CHỦ) */}
-            <section className="tt-container" style={{ marginBottom: '64px' }}>
+            <section className="tt-container" style={{ marginBottom: '48px' }}>
                 <div className="custom-tour-banner" style={{
                     position: 'relative',
                     borderRadius: '24px',
