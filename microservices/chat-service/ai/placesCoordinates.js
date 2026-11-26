@@ -356,24 +356,52 @@ function calculateRouteDistance(coord1, coord2, region = 'urban') {
 
 /**
  * Phân tích và tính toán ma trận khoảng cách giữa các chặng hoạt động trong ngày
+ * Phân định rõ ràng:
+ * 1. Chặng trung chuyển liên tỉnh (Intercity Transfer) giữa nơi đón và điểm đến (không gộp vào cự ly tham quan nội tỉnh).
+ * 2. Chặng tham quan nội tỉnh (Sightseeing legs) kết nối giữa các điểm du lịch thực tế.
  * @param {Array} activities Danh sách hoạt động của 1 ngày
  * @param {string} destinationName Tên điểm đến của ngày
- * @returns {{ totalKm: number, totalMinutes: number, legs: Array, warnings: Array }}
+ * @param {string} departureName Tên nơi khởi hành / đón khách
+ * @returns {{ totalKm: number, totalMinutes: number, intercityTransfer: object | null, legs: Array, warnings: Array }}
  */
-function analyzeDayLegs(activities, destinationName = '') {
+function analyzeDayLegs(activities, destinationName = '', departureName = '') {
   const acts = Array.isArray(activities) ? activities : [];
   const legs = [];
   const warnings = [];
   let totalKm = 0;
   let totalMinutes = 0;
+  let intercityTransfer = null;
 
-  // Lọc các hoạt động có địa điểm tham quan hoặc di chuyển rõ ràng
-  const validStops = [];
+  const destCoords = getPlaceCoordinates(destinationName, destinationName);
+
+  // 1. Kiểm tra chặng đón/trung chuyển liên tỉnh ở đầu hoặc cuối ngày
   acts.forEach((act, idx) => {
-    // Ưu tiên điểm tham quan hoặc điểm di chuyển có địa danh
-    if (act.type === 'Tham quan' || (act.type === 'Di chuyển' && act.name)) {
+    if (act.type === 'Di chuyển' && act.name) {
+      const actCoords = getPlaceCoordinates(act.name, departureName || destinationName);
+      if (actCoords && destCoords) {
+        const transferRoute = calculateRouteDistance(actCoords, destCoords);
+        // Nếu khoảng cách giữa nơi đón/trả và điểm đến > 50 km => Đây là chặng trung chuyển liên tỉnh
+        if (transferRoute.distanceKm >= 50 && !intercityTransfer) {
+          intercityTransfer = {
+            activityIndex: idx,
+            name: act.name,
+            fromCity: departureName || actCoords.matchedName || 'Nơi đón',
+            toCity: destinationName,
+            distanceKm: transferRoute.distanceKm,
+            durationMinutes: transferRoute.durationMinutes,
+            formattedDuration: transferRoute.formattedDuration
+          };
+        }
+      }
+    }
+  });
+
+  // 2. Lọc các điểm tham quan thực tế trong ngày để tính cự ly nội tỉnh
+  const sightseeingStops = [];
+  acts.forEach((act, idx) => {
+    if (act.type === 'Tham quan') {
       const coords = getPlaceCoordinates(act.name, destinationName);
-      validStops.push({
+      sightseeingStops.push({
         activityIndex: idx,
         name: act.name,
         type: act.type,
@@ -382,9 +410,10 @@ function analyzeDayLegs(activities, destinationName = '') {
     }
   });
 
-  for (let i = 0; i < validStops.length - 1; i++) {
-    const fromStop = validStops[i];
-    const toStop = validStops[i + 1];
+  // 3. Tính khoảng cách giữa các điểm tham quan liên tiếp trong ngày
+  for (let i = 0; i < sightseeingStops.length - 1; i++) {
+    const fromStop = sightseeingStops[i];
+    const toStop = sightseeingStops[i + 1];
 
     if (fromStop.coords && toStop.coords) {
       const route = calculateRouteDistance(fromStop.coords, toStop.coords);
@@ -395,13 +424,14 @@ function analyzeDayLegs(activities, destinationName = '') {
         toName: toStop.name,
         distanceKm: route.distanceKm,
         durationMinutes: route.durationMinutes,
-        formattedDuration: route.formattedDuration
+        formattedDuration: route.formattedDuration,
+        isConsecutiveSightseeing: true
       });
 
       totalKm += route.distanceKm;
       totalMinutes += route.durationMinutes;
 
-      // Cảnh báo nếu một chặng di chuyển quá xa trong cùng một buổi (> 35 km hoặc > 50 phút)
+      // Cảnh báo nếu một chặng di chuyển tham quan liên điểm quá xa (> 35 km hoặc > 50 phút)
       if (route.distanceKm >= 35) {
         warnings.push({
           type: 'leg_too_far',
@@ -415,19 +445,20 @@ function analyzeDayLegs(activities, destinationName = '') {
     }
   }
 
-  // Cảnh báo nếu tổng quãng đường di chuyển nội bộ trong ngày quá 90 km
+  // Cảnh báo nếu tổng cự ly tham quan nội tỉnh trong ngày quá 90 km
   if (totalKm >= 90) {
     warnings.push({
       type: 'day_travel_overload',
       totalKm: Math.round(totalKm * 10) / 10,
       totalMinutes,
-      message: `Tổng quãng đường di chuyển trong ngày lên tới ${Math.round(totalKm * 10) / 10} km (~${Math.round(totalMinutes / 60 * 10) / 10} tiếng ngồi xe). Nên gom các điểm tham quan gần nhau để du khách đỡ mệt mỏi.`
+      message: `Tổng quãng đường di chuyển tham quan trong ngày lên tới ${Math.round(totalKm * 10) / 10} km (~${Math.round(totalMinutes / 60 * 10) / 10} tiếng ngồi xe). Nên gom các điểm tham quan gần nhau để du khách đỡ mệt mỏi.`
     });
   }
 
   return {
     totalKm: Math.round(totalKm * 10) / 10,
     totalMinutes,
+    intercityTransfer,
     legs,
     warnings
   };

@@ -1255,11 +1255,12 @@ async function copilotTourDesign({
 
       // Phân tích ma trận khoảng cách & thời gian di chuyển các chặng trong ngày
       const dayDestObj = activeDestList.find(d => String(d.destination_id) === String(tourDayEndDest)) || activeDestList[0];
-      const legAnalysis = analyzeDayLegs(acts, dayDestObj?.destination_name || routeLabel);
+      const legAnalysis = analyzeDayLegs(acts, dayDestObj?.destination_name || routeLabel, depDest?.destination_name || '');
       dayDistanceMetrics.push({
         dayIndex: dNum,
         totalKm: legAnalysis.totalKm,
         totalMinutes: legAnalysis.totalMinutes,
+        intercityTransfer: legAnalysis.intercityTransfer,
         legs: legAnalysis.legs
       });
 
@@ -1729,11 +1730,12 @@ Hãy trả về duy nhất chuỗi JSON hợp lệ theo mẫu:
     // Tính toán cự ly & thời gian di chuyển ước tính cho các ngày gợi ý
     const dayDistances = (suggestedResult.suggestedDays || []).map(d => {
       const dest = activeDestList.find(x => String(x.destination_id) === String(d.end_destination_id)) || activeDestList[0];
-      const legAnalysis = analyzeDayLegs(d.activities, dest?.destination_name || routeLabel);
+      const legAnalysis = analyzeDayLegs(d.activities, dest?.destination_name || routeLabel, depDest?.destination_name || '');
       return {
         dayIndex: d.dayIndex,
         totalKm: legAnalysis.totalKm,
         totalMinutes: legAnalysis.totalMinutes,
+        intercityTransfer: legAnalysis.intercityTransfer,
         legs: legAnalysis.legs
       };
     });

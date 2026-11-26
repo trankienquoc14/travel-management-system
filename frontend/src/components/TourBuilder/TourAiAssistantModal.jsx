@@ -769,22 +769,57 @@ const TourAiAssistantModal = ({
                             <span style={{ fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>
                               {d.route_title}
                             </span>
-                            {dayDist && dayDist.totalKm > 0 && (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                background: '#eff6ff',
-                                border: '1px solid #bfdbfe',
-                                color: '#1d4ed8',
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                fontSize: '11.5px',
-                                fontWeight: '600'
-                              }}>
-                                <Navigation size={11} color="#2563eb" />
-                                <span>~{dayDist.totalKm} km (~{dayDist.totalMinutes} phút xe)</span>
-                              </span>
+                            {dayDist && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                {dayDist.intercityTransfer && (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#fef3c7',
+                                    border: '1px solid #fde68a',
+                                    color: '#92400e',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: '600'
+                                  }}>
+                                    <span>✈️ Trung chuyển: {dayDist.intercityTransfer.fromCity} ➔ {dayDist.intercityTransfer.toCity} (~{dayDist.intercityTransfer.distanceKm} km)</span>
+                                  </span>
+                                )}
+                                {dayDist.totalKm > 0 ? (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#eff6ff',
+                                    border: '1px solid #bfdbfe',
+                                    color: '#1d4ed8',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11.5px',
+                                    fontWeight: '600'
+                                  }}>
+                                    <Navigation size={11} color="#2563eb" />
+                                    <span>🚗 Tham quan: ~{dayDist.totalKm} km (~{dayDist.totalMinutes} phút xe)</span>
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0',
+                                    color: '#64748b',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: '500'
+                                  }}>
+                                    <span>Điểm tham quan tập trung gần</span>
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
 
@@ -804,6 +839,7 @@ const TourAiAssistantModal = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {(d.activities || []).map((act, actIdx) => {
                             const matchedLeg = dayDist?.legs?.find(l => l.fromIndex === actIdx);
+                            const isIntercityAct = dayDist?.intercityTransfer && dayDist.intercityTransfer.activityIndex === actIdx;
                             return (
                               <React.Fragment key={actIdx}>
                                 <div style={{
@@ -837,7 +873,26 @@ const TourAiAssistantModal = ({
                                   )}
                                 </div>
 
-                                {/* THÔNG TIN CHẶNG DI CHUYỂN GIỮA 2 ĐIỂM THAM QUAN */}
+                                {/* CHẶNG TRUNG CHUYỂN LIÊN TỈNH */}
+                                {isIntercityAct && (
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '3px 12px',
+                                    margin: '1px 0 3px 0',
+                                    fontSize: '11px',
+                                    color: '#b45309',
+                                    fontWeight: '600',
+                                    background: '#fffbeb',
+                                    borderRadius: '4px',
+                                    borderLeft: '3px solid #f59e0b'
+                                  }}>
+                                    <span>✈️ Chặng di chuyển liên tỉnh: {dayDist.intercityTransfer.fromCity} ➔ {dayDist.intercityTransfer.toCity} (~{dayDist.intercityTransfer.distanceKm} km) • Đến nơi nhận phòng & chuẩn bị tham quan</span>
+                                  </div>
+                                )}
+
+                                {/* THÔNG TIN CHẶNG DI CHUYỂN GIỮA 2 ĐIỂM THAM QUAN NỘI TỈNH */}
                                 {matchedLeg && (
                                   <div style={{
                                     display: 'flex',
@@ -1039,9 +1094,23 @@ const TourAiAssistantModal = ({
                                 borderRadius: '12px',
                                 fontSize: '11px'
                               }}>
-                                ~{dd.totalKm} km (~{dd.totalMinutes}p)
+                                {dd.totalKm > 0 ? `~${dd.totalKm} km (~${dd.totalMinutes}p)` : 'Gần nhau'}
                               </span>
                             </div>
+                            {dd.intercityTransfer && (
+                              <div style={{
+                                marginBottom: '6px',
+                                fontSize: '11px',
+                                color: '#92400e',
+                                background: '#fef3c7',
+                                border: '1px solid #fde68a',
+                                padding: '3px 6px',
+                                borderRadius: '4px',
+                                fontWeight: '600'
+                              }}>
+                                ✈️ Liên tỉnh: {dd.intercityTransfer.fromCity} ➔ {dd.intercityTransfer.toCity} (~{dd.intercityTransfer.distanceKm} km)
+                              </div>
+                            )}
                             {dd.legs && dd.legs.length > 0 ? (
                               <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                 {dd.legs.map((leg, lIdx) => (
