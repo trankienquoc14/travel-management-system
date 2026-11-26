@@ -172,10 +172,12 @@ const TravelPreferenceSidebar = ({ preferences, onPreferenceChange, isDrawer = f
             boxShadow: isDrawer ? 'none' : '0 10px 30px rgba(15, 23, 42, 0.06)',
             padding: isDrawer ? '0' : '20px',
             fontFamily: '"Outfit", "Inter", sans-serif',
-            height: isDrawer ? 'auto' : '100%',
+            height: isDrawer ? 'auto' : '820px',
+            maxHeight: isDrawer ? 'none' : '820px',
             boxSizing: 'border-box',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflowY: isDrawer ? 'visible' : 'auto'
         }}>
             {/* SIDEBAR HEADER */}
             {!isDrawer && (
