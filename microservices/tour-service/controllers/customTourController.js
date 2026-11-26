@@ -325,15 +325,30 @@ exports.updateCustomerAction = async (req, res) => {
         let latestQuote;
         if (req.params.quoteId) {
             [latestQuote] = await sequelize.query(`
-                SELECT quote_id, request_id FROM custom_tour_quotes WHERE quote_id = ?
+                SELECT q.quote_id, q.request_id, r.customer_id 
+                FROM custom_tour_quotes q
+                JOIN custom_tour_requests r ON q.request_id = r.request_id
+                WHERE q.quote_id = ?
             `, { replacements: [req.params.quoteId], transaction });
         } else {
             [latestQuote] = await sequelize.query(`
-                SELECT quote_id, request_id FROM custom_tour_quotes WHERE request_id = ? ORDER BY quote_id DESC LIMIT 1
+                SELECT q.quote_id, q.request_id, r.customer_id 
+                FROM custom_tour_quotes q
+                JOIN custom_tour_requests r ON q.request_id = r.request_id
+                WHERE q.request_id = ? ORDER BY q.quote_id DESC LIMIT 1
             `, { replacements: [req.params.id], transaction });
         }
 
         if (latestQuote.length > 0) {
+            const userId = req.user?.id || req.user?.user_id;
+            const roleId = Number(req.user?.role_id || req.user?.role || 6);
+            const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
+
+            if (!isStaffOrAdmin && userId && latestQuote[0].customer_id && latestQuote[0].customer_id !== userId) {
+                await transaction.rollback();
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện thao tác trên yêu cầu tour của người khác!' });
+            }
+
             const quoteId = latestQuote[0].quote_id;
             const targetReqId = latestQuote[0].request_id;
 

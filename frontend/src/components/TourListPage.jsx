@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import TravelPreferenceFilter, { trackBehavior } from './TravelPreferenceFilter';
 import TravelPreferenceSidebar from './TravelPreferenceSidebar';
+import { createTourSlug } from '../utils/slugify';
+import { getImageUrl } from '../utils/imageUrl';
 import '../index.css';
 
 const TourListPage = () => {
@@ -202,17 +204,6 @@ const TourListPage = () => {
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-    };
-
-    const getImageUrl = (url) => {
-        if (!url) return 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2000';
-        if (url.startsWith('http')) return url;
-
-        let imagePath = url.startsWith('/') ? url.substring(1) : url;
-        if (!imagePath.startsWith('uploads/')) {
-            imagePath = `uploads/${imagePath}`;
-        }
-        return `http://localhost:5000/${encodeURI(imagePath)}`;
     };
 
     // 🚀 BỘ LỌC MATCHING SCORE CÁ NHÂN HÓA & TIÊU CHÍ SIDEBAR
@@ -941,7 +932,7 @@ const TourListPage = () => {
                                                 key={tour.tour_id}
                                                 onClick={() => {
                                                     trackBehavior('CLICK_TOUR', tour.tour_id, { tour_name: tour.tour_name });
-                                                    navigate(`/tour/${tour.tour_id}`);
+                                                    navigate(`/tour/${createTourSlug(tour)}`);
                                                 }}
                                                 className="tt-tour-card"
                                             >

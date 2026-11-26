@@ -25,7 +25,7 @@ const upload = multer({ storage: storage });
 // Route dành cho Khách hàng
 router.post('/request', protect, customTourController.createCustomRequest);
 router.get('/requests/pending/staff', protect, customTourController.getStaffPendingTours);
-router.put('/requests/:id/customer-action', customTourController.updateCustomerAction);
+router.put('/requests/:id/customer-action', protect, customTourController.updateCustomerAction);
 router.put('/requests/:id/accept', protect, (req, res, next) => {
   req.body.action = 'Accept';
   return customTourController.updateCustomerAction(req, res, next);

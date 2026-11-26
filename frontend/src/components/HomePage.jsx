@@ -9,6 +9,8 @@ import TravelPreferenceSidebar from './TravelPreferenceSidebar';
 import CustomerChatWidget from './CustomerChatWidget';
 import CustomerAIChatWidget from './CustomerAIChatWidget';
 import { useRealtime } from '../services/realtimeService';
+import { createTourSlug } from '../utils/slugify';
+import { getImageUrl } from '../utils/imageUrl';
 import '../index.css';
 
 const HomePage = () => {
@@ -127,17 +129,6 @@ const HomePage = () => {
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-    };
-
-    const getImageUrl = (url) => {
-        if (!url || url === 'undefined' || url === 'null') return 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2000';
-        if (url.startsWith('http')) return url;
-
-        let imagePath = url.startsWith('/') ? url.substring(1) : url;
-        if (!imagePath.startsWith('uploads/')) {
-            imagePath = `uploads/${imagePath}`;
-        }
-        return `http://localhost:5000/${encodeURI(imagePath)}`;
     };
 
     // 🚀 BỘ LỌC MATCHING SCORE CÁ NHÂN HÓA & TIÊU CHÍ SIDEBAR
@@ -887,7 +878,7 @@ const HomePage = () => {
                                     key={tour.tour_id}
                                     onClick={() => {
                                         trackBehavior('CLICK_TOUR', tour.tour_id, { tour_name: tour.tour_name });
-                                        navigate(`/tour/${tour.tour_id}`);
+                                        navigate(`/tour/${createTourSlug(tour)}`);
                                     }}
                                     style={{
                                         minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', flex: '0 0 auto', scrollSnapAlign: 'start', height: '380px',
@@ -1080,7 +1071,7 @@ const HomePage = () => {
                                         key={tour.tour_id}
                                         onClick={() => {
                                             trackBehavior('CLICK_TOUR', tour.tour_id, { tour_name: tour.tour_name });
-                                            navigate(`/tour/${tour.tour_id}`);
+                                            navigate(`/tour/${createTourSlug(tour)}`);
                                         }}
                                         style={{
                                             minWidth: 'calc(25% - 15px)', maxWidth: 'calc(25% - 15px)', flex: '0 0 auto', scrollSnapAlign: 'start', height: '380px',

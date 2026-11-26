@@ -2217,7 +2217,7 @@ exports.getSepayPaymentInfo = async (req, res) => {
 
         if (type === 'service') {
             const [rows] = await sequelize.query(`
-                SELECT sb.booking_id, sb.total_amount, sb.status, sb.voucher_code, sb.created_at,
+                SELECT sb.booking_id, sb.customer_id, sb.total_amount, sb.status, sb.voucher_code, sb.created_at,
                        s.service_name, u.full_name AS customer_name
                 FROM service_bookings sb
                 LEFT JOIN travel_management.services s ON sb.service_id = s.service_id
@@ -2235,7 +2235,7 @@ exports.getSepayPaymentInfo = async (req, res) => {
             isPaid = ['Paid', 'Completed'].includes(orderInfo.status);
         } else {
             const [rows] = await sequelize.query(`
-                SELECT b.booking_id, b.total_amount, b.payment_status, b.booking_status, b.booking_date,
+                SELECT b.booking_id, b.customer_id, b.total_amount, b.payment_status, b.booking_status, b.booking_date,
                        p_method.payment_method,
                        u.full_name AS customer_name,
                        COALESCE(t.tour_name, CONCAT('Tour thiết kế riêng: ', cr.destination), 'Tour du lịch') AS tour_name
@@ -2257,6 +2257,14 @@ exports.getSepayPaymentInfo = async (req, res) => {
                 return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt tour!' });
             }
             orderInfo = rows[0];
+
+            // Kiểm tra phân quyền sở hữu đơn hàng (Chống IDOR)
+            const reqUserId = req.user?.id || req.user?.user_id;
+            const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+            const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+            if (!isStaff && reqUserId && orderInfo.customer_id && Number(orderInfo.customer_id) !== Number(reqUserId)) {
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập thông tin thanh toán của đơn hàng này!' });
+            }
             transferContent = `THANHTOAN${bookingId}`;
             orderCode = `#BKG-${String(bookingId).padStart(4, '0')}`;
             orderTitle = orderInfo.tour_name;
@@ -2482,19 +2490,37 @@ exports.checkSepayPaymentStatus = async (req, res) => {
 
         if (type === 'service') {
             const [rows] = await sequelize.query(
-                `SELECT booking_id, total_amount, status, voucher_code, created_at FROM service_bookings WHERE booking_id = ?`,
+                `SELECT booking_id, customer_id, total_amount, status, voucher_code, created_at FROM service_bookings WHERE booking_id = ?`,
                 { replacements: [bookingId] }
             );
             if (rows.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn dịch vụ!' });
+
+            // Chống IDOR
+            const reqUserId = req.user?.id || req.user?.user_id;
+            const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+            const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+            if (!isStaff && reqUserId && rows[0].customer_id && Number(rows[0].customer_id) !== Number(reqUserId)) {
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền kiểm tra đơn hàng này!' });
+            }
+
             expectedAmount = Math.round(Number(rows[0].total_amount || 0));
             isAlreadyPaid = ['Paid', 'Completed'].includes(rows[0].status);
             bookingCreatedAt = rows[0].created_at;
         } else {
             const [rows] = await sequelize.query(
-                `SELECT booking_id, total_amount, payment_status, booking_status, booking_date FROM bookings WHERE booking_id = ?`,
+                `SELECT booking_id, customer_id, total_amount, payment_status, booking_status, booking_date FROM bookings WHERE booking_id = ?`,
                 { replacements: [bookingId] }
             );
             if (rows.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt tour!' });
+
+            // Chống IDOR
+            const reqUserId = req.user?.id || req.user?.user_id;
+            const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+            const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+            if (!isStaff && reqUserId && rows[0].customer_id && Number(rows[0].customer_id) !== Number(reqUserId)) {
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền kiểm tra đơn hàng này!' });
+            }
+
             expectedAmount = Math.round(Number(rows[0].total_amount || 0));
             isAlreadyPaid = rows[0].payment_status === 'Paid';
             bookingCreatedAt = rows[0].booking_date;
@@ -2605,7 +2631,7 @@ exports.getReschedulePaymentInfo = async (req, res) => {
         const { bookingId } = req.params;
         const [crRows] = await sequelize.query(`
             SELECT cr.change_id, cr.booking_id, cr.new_departure_id, cr.fee_amount, cr.fee_percentage, cr.status, cr.staff_note,
-                   b.num_people, b.total_amount,
+                   b.num_people, b.total_amount, b.customer_id,
                    COALESCE(t.tour_name, CONCAT('Tour ', ctr.destination), 'Tour du lịch') AS tour_name,
                    d.departure_date AS current_departure_date,
                    nd.departure_date AS requested_departure_date
@@ -2625,6 +2651,14 @@ exports.getReschedulePaymentInfo = async (req, res) => {
         }
 
         const cr = crRows[0];
+
+        // Chống IDOR
+        const reqUserId = req.user?.id || req.user?.user_id;
+        const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+        const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+        if (!isStaff && reqUserId && cr.customer_id && Number(cr.customer_id) !== Number(reqUserId)) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập thông tin đổi lịch này!' });
+        }
         const feeAmount = Math.round(Number(cr.fee_amount || 0));
         const transferContent = `DOILICH${bookingId}`;
         const sepayQrUrl = `https://qr.sepay.vn/img?acc=${SEPAY_CONFIG.accountNumber}&bank=${SEPAY_CONFIG.bankName}&amount=${feeAmount}&des=${encodeURIComponent(transferContent)}&template=compact`;
@@ -2667,10 +2701,11 @@ exports.checkReschedulePaymentStatus = async (req, res) => {
 
         // 1. Kiểm tra yêu cầu đổi lịch gần nhất của booking
         const [requests] = await sequelize.query(`
-            SELECT change_id, booking_id, request_type, new_departure_id, fee_amount, status, staff_note
-            FROM booking_change_requests
-            WHERE booking_id = ? AND request_type = 'Reschedule'
-            ORDER BY change_id DESC LIMIT 1
+            SELECT cr.change_id, cr.booking_id, cr.request_type, cr.new_departure_id, cr.fee_amount, cr.status, cr.staff_note, b.customer_id
+            FROM booking_change_requests cr
+            JOIN bookings b ON cr.booking_id = b.booking_id
+            WHERE cr.booking_id = ? AND cr.request_type = 'Reschedule'
+            ORDER BY cr.change_id DESC LIMIT 1
         `, { replacements: [bookingId] });
 
         if (requests.length === 0) {
@@ -2678,6 +2713,14 @@ exports.checkReschedulePaymentStatus = async (req, res) => {
         }
 
         const cr = requests[0];
+
+        // Chống IDOR
+        const reqUserId = req.user?.id || req.user?.user_id;
+        const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+        const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+        if (!isStaff && reqUserId && cr.customer_id && Number(cr.customer_id) !== Number(reqUserId)) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền kiểm tra trạng thái đổi lịch này!' });
+        }
         const expectedFee = Math.round(Number(cr.fee_amount || 0));
 
         // Nếu đã được duyệt (Approved) -> Trả về paid = true ngay
@@ -2901,13 +2944,23 @@ exports.cancelExpiredBooking = async (req, res) => {
 
         if (type === 'service') {
             const [rows] = await sequelize.query(
-                `SELECT booking_id, status FROM service_bookings WHERE booking_id = ?`,
+                `SELECT booking_id, customer_id, status FROM service_bookings WHERE booking_id = ?`,
                 { replacements: [bookingId], transaction }
             );
             if (rows.length === 0) {
                 await transaction.rollback();
                 return res.status(404).json({ success: false, message: 'Không tìm thấy đơn dịch vụ!' });
             }
+
+            // Chống IDOR
+            const reqUserId = req.user?.id || req.user?.user_id;
+            const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+            const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+            if (!isStaff && reqUserId && rows[0].customer_id && Number(rows[0].customer_id) !== Number(reqUserId)) {
+                await transaction.rollback();
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên đơn hàng này!' });
+            }
+
             if (['Paid', 'Completed'].includes(rows[0].status)) {
                 await transaction.rollback();
                 return res.status(400).json({ success: false, message: 'Đơn hàng đã thanh toán thành công, không thể hủy!' });
@@ -2932,6 +2985,15 @@ exports.cancelExpiredBooking = async (req, res) => {
             if (rows.length === 0) {
                 await transaction.rollback();
                 return res.status(404).json({ success: false, message: 'Không tìm thấy đơn đặt tour!' });
+            }
+
+            // Chống IDOR
+            const reqUserId = req.user?.id || req.user?.user_id;
+            const reqRoleId = Number(req.user?.role_id || req.user?.role || 6);
+            const isStaff = [1, 2, 3, 4].includes(reqRoleId);
+            if (!isStaff && reqUserId && rows[0].customer_id && Number(rows[0].customer_id) !== Number(reqUserId)) {
+                await transaction.rollback();
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên đơn hàng này!' });
             }
             if (rows[0].payment_status === 'Paid' || rows[0].booking_status === 'Confirmed') {
                 await transaction.rollback();

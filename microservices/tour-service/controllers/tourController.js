@@ -1,6 +1,7 @@
 const { calculateDepartureCrossBooking } = require('../utils/roomCalculator');
 const sequelize = require('../config/database');
 const Tour = require('../models/Tour');
+const jwt = require('jsonwebtoken');
 const { broadcastRealtime } = require('../../shared/realtimeNotifier');
 
 const notifyTourEvent = (type, data = {}) => {
@@ -48,18 +49,83 @@ exports.getAllTours = async (req, res) => {
   }
 };
 
-// Lấy chi tiết tour cơ bản cho khách
+// Lấy chi tiết tour cơ bản cho khách (Bảo mật chống SQL Injection, hỗ trợ SEO slug, kiểm soát quyền truy cập tour riêng & tour nháp)
 exports.getTourById = async (req, res) => {
   try {
     await syncExpiredDeparturesStatus();
-    const tourId = req.params.id;
-    const [tour] = await sequelize.query(`SELECT * FROM tours WHERE tour_id = ${tourId}`);
-    if (!tour.length) return res.status(404).json({ success: false, message: 'Không tìm thấy tour' });
+    const tourIdParam = req.params.id;
 
-    const [itineraries] = await sequelize.query(`SELECT * FROM itineraries WHERE tour_id = ${tourId} ORDER BY day_number ASC`);
-    const [departures] = await sequelize.query(`SELECT * FROM departures WHERE tour_id = ${tourId} AND status = 'Open' AND available_slots > 0 AND departure_date > CURDATE() ORDER BY departure_date ASC`);
+    // Hỗ trợ cả định dạng ID số thuần túy (VD: "39") lẫn slug SEO (VD: "du-lich-da-lat-3n2d-39")
+    let tourId = tourIdParam;
+    if (typeof tourIdParam === 'string' && isNaN(Number(tourIdParam))) {
+      const match = tourIdParam.match(/(\d+)$/) || tourIdParam.match(/^(\d+)/);
+      if (match) {
+        tourId = match[1];
+      }
+    }
+    const numericTourId = parseInt(tourId, 10);
+    if (isNaN(numericTourId) || numericTourId <= 0) {
+      return res.status(400).json({ success: false, message: 'Mã định danh tour không hợp lệ' });
+    }
 
-    res.status(200).json({ success: true, data: { ...tour[0], itineraries, departures } });
+    // 1. Chống SQL Injection tuyệt đối bằng Parameterized Query
+    const [tour] = await sequelize.query(`SELECT * FROM tours WHERE tour_id = ?`, {
+      replacements: [numericTourId]
+    });
+    if (!tour.length) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tour du lịch' });
+    }
+
+    const tourData = tour[0];
+
+    // 2. Kiểm tra phân quyền truy cập (Chống IDOR / Rò rỉ thông tin Tour riêng hoặc Tour nháp)
+    const isCustomTour = Boolean(tourData.is_custom === 1 || tourData.is_custom === true);
+    const isPublicActive = (tourData.status === 'Active' || tourData.status === 'Public');
+
+    if (isCustomTour || !isPublicActive) {
+      // Giải mã JWT token nếu có trong Authorization header
+      let authUser = req.user;
+      if (!authUser && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+          const token = req.headers.authorization.split(' ')[1];
+          authUser = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+        } catch (jwtErr) {
+          // Token không hợp lệ hoặc hết hạn
+        }
+      }
+
+      const roleId = Number(authUser?.role_id || authUser?.role || 6);
+      const isStaffOrAdmin = [1, 2, 3, 4].includes(roleId);
+      const isOwnerCustomer = authUser && (
+        authUser.id === tourData.created_by ||
+        authUser.user_id === tourData.created_by ||
+        (tourData.customer_id && (authUser.id === tourData.customer_id || authUser.user_id === tourData.customer_id))
+      );
+
+      if (!isStaffOrAdmin && !isOwnerCustomer) {
+        if (isCustomTour) {
+          return res.status(403).json({
+            success: false,
+            message: 'Đây là tour du lịch thiết kế riêng theo yêu cầu bảo mật của khách hàng và không được công khai.'
+          });
+        }
+        return res.status(404).json({
+          success: false,
+          message: 'Tour du lịch này hiện không khả dụng hoặc chưa được mở bán công khai.'
+        });
+      }
+    }
+
+    const [itineraries] = await sequelize.query(
+      `SELECT * FROM itineraries WHERE tour_id = ? ORDER BY day_number ASC`,
+      { replacements: [numericTourId] }
+    );
+    const [departures] = await sequelize.query(
+      `SELECT * FROM departures WHERE tour_id = ? AND status = 'Open' AND available_slots > 0 AND departure_date > CURDATE() ORDER BY departure_date ASC`,
+      { replacements: [numericTourId] }
+    );
+
+    res.status(200).json({ success: true, data: { ...tourData, itineraries, departures } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

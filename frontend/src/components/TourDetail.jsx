@@ -4,6 +4,8 @@ import axios from 'axios';
 import CustomerFooter from './CustomerFooter';
 import CustomerNavbar from './CustomerNavbar';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
+import { extractTourId } from '../utils/slugify';
+import { getImageUrl } from '../utils/imageUrl';
 import TourReviewModal from './TourReviewModal';
 import {
     Star,
@@ -155,6 +157,7 @@ const DayItem = ({ day, isOldFormat, index, getDestString, tour, parsedDesign, d
 
 const TourDetail = () => {
     const { id } = useParams();
+    const tourId = extractTourId(id);
     const navigate = useNavigate();
     const location = useLocation();
     const [tour, setTour] = useState(null);
@@ -170,6 +173,7 @@ const TourDetail = () => {
     const [canReview, setCanReview] = useState(false);
     const [userReviewed, setUserReviewed] = useState(false);
     const [reviewBookingId, setReviewBookingId] = useState(null);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Tự động cuộn đến phần đánh giá nếu URL có hash #reviews
     useEffect(() => {
@@ -187,12 +191,12 @@ const TourDetail = () => {
                 clearTimeout(t2);
             };
         }
-    }, [location.hash, id, tour]);
+    }, [location.hash, tourId, tour]);
 
     const fetchReviews = async () => {
         try {
             setLoadingReviews(true);
-            const res = await axios.get(`http://localhost:5000/api/tours/${id}/reviews`);
+            const res = await axios.get(`http://localhost:5000/api/tours/${tourId}/reviews`);
             if (res.data.success) {
                 setReviewStats(res.data.data);
                 setReviewsList(res.data.data.reviews || []);
@@ -213,7 +217,7 @@ const TourDetail = () => {
             return;
         }
         try {
-            const res = await axios.get(`http://localhost:5000/api/tours/${id}/my-review`, {
+            const res = await axios.get(`http://localhost:5000/api/tours/${tourId}/my-review`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
@@ -235,8 +239,12 @@ const TourDetail = () => {
 
     const fetchTourDetail = async () => {
         try {
+            setErrorMessage('');
+            const token = localStorage.getItem('token');
+            const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
             const [tourRes, destRes] = await Promise.all([
-                axios.get(`http://localhost:5000/api/tours/${id}`),
+                axios.get(`http://localhost:5000/api/tours/${tourId}`, { headers: authHeader }),
                 axios.get(`http://localhost:5000/api/destinations`)
             ]);
             
@@ -250,16 +258,19 @@ const TourDetail = () => {
                 setTour(data);
             }
         } catch (error) {
-            console.error(error);
-            alert('Lỗi khi tải thông tin tour!');
+            console.error('Lỗi tải tour:', error);
+            const msg = error.response?.data?.message || 'Tour không khả dụng hoặc bạn không có quyền xem.';
+            setErrorMessage(msg);
         }
     };
 
     useEffect(() => {
-        fetchTourDetail();
-        fetchReviews();
-        checkReviewEligibility();
-    }, [id]);
+        if (tourId) {
+            fetchTourDetail();
+            fetchReviews();
+            checkReviewEligibility();
+        }
+    }, [tourId]);
 
     const getDestString = (tourObj, design) => {
         try {
@@ -333,6 +344,42 @@ const TourDetail = () => {
     };
 
     if (!tour) {
+        if (errorMessage) {
+            return (
+                <div className="tt-page">
+                    <CustomerNavbar activeTab="explore" />
+                    <div className="tt-container" style={{ padding: '80px 24px', textAlign: 'center' }}>
+                        <div style={{ maxWidth: '520px', margin: '0 auto', background: '#ffffff', borderRadius: '24px', padding: '40px 32px', boxShadow: '0 10px 30px rgba(15,23,42,0.08)', border: '1px solid #e2e8f0' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+                                <AlertTriangle size={32} />
+                            </div>
+                            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#102A43', marginBottom: '12px' }}>Không tìm thấy tour</h2>
+                            <p style={{ color: '#627D98', fontSize: '15px', lineHeight: '1.6', marginBottom: '28px' }}>
+                                {errorMessage}
+                            </p>
+                            <button
+                                onClick={() => navigate('/tours')}
+                                style={{
+                                    background: '#168BEB',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '12px 28px',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                Quay lại danh sách tour
+                            </button>
+                        </div>
+                    </div>
+                    <CustomerFooter />
+                </div>
+            );
+        }
+
         return (
             <div className="tt-page">
                 <CustomerNavbar activeTab="explore" />
@@ -354,19 +401,7 @@ const TourDetail = () => {
     // ==========================================
     // LOGIC XỬ LÝ ẢNH THÔNG MINH
     // ==========================================
-    let finalImageUrl = 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2000';
-    if (tour.image_url) {
-        if (tour.image_url.startsWith('http')) {
-            finalImageUrl = tour.image_url;
-        } else {
-            let imagePath = tour.image_url.startsWith('/') ? tour.image_url.substring(1) : tour.image_url;
-            if (!imagePath.startsWith('uploads/')) {
-                imagePath = `uploads/${imagePath}`;
-            }
-            finalImageUrl = `http://localhost:5000/${encodeURI(imagePath)}`;
-        }
-    }
-    const bgImage = finalImageUrl;
+    const bgImage = getImageUrl(tour.image_url);
 
     // ==========================================
     // GIẢI MÃ DỮ LIỆU THIẾT KẾ (KÉO THẢ)
