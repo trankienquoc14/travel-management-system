@@ -939,7 +939,7 @@ const TourListPage = () => {
                                                 <div className="tt-tour-card-media">
                                                     <div
                                                         className="tt-tour-card-img"
-                                                        style={{ backgroundImage: `url(${getImageUrl(tour.image_url)})` }}
+                                                        style={{ backgroundImage: `url(${getImageUrl(tour.image_url || tour.images)})` }}
                                                     />
                                                     {Number(tour.base_price || 0) <= 4000000 && (
                                                         <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#FF9852', color: '#ffffff', fontSize: '11.5px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px' }}>

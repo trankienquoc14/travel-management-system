@@ -401,7 +401,7 @@ const TourDetail = () => {
     // ==========================================
     // LOGIC XỬ LÝ ẢNH THÔNG MINH
     // ==========================================
-    const bgImage = getImageUrl(tour.image_url);
+    const bgImage = getImageUrl(tour.image_url || tour.images);
 
     // ==========================================
     // GIẢI MÃ DỮ LIỆU THIẾT KẾ (KÉO THẢ)
