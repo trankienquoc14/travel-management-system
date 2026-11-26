@@ -6,6 +6,7 @@ import {
   compareFaceDescriptors, 
   loadFaceDescriptorFromImage 
 } from '../utils/faceIdEngine';
+import soundService from '../utils/soundService';
 
 const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -52,6 +53,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const verifiedLockUntilRef = useRef(0);
   const bestConfRef = useRef(0);
   const mismatchCountRef = useRef(0);
+  const hasAutoTriggeredRef = useRef(false);
 
   // Cập nhật đồng hồ thời gian thực
   useEffect(() => {
@@ -216,6 +218,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const startCamera = async () => {
     setCameraError('');
     setAlertMsg({ type: '', text: '' });
+    hasAutoTriggeredRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
@@ -246,6 +249,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     verifiedLockUntilRef.current = 0;
     bestConfRef.current = 0;
     mismatchCountRef.current = 0;
+    hasAutoTriggeredRef.current = false;
   };
 
   // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG (220ms/lần siêu mượt)
@@ -351,6 +355,21 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         metrics: matchResult.metrics,
         confidence: finalScore
       });
+
+      // 🚀 TỰ ĐỘNG CHẤM CÔNG NGAY KHI KHỚP MẶT (Đạt từ 65% là tự động ghi nhận ngay, không bắt đợi 100%)
+      if (!isCheckedOut && !hasAutoTriggeredRef.current && !actionLoading) {
+        hasAutoTriggeredRef.current = true;
+        setScanStatus({
+          status: 'MATCHED',
+          message: `🎯 ĐÃ KHỚP ${finalScore}%: Đang tự động ghi nhận chấm công...`,
+          box: detection.box,
+          metrics: matchResult.metrics,
+          confidence: finalScore
+        });
+        setTimeout(() => {
+          handleGPSCheckIn(liveDataUrl, finalScore);
+        }, 500);
+      }
     } else {
       mismatchCountRef.current += 1;
 
@@ -383,20 +402,12 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     runFaceVerificationStep();
   };
 
-  // THỰC HIỆN ĐIỂM DANH GPS + FACEID CHÍNH CHỦ
-  const handleGPSCheckIn = async () => {
+  // THỰC HIỆN ĐIỂM DANH GPS + FACEID CHÍNH CHỦ (HỖ TRỢ CẢ TỰ ĐỘNG VÀ BẤM THỦ CÔNG)
+  const handleGPSCheckIn = async (customSnapshot, customScore) => {
     setAlertMsg({ type: '', text: '' });
 
-    if (!cameraActive) {
-      setAlertMsg({
-        type: 'error',
-        text: '⚠️ Vui lòng bấm [Bật Camera Quét FaceID] và nhìn thẳng vào camera trước khi điểm danh!'
-      });
-      startCamera();
-      return;
-    }
-
-    runFaceVerificationStep();
+    const snapToUse = customSnapshot || faceSnapshot;
+    const scoreToUse = customScore || confidenceScore;
 
     if (!profileDescriptor) {
       setAlertMsg({
@@ -406,18 +417,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       return;
     }
 
-    if (!faceVerified || confidenceScore < 65.0) {
+    if (!snapToUse) {
       setAlertMsg({
         type: 'error',
-        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 65.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
+        text: '⚠️ Chưa thể chụp được ảnh khuôn mặt rõ nét. Vui lòng đứng trước ánh sáng và thử lại!'
       });
       return;
     }
 
-    if (!faceSnapshot) {
+    if (!faceVerified && !customSnapshot && scoreToUse < 65.0) {
       setAlertMsg({
         type: 'error',
-        text: '⚠️ Chưa thể chụp được ảnh khuôn mặt rõ nét. Vui lòng đứng trước ánh sáng và thử lại!'
+        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${scoreToUse.toFixed(1)}% (yêu cầu tối thiểu 65.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
       });
       return;
     }
@@ -429,11 +440,11 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         latitude: location ? location.lat : null,
         longitude: location ? location.lng : null,
         location_address: address || (location ? `Lat: ${location.lat}, Lng: ${location.lng}` : 'Vị trí GPS thời gian thực'),
-        device_info: `Live FaceID Biometrics (${confidenceScore.toFixed(1)}%) • ${navigator.userAgent.slice(0, 40)}`,
-        face_image: faceSnapshot,
+        device_info: `Live FaceID Biometrics (${scoreToUse.toFixed(1)}%) • ${navigator.userAgent.slice(0, 40)}`,
+        face_image: snapToUse,
         face_verified: true,
-        match_confidence: confidenceScore,
-        notes: location ? `Xác thực FaceID thành công (${confidenceScore.toFixed(1)}%) + GPS ±${location.accuracy}m` : `Xác thực FaceID thành công (${confidenceScore.toFixed(1)}%)`
+        match_confidence: scoreToUse,
+        notes: location ? `Xác thực FaceID thành công (${scoreToUse.toFixed(1)}%) + GPS ±${location.accuracy}m` : `Xác thực FaceID thành công (${scoreToUse.toFixed(1)}%)`
       };
 
       const res = await axios.post('http://localhost:5000/api/hr/attendance/gps-checkin', payload, {
@@ -441,9 +452,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       });
 
       if (res.data.success) {
-        setAlertMsg({ type: 'success', text: res.data.message });
+        soundService.playSuccessChime();
+        setAlertMsg({ type: 'success', text: `🎉 ${res.data.message}` });
         stopCamera();
-        fetchMyStatus();
+        await fetchMyStatus();
         if (onCheckInSuccess) onCheckInSuccess();
       } else {
         setAlertMsg({ type: 'error', text: res.data.message || 'Điểm danh thất bại!' });
@@ -1003,6 +1015,47 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             </>
           )}
         </div>
+
+        {/* 🚀 NÚT BẤM ĐIỂM DANH TRỰC TIẾP NGAY DƯỚI CAMERA KHI ĐÃ KHỚP MẶT */}
+        {cameraActive && faceVerified && (
+          <div style={{ marginTop: '14px' }}>
+            <button
+              onClick={() => handleGPSCheckIn()}
+              disabled={actionLoading || isCheckedOut}
+              style={{
+                width: '100%',
+                maxWidth: '340px',
+                padding: '12px 20px',
+                borderRadius: '24px',
+                border: 'none',
+                background: isCheckedOut
+                  ? '#94a3b8'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                fontWeight: '800',
+                fontSize: '14px',
+                cursor: isCheckedOut ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 0 20px rgba(16, 185, 129, 0.55)',
+                animation: 'pulse 2s infinite'
+              }}
+            >
+              <span>{actionLoading ? '⏳' : isCheckedIn ? '🏁' : '🚀'}</span>
+              <span>
+                {actionLoading 
+                  ? 'Đang ghi nhận công...' 
+                  : isCheckedOut 
+                    ? 'Đã hoàn thành ca làm' 
+                    : isCheckedIn 
+                      ? `Bấm Ra Ca / Check-out (${confidenceScore.toFixed(1)}%)` 
+                      : `Bấm Chấm Công Ngay (${confidenceScore.toFixed(1)}%)`}
+              </span>
+            </button>
+          </div>
+        )}
 
         {cameraError && (
           <div style={{ color: '#f87171', fontSize: '11px', fontWeight: '600', marginTop: '10px' }}>
