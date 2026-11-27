@@ -176,13 +176,13 @@ export function analyzeFacePoseAndLiveness(positions, box) {
     ear,
     yawRatio: parseFloat(yawRatio.toFixed(2)),
     pitchRatio: parseFloat(pitchRatio.toFixed(2)),
-    isFront: yawRatio >= 0.70 && yawRatio <= 1.40 && pitchRatio >= 1.15 && pitchRatio <= 2.2,
-    isTurnLeft: yawRatio < 0.58,
-    isTurnRight: yawRatio > 1.75,
+    isFront: yawRatio >= 0.72 && yawRatio <= 1.38 && pitchRatio >= 1.05 && pitchRatio <= 2.25,
+    isTurnLeft: yawRatio < 0.72,
+    isTurnRight: yawRatio > 1.38,
     isTiltedUp: pitchRatio < 1.05,
-    isTiltedDown: pitchRatio > 2.35,
-    isBlinking: ear < 0.18,
-    isEyesOpen: ear >= 0.24
+    isTiltedDown: pitchRatio > 2.25,
+    isBlinking: ear < 0.20,
+    isEyesOpen: ear >= 0.23
   };
 }
 

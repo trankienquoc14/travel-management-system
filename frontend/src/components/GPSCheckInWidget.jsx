@@ -44,20 +44,19 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
 
-  // Trạng thái eKYC Đăng ký khuôn mặt đa góc & Liveness (Chớp mắt, Quay trái, Quay phải)
-  const [ekycStep, setEkycStep] = useState(1); // 1: FRONT, 2: BLINK, 3: TURN_LEFT, 4: TURN_RIGHT, 5: DONE
-  const [ekycMsg, setEkycMsg] = useState('1/4: Vui lòng nhìn thẳng vào giữa khung hình 🎯');
+  // Trạng thái Face ID Đăng ký khuôn mặt đa chiều (Chuẩn Apple Face ID: Nhìn thẳng ➔ Quay trái ➔ Quay phải)
+  const [ekycStep, setEkycStep] = useState(1); // 1: FRONT, 2: ROTATE, 3: DONE
+  const [ekycMsg, setEkycMsg] = useState('1/3: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
   const [ekycPassedSteps, setEkycPassedSteps] = useState({
     front: false,
-    blink: false,
     turnLeft: false,
     turnRight: false
   });
   const ekycStepRef = useRef(1);
+  const ekycPassedStepsRef = useRef({ front: false, turnLeft: false, turnRight: false });
   const regScanIntervalRef = useRef(null);
   const frontSnapshotRef = useRef(null);
   const frontDescriptorRef = useRef(null);
-  const hasEyeClosedRef = useRef(false);
   const consecutiveFrontCountRef = useRef(0);
   const consecutiveLeftCountRef = useRef(0);
   const consecutiveRightCountRef = useRef(0);
@@ -509,18 +508,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   };
 
   // ==========================================
-  // XỬ LÝ ĐĂNG KÝ KHUÔN MẶT MẪU FACEID VÀO HỒ SƠ (CHUẨN eKYC 4 BƯỚC)
+  // XỬ LÝ ĐĂNG KÝ KHUÔN MẶT MẪU FACEID VÀO HỒ SƠ (CHUẨN APPLE FACE ID 3D)
   // ==========================================
   const startRegScanLoop = () => {
     stopRegScanLoop();
     ekycStepRef.current = 1;
+    ekycPassedStepsRef.current = { front: false, turnLeft: false, turnRight: false };
     setEkycStep(1);
-    setEkycMsg('1/4: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
-    setEkycPassedSteps({ front: false, blink: false, turnLeft: false, turnRight: false });
+    setEkycMsg('1/3: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
+    setEkycPassedSteps({ front: false, turnLeft: false, turnRight: false });
     consecutiveFrontCountRef.current = 0;
     consecutiveLeftCountRef.current = 0;
     consecutiveRightCountRef.current = 0;
-    hasEyeClosedRef.current = false;
     frontSnapshotRef.current = null;
     frontDescriptorRef.current = null;
 
@@ -530,7 +529,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       try {
         await runRegEkycStep();
       } catch (e) {
-        console.warn("Lỗi eKYC frame:", e);
+        console.warn("Lỗi Face ID frame:", e);
       } finally {
         isRegScanningRef.current = false;
       }
@@ -570,7 +569,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     const pose = analyzeFacePoseAndLiveness(detection.landmarks, detection.box);
     if (!pose.valid) return;
 
-    // STEP 1: NHÌN THẲNG
+    // BƯỚC 1: NHÌN THẲNG VÀO CAMERA (LẤY ẢNH GỐC NÉT NHẤT)
     if (ekycStepRef.current === 1) {
       if (pose.isFront) {
         consecutiveFrontCountRef.current += 1;
@@ -579,67 +578,60 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           frontSnapshotRef.current = canvas.toDataURL('image/jpeg', 0.92);
           frontDescriptorRef.current = detection.descriptor;
           try { soundService.playSuccess(); } catch (s) {}
+          ekycPassedStepsRef.current.front = true;
           setEkycPassedSteps(prev => ({ ...prev, front: true }));
           ekycStepRef.current = 2;
           setEkycStep(2);
-          hasEyeClosedRef.current = false;
-          setEkycMsg('2/4: Vui lòng CHỚP MẮT tự nhiên 1 lần 👁️');
+          setEkycMsg('2/3: Từ từ quay nhẹ mặt sang TRÁI 👈');
         }
       } else {
         consecutiveFrontCountRef.current = 0;
-        setEkycMsg('1/4: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
+        setEkycMsg('1/3: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
       }
+      return;
     }
-    // STEP 2: CHỚP MẮT (LIVENESS)
-    else if (ekycStepRef.current === 2) {
-      if (pose.isBlinking) {
-        hasEyeClosedRef.current = true;
-        setEkycMsg('👁️ Đã nhắm mắt... Giờ hãy mở mắt ra');
-      } else if (hasEyeClosedRef.current && pose.isEyesOpen) {
-        try { soundService.playSuccess(); } catch (s) {}
-        setEkycPassedSteps(prev => ({ ...prev, blink: true }));
-        ekycStepRef.current = 3;
-        setEkycStep(3);
-        setEkycMsg('3/4: Từ từ quay nhẹ mặt sang TRÁI 👈');
-      } else {
-        setEkycMsg('2/4: Vui lòng CHỚP MẮT tự nhiên 1 lần 👁️');
-      }
-    }
-    // STEP 3: QUAY TRÁI
-    else if (ekycStepRef.current === 3) {
-      if (pose.isTurnLeft) {
+
+    // BƯỚC 2 & 3: QUÉT ĐA GÓC XOAY ĐẦU (CHUẨN APPLE FACE ID: TỰ DO QUAY TRÁI HOẶC PHẢI)
+    if (ekycStepRef.current >= 2) {
+      // Quét góc nghiêng bên Trái
+      if (!ekycPassedStepsRef.current.turnLeft && pose.isTurnLeft) {
         consecutiveLeftCountRef.current += 1;
-        setEkycMsg('👈 Rất tốt! Đang quét góc mặt trái...');
+        setEkycMsg('👈 Rất tốt! Đang quét góc mặt bên trái...');
         if (consecutiveLeftCountRef.current >= 2) {
           try { soundService.playSuccess(); } catch (s) {}
+          ekycPassedStepsRef.current.turnLeft = true;
           setEkycPassedSteps(prev => ({ ...prev, turnLeft: true }));
-          ekycStepRef.current = 4;
-          setEkycStep(4);
-          setEkycMsg('4/4: Từ từ quay nhẹ mặt sang PHẢI 👉');
+          consecutiveLeftCountRef.current = 0;
         }
-      } else {
-        consecutiveLeftCountRef.current = 0;
-        setEkycMsg('3/4: Từ từ quay nhẹ mặt sang TRÁI 👈');
-      }
-    }
-    // STEP 4: QUAY PHẢI
-    else if (ekycStepRef.current === 4) {
-      if (pose.isTurnRight) {
+      } 
+      // Quét góc nghiêng bên Phải
+      else if (!ekycPassedStepsRef.current.turnRight && pose.isTurnRight) {
         consecutiveRightCountRef.current += 1;
-        setEkycMsg('👉 Rất tốt! Đang quét góc mặt phải...');
+        setEkycMsg('👉 Rất tốt! Đang quét góc mặt bên phải...');
         if (consecutiveRightCountRef.current >= 2) {
           try { soundService.playSuccess(); } catch (s) {}
+          ekycPassedStepsRef.current.turnRight = true;
           setEkycPassedSteps(prev => ({ ...prev, turnRight: true }));
-          ekycStepRef.current = 5;
-          setEkycStep(5);
-          setEkycMsg('🎉 Xác thực sinh trắc học 3D hoàn tất! Đang lưu hồ sơ...');
-          stopRegScanLoop();
-          const finalPhoto = frontSnapshotRef.current || canvas.toDataURL('image/jpeg', 0.92);
-          await handleSaveFaceData(finalPhoto, detection.box);
+          consecutiveRightCountRef.current = 0;
         }
-      } else {
-        consecutiveRightCountRef.current = 0;
-        setEkycMsg('4/4: Từ từ quay nhẹ mặt sang PHẢI 👉');
+      } 
+      else {
+        // Hướng dẫn góc còn thiếu
+        if (!ekycPassedStepsRef.current.turnLeft) {
+          setEkycMsg('2/3: Từ từ quay nhẹ mặt sang TRÁI 👈');
+        } else if (!ekycPassedStepsRef.current.turnRight) {
+          setEkycMsg('3/3: Từ từ quay nhẹ mặt sang PHẢI 👉');
+        }
+      }
+
+      // Khi đã quét đủ cả góc Trái và Phải
+      if (ekycPassedStepsRef.current.turnLeft && ekycPassedStepsRef.current.turnRight) {
+        ekycStepRef.current = 4;
+        setEkycStep(4);
+        setEkycMsg('🎉 Quét đa góc Face ID hoàn tất! Đang lưu hồ sơ...');
+        stopRegScanLoop();
+        const finalPhoto = frontSnapshotRef.current || canvas.toDataURL('image/jpeg', 0.92);
+        await handleSaveFaceData(finalPhoto, detection.box);
       }
     }
   };
@@ -1404,25 +1396,22 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             </button>
 
             <h3 style={{ margin: '0 0 6px 0', fontSize: '19px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <span>🛡️</span> Đăng Ký Sinh Trắc Học FaceID (eKYC 4 Bước)
+              <span>🍏</span> Đăng Ký Face ID 3D (Chuẩn Apple Face ID)
             </h3>
             <p style={{ margin: '0 0 14px 0', color: '#64748b', fontSize: '12px' }}>
-              Hệ thống AI tự động dẫn đường xác thực người thật: Nhìn thẳng ➔ Chớp mắt ➔ Quay trái ➔ Quay phải.
+              Hệ thống hướng dẫn xoay góc mặt tự nhiên: Nhìn thẳng ➔ Quay nhẹ sang trái ➔ Quay nhẹ sang phải.
             </p>
 
-            {/* THANH TIẾN TRÌNH 4 BƯỚC eKYC */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '12px' }}>
-              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.front ? '#dcfce7' : ekycStep === 1 ? '#e0f2fe' : '#f1f5f9', color: ekycPassedSteps.front ? '#166534' : ekycStep === 1 ? '#0284c7' : '#94a3b8', border: ekycStep === 1 ? '1px solid #0284c7' : '1px solid transparent' }}>
-                {ekycPassedSteps.front ? '✅' : '1.'} Nhìn thẳng
+            {/* THANH TIẾN TRÌNH 3 BƯỚC APPLE FACE ID */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ padding: '8px 4px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', background: ekycPassedSteps.front ? '#dcfce7' : ekycStep === 1 ? '#e0f2fe' : '#f1f5f9', color: ekycPassedSteps.front ? '#166534' : ekycStep === 1 ? '#0284c7' : '#94a3b8', border: ekycStep === 1 ? '1.5px solid #0284c7' : '1px solid transparent', textAlign: 'center' }}>
+                {ekycPassedSteps.front ? '✅' : '1.'} Nhìn thẳng 🎯
               </div>
-              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.blink ? '#dcfce7' : ekycStep === 2 ? '#fef3c7' : '#f1f5f9', color: ekycPassedSteps.blink ? '#166534' : ekycStep === 2 ? '#d97706' : '#94a3b8', border: ekycStep === 2 ? '1px solid #d97706' : '1px solid transparent' }}>
-                {ekycPassedSteps.blink ? '✅' : '2.'} Chớp mắt 👁️
+              <div style={{ padding: '8px 4px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', background: ekycPassedSteps.turnLeft ? '#dcfce7' : (!ekycPassedSteps.turnLeft && ekycStep >= 2) ? '#ede9fe' : '#f1f5f9', color: ekycPassedSteps.turnLeft ? '#166534' : (!ekycPassedSteps.turnLeft && ekycStep >= 2) ? '#7c3aed' : '#94a3b8', border: (!ekycPassedSteps.turnLeft && ekycStep >= 2) ? '1.5px solid #7c3aed' : '1px solid transparent', textAlign: 'center' }}>
+                {ekycPassedSteps.turnLeft ? '✅' : '2.'} Quay trái 👈
               </div>
-              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.turnLeft ? '#dcfce7' : ekycStep === 3 ? '#ede9fe' : '#f1f5f9', color: ekycPassedSteps.turnLeft ? '#166534' : ekycStep === 3 ? '#7c3aed' : '#94a3b8', border: ekycStep === 3 ? '1px solid #7c3aed' : '1px solid transparent' }}>
-                {ekycPassedSteps.turnLeft ? '✅' : '3.'} Quay trái 👈
-              </div>
-              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.turnRight ? '#dcfce7' : ekycStep === 4 ? '#ede9fe' : '#f1f5f9', color: ekycPassedSteps.turnRight ? '#166534' : ekycStep === 4 ? '#7c3aed' : '#94a3b8', border: ekycStep === 4 ? '1px solid #7c3aed' : '1px solid transparent' }}>
-                {ekycPassedSteps.turnRight ? '✅' : '4.'} Quay phải 👉
+              <div style={{ padding: '8px 4px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', background: ekycPassedSteps.turnRight ? '#dcfce7' : (ekycPassedSteps.turnLeft && !ekycPassedSteps.turnRight) ? '#ede9fe' : '#f1f5f9', color: ekycPassedSteps.turnRight ? '#166534' : (ekycPassedSteps.turnLeft && !ekycPassedSteps.turnRight) ? '#7c3aed' : '#94a3b8', border: (ekycPassedSteps.turnLeft && !ekycPassedSteps.turnRight) ? '1.5px solid #7c3aed' : '1px solid transparent', textAlign: 'center' }}>
+                {ekycPassedSteps.turnRight ? '✅' : '3.'} Quay phải 👉
               </div>
             </div>
 
@@ -1430,8 +1419,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             <div style={{ width: '100%', height: '5px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden', marginBottom: '14px' }}>
               <div style={{
                 height: '100%',
-                width: ekycStep === 5 ? '100%' : ekycStep === 4 ? '75%' : ekycStep === 3 ? '50%' : ekycStep === 2 ? '25%' : '10%',
-                background: ekycStep === 5 ? '#10b981' : 'linear-gradient(90deg, #0284c7 0%, #10b981 100%)',
+                width: ekycStep === 4 ? '100%' : (ekycPassedSteps.turnLeft || ekycPassedSteps.turnRight) ? '66%' : ekycPassedSteps.front ? '33%' : '10%',
+                background: ekycStep === 4 ? '#10b981' : 'linear-gradient(90deg, #0284c7 0%, #10b981 100%)',
                 transition: 'width 0.4s ease'
               }} />
             </div>
@@ -1455,8 +1444,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               margin: '0 auto 14px auto',
               borderRadius: '50%',
               overflow: 'hidden',
-              border: `4px solid ${ekycStep === 5 ? '#10b981' : ekycStep === 4 ? '#ec4899' : ekycStep === 3 ? '#8b5cf6' : ekycStep === 2 ? '#f59e0b' : '#0284c7'}`,
-              boxShadow: `0 0 25px ${ekycStep === 5 ? 'rgba(16, 185, 129, 0.45)' : 'rgba(2, 132, 199, 0.4)'}`,
+              border: `4px solid ${ekycStep === 4 ? '#10b981' : (ekycPassedSteps.turnLeft || ekycPassedSteps.turnRight) ? '#8b5cf6' : '#0284c7'}`,
+              boxShadow: `0 0 25px ${ekycStep === 4 ? 'rgba(16, 185, 129, 0.45)' : 'rgba(2, 132, 199, 0.4)'}`,
               position: 'relative',
               background: '#0f172a',
               transition: 'border-color 0.3s ease, box-shadow 0.3s ease'
@@ -1483,10 +1472,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
             {/* BANNER THÔNG BÁO CHỈ DẪN TRỰC TIẾP */}
             <div style={{
-              background: ekycStep === 5 ? '#f0fdf4' : ekycStep === 2 ? '#fefce8' : ekycStep >= 3 ? '#faf5ff' : '#f0f9ff',
-              color: ekycStep === 5 ? '#166534' : ekycStep === 2 ? '#854d0e' : ekycStep >= 3 ? '#6b21a8' : '#0369a1',
+              background: ekycStep === 4 ? '#f0fdf4' : ekycStep >= 2 ? '#faf5ff' : '#f0f9ff',
+              color: ekycStep === 4 ? '#166534' : ekycStep >= 2 ? '#6b21a8' : '#0369a1',
               border: '1px solid',
-              borderColor: ekycStep === 5 ? '#bbf7d0' : ekycStep === 2 ? '#fef08a' : ekycStep >= 3 ? '#e9d5ff' : '#bae6fd',
+              borderColor: ekycStep === 4 ? '#bbf7d0' : ekycStep >= 2 ? '#e9d5ff' : '#bae6fd',
               padding: '10px 14px',
               borderRadius: '12px',
               fontSize: '13px',
@@ -1523,7 +1512,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                 }}
               >
                 <span>{regLoading ? '⏳' : '⚡'}</span>
-                <span>{regLoading ? 'Đang trích xuất AI & lưu hồ sơ...' : 'Chụp Trực Tiếp (Bỏ qua eKYC)'}</span>
+                <span>{regLoading ? 'Đang trích xuất AI & lưu hồ sơ...' : 'Chụp Trực Tiếp (Bỏ qua xoay mặt)'}</span>
               </button>
 
               <div style={{
@@ -1533,7 +1522,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                 lineHeight: '1.4',
                 padding: '2px 8px'
               }}>
-                🔒 <strong>AI Tự Động:</strong> Hệ thống sẽ tự động lưu khi bạn hoàn thành 4 bước quay mặt và chớp mắt.
+                🔒 <strong>AI Tự Động:</strong> Hệ thống sẽ tự động lưu khi bạn hoàn tất xoay nhẹ mặt sang trái và phải (như Apple Face ID).
               </div>
 
               <button
