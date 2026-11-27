@@ -8,8 +8,10 @@ import {
   loadFaceDescriptorFromImage 
 } from '../utils/faceIdEngine';
 import soundService from '../utils/soundService';
+import { getBaseApiUrl, getImageUrl } from '../utils/imageUrl';
 
 const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
+  const API_BASE = getBaseApiUrl();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [location, setLocation] = useState(null);
   const [address, setAddress] = useState('');
@@ -51,6 +53,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
   // Refs hỗ trợ làm mịn điểm số và khóa trạng thái xác thực chống giật lag
   const isScanningRef = useRef(false);
+  const consecutiveMatchesRef = useRef(0);
   const smoothedScoreRef = useRef(0);
   const verifiedLockUntilRef = useRef(0);
   const bestConfRef = useRef(0);
@@ -98,15 +101,13 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const fetchMyStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/hr/attendance/my-status', {
+      const res = await axios.get(`${API_BASE}/api/hr/attendance/my-status`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success && res.data.data) {
         setAttendanceStatus(res.data.data);
         if (res.data.data.face_image_url) {
-          const imgUrl = res.data.data.face_image_url.startsWith('http') 
-            ? res.data.data.face_image_url 
-            : `http://localhost:5000${res.data.data.face_image_url}`;
+          const imgUrl = getImageUrl(res.data.data.face_image_url);
           setFaceSnapshot(imgUrl);
         }
       }
@@ -123,7 +124,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
       // 1. Thử lấy từ /api/auth/me trước (endpoint chuẩn luôn sẵn sàng)
       try {
-        const meRes = await axios.get('http://localhost:5000/api/auth/me', {
+        const meRes = await axios.get(`${API_BASE}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (meRes.data && meRes.data.success && meRes.data.data) {
@@ -136,7 +137,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       // 2. Fallback sang /api/hr/attendance/face-profile
       if (!userData) {
         try {
-          const hrRes = await axios.get('http://localhost:5000/api/hr/attendance/face-profile', {
+          const hrRes = await axios.get(`${API_BASE}/api/hr/attendance/face-profile`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (hrRes.data && hrRes.data.success && hrRes.data.data) {
@@ -165,9 +166,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       if (userData) {
         setFaceProfile(userData);
         if (userData.avatar) {
-          const avatarFullUrl = (userData.avatar.startsWith('http') || userData.avatar.startsWith('data:'))
-            ? userData.avatar 
-            : `http://localhost:5000${userData.avatar}`;
+          const avatarFullUrl = getImageUrl(userData.avatar);
           const descriptor = await loadFaceDescriptorFromImage(avatarFullUrl);
           if (descriptor) {
             setProfileDescriptor(descriptor);
@@ -344,6 +343,19 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
     if (isMatchNow) {
+      consecutiveMatchesRef.current += 1;
+      // Bắt buộc giữ ổn định ít nhất 3 frame liên tiếp (khoảng 0.6s)
+      if (consecutiveMatchesRef.current < 3) {
+        setConfidenceScore(finalScore);
+        setScanStatus({
+          status: 'SCANNING',
+          message: `🔍 Đang xác thực sinh trắc học chính chủ... (${finalScore}%)`,
+          box: detection.box,
+          confidence: finalScore
+        });
+        return;
+      }
+
       mismatchCountRef.current = 0;
       verifiedLockUntilRef.current = Date.now() + 1500;
       setFaceVerified(true);
@@ -378,13 +390,14 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         }, 500);
       }
     } else {
+      consecutiveMatchesRef.current = 0;
       mismatchCountRef.current += 1;
       verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
       setConfidenceScore(finalScore);
       setScanStatus({
         status: 'MISMATCHED',
-        message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${finalScore}% (Yêu cầu >= 70% chính chủ)`,
+        message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${finalScore}% (Yêu cầu >= 75% chính chủ)`,
         box: detection.box,
         metrics: matchResult.metrics,
         confidence: finalScore
@@ -420,10 +433,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       return;
     }
 
-    if (!faceVerified && !customSnapshot && scoreToUse < 65.0) {
+    if (!faceVerified || scoreToUse < 75.0) {
       setAlertMsg({
         type: 'error',
-        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${scoreToUse.toFixed(1)}% (yêu cầu tối thiểu 65.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
+        text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${scoreToUse.toFixed(1)}% (yêu cầu tối thiểu 75.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
       });
       return;
     }
@@ -442,7 +455,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         notes: location ? `Xác thực FaceID thành công (${scoreToUse.toFixed(1)}%) + GPS ±${location.accuracy}m` : `Xác thực FaceID thành công (${scoreToUse.toFixed(1)}%)`
       };
 
-      const res = await axios.post('http://localhost:5000/api/hr/attendance/gps-checkin', payload, {
+      const res = await axios.post(`${API_BASE}/api/hr/attendance/gps-checkin`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -514,7 +527,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
       // 1. Thử gọi PUT /api/auth/profile trước (luôn tồn tại trên auth-service)
       try {
-        const authRes = await axios.put('http://localhost:5000/api/auth/profile', {
+        const authRes = await axios.put(`${API_BASE}/api/auth/profile`, {
           avatar: photoData
         }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -530,7 +543,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       // 2. Nếu auth-service chưa phản hồi, fallback sang /api/hr/attendance/face-profile
       if (!saveSuccess) {
         try {
-          const hrRes = await axios.post('http://localhost:5000/api/hr/attendance/face-profile', {
+          const hrRes = await axios.post(`${API_BASE}/api/hr/attendance/face-profile`, {
             face_image: photoData
           }, {
             headers: { Authorization: `Bearer ${token}` }
@@ -789,7 +802,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {faceProfile?.avatar ? (
             <img 
-              src={(faceProfile.avatar.startsWith('http') || faceProfile.avatar.startsWith('data:')) ? faceProfile.avatar : `http://localhost:5000${faceProfile.avatar}`} 
+              src={getImageUrl(faceProfile.avatar)} 
               alt="Hồ sơ gốc" 
               style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
             />

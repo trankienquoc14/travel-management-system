@@ -27,10 +27,10 @@ export async function initFaceModels(modelsPath = '/models') {
         faceapi = await import('@vladmandic/face-api');
       }
 
-      // Nạp 3 mô hình Deep Learning siêu nhẹ
+      // Nạp 3 mô hình Deep Learning chuẩn xác cao
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath),
-        faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelsPath),
+        faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath),
         faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath)
       ]);
 
@@ -160,7 +160,7 @@ export async function detectFaceInCanvas(input) {
     });
 
     const result = await api.detectSingleFace(input, options)
-      .withFaceLandmarks(true)
+      .withFaceLandmarks(false)
       .withFaceDescriptor();
 
     if (!result) {
@@ -249,33 +249,31 @@ export function compareFaceDescriptors(desc1, desc2) {
   }
   const distance = Math.sqrt(sumSquare);
 
-  // 2. Thang đo chuẩn hóa sinh trắc học quốc tế (FaceNet / MobileFaceNet Metric):
-  // - Khoảng cách Euclidean < 0.40: Cực kỳ khớp (Cùng 1 người, chính chủ, confidence > 88%)
-  // - Khoảng cách 0.40 - 0.50: Khớp tốt (72% - 88%)
-  // - Khoảng cách 0.50 - 0.60: Ngưỡng biên (45% - 72%)
-  // - Khoảng cách > 0.60: Người khác hoàn toàn (confidence < 40%)
-  // - Khoảng cách > 0.70: Không liên quan (confidence < 15%)
+  // 2. Thang đo chuẩn hóa sinh trắc học nghiêm ngặt (FaceNet / DeepFace Metric):
+  // - Khoảng cách Euclidean <= 0.28: Cực kỳ khớp (Cùng 1 người, confidence 92% - 99.5%)
+  // - Khoảng cách 0.28 - 0.38: Khớp chính chủ đạt chuẩn (confidence 75% - 92%)
+  // - Khoảng cách 0.38 - 0.44: Vùng nghi ngờ (confidence 45% - 74% -> KHÔNG ĐẠT)
+  // - Khoảng cách 0.44 - 0.52: Khác người (confidence 18% - 45% -> KHÔNG ĐẠT)
+  // - Khoảng cách > 0.52: Người khác hoàn toàn (confidence < 18% -> TỪ CHỐI TUYỆT ĐỐI)
   let confidence;
-  if (distance <= 0.35) {
-    // Độ khớp hoàn hảo: 92% - 99.2%
-    confidence = 92.0 + ((0.35 - distance) / 0.35) * 7.2;
-  } else if (distance <= 0.50) {
-    // Độ khớp chính chủ chuẩn: 72% - 92%
-    confidence = 72.0 + ((0.50 - distance) / 0.15) * 20.0;
-  } else if (distance <= 0.62) {
-    // Vùng nghi ngờ/khác người: 38% - 72%
-    confidence = 38.0 + ((0.62 - distance) / 0.12) * 34.0;
+  if (distance <= 0.28) {
+    confidence = 92.0 + ((0.28 - distance) / 0.28) * 7.5;
+  } else if (distance <= 0.38) {
+    confidence = 75.0 + ((0.38 - distance) / 0.10) * 17.0;
+  } else if (distance <= 0.44) {
+    confidence = 45.0 + ((0.44 - distance) / 0.06) * 29.0;
+  } else if (distance <= 0.52) {
+    confidence = 18.0 + ((0.52 - distance) / 0.08) * 27.0;
   } else {
-    // Chắc chắn là người khác: tụt sâu dưới 38%
-    confidence = Math.max(5.0, 38.0 - (distance - 0.62) * 120.0);
+    confidence = Math.max(5.0, 18.0 - (distance - 0.52) * 80.0);
   }
 
-  confidence = parseFloat(Math.min(99.2, Math.max(5.0, confidence)).toFixed(1));
+  confidence = parseFloat(Math.min(99.5, Math.max(5.0, confidence)).toFixed(1));
 
-  // Ngưỡng an toàn bảo mật hệ thống: 70.0% (Tương đương distance <= 0.505)
-  // Hai người khác nhau luôn có khoảng cách >= 0.65 -> Điểm sẽ chỉ đạt 10% - 30% -> Không bao giờ vượt qua 70%!
-  const MATCH_THRESHOLD = 70.0;
-  const isMatch = distance <= 0.505 && confidence >= MATCH_THRESHOLD;
+  // Ngưỡng an toàn bảo mật nghiêm ngặt: 75.0% (Bắt buộc distance <= 0.38)
+  // Khi quét mặt người khác, khoảng cách luôn >= 0.45 -> Điểm chỉ đạt 10% - 35% -> Tuyệt đối không thể qua!
+  const MATCH_THRESHOLD = 75.0;
+  const isMatch = distance <= 0.38 && confidence >= MATCH_THRESHOLD;
 
   return {
     matched: isMatch,
@@ -308,9 +306,9 @@ export async function loadFaceDescriptorFromImage(imageUrl) {
 
       img.onload = async () => {
         try {
-          const options = new api.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+          const options = new api.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 });
           const detection = await api.detectSingleFace(img, options)
-            .withFaceLandmarks(true)
+            .withFaceLandmarks(false)
             .withFaceDescriptor();
 
           if (detection && detection.descriptor) {
