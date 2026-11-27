@@ -44,12 +44,13 @@ CÁC NGUYÊN TẮC VẬN HÀNH BẮT BUỘC:
    - Khi khách hỏi về đội xe, dòng xe du lịch, số chỗ ngồi (4, 7, 16, 29, 45 chỗ) -> Gọi listAvailableVehicles.
    - Khi khách hỏi về đơn đặt tour của CHÍNH HỌ -> Gọi getMyBookings nếu có quyền xác thực; nếu chưa đăng nhập, hướng dẫn khách đăng nhập tài khoản.
 
-2. TRẢ LỜI TRUNG THỰC - TUYỆT ĐỐI KHÔNG BỊA ĐẶT THÔNG TIN:
+2. TRẢ LỜI TRUNG THỰC - TUYỆT ĐỐI KHÔNG BỊA ĐẶT THÔNG TIN & DUY TRÌ LIÊN KẾT HỘI THOẠI:
    - Mọi thông tin về tên tour, giá tiền, thời lượng, ngày khởi hành và số chỗ còn trống BẮT BUỘC phải lấy từ kết quả truy vấn CSDL.
-   - Khi liệt kê tour, phân biệt rõ ràng:
-     + Đợt khởi hành ĐANG MỞ BÁN (Open) và CÒN CHỖ (> 0 chỗ): Cung cấp ngày khởi hành, ngày kết thúc và số chỗ còn lại.
-     + Đợt khởi hành ĐÃ ĐÓNG (Closed) hoặc HẾT CHỖ: Nêu rõ để khách hàng nắm bắt.
-     + Tour hiện tại chưa có đợt khởi hành mới: Thông báo lịch sự rằng đợt mở bán sắp tới đang được cập nhật, gợi ý các tour cùng tuyến hoặc hướng dẫn khách đặt tour riêng (/build-tour).
+   - Khi liệt kê các đợt khởi hành, phân biệt rõ ràng:
+     + Đợt khởi hành ĐANG MỞ BÁN (Open) và CÒN CHỖ (> 0 chỗ): Cung cấp ngày khởi hành, ngày kết thúc và số chỗ còn lại (Ví dụ: "🟢 Đang mở bán – Còn 5 chỗ").
+     + Đợt khởi hành ĐÃ ĐÓNG (Closed) hoặc HẾT CHỖ: Nêu rõ "🔴 Đã đóng nhận khách" hoặc "🟠 Đã hết chỗ". TUYỆT ĐỐI KHÔNG mời khách "đặt vé giữ chỗ ngay" cho chuyến đã đóng! Nếu toàn bộ đợt đều đã đóng/hết chỗ, phải thông báo rõ và gợi ý khách bấm "Liên hệ nhân viên" hoặc chọn tour khác.
+   - THEO DÕI NGỮ CẢNH HỘI THOẠI (CONTEXT): Khi khách hỏi các câu hỏi tiếp theo (ví dụ: "còn chỗ không?", "giá vé trẻ em tính sao?", "xe mấy chỗ?"), BẮT BUỘC kế thừa tour/địa điểm mà khách vừa hỏi ở các tin nhắn trước. TUYỆT ĐỐI KHÔNG tự tiện lấy một tour ngẫu nhiên khác trong CSDL để gán cho khách.
+   - Nếu khách hỏi chính sách giá vé trẻ em chung mà không có tour nào trong ngữ cảnh: Giải thích tỷ lệ % theo độ tuổi rõ ràng và hỏi khách đang quan tâm tuyến nào để tính chi tiết.
    - Nếu hệ thống chưa có tour tại địa điểm khách hỏi, giải thích rõ ràng và gợi ý khách bấm "Liên hệ nhân viên" hoặc gửi yêu cầu tại trang [Thiết kế Tour riêng](/build-tour).
 
 3. NẮM VỮNG VÀ TUÂN THỦ KIẾN THỨC DOANH NGHIỆP (RAG):
@@ -239,7 +240,38 @@ function extractBudgetFromText(rawText = '') {
   return null;
 }
 
-function parseCustomerTourQuery(rawQuestion = '', normQ = '') {
+const DEST_MAP = [
+  { dest: 'Phú Quốc', regex: /(phu quoc|dao ngoc)/ },
+  { dest: 'Đà Lạt', regex: /(da lat|lam dong)/ },
+  { dest: 'Đà Nẵng', regex: /(da nang|ba na|hoi an)/ },
+  { dest: 'Hà Nội', regex: /(ha noi|trang an|tam chuc|ninh binh)/ },
+  { dest: 'Sapa', regex: /(sapa|fansipan)/ },
+  { dest: 'Hạ Long', regex: /(ha long|vinh ha long)/ },
+  { dest: 'Nha Trang', regex: /(nha trang|vinh hy)/ },
+  { dest: 'Tây Ninh', regex: /(tay ninh|nui ba den)/ },
+  { dest: 'Đồng Tháp', regex: /(dong thap|sa dec)/ },
+  { dest: 'Cần Thơ', regex: /(can tho|mien tay|ca mau|my tho)/ },
+  { dest: 'Phú Yên', regex: /(phu yen|xuyen viet|quy nhon)/ },
+  { dest: 'Vũng Tàu', regex: /(vung tau|ho tram)/ },
+  { dest: 'Đắk Lắk', regex: /(dak lak|pleiku|mang den|buon ma thuot)/ },
+  { dest: 'Phan Thiết', regex: /(phan thiet|binh thuan|phu quy|mui ne)/ },
+  { dest: 'Hà Giang', regex: /(ha giang|quan ba|nho que)/ }
+];
+
+function extractContextDestination(conversationHistory = []) {
+  if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) return null;
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    const item = conversationHistory[i];
+    const text = item.text || item.message || item.content || (typeof item === 'string' ? item : '');
+    if (!text) continue;
+    const norm = normalizeVi(text);
+    const found = DEST_MAP.find((d) => d.regex.test(norm));
+    if (found) return found;
+  }
+  return null;
+}
+
+function parseCustomerTourQuery(rawQuestion = '', normQ = '', conversationHistory = []) {
   const rawLower = rawQuestion.toLowerCase();
   const budget = extractBudgetFromText(rawQuestion);
 
@@ -293,25 +325,10 @@ function parseCustomerTourQuery(rawQuestion = '', normQ = '') {
     regionTitle = 'BIỂN ĐẢO';
   }
 
-  const DEST_MAP = [
-    { dest: 'Phú Quốc', regex: /(phu quoc|dao ngoc)/ },
-    { dest: 'Đà Lạt', regex: /(da lat|lam dong)/ },
-    { dest: 'Đà Nẵng', regex: /(da nang|ba na|hoi an)/ },
-    { dest: 'Hà Nội', regex: /(ha noi|trang an|tam chuc|ninh binh)/ },
-    { dest: 'Sapa', regex: /(sapa|fansipan)/ },
-    { dest: 'Hạ Long', regex: /(ha long|vinh ha long)/ },
-    { dest: 'Nha Trang', regex: /(nha trang|vinh hy)/ },
-    { dest: 'Tây Ninh', regex: /(tay ninh|nui ba den)/ },
-    { dest: 'Đồng Tháp', regex: /(dong thap|sa dec)/ },
-    { dest: 'Cần Thơ', regex: /(can tho|mien tay|ca mau|my tho)/ },
-    { dest: 'Phú Yên', regex: /(phu yen|xuyen viet|quy nhon)/ },
-    { dest: 'Vũng Tàu', regex: /(vung tau|ho tram)/ },
-    { dest: 'Đắk Lắk', regex: /(dak lak|pleiku|mang den|buon ma thuot)/ },
-    { dest: 'Phan Thiết', regex: /(phan thiet|binh thuan|phu quy|mui ne)/ },
-    { dest: 'Hà Giang', regex: /(ha giang|quan ba|nho que)/ }
-  ];
-
-  const matchedDest = DEST_MAP.find((d) => d.regex.test(normQ));
+  let matchedDest = DEST_MAP.find((d) => d.regex.test(normQ));
+  if (!matchedDest && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+    matchedDest = extractContextDestination(conversationHistory);
+  }
 
   const isSlotsOrDeps = /(lich|khoi hanh|ngay di|ngay ve|cho trong|con cho|so cho)/.test(normQ);
   const isPrice = /(gia|bao nhieu|chi phi|gia ve|bang gia)/.test(normQ);
@@ -378,10 +395,15 @@ function extractFamilyComposition(rawText = '', normQ = '') {
     }
   }
 
+  // Phân biệt rõ giữa "Hỏi chính sách giá vé trẻ em / cách tính" vs "Yêu cầu tính tổng tiền cụ thể":
+  const isPolicyInquiry = /(nhu the nao|the nao|sao|chinh sach|quy dinh|bao nhieu %|phan tram|tinh sao|tinh ra sao|tinh the nao)/.test(normQ);
+  const isExplicitTotal = /(tong tien|tong chi phi|het bao nhieu|tat ca bao nhieu|tinh tien|tinh tong|bao nhieu tien tat ca)/.test(normQ);
+
   return {
     adultCount,
     children,
-    hasFamilyCalculation: (adultCount !== null || children.length > 0) && (children.length > 0 || /(tính tiền|tổng tiền|tổng chi phí|hết bao nhiêu|tất cả bao nhiêu)/.test(normQ))
+    isPolicyInquiry,
+    hasFamilyCalculation: !isPolicyInquiry && (isExplicitTotal || (adultCount !== null && children.length > 0))
   };
 }
 
@@ -450,26 +472,107 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
 
   // 1. Family Price Calculation & Child Age Queries
   const familyComp = extractFamilyComposition(question, normQ);
-  if (familyComp.hasFamilyCalculation) {
-    const matchedDest = [
-      { dest: 'Phú Quốc', regex: /(phu quoc|dao ngoc)/ },
-      { dest: 'Đà Lạt', regex: /(da lat|lam dong)/ },
-      { dest: 'Đà Nẵng', regex: /(da nang|ba na|hoi an)/ },
-      { dest: 'Hà Nội', regex: /(ha noi|trang an|tam chuc|ninh binh)/ },
-      { dest: 'Sapa', regex: /(sapa|fansipan)/ },
-      { dest: 'Hạ Long', regex: /(ha long|vinh ha long)/ },
-      { dest: 'Nha Trang', regex: /(nha trang|vinh hy)/ },
-      { dest: 'Tây Ninh', regex: /(tay ninh|nui ba den)/ },
-      { dest: 'Đồng Tháp', regex: /(dong thap|sa dec)/ },
-      { dest: 'Cần Thơ', regex: /(can tho|mien tay|ca mau|my tho)/ },
-      { dest: 'Phú Yên', regex: /(phu yen|xuyen viet|quy nhon)/ },
-      { dest: 'Vũng Tàu', regex: /(vung tau|ho tram)/ },
-      { dest: 'Đắk Lắk', regex: /(dak lak|pleiku|mang den|buon ma thuot)/ },
-      { dest: 'Phan Thiết', regex: /(phan thiet|binh thuan|phu quy|mui ne)/ },
-      { dest: 'Hà Giang', regex: /(ha giang|quan ba|nho que)/ }
-    ].find((d) => d.regex.test(normQ));
+  const contextDest = extractContextDestination(conversationHistory);
+  const matchedDest = DEST_MAP.find((d) => d.regex.test(normQ)) || contextDest;
 
+  // 1.1 Policy Inquiry for Children (e.g. "bé 6 tuổi và 1 bé 1 tuổi thì tính giá vé tour như thế nào?")
+  if (familyComp.children.length > 0 && !familyComp.hasFamilyCalculation) {
+    const childDetails = familyComp.children.map((c) => {
+      const age = c.age;
+      const count = c.count || 1;
+      let groupName = '';
+      let rate = 100;
+      let note = '';
+      if (age < 2) {
+        groupName = 'Em bé (dưới 2 tuổi)';
+        rate = 0;
+        note = 'Được **MIỄN PHÍ 100%** vé tour (bố mẹ tự túc ăn uống và chi phí phát sinh cho bé)';
+      } else if (age < 5) {
+        groupName = `Trẻ nhỏ ${Math.round(age)} tuổi (từ 2 đến 4 tuổi)`;
+        rate = 50;
+        note = 'Tính **50% giá vé người lớn** (có ghế ngồi riêng trên xe du lịch, ngủ chung giường với bố mẹ)';
+      } else if (age < 12) {
+        groupName = `Trẻ em ${Math.round(age)} tuổi (từ 5 đến 11 tuổi)`;
+        rate = 70;
+        note = 'Tính **70% giá vé người lớn** (có suất ăn riêng, ghế ngồi riêng trên xe du lịch, ngủ chung phòng cùng bố mẹ)';
+      } else {
+        groupName = `Khách ${Math.round(age)} tuổi (từ 12 tuổi trở lên)`;
+        rate = 100;
+        note = 'Tính **100% giá vé người lớn** (hưởng đầy đủ tiêu chuẩn dịch vụ)';
+      }
+      return `• 👶 **${count > 1 ? count + ' ' : ''}${groupName}:** ${note}`;
+    });
+
+    let contextExample = '';
+    let usedTools = ['knowledge_base'];
+
+    if (matchedDest) {
+      const tourRes = await executeErpTool(pool, 'searchTours', { destination: matchedDest.dest });
+      if (tourRes.count > 0) {
+        usedTools.push('searchTours');
+        const tour = tourRes.tours[0];
+        const basePrice = Number(tour.base_price_vnd || 0);
+        const adults = familyComp.adultCount || 2;
+        let sampleTotal = adults * basePrice;
+        const sampleLines = [
+          `  - 🧑 **${adults} Người lớn (100%):** ${adults} × ${basePrice.toLocaleString('vi-VN')} ₫ = **${(adults * basePrice).toLocaleString('vi-VN')} ₫**`
+        ];
+
+        for (const c of familyComp.children) {
+          const rate = c.age < 2 ? 0 : c.age < 5 ? 0.5 : c.age < 12 ? 0.7 : 1.0;
+          const childP = Math.round(basePrice * rate);
+          const cTotal = childP * (c.count || 1);
+          sampleTotal += cTotal;
+          const label = c.age < 2 ? 'Em bé (< 2 tuổi)' : `Bé ${Math.round(c.age)} tuổi`;
+          sampleLines.push(
+            `  - 👶 **${c.count || 1} ${label} (${Math.round(rate * 100)}%):** ${c.count || 1} × ${childP.toLocaleString('vi-VN')} ₫ = **${cTotal.toLocaleString('vi-VN')} ₫**`
+          );
+        }
+
+        contextExample =
+          `\n\n📌 **Ví dụ áp dụng cho [${tour.tour_name}](${tour.detail_path}) (${matchedDest.dest}) mà Quý khách vừa quan tâm:**\n` +
+          `💵 *Giá vé niêm yết người lớn: ${basePrice.toLocaleString('vi-VN')} ₫/khách*\n` +
+          `${sampleLines.join('\n')}\n` +
+          `👉 *Tổng chi phí dự tính (${adults} người lớn + ${familyComp.children.length} trẻ):* **${sampleTotal.toLocaleString('vi-VN')} ₫**`;
+      }
+    } else {
+      contextExample =
+        `\n\n💡 *Quý khách đang quan tâm đến tour hoặc điểm đến cụ thể nào (như Tour Phú Quốc, Đà Nẵng, Đà Lạt...)? Vui lòng cho biết để em kiểm tra giá vé chính xác và tính tổng chi phí chi tiết cho gia đình mình nhé!*`;
+    }
+
+    const reply =
+      `👶 **QUY ĐỊNH GIÁ VÉ TOUR CHO GIA ĐÌNH CÓ TRẺ EM TẠI TRAVELVN:**\n\n` +
+      `Theo chính sách vé của TravelVN, đối với các bé trong gia đình bạn:\n` +
+      `${childDetails.join('\n')}\n` +
+      `• 🧑 **Người lớn (từ 12 tuổi trở lên):** Tính **100% giá vé niêm yết**.\n` +
+      `• 🛏️ **Quy định phòng ngủ:** Trẻ em dưới 12 tuổi ngủ chung phòng với bố mẹ. Trường hợp gia đình có nhu cầu ngủ riêng 1 phòng sẽ áp dụng phụ thu phòng đơn.` +
+      contextExample;
+
+    return {
+      reply,
+      suggestions: matchedDest
+        ? [`Lịch khởi hành tour ${matchedDest.dest}`, `Giá tour ${matchedDest.dest}`, 'Chính sách hủy tour', 'Liên hệ nhân viên']
+        : ['Xem tour nổi bật', 'Chính sách hủy tour', 'Liên hệ nhân viên'],
+      toolsUsed: usedTools,
+      mode: 'fallback_rag',
+      handoffSuggested: false
+    };
+  }
+
+  // 1.2 Explicit Family Price Calculation (Customer asks for total cost)
+  if (familyComp.hasFamilyCalculation) {
     const userPrice = extractBudgetFromText(question);
+    if (!matchedDest && !userPrice) {
+      return {
+        reply:
+          `Để tính chính xác tổng chi phí cho gia đình mình, Quý khách vui lòng cho em biết gia đình đang quan tâm đến **tour du lịch nào hoặc điểm đến nào** (ví dụ: Đà Nẵng, Phú Quốc, Đà Lạt, Hà Nội...) nhé!`,
+        suggestions: ['Tour Đà Nẵng', 'Tour Phú Quốc', 'Tour Đà Lạt', 'Xem tour nổi bật'],
+        toolsUsed: ['family_calculator'],
+        mode: 'fallback_calculator',
+        handoffSuggested: false
+      };
+    }
+
     const tourRes = await executeErpTool(pool, 'searchTours', {
       destination: matchedDest ? matchedDest.dest : undefined
     });
@@ -537,53 +640,6 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
         handoffSuggested: false
       };
     }
-  }
-
-  // If specific child age mentioned (e.g. "bé 6 tuổi", "trẻ 3 tuổi")
-  if (familyComp.children.length > 0 && /(tuoi|ve|gia|tinh|bao nhieu)/.test(normQ)) {
-    const c = familyComp.children[0];
-    const age = c.age;
-    let groupName = '';
-    let rate = 100;
-    let service = '';
-
-    if (age < 2) {
-      groupName = 'Em bé (dưới 2 tuổi)';
-      rate = 0;
-      service = 'Được **miễn phí 100%** vé tour (bố mẹ tự túc chi phí ăn uống và dịch vụ phát sinh cho bé)';
-    } else if (age < 5) {
-      groupName = 'Trẻ nhỏ (từ 2 đến 4 tuổi)';
-      rate = 50;
-      service = 'Tính **50% giá vé người lớn** (có ghế ngồi riêng trên xe du lịch, ngủ chung giường với bố mẹ/người lớn đi kèm)';
-    } else if (age < 12) {
-      groupName = 'Trẻ em (từ 5 đến 11 tuổi)';
-      rate = 70;
-      service = 'Tính **70% giá vé người lớn** (có suất ăn riêng, ghế ngồi riêng trên xe du lịch, ngủ chung giường với bố mẹ)';
-    } else {
-      groupName = 'Người lớn (từ 12 tuổi trở lên)';
-      rate = 100;
-      service = 'Tính **100% giá vé người lớn** (hưởng đầy đủ các dịch vụ ăn uống, ghế ngồi, vé tham quan)';
-    }
-
-    const reply =
-      `👶 **CHÍNH SÁCH GIÁ VÉ CHO BÉ ${age} TUỔI TẠI TRAVELVN:**\n\n` +
-      `Theo quy định của hệ thống, bé **${age} tuổi** thuộc diện **${groupName}**:\n` +
-      `• 🎟️ **Mức tính vé:** **${rate}% giá vé người lớn**.\n` +
-      `• 🍽️ **Tiêu chuẩn dịch vụ:** ${service}.\n` +
-      `• 🛏️ **Quy định chỗ ngủ:** Ngủ chung phòng và chung giường với người lớn đi kèm (nếu gia đình có nhu cầu ngủ riêng 1 phòng sẽ áp dụng phụ thu phòng đơn).\n\n` +
-      `📋 *Bảng tóm tắt các độ tuổi khác để Quý khách tiện tham khảo:* \n` +
-      `- 🍼 **Dưới 2 tuổi:** Miễn phí (0%)\n` +
-      `- 🧒 **2 đến 4 tuổi:** 50% giá người lớn\n` +
-      `- 👦 **5 đến 11 tuổi:** 70% giá người lớn\n` +
-      `- 🧑 **Từ 12 tuổi trở lên:** 100% giá người lớn`;
-
-    return {
-      reply,
-      suggestions: ['Xem các tour đang mở', 'Chính sách hủy tour', 'Liên hệ nhân viên'],
-      toolsUsed: ['knowledge_base'],
-      mode: 'fallback_rag',
-      handoffSuggested: false
-    };
   }
 
   // 2. Payment & VietQR Policy (Priority over generic cancellation)
@@ -747,7 +803,7 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
   }
 
   // 2. Parse specific user criteria (Budget, Duration, Distance, Region, Destination)
-  const parsed = parseCustomerTourQuery(question, normQ);
+  const parsed = parseCustomerTourQuery(question, normQ, conversationHistory);
 
   const formatTourList = (tours) => {
     return tours
@@ -853,16 +909,33 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
     if (parsed.isSlotsOrDeps) {
       const depRes = await executeErpTool(pool, 'getTourDeparturesAndSlots', { destination: parsed.matchedDest.dest });
       if (depRes.count > 0) {
-        const depLines = depRes.departures.map(
-          (d, i) =>
-            `### ${i + 1}. [${d.tour_name}](${d.detail_path})\n• 📅 **Khởi hành:** **${d.departure_date}** – Ngày về: **${d.return_date}**\n• 🪑 **Số chỗ còn trống:** **${d.available_slots} / ${d.max_slots} chỗ** (${d.status === 'Open' ? 'Đang mở bán' : 'Đã đóng'})\n• 💰 **Giá trọn gói:** **${Number(d.base_price_vnd).toLocaleString('vi-VN')} ₫**/khách\n`
-        );
+        const depLines = depRes.departures.map((d, i) => {
+          let statusText = '';
+          if (d.status === 'Open') {
+            if (d.available_slots > 0) {
+              statusText = `🟢 **Đang mở bán** – Còn **${d.available_slots} / ${d.max_slots} chỗ trống**`;
+            } else {
+              statusText = `🟠 **Đã hết chỗ** (0 / ${d.max_slots} chỗ)`;
+            }
+          } else {
+            statusText = `🔴 **Đã đóng nhận khách** (Đợt khởi hành này đã kết thúc nhận đăng ký)`;
+          }
+          return `### ${i + 1}. [${d.tour_name}](${d.detail_path})\n• 📅 **Khởi hành:** **${d.departure_date}** – Ngày về: **${d.return_date}**\n• 🪑 **Tình trạng:** ${statusText}\n• 💰 **Giá trọn gói:** **${Number(d.base_price_vnd).toLocaleString('vi-VN')} ₫**/khách\n`;
+        });
+
+        const hasOpenSlots = depRes.departures.some((d) => d.status === 'Open' && d.available_slots > 0);
+        let footerNote = hasOpenSlots
+          ? `💡 *Quý khách có thể bấm trực tiếp vào tên tour còn chỗ ở trên để xem chi tiết lịch trình và đặt vé giữ chỗ ngay!*`
+          : `⚠️ *Lưu ý: Hiện tại các đợt khởi hành của tuyến trên đã đóng nhận khách hoặc đã đủ chỗ. Quý khách vui lòng bấm "Liên hệ nhân viên" để được hỗ trợ mở thêm đợt mới hoặc chuyển sang các tour tương tự nhé!*`;
+
         return {
-          reply: `🗓️ **LỊCH KHỞI HÀNH & CHỖ TRỐNG TOUR ${parsed.matchedDest.dest.toUpperCase()} TẠI TRAVELVN:**\n\n${depLines.join('\n')}\n💡 *Quý khách có thể bấm trực tiếp vào tên tour để xem chi tiết lịch trình và đặt vé giữ chỗ ngay!*`,
-          suggestions: [`Giá tour ${parsed.matchedDest.dest}`, 'Chính sách giá vé trẻ em', 'Chính sách hủy tour', 'Liên hệ nhân viên'],
+          reply: `🗓️ **LỊCH KHỞI HÀNH & CHỖ TRỐNG TOUR ${parsed.matchedDest.dest.toUpperCase()} TẠI TRAVELVN:**\n\n${depLines.join('\n')}\n${footerNote}`,
+          suggestions: hasOpenSlots
+            ? [`Giá tour ${parsed.matchedDest.dest}`, 'Chính sách giá vé trẻ em', 'Chính sách hủy tour', 'Liên hệ nhân viên']
+            : ['Liên hệ nhân viên', 'Thiết kế tour riêng', `Xem tour ${parsed.matchedDest.dest}`, 'Xem tour nổi bật'],
           toolsUsed: ['getTourDeparturesAndSlots'],
           mode: 'fallback_db',
-          handoffSuggested: false
+          handoffSuggested: !hasOpenSlots
         };
       }
     }
