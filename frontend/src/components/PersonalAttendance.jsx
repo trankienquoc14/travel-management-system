@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import GPSCheckInWidget from './GPSCheckInWidget';
+import { getBaseApiUrl, getImageUrl } from '../utils/imageUrl';
+
+const formatDateVN = (dateStr) => {
+  if (!dateStr) return '--/--/----';
+  const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, y, m, d] = match;
+    return `${d}/${m}/${y}`;
+  }
+  try {
+    return new Date(dateStr).toLocaleDateString('vi-VN');
+  } catch (e) {
+    return dateStr;
+  }
+};
 
 const PersonalAttendance = () => {
+  const API_BASE = getBaseApiUrl();
   const [myHistory, setMyHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
@@ -25,7 +41,7 @@ const PersonalAttendance = () => {
       const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
       const endDate = `${selectedYear}-${formattedMonth}-${daysInMonth}`;
 
-      const res = await axios.get(`http://localhost:5000/api/hr/attendance/history`, {
+      const res = await axios.get(`${API_BASE}/api/hr/attendance/history`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           startDate,
@@ -148,7 +164,7 @@ const PersonalAttendance = () => {
                   {myHistory.map((row, idx) => (
                     <tr key={row.timekeeping_id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0f172a' }}>
-                        {new Date(row.work_date).toLocaleDateString('vi-VN')}
+                        {formatDateVN(row.work_date)}
                       </td>
                       
                       {/* CỘT HIỂN THỊ ẢNH SELFIE KHUÔN MẶT */}
@@ -160,7 +176,7 @@ const PersonalAttendance = () => {
                             title="Click để xem phóng to ảnh xác thực khuôn mặt"
                           >
                             <img 
-                              src={row.face_image_url.startsWith('http') ? row.face_image_url : `http://localhost:5000${row.face_image_url}`} 
+                              src={getImageUrl(row.face_image_url)} 
                               alt="Selfie Checkin" 
                               style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
                             />
@@ -249,7 +265,7 @@ const PersonalAttendance = () => {
             {selectedFaceModal.face_image_url && (
               <div style={{ width: '220px', height: '220px', margin: '0 auto 16px auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 8px 20px rgba(16,185,129,0.3)' }}>
                 <img 
-                  src={selectedFaceModal.face_image_url.startsWith('http') ? selectedFaceModal.face_image_url : `http://localhost:5000${selectedFaceModal.face_image_url}`} 
+                  src={getImageUrl(selectedFaceModal.face_image_url)} 
                   alt="Full Selfie" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                 />
@@ -258,7 +274,7 @@ const PersonalAttendance = () => {
 
             <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', fontSize: '13px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid #e2e8f0' }}>
               <div>👤 <strong>Nhân sự:</strong> {selectedFaceModal.full_name || currentUser?.fullName}</div>
-              <div>📅 <strong>Ngày làm:</strong> {new Date(selectedFaceModal.work_date).toLocaleDateString('vi-VN')}</div>
+              <div>📅 <strong>Ngày làm:</strong> {formatDateVN(selectedFaceModal.work_date)}</div>
               <div>⏱️ <strong>Giờ Check-in:</strong> <span style={{ color: '#059669', fontWeight: '700' }}>{selectedFaceModal.check_in || '--:--'}</span> | <strong>Check-out:</strong> <span style={{ color: '#0284c7', fontWeight: '700' }}>{selectedFaceModal.check_out || '--:--'}</span></div>
               <div>🎯 <strong>Độ khớp AI:</strong> <span style={{ color: '#166534', fontWeight: '800' }}>{selectedFaceModal.match_confidence || 98.5}% (Chính chủ)</span></div>
               {selectedFaceModal.location_address && <div>🏠 <strong>Vị trí GPS:</strong> {selectedFaceModal.location_address}</div>}

@@ -994,13 +994,16 @@ exports.gpsCheckIn = async (req, res) => {
 
     const { latitude, longitude, location_address, device_info, notes, face_image, match_confidence, face_verified } = req.body;
     
-    // Sử dụng ngày và giờ theo múi giờ địa phương Việt Nam (YYYY-MM-DD)
+    // Sử dụng ngày và giờ chuẩn theo múi giờ Việt Nam (Asia/Ho_Chi_Minh, UTC+7)
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
-    const nowTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(now);
+    const nowTime = new Intl.DateTimeFormat('en-GB', { 
+      timeZone: 'Asia/Ho_Chi_Minh', 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    }).format(now);
 
     // 🔒 KIỂM TRA BẮT BUỘC: PHẢI CÓ ẢNH VÀ QUÉT ĐÚNG KHUÔN MẶT CHÍNH CHỦ
     if (!face_image || typeof face_image !== 'string' || !face_image.startsWith('data:image')) {
@@ -1012,11 +1015,11 @@ exports.gpsCheckIn = async (req, res) => {
 
     const confidenceScore = match_confidence !== undefined && match_confidence !== null ? parseFloat(match_confidence) : 0;
 
-    // Ngưỡng bảo mật: khuôn mặt phải được hệ thống xác thực (face_verified === true) và độ khớp >= 65%
-    if (!face_verified || confidenceScore < 65.0) {
+    // Ngưỡng bảo mật: khuôn mặt phải được hệ thống xác thực (face_verified === true) và độ khớp >= 75%
+    if (!face_verified || confidenceScore < 75.0) {
       return res.status(400).json({
         success: false,
-        message: `Xác thực khuôn mặt thất bại! Khuôn mặt không trùng khớp với hồ sơ nhân viên (Độ khớp: ${confidenceScore.toFixed(1)}% < 65%). Hệ thống từ chối ghi nhận chấm công!`
+        message: `Xác thực khuôn mặt thất bại! Khuôn mặt không trùng khớp với hồ sơ nhân viên (Độ khớp: ${confidenceScore.toFixed(1)}% < 75%). Hệ thống từ chối ghi nhận chấm công!`
       });
     }
 
@@ -1119,10 +1122,7 @@ exports.getMyAttendanceStatus = async (req, res) => {
   try {
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(now);
 
     const [rows] = await sequelize.query(`
       SELECT * FROM timekeeping WHERE employee_id = ? AND work_date = ?
@@ -1247,7 +1247,7 @@ exports.createLeaveRequest = async (req, res) => {
       attachment_url = `/uploads/${req.file.filename}`;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
 
     let final_leave_type = null;
     let final_explanation_type = null;
