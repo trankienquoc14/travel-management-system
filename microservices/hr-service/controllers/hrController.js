@@ -1745,3 +1745,75 @@ exports.updateOfficeLocationSettings = async (req, res) => {
   }
 };
 
+// 8. Tìm kiếm địa chỉ & Tọa độ bản đồ (Geocoding Proxy - Tránh lỗi CORS trên trình duyệt)
+exports.geocodeSearch = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || !query.trim()) {
+      return res.status(400).json({ success: false, message: 'Từ khóa tìm kiếm không được để trống' });
+    }
+
+    const cleanQuery = query.trim();
+    let results = [];
+
+    // 1. Thử qua Nominatim OpenStreetMap với User-Agent hợp lệ
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery)}&format=json&limit=5&accept-language=vi`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'TMS-Travel-System/1.0 (contact@travelmanagement.com)',
+          'Accept': 'application/json'
+        },
+        signal: AbortSignal.timeout(6000)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          results = data.map(item => ({
+            display_name: item.display_name,
+            lat: item.lat,
+            lon: item.lon
+          }));
+        }
+      }
+    } catch (nomErr) {
+      console.warn("Nominatim search error:", nomErr.message);
+    }
+
+    // 2. Dự phòng qua Photon Komoot nếu Nominatim không có kết quả
+    if (results.length === 0) {
+      try {
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQuery)}&limit=5`;
+        const pRes = await fetch(photonUrl, {
+          signal: AbortSignal.timeout(6000)
+        });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData && pData.features && pData.features.length > 0) {
+            results = pData.features.map(f => {
+              const props = f.properties || {};
+              const coords = f.geometry?.coordinates || [0, 0];
+              const nameParts = [props.name, props.street, props.city, props.state, props.country].filter(Boolean);
+              return {
+                display_name: nameParts.join(', ') || props.name || cleanQuery,
+                lat: coords[1]?.toString(),
+                lon: coords[0]?.toString()
+              };
+            });
+          }
+        }
+      } catch (pErr) {
+        console.warn("Photon search error:", pErr.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    console.error("Lỗi geocodeSearch:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

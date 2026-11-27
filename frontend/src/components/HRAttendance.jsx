@@ -246,28 +246,25 @@ const HRAttendance = () => {
       return;
     }
 
-    // 2. Tìm kiếm theo tên địa danh/địa chỉ qua OpenStreetMap
+    // 2. Tìm kiếm qua Backend API Proxy (Không bao giờ bị lỗi CORS Failed to fetch trên trình duyệt)
     setSearchLoading(true);
     setSearchResults([]);
     setSettingsAlert(null);
     try {
-      const query = encodeURIComponent(raw);
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=5&accept-language=vi`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          setSearchResults(data);
-        } else {
-          setSettingsAlert({ 
-            type: 'error', 
-            message: `❌ Không tìm thấy địa điểm "${raw}". Bạn có thể mở Google Maps, click chuột phải vào vị trí cần chọn để copy tọa độ rồi dán vào đây!` 
-          });
-        }
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/api/hr/settings/geocode?query=${encodeURIComponent(raw)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data?.success && res.data?.data && res.data.data.length > 0) {
+        setSearchResults(res.data.data);
       } else {
-        setSettingsAlert({ type: 'error', message: 'Không thể kết nối đến máy chủ tìm kiếm bản đồ. Vui lòng thử lại hoặc nhập tọa độ thủ công.' });
+        setSettingsAlert({ 
+          type: 'error', 
+          message: `❌ Không tìm thấy địa điểm "${raw}". Bạn có thể mở Google Maps, click chuột phải vào vị trí cần chọn để copy tọa độ rồi dán vào đây!` 
+        });
       }
     } catch (err) {
-      setSettingsAlert({ type: 'error', message: 'Lỗi tìm kiếm: ' + err.message });
+      setSettingsAlert({ type: 'error', message: 'Lỗi tìm kiếm: ' + (err.response?.data?.message || err.message) });
     } finally {
       setSearchLoading(false);
     }

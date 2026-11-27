@@ -27,6 +27,7 @@ router.get('/attendance/face-profile', protect, hrController.getMyFaceProfile);
 router.post('/attendance/face-profile', protect, hrController.updateMyFaceProfile);
 router.get('/settings/office-location', protect, hrController.getOfficeLocationSettings);
 router.put('/settings/office-location', protect, restrictTo(1, 2), hrController.updateOfficeLocationSettings);
+router.get('/settings/geocode', protect, hrController.geocodeSearch);
 
 // Các tuyến đường chấm công nhân sự
 router.get('/attendance/history', protect, hrController.getAttendanceHistory);
