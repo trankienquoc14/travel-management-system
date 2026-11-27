@@ -241,6 +241,9 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     setGpsLoading(true);
     setGpsError('');
 
+    // Đồng bộ lại cấu hình trụ sở văn phòng mới nhất từ server
+    fetchOfficeConfig();
+
     if (!navigator.geolocation) {
       setGpsError('Trình duyệt không hỗ trợ Geolocation!');
       setGpsLoading(false);
@@ -253,19 +256,33 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         const coordsData = { lat: latitude, lng: longitude, accuracy: Math.round(accuracy) };
         setLocation(coordsData);
 
+        let detectedAddr = '';
+        // Thử 1: BigDataCloud (Rất nhanh, CORS)
         try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=vi`);
-          const geoData = await geoRes.json();
-          if (geoData && geoData.display_name) {
-            setAddress(geoData.display_name);
-          } else {
-            setAddress(`Tọa độ: ${latitude.toFixed(5)}°N, ${longitude.toFixed(5)}°E`);
+          const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=vi`);
+          if (bdcRes.ok) {
+            const bdcData = await bdcRes.json();
+            const parts = [];
+            if (bdcData.locality) parts.push(bdcData.locality);
+            if (bdcData.city && bdcData.city !== bdcData.locality) parts.push(bdcData.city);
+            if (bdcData.principalSubdivision) parts.push(bdcData.principalSubdivision);
+            if (parts.length > 0) detectedAddr = parts.join(', ');
           }
-        } catch (e) {
-          setAddress(`Tọa độ GPS: ${latitude.toFixed(5)}°N, ${longitude.toFixed(5)}°E (±${Math.round(accuracy)}m)`);
-        } finally {
-          setGpsLoading(false);
+        } catch (e) {}
+
+        // Thử 2: OpenStreetMap Nominatim
+        if (!detectedAddr) {
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=vi`);
+            const geoData = await geoRes.json();
+            if (geoData && geoData.display_name) {
+              detectedAddr = geoData.display_name;
+            }
+          } catch (e) {}
         }
+
+        setAddress(detectedAddr || `Tọa độ GPS: ${latitude.toFixed(5)}°N, ${longitude.toFixed(5)}°E (±${Math.round(accuracy)}m)`);
+        setGpsLoading(false);
       },
       (error) => {
         let msg = 'Không thể lấy vị trí GPS.';
@@ -1327,8 +1344,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           </div>
         ) : location ? (
           <div>
-            <div style={{ fontSize: '12px', color: '#0f172a', fontWeight: '600', marginBottom: '4px', lineHeight: '1.4' }}>
-              🏠 {address || 'Đang cập nhật địa chỉ...'}
+            <div style={{ fontSize: '12px', color: '#0f172a', fontWeight: '700', marginBottom: '4px', lineHeight: '1.4' }}>
+              📍 Vị trí bạn đang đứng: <span style={{ fontWeight: '500', color: '#1e293b' }}>{address || 'Đang cập nhật địa chỉ...'}</span>
             </div>
             <div style={{ display: 'flex', gap: '14px', fontSize: '11px', color: '#475569', fontWeight: '600', flexWrap: 'wrap' }}>
               <span>📐 Vĩ độ: <strong>{location.lat.toFixed(5)}°</strong></span>
@@ -1360,17 +1377,17 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                 <div style={{ marginTop: '8px', fontSize: '11px' }}>
                   {isOffice ? (
                     dist <= officeRadius ? (
-                      <span style={{ color: '#15803d', fontWeight: '700', background: '#dcfce7', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: '#15803d', fontWeight: '700', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         🏢 Trụ sở ({officeConfig.address ? (officeConfig.address.length > 30 ? officeConfig.address.slice(0, 30) + '...' : officeConfig.address) : 'Văn phòng'}): Cách {dist}m (Hợp lệ: Trong bán kính {officeRadius}m)
                       </span>
                     ) : (
-                      <span style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '3px 8px', borderRadius: '6px', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        ⚠️ Ngoài bán kính: Cách văn phòng {dist}m (&gt; {officeRadius}m)
+                      <span style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        ⚠️ Ngoài bán kính: Cách trụ sở ({officeConfig.address ? (officeConfig.address.length > 30 ? officeConfig.address.slice(0, 30) + '...' : officeConfig.address) : 'Văn phòng'}) {dist}m (&gt; {officeRadius}m)
                       </span>
                     )
                   ) : isField ? (
-                    <span style={{ color: '#0369a1', fontWeight: '700', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      🚌 Hiện trường lưu động: Cách trụ sở chính {dist >= 1000 ? `${(dist/1000).toFixed(1)}km` : `${dist}m`}
+                    <span style={{ color: '#0369a1', fontWeight: '700', background: '#e0f2fe', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      🚌 Hiện trường lưu động: Cách trụ sở ({officeConfig.address ? (officeConfig.address.length > 25 ? officeConfig.address.slice(0, 25) + '...' : officeConfig.address) : 'Trụ sở chính'}) {dist >= 1000 ? `${(dist/1000).toFixed(1)}km` : `${dist}m`}
                     </span>
                   ) : null}
                 </div>

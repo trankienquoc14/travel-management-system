@@ -116,7 +116,16 @@ const HRAttendance = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data?.success) {
-        setSettingsAlert({ type: 'success', message: '✅ ' + (res.data.message || 'Lưu cấu hình vị trí thành công!') });
+        // Cập nhật lại state với dữ liệu trả về từ server
+        if (res.data.data) {
+          setOfficeSettings(res.data.data);
+        } else {
+          await fetchOfficeSettings();
+        }
+        setSettingsAlert({ 
+          type: 'success', 
+          message: `✅ Đã lưu thành công trụ sở: "${res.data.data?.address || officeSettings.address}" (${res.data.data?.latitude || officeSettings.latitude}, ${res.data.data?.longitude || officeSettings.longitude}) - Bán kính: ${res.data.data?.radius || officeSettings.radius}m!` 
+        });
       } else {
         setSettingsAlert({ type: 'error', message: res.data?.message || 'Không thể lưu cấu hình' });
       }
@@ -140,15 +149,40 @@ const HRAttendance = () => {
         const lat = parseFloat(pos.coords.latitude.toFixed(6));
         const lng = parseFloat(pos.coords.longitude.toFixed(6));
         
-        let fetchedAddress = officeSettings.address;
+        let fetchedAddress = '';
+
+        // Thử 1: BigDataCloud (Rất nhanh, CORS thân thiện, hỗ trợ tiếng Việt)
         try {
-          // Thử reverse geocoding qua OpenStreetMap để lấy tên đường
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-          const geoData = await geoRes.json();
-          if (geoData && geoData.display_name) {
-            fetchedAddress = geoData.display_name;
+          const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=vi`);
+          if (bdcRes.ok) {
+            const bdcData = await bdcRes.json();
+            const parts = [];
+            if (bdcData.locality) parts.push(bdcData.locality);
+            if (bdcData.city && bdcData.city !== bdcData.locality) parts.push(bdcData.city);
+            if (bdcData.principalSubdivision) parts.push(bdcData.principalSubdivision);
+            if (parts.length > 0) {
+              fetchedAddress = parts.join(', ');
+            }
           }
         } catch (e) {}
+
+        // Thử 2: OpenStreetMap Nominatim nếu Thử 1 chưa có
+        if (!fetchedAddress) {
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`);
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              if (geoData && geoData.display_name) {
+                fetchedAddress = geoData.display_name;
+              }
+            }
+          } catch (e) {}
+        }
+
+        // Thử 3: Nếu không dò được tên đường, đặt tên theo tọa độ mới (tuyệt đối không giữ địa chỉ 190 Pasteur cũ)
+        if (!fetchedAddress) {
+          fetchedAddress = `Văn phòng mới (Tọa độ: ${lat}, ${lng})`;
+        }
 
         setOfficeSettings(prev => ({
           ...prev,
@@ -159,7 +193,7 @@ const HRAttendance = () => {
         setDetectingGps(false);
         setSettingsAlert({ 
           type: 'success', 
-          message: `📍 Đã lấy thành công tọa độ hiện tại của bạn: ${lat}, ${lng}! Nhấn "Lưu cấu hình" để áp dụng.` 
+          message: `📍 Đã nhận diện vị trí mới: "${fetchedAddress}" (${lat}, ${lng})! Bạn có thể chỉnh sửa lại tên văn phòng nếu muốn rồi nhấn nút "💾 Lưu Cấu Hình Vị Trí & Bán Kính" phía dưới.` 
         });
       },
       (err) => {
