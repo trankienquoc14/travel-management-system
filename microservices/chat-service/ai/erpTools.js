@@ -157,9 +157,9 @@ async function searchTours(pool, args = {}) {
   if (isFar) {
     where.push(`(t.duration_days >= 3 OR t.destination NOT IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho'))`);
   }
-  // Filter for near/short tours
+  // Filter for near/short tours (cuối tuần, ngắn ngày bao gồm cả tour 2N1Đ hoặc 3N2Đ)
   if (isNear) {
-    where.push(`(t.duration_days <= 2 OR t.destination IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho'))`);
+    where.push(`(t.duration_days <= 3 OR t.destination IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho', 'Đà Lạt', 'Phú Quốc'))`);
   }
 
   // Filter for region
@@ -203,10 +203,10 @@ async function searchTours(pool, args = {}) {
 
   const [rows] = await pool.query(sql, params);
 
-  // If no tours match budget constraint, find closest/cheapest alternative active tours
+  // If no tours match constraint, find closest/alternative active tours
   let suggestedAlternatives = [];
   let minPriceInDb = null;
-  if (rows.length === 0 && typeof maxPrice === 'number' && maxPrice > 0) {
+  if (rows.length === 0) {
     try {
       const altWhere = [`t.status = 'Active'`, `(t.is_custom IS NULL OR t.is_custom = 0)`];
       const altParams = [];
@@ -215,6 +215,10 @@ async function searchTours(pool, args = {}) {
         altWhere.push(`(t.destination LIKE ? OR t.tour_name LIKE ?)`);
         altParams.push(like, like);
       }
+      const altOrder = isNear || (typeof maxDays === 'number' && maxDays > 0)
+        ? 't.duration_days ASC, t.base_price ASC'
+        : 't.base_price ASC';
+
       const altSql = `
         SELECT
           t.tour_id,
@@ -229,7 +233,7 @@ async function searchTours(pool, args = {}) {
         LEFT JOIN departures d ON t.tour_id = d.tour_id
         WHERE ${altWhere.join(' AND ')}
         GROUP BY t.tour_id, t.tour_name, t.destination, t.duration_days, t.base_price, t.description
-        ORDER BY t.base_price ASC
+        ORDER BY ${altOrder}
         LIMIT 4
       `;
       const [altRows] = await pool.query(altSql, altParams);

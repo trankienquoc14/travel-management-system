@@ -302,7 +302,7 @@ function parseCustomerTourQuery(rawQuestion = '', normQ = '', conversationHistor
     /(du lich gan|di gan|trong ngay|ngan ngay|cuoi tuan)/.test(normQ) ||
     /(du lịch gần|đi gần|trong ngày|ngắn ngày|cuối tuần)/i.test(rawQuestion);
   if (isNear && !maxDays) {
-    maxDays = 2;
+    maxDays = 3;
   }
 
   // Regions
@@ -884,15 +884,26 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
           ? `${Number(tourRes.minPriceInDb).toLocaleString('vi-VN')} ₫`
           : '2.500.000 ₫';
         noMatchMsg = `Dạ hiện tại TravelVN chưa có tour trọn gói cố định nào dưới **${budgetStr}** (mức giá tour tiết kiệm nhất hiện tại mở bán từ **${minPriceStr}**/khách).\n\n`;
+      } else if (parsed.duration.isNear || (parsed.duration.maxDays && parsed.duration.maxDays <= 2)) {
+        noMatchMsg = `Dạ hiện tại TravelVN chưa có tour cố định ngắn 1 - 2 ngày trong tuần. Thời lượng các tour ngắn ngày & cuối tuần phổ biến nhất hiện có là **3 ngày 2 đêm** (rất thích hợp khởi hành vào thứ Sáu và về Chủ Nhật).\n\n`;
       } else {
         noMatchMsg = `Dạ hiện tại chưa tìm thấy tour nào khớp hoàn toàn với tiêu chí tìm kiếm của Quý khách.\n\n`;
       }
 
       if (tourRes.suggestedAlternatives && tourRes.suggestedAlternatives.length > 0) {
-        noMatchMsg += `💡 **GỢI Ý CÁC TOUR GIÁ TỐT NHẤT CHO QUÝ KHÁCH THAM KHẢO:**\n\n${formatTourList(tourRes.suggestedAlternatives)}\n\n`;
+        const altTitle = parsed.duration.isNear || (parsed.duration.maxDays && parsed.duration.maxDays <= 3)
+          ? '💡 **GỢI Ý CÁC TOUR CÓ THỜI LƯỢNG NGẮN NHẤT ĐANG MỞ BÁN:**'
+          : '💡 **GỢI Ý CÁC TOUR GIÁ TỐT NHẤT CHO QUÝ KHÁCH THAM KHẢO:**';
+        noMatchMsg += `${altTitle}\n\n${formatTourList(tourRes.suggestedAlternatives)}\n\n`;
       }
 
-      noMatchMsg += `✨ **Giải pháp tối ưu ngân sách:** Quý khách có thể tự do lựa chọn điểm đến, khách sạn và dịch vụ tại trang **[Thiết kế Tour riêng](/build-tour)** để hệ thống tối ưu hóa chi phí vừa vặn với ngân sách!`;
+      if (parsed.budget) {
+        noMatchMsg += `✨ **Giải pháp tối ưu ngân sách:** Quý khách có thể tự do lựa chọn điểm đến, khách sạn và dịch vụ tại trang **[Thiết kế Tour riêng](/build-tour)** để hệ thống tối ưu hóa chi phí vừa vặn với ngân sách!`;
+      } else if (parsed.duration.isNear || parsed.duration.maxDays) {
+        noMatchMsg += `✨ **Lịch trình thiết kế theo yêu cầu:** Nếu Quý khách cần đi ngắn 1 - 2 ngày cho đoàn gia đình hoặc công ty, Quý khách có thể gửi yêu cầu tại trang **[Thiết kế Tour riêng](/build-tour)** để TravelVN sắp xếp lịch trình riêng biệt theo yêu cầu nhé!`;
+      } else {
+        noMatchMsg += `✨ Quý khách có thể tự do lựa chọn điểm đến và dịch vụ mong muốn tại trang **[Thiết kế Tour riêng](/build-tour)** hoặc bấm **Liên hệ nhân viên** để được tư vấn nhé!`;
+      }
 
       return {
         reply: noMatchMsg,
