@@ -191,8 +191,21 @@ async function searchTours(pool, args = {}) {
       t.duration_days,
       t.base_price,
       LEFT(COALESCE(t.description, ''), 240) AS short_description,
-      MIN(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.departure_date ELSE NULL END) AS next_departure_date,
-      COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
+      (
+        SELECT d.departure_date
+        FROM departures d
+        WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+        ORDER BY d.departure_date ASC
+        LIMIT 1
+      ) AS next_departure_date,
+      (
+        SELECT d.available_slots
+        FROM departures d
+        WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+        ORDER BY d.departure_date ASC
+        LIMIT 1
+      ) AS next_departure_slots,
+      COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
     FROM tours t
     LEFT JOIN departures d ON t.tour_id = d.tour_id
     WHERE ${where.join(' AND ')}
@@ -227,8 +240,21 @@ async function searchTours(pool, args = {}) {
           t.duration_days,
           t.base_price,
           LEFT(COALESCE(t.description, ''), 240) AS short_description,
-          MIN(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.departure_date ELSE NULL END) AS next_departure_date,
-          COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
+          (
+            SELECT d.departure_date
+            FROM departures d
+            WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+            ORDER BY d.departure_date ASC
+            LIMIT 1
+          ) AS next_departure_date,
+          (
+            SELECT d.available_slots
+            FROM departures d
+            WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+            ORDER BY d.departure_date ASC
+            LIMIT 1
+          ) AS next_departure_slots,
+          COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
         FROM tours t
         LEFT JOIN departures d ON t.tour_id = d.tour_id
         WHERE ${altWhere.join(' AND ')}
@@ -247,6 +273,7 @@ async function searchTours(pool, args = {}) {
           base_price_vnd: Number(r.base_price || 0),
           short_description: r.short_description,
           next_departure_date: formatDateVi(r.next_departure_date),
+          next_departure_slots: Number(r.next_departure_slots || 0),
           total_available_slots: Number(r.total_available_slots || 0),
           detail_path: `/tour/${r.tour_id}`
         }));
@@ -266,6 +293,7 @@ async function searchTours(pool, args = {}) {
       base_price_vnd: Number(r.base_price || 0),
       short_description: r.short_description,
       next_departure_date: formatDateVi(r.next_departure_date),
+      next_departure_slots: Number(r.next_departure_slots || 0),
       total_available_slots: Number(r.total_available_slots || 0),
       detail_path: `/tour/${r.tour_id}`
     })),

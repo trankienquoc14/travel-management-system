@@ -811,8 +811,9 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
         let line = `### ${i + 1}. [${t.tour_name}](${t.detail_path})\n`;
         line += `• 📍 **Điểm đến:** ${t.destination} | ⏱️ **Thời lượng:** ${t.duration_days} ngày\n`;
         line += `• 💰 **Giá trọn gói:** **${Number(t.base_price_vnd).toLocaleString('vi-VN')} ₫**/khách\n`;
-        if (t.next_departure_date && t.total_available_slots > 0) {
-          line += `• 📅 **Khởi hành gần nhất:** **${t.next_departure_date}** (Còn ${t.total_available_slots} chỗ mở bán)\n`;
+        const nearestSlots = t.next_departure_slots || t.total_available_slots;
+        if (t.next_departure_date && nearestSlots > 0) {
+          line += `• 📅 **Khởi hành gần nhất:** **${t.next_departure_date}** (Còn ${nearestSlots} chỗ mở bán)\n`;
         } else {
           line += `• 📅 **Khởi hành:** Đang cập nhật đợt mới\n`;
         }
@@ -947,6 +948,63 @@ async function runDeterministicFallback(pool, question, conversationHistory = []
           toolsUsed: ['getTourDeparturesAndSlots'],
           mode: 'fallback_db',
           handoffSuggested: !hasOpenSlots
+        };
+      }
+    }
+
+    // 2.2.1 Specific Follow-Up Query for duration / price of "this tour" (e.g. "Tour này đi mấy ngày và giá bao nhiêu một người?")
+    const isSpecificDetail =
+      /(tour nay|chuyen nay|tour do|cai nay|di may ngay|may ngay|bao nhieu mot nguoi|bao nhieu 1 nguoi|bao nhieu tien mot nguoi)/.test(
+        normQ
+      );
+
+    if (isSpecificDetail) {
+      const tourRes = await executeErpTool(pool, 'searchTours', {
+        destination: parsed.matchedDest.dest
+      });
+      if (tourRes.count > 0) {
+        const topTour =
+          tourRes.tours.find((t) => (t.next_departure_slots || t.total_available_slots) > 0) || tourRes.tours[0];
+        const otherTours = tourRes.tours.filter((t) => t.tour_id !== topTour.tour_id);
+
+        let otherTourText = '';
+        if (otherTours.length > 0) {
+          otherTourText =
+            `\n\n📌 *Các tour ${parsed.matchedDest.dest} khác cùng tuyến để Quý khách tham khảo:*\n` +
+            otherTours
+              .map(
+                (t) =>
+                  `• [${t.tour_name}](${t.detail_path}): **${t.duration_days} ngày** – Giá **${Number(t.base_price_vnd).toLocaleString('vi-VN')} ₫**/khách (${t.next_departure_date ? 'Khởi hành: ' + t.next_departure_date : 'Đang cập nhật đợt mới'})`
+              )
+              .join('\n');
+        }
+
+        const depInfo = topTour.next_departure_date
+          ? `• 📅 **Khởi hành gần nhất:** **${topTour.next_departure_date}** ${topTour.next_departure_slots ? `(Còn ${topTour.next_departure_slots} chỗ mở bán)` : ''}\n`
+          : '• 📅 **Khởi hành:** Đang cập nhật đợt mới\n';
+
+        const reply =
+          `ℹ️ **THÔNG TIN CHI TIẾT TOUR DU LỊCH ${parsed.matchedDest.dest.toUpperCase()}:**\n\n` +
+          `Đối với tour nổi bật tại ${parsed.matchedDest.dest} là **[${topTour.tour_name}](${topTour.detail_path})**:\n` +
+          `• ⏱️ **Thời lượng chuyến đi:** **${topTour.duration_days} ngày** (trọn gói lịch trình tham quan)\n` +
+          `• 💰 **Giá vé trọn gói:** **${Number(topTour.base_price_vnd).toLocaleString('vi-VN')} ₫/khách** (người lớn từ 12 tuổi trở lên)\n` +
+          depInfo +
+          `• 👶 **Chính sách vé trẻ em:** Dưới 2 tuổi: Miễn phí (0%); 2 - 4 tuổi: 50%; 5 - 11 tuổi: 70% giá người lớn\n` +
+          `• ✨ **Giá đã bao gồm:** Toàn bộ xe du lịch đưa đón đời mới, khách sạn tiện nghi, các bữa ăn theo tour, vé tham quan và bảo hiểm du lịch trọn gói.` +
+          otherTourText +
+          `\n\n💡 *Quý khách có thể bấm trực tiếp vào tên tour ở trên để xem chi tiết từng ngày và đặt vé giữ chỗ ngay nhé!*`;
+
+        return {
+          reply,
+          suggestions: [
+            `Lịch khởi hành tour ${parsed.matchedDest.dest}`,
+            'Chính sách giá vé trẻ em',
+            'Chính sách hủy tour',
+            'Liên hệ nhân viên'
+          ],
+          toolsUsed: ['searchTours'],
+          mode: 'fallback_db',
+          handoffSuggested: false
         };
       }
     }
