@@ -371,12 +371,12 @@ async function processAIQuery(question, conversationHistory = []) {
   // -------------------------------------------------------------
   if (isGreeting(qLower)) {
     return {
-      reply: `Dạ xin chào Quý khách! 🤖 Em là **Trợ lý du lịch AI của TravelVN**.\n\nEm sẵn sàng hỗ trợ Quý khách 24/7:\n- 🗺️ **Tra cứu Tour**: Kiểm tra tour đã mở bán chưa, giá vé, lịch trình, ngày khởi hành.\n- 🚌 **Dịch vụ Đội xe**: Xe 4, 7, 16, 29, 45 chỗ & Limousine VIP có tài xế.\n- 📋 **Chính sách**: Giá vé trẻ em, quy định hoàn tiền khi hủy tour, đổi lịch trình.\n- 💳 **Thanh toán**: Hướng dẫn chuyển khoản VietQR tự động qua SePay, thanh toán online.\n- ✨ **Thiết kế tour riêng**: Lên lịch trình theo yêu cầu cho cá nhân & đoàn thể.\n\nQuý khách muốn tìm tour đi đâu hoặc cần em hỗ trợ thông tin gì ạ?`,
+      reply: `Dạ xin chào Quý khách! 🤖 Em là **Trợ lý du lịch AI của TravelVN**.\n\nEm sẵn sàng hỗ trợ Quý khách 24/7:\n- 🗺️ **Tra cứu Tour**: Kiểm tra tour đã mở bán chưa, giá vé, lịch trình, ngày khởi hành.\n- 📋 **Chính sách**: Giá vé trẻ em, quy định hoàn tiền khi hủy tour, đổi lịch trình.\n- 💳 **Thanh toán**: Hướng dẫn chuyển khoản VietQR tự động qua SePay, thanh toán online.\n- ✨ **Thiết kế tour riêng**: Lên lịch trình theo yêu cầu cho cá nhân & đoàn thể.\n\nQuý khách muốn tìm tour đi đâu hoặc cần em hỗ trợ thông tin gì ạ?`,
       suggestions: [
         'Có những tour nào đang mở bán?',
         'Tour Đà Lạt giá bao nhiêu?',
         'Lịch khởi hành tour sắp tới',
-        'Bảng giá thuê xe du lịch',
+        'Chính sách hủy đổi vé',
         'Chính sách giá vé trẻ em'
       ]
     };
@@ -418,7 +418,7 @@ async function processAIQuery(question, conversationHistory = []) {
   if (qLower.includes('đón ở đâu') || qLower.includes('điểm đón') || qLower.includes('tập trung ở đâu') || qLower.includes('xuất phát ở đâu') || qLower.includes('nơi đón')) {
     return {
       reply: `📍 **ĐIỂM ĐÓN & TẬP TRUNG KHỞI HÀNH:**\n\nĐể thuận tiện nhất cho Quý khách, TravelVN bố trí nhiều điểm đón cố định:\n\n- 🏢 **Trụ sở chính TravelVN:** Tòa nhà TravelVN, TP. Hồ Chí Minh.\n- ✈️ **Khu vực Sân bay:** Cột 12 Ga Quốc nội - Sân bay Tân Sơn Nhất.\n- 🚌 **Khu vực Bến xe & Cửa ngõ:** Bến xe Miền Đông, Bến xe Miền Tây, Ngã tư Hàng Xanh, Ngã tư Thủ Đức dọc tuyến Quốc lộ.\n- 🌟 **Đặc biệt với đoàn riêng hoặc Tour thiết kế:** Xe sẽ **đón tận nơi** tại nhà riêng, cơ quan hoặc khách sạn theo yêu cầu của đoàn!\n\n💡 *Trước ngày khởi hành 1 ngày, Trưởng đoàn / Hướng dẫn viên sẽ gọi điện xác nhận chính xác thời gian và vị trí đón cụ thể cho Quý khách.*`,
-      suggestions: ['Xem lịch khởi hành gần nhất', 'Bảng giá thuê xe', 'Tư vấn trực tiếp']
+      suggestions: ['Xem lịch khởi hành gần nhất', 'Chính sách giá vé', 'Tư vấn trực tiếp']
     };
   }
 
@@ -438,42 +438,18 @@ async function processAIQuery(question, conversationHistory = []) {
   if (qLower.includes('thiết kế tour') || qLower.includes('tour riêng') || qLower.includes('đoàn riêng') || qLower.includes('tour gia đình') || qLower.includes('tự chọn')) {
     return {
       reply: `✨ **DỊCH VỤ THIẾT KẾ TOUR RIÊNG THEO YÊU CẦU:**\n\nTravelVN có công cụ **Tự thiết kế Tour** thông minh dành cho cá nhân, gia đình hoặc đoàn công ty:\n\n- 🎯 **Tùy biến lịch trình:** Tự chọn điểm đến, số ngày, điểm tham quan yêu thích.\n- 🏨 **Tùy chọn tiện ích:** Khách sạn từ 3★ đến Resort 5★ sang trọng.\n- 🚗 **Xe riêng VIP:** Tự chọn loại xe 4, 7, 16, 29, 45 chỗ đời mới theo quy mô đoàn.\n- 💰 **Báo giá tức thì:** Hệ thống tự động tính toán tổng chi phí và gửi bảng dự toán chi tiết trong 2 phút!\n\n👉 Quý khách có thể nhấn vào mục **"Thiết kế tour theo yêu cầu"** trên thanh menu hoặc để lại thông tin để chuyên viên TravelVN lên lịch trình riêng cho đoàn nhé!`,
-      suggestions: ['Gửi yêu cầu thiết kế tour', 'Xem các tour cố định', 'Bảng giá thuê xe']
+      suggestions: ['Gửi yêu cầu thiết kế tour', 'Xem các tour cố định', 'Tư vấn trực tiếp']
     };
   }
 
   // -------------------------------------------------------------
-  // 8. DỊCH VỤ THUÊ XE / ĐỘI XE NỘI BỘ
+  // 8. DỊCH VỤ THUÊ XE
   // -------------------------------------------------------------
-  if (qLower.includes('thuê xe') || (qLower.includes('xe') && (qLower.includes('chỗ') || qLower.includes('giá') || qLower.includes('bảng giá') || qLower.includes('tài xế')))) {
-    try {
-      const [vehicleRows] = await pool.query(`
-        SELECT vehicle_type, seat_capacity, COUNT(*) as total_vehicles
-        FROM vehicles
-        WHERE status != 'MAINTENANCE'
-        GROUP BY vehicle_type, seat_capacity
-        ORDER BY seat_capacity ASC
-      `);
-
-      let vehicleText = `🚌 **HỆ THỐNG ĐỘI XE DU LỊCH ĐỜI MỚI CỦA TRAVELVN:**\n\nCông ty hiện đang vận hành đội xe chất lượng cao, trang bị đầy đủ máy lạnh, Wifi, ghế ngả cao cấp và tài xế giàu kinh nghiệm:\n\n`;
-
-      if (vehicleRows && vehicleRows.length > 0) {
-        vehicleRows.forEach(v => {
-          vehicleText += `• **${v.vehicle_type}** (${v.seat_capacity} chỗ): Đang sẵn sàng ${v.total_vehicles} xe phục vụ đoàn.\n`;
-        });
-      } else {
-        vehicleText += `• Xe 4 chỗ, 7 chỗ (Innova, Fortuner, Sedona)\n• Xe 16 chỗ (Ford Transit, Hyundai Solati)\n• Xe 29 chỗ (Thaco Town, Samco)\n• Xe 45 chỗ (Hyundai Universe)\n• Xe Limousine 9 - 11 chỗ hạng thương gia.\n`;
-      }
-
-      vehicleText += `\n✨ **Ưu điểm dịch vụ xe:**\n- Xe được bảo dưỡng định kỳ, kiểm tra an toàn trước mỗi chuyến đi.\n- Tài xế được đào tạo bài bản, nhiệt tình, am hiểu cung đường du lịch.\n- Quý khách có thể đặt xe theo tour hoặc thuê xe riêng kèm tài xế đưa đón sân bay, tham quan.`;
-
-      return {
-        reply: vehicleText,
-        suggestions: ['Xem các tour có xe đưa đón', 'Tour Đà Lạt', 'Tour Tây Ninh']
-      };
-    } catch (err) {
-      console.error('Lỗi truy vấn xe:', err);
-    }
+  if (qLower.includes('thuê xe') || (qLower.includes('xe') && (qLower.includes('chỗ') || qLower.includes('bảng giá xe') || qLower.includes('thuê riêng')))) {
+    return {
+      reply: `Dạ hiện tại TravelVN **tập trung cung cấp các Tour du lịch trọn gói chất lượng cao và dịch vụ Thiết kế tour riêng theo yêu cầu** (toàn bộ tour đều đã bao gồm xe du lịch đời mới và tài xế đưa đón trọn tuyến an toàn).\n\nCông ty tạm thời **chưa triển khai dịch vụ cho thuê xe tự lái hoặc thuê xe riêng lẻ** ạ! 🌿\n\nQuý khách có thể:\n1. 🎯 Tham khảo các **Tour du lịch trọn gói** có xe đưa đón tận nơi.\n2. 🌟 Sử dụng tính năng **Thiết kế tour riêng theo yêu cầu** để chọn dòng xe (16, 29, 45 chỗ) phục vụ riêng cho đoàn gia đình/công ty.\n\nQuý khách có thể cho em biết địa điểm mình muốn đến để em gợi ý lịch trình tour phù hợp nhất nhé!`,
+      suggestions: ['Xem các tour đang mở bán', 'Tự thiết kế tour riêng', 'Chính sách hủy đổi vé']
+    };
   }
 
   // -------------------------------------------------------------
@@ -482,7 +458,7 @@ async function processAIQuery(question, conversationHistory = []) {
   if (qLower.includes('liên hệ') || qLower.includes('hotline') || qLower.includes('địa chỉ') || qLower.includes('công ty') || qLower.includes('số điện thoại') || qLower.includes('ở đâu')) {
     return {
       reply: `🏢 **THÔNG TIN LIÊN HỆ TRAVELVN:**\n\n- 🌐 **Thương hiệu:** TravelVN - Dịch vụ Lữ hành & Vận chuyển Du lịch\n- 📞 **Hotline hỗ trợ 24/7:** \`1900 6868\` - \`0908 123 456\`\n- 📧 **Email:** \`support@travelvn.com\` | \`booking@travelvn.com\`\n- 📍 **Trụ sở chính:** Tòa nhà TravelVN, TP. Hồ Chí Minh\n- ⏰ **Giờ làm việc:** 08:00 - 21:00 (Tất cả các ngày trong tuần, kể cả Lễ/Tết)\n\nNếu Quý khách cần gặp chuyên viên tư vấn trực tiếp, vui lòng bấm vào nút **Message tròn màu xanh** ngay bên dưới em nhé!`,
-      suggestions: ['Xem các tour đang hot', 'Chính sách hoàn tiền', 'Bảng giá thuê xe']
+      suggestions: ['Xem các tour đang hot', 'Chính sách hoàn tiền', 'Tư vấn trực tiếp']
     };
   }
 
@@ -647,11 +623,11 @@ async function processAIQuery(question, conversationHistory = []) {
     // TRƯỜNG HỢP B: ĐỊA DANH CHƯA CÓ TOUR CỐ ĐỊNH TRONG CSDL (VÍ DỤ: NGHỆ AN, THANH HÓA, HÀ TĨNH...)
     else {
       return {
-        reply: `Dạ hiện tại TravelVN **chưa có tour cố định mở bán sẵn cho tuyến ${destName}** ạ! 🌿\n\nTuy nhiên, TravelVN có thể hỗ trợ Quý khách theo 2 phương án rất thuận tiện:\n\n1. 🎯 **Thiết kế tour riêng theo yêu cầu đến ${destName}:**\n- Thiết kế lịch trình riêng theo sở thích của Quý khách hoặc đoàn công ty/gia đình.\n- Tự do chọn số ngày, điểm tham quan, tiêu chuẩn khách sạn (3★ - 5★) và thời gian xuất phát.\n- Báo giá dự toán minh bạch, nhanh chóng chỉ trong 5 phút.\n\n2. 🚌 **Dịch vụ Đội xe du lịch từ 4 đến 45 chỗ đời mới:**\n- Thuê xe riêng có tài xế chuyên nghiệp, lịch sự đưa đón đoàn đi ${destName} trọn gói an toàn.\n\nQuý khách có thể cho em biết đoàn mình dự kiến đi bao nhiêu người và mấy ngày để chuyên viên TravelVN lên lịch trình và dự toán chi phí tốt nhất nhé!`,
+        reply: `Dạ hiện tại TravelVN **chưa có tour cố định mở bán sẵn cho tuyến ${destName}** ạ! 🌿\n\nTuy nhiên, TravelVN có thể hỗ trợ Quý khách theo phương án rất thuận tiện:\n\n🎯 **Thiết kế tour riêng theo yêu cầu đến ${destName}:**\n- Thiết kế lịch trình riêng theo sở thích của Quý khách hoặc đoàn công ty/gia đình.\n- Tự do chọn số ngày, điểm tham quan, tiêu chuẩn khách sạn (3★ - 5★) và thời gian xuất phát.\n- Báo giá dự toán minh bạch, nhanh chóng chỉ trong 5 phút.\n- Xe du lịch đời mới đưa đón tận nơi trọn gói theo đoàn.\n\nQuý khách có thể cho em biết đoàn mình dự kiến đi bao nhiêu người và mấy ngày để chuyên viên TravelVN lên lịch trình và dự toán chi phí tốt nhất nhé!`,
         suggestions: [
           `Thiết kế tour ${destName} riêng`,
-          `Thuê xe đi ${destName}`,
           'Xem các tour đang mở bán',
+          'Chính sách giá vé trẻ em',
           'Liên hệ tư vấn viên'
         ]
       };
@@ -756,7 +732,7 @@ async function processAIQuery(question, conversationHistory = []) {
 
         return {
           reply: tourText,
-          suggestions: ['Tour Đà Lạt', 'Tour Tây Ninh', 'Thuê xe du lịch', 'Chính sách giá trẻ em']
+          suggestions: ['Tour Đà Lạt', 'Tour Tây Ninh', 'Chính sách giá vé trẻ em', 'Chính sách hủy đổi vé']
         };
       }
     } catch (err) {
@@ -768,12 +744,12 @@ async function processAIQuery(question, conversationHistory = []) {
   // 14. TRƯỜNG HỢP CÂU HỎI TỰ DO / TƯ VẤN CHUNG
   // -------------------------------------------------------------
   return {
-    reply: `Dạ em đã ghi nhận câu hỏi của Quý khách: *"${qRaw}"*.\n\n🤖 Để em hỗ trợ Quý khách chính xác và nhanh nhất, Quý khách có thể cho em biết thêm:\n1. Quý khách đang quan tâm đến **địa điểm du lịch nào** (ví dụ: *Đà Lạt, Phú Quốc, Nghệ An, Miền Tây, Tây Ninh...*)?\n2. Hoặc Quý khách cần thông tin về **Giá vé, Lịch khởi hành, Thuê xe du lịch hay Thiết kế tour riêng**?\n\nQuý khách cũng có thể chọn nhanh một trong các gợi ý bên dưới hoặc bấm nút **Message tròn màu xanh** để gặp tư vấn viên trực tiếp ạ!`,
+    reply: `Dạ em đã ghi nhận câu hỏi của Quý khách: *"${qRaw}"*.\n\n🤖 Để em hỗ trợ Quý khách chính xác và nhanh nhất, Quý khách có thể cho em biết thêm:\n1. Quý khách đang quan tâm đến **địa điểm du lịch nào** (ví dụ: *Đà Lạt, Phú Quốc, Nghệ An, Miền Tây, Tây Ninh...*)?\n2. Hoặc Quý khách cần thông tin về **Giá vé, Lịch khởi hành, Chính sách tour hay Thiết kế tour riêng**?\n\nQuý khách cũng có thể chọn nhanh một trong các gợi ý bên dưới hoặc bấm nút **Message tròn màu xanh** để gặp tư vấn viên trực tiếp ạ!`,
     suggestions: [
       'Tour Đà Lạt có những tour nào?',
       'Tour Tây Ninh 1 ngày',
       'Lịch khởi hành sắp tới',
-      'Bảng giá thuê xe du lịch',
+      'Chính sách giá vé trẻ em',
       'Chính sách hủy đổi vé'
     ]
   };

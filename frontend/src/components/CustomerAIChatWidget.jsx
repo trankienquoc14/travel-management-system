@@ -544,7 +544,7 @@ const CustomerAIChatWidget = () => {
                   Trợ lý du lịch AI
                 </h4>
                 <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#64748b', maxWidth: '300px', lineHeight: '1.5' }}>
-                  Xin chào! Em có thể giúp Quý khách tìm kiếm tour, lịch trình, giá vé hoặc dịch vụ thuê xe.
+                  Xin chào! Em có thể giúp Quý khách tìm kiếm tour, lịch trình, giá vé hoặc chính sách đặt tour.
                 </p>
 
                 <div style={{
@@ -558,7 +558,7 @@ const CustomerAIChatWidget = () => {
                     'Tour Phú Quốc giá bao nhiêu?',
                     'Có những tour Đà Lạt nào?',
                     'Lịch khởi hành tour sắp tới',
-                    'Bảng giá và các dòng xe du lịch',
+                    'Chính sách hủy và đổi lịch tour',
                     'Chính sách giá vé trẻ em'
                   ].map((sug, idx) => (
                     <button
@@ -768,7 +768,7 @@ const CustomerAIChatWidget = () => {
                 type="text"
                 value={inputQuestion}
                 onChange={e => setInputQuestion(e.target.value)}
-                placeholder="Hỏi về tour du lịch, giá vé, lịch trình, thuê xe..."
+                placeholder="Hỏi về tour du lịch, giá vé, lịch trình, chính sách..."
                 disabled={isTyping}
                 style={{
                   flex: 1,
