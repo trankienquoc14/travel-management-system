@@ -170,10 +170,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       });
       if (res.data.success && res.data.data) {
         setAttendanceStatus(res.data.data);
-        if (res.data.data.face_image_url) {
-          const imgUrl = getImageUrl(res.data.data.face_image_url);
-          setFaceSnapshot(imgUrl);
-        }
       }
     } catch (err) {
       console.error('Lỗi tải trạng thái chấm công cá nhân:', err);
@@ -1253,13 +1249,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                       : '🔍 ĐANG QUÉT MẶT...'}
             </div>
           </div>
-        ) : faceSnapshot ? (
-          <div style={{ position: 'relative', width: '160px', height: '160px', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 0 20px rgba(16,185,129,0.4)' }}>
-            <img src={faceSnapshot} alt="Face Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#10b981', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '4px 0' }}>
-              ✅ ĐÃ CHỤP ẢNH XÁC THỰC
-            </div>
-          </div>
         ) : (
           <div style={{ padding: '24px 10px', color: '#94a3b8' }}>
             <div style={{ fontSize: '44px', marginBottom: '10px' }}>👁️‍🗨️</div>
@@ -1540,6 +1529,16 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               📍 {attendanceStatus.location_address.slice(0, 50)}...
             </div>
           )}
+          {attendanceStatus?.face_image_url && (
+            <a 
+              href={getImageUrl(attendanceStatus.face_image_url)} 
+              target="_blank" 
+              rel="noreferrer"
+              style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700', textDecoration: 'underline', marginTop: '4px', display: 'inline-block' }}
+            >
+              👁️ Xem ảnh vào ca ↗
+            </a>
+          )}
         </div>
 
         <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
@@ -1551,6 +1550,16 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             <div style={{ fontSize: '10.5px', color: '#475569', marginTop: '4px', lineHeight: '1.3' }}>
               🏁 {(attendanceStatus.checkout_location_address || attendanceStatus.location_address).slice(0, 50)}...
             </div>
+          )}
+          {attendanceStatus?.checkout_face_image_url && (
+            <a 
+              href={getImageUrl(attendanceStatus.checkout_face_image_url)} 
+              target="_blank" 
+              rel="noreferrer"
+              style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: '700', textDecoration: 'underline', marginTop: '4px', display: 'inline-block' }}
+            >
+              👁️ Xem ảnh ra ca ↗
+            </a>
           )}
         </div>
       </div>
