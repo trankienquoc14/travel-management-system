@@ -141,6 +141,52 @@ function validateFaceCompleteness(positions, box) {
 }
 
 /**
+ * Phân tích tư thế khuôn mặt và độ mở mắt (Liveness & Head Pose) cho quy trình eKYC
+ * @param {Array<{x, y}>} positions 68 điểm landmarks
+ * @param {Object} box Bounding box
+ * @returns {Object} { valid, isFront, isTurnLeft, isTurnRight, isTiltedUp, isTiltedDown, isBlinking, isEyesOpen, ear, yawRatio }
+ */
+export function analyzeFacePoseAndLiveness(positions, box) {
+  if (!positions || positions.length < 68) {
+    return { valid: false, message: 'Chưa đủ điểm mốc khuôn mặt' };
+  }
+
+  const leftEyeOuter = positions[36];
+  const rightEyeOuter = positions[45];
+  const noseTip = positions[30];
+  const noseBridge = positions[27];
+  const chin = positions[8];
+
+  const dLeftEyeToNose = Math.abs(noseTip.x - leftEyeOuter.x);
+  const dNoseToRightEye = Math.abs(rightEyeOuter.x - noseTip.x);
+  const yawRatio = dLeftEyeToNose / Math.max(1, dNoseToRightEye);
+
+  const dTop = Math.abs(noseTip.y - noseBridge.y);
+  const dBottom = Math.abs(chin.y - noseTip.y);
+  const pitchRatio = dBottom / Math.max(1, dTop);
+
+  const leftEyePts = positions.slice(36, 42);
+  const rightEyePts = positions.slice(42, 48);
+  const earLeft = calculateEyeAspectRatio(leftEyePts);
+  const earRight = calculateEyeAspectRatio(rightEyePts);
+  const ear = parseFloat(((earLeft + earRight) / 2.0).toFixed(3));
+
+  return {
+    valid: true,
+    ear,
+    yawRatio: parseFloat(yawRatio.toFixed(2)),
+    pitchRatio: parseFloat(pitchRatio.toFixed(2)),
+    isFront: yawRatio >= 0.70 && yawRatio <= 1.40 && pitchRatio >= 1.15 && pitchRatio <= 2.2,
+    isTurnLeft: yawRatio < 0.58,
+    isTurnRight: yawRatio > 1.75,
+    isTiltedUp: pitchRatio < 1.05,
+    isTiltedDown: pitchRatio > 2.35,
+    isBlinking: ear < 0.18,
+    isEyesOpen: ear >= 0.24
+  };
+}
+
+/**
  * 1. PHÁT HIỆN VÀ PHÂN TÍCH KHUÔN MẶT TRÊN CANVAS (FACE DETECTION & LANDMARKS)
  * @param {HTMLCanvasElement|HTMLVideoElement|HTMLImageElement} input 
  * @returns {Promise<Object>} Kết quả phát hiện kèm box, landmarks, descriptor

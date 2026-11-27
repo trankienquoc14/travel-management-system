@@ -5,7 +5,8 @@ import {
   detectFaceInCanvas, 
   extractFaceDescriptor, 
   compareFaceDescriptors, 
-  loadFaceDescriptorFromImage 
+  loadFaceDescriptorFromImage,
+  analyzeFacePoseAndLiveness
 } from '../utils/faceIdEngine';
 import soundService from '../utils/soundService';
 import { getBaseApiUrl, getImageUrl } from '../utils/imageUrl';
@@ -42,6 +43,25 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
+
+  // Trạng thái eKYC Đăng ký khuôn mặt đa góc & Liveness (Chớp mắt, Quay trái, Quay phải)
+  const [ekycStep, setEkycStep] = useState(1); // 1: FRONT, 2: BLINK, 3: TURN_LEFT, 4: TURN_RIGHT, 5: DONE
+  const [ekycMsg, setEkycMsg] = useState('1/4: Vui lòng nhìn thẳng vào giữa khung hình 🎯');
+  const [ekycPassedSteps, setEkycPassedSteps] = useState({
+    front: false,
+    blink: false,
+    turnLeft: false,
+    turnRight: false
+  });
+  const ekycStepRef = useRef(1);
+  const regScanIntervalRef = useRef(null);
+  const frontSnapshotRef = useRef(null);
+  const frontDescriptorRef = useRef(null);
+  const hasEyeClosedRef = useRef(false);
+  const consecutiveFrontCountRef = useRef(0);
+  const consecutiveLeftCountRef = useRef(0);
+  const consecutiveRightCountRef = useRef(0);
+  const isRegScanningRef = useRef(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -224,6 +244,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     setCameraError('');
     setAlertMsg({ type: '', text: '' });
     hasAutoTriggeredRef.current = false;
+    // Tự động làm mới vị trí GPS tức thì khi bật camera ra ca/vào ca
+    getGPSLocation();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
@@ -487,8 +509,141 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   };
 
   // ==========================================
-  // XỬ LÝ ĐĂNG KÝ KHUÔN MẶT MẪU FACEID VÀO HỒ SƠ
+  // XỬ LÝ ĐĂNG KÝ KHUÔN MẶT MẪU FACEID VÀO HỒ SƠ (CHUẨN eKYC 4 BƯỚC)
   // ==========================================
+  const startRegScanLoop = () => {
+    stopRegScanLoop();
+    ekycStepRef.current = 1;
+    setEkycStep(1);
+    setEkycMsg('1/4: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
+    setEkycPassedSteps({ front: false, blink: false, turnLeft: false, turnRight: false });
+    consecutiveFrontCountRef.current = 0;
+    consecutiveLeftCountRef.current = 0;
+    consecutiveRightCountRef.current = 0;
+    hasEyeClosedRef.current = false;
+    frontSnapshotRef.current = null;
+    frontDescriptorRef.current = null;
+
+    regScanIntervalRef.current = setInterval(async () => {
+      if (isRegScanningRef.current || !regVideoRef.current) return;
+      isRegScanningRef.current = true;
+      try {
+        await runRegEkycStep();
+      } catch (e) {
+        console.warn("Lỗi eKYC frame:", e);
+      } finally {
+        isRegScanningRef.current = false;
+      }
+    }, 180);
+  };
+
+  const stopRegScanLoop = () => {
+    if (regScanIntervalRef.current) {
+      clearInterval(regScanIntervalRef.current);
+      regScanIntervalRef.current = null;
+    }
+  };
+
+  const runRegEkycStep = async () => {
+    if (!regVideoRef.current) return;
+    const video = regVideoRef.current;
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    if (w === 0 || h === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.restore();
+
+    const detection = await detectFaceInCanvas(canvas);
+    if (!detection.detected) {
+      setEkycMsg(detection.message || '⚠️ Vui lòng giữ khuôn mặt rõ trong khung tròn');
+      return;
+    }
+
+    const pose = analyzeFacePoseAndLiveness(detection.landmarks, detection.box);
+    if (!pose.valid) return;
+
+    // STEP 1: NHÌN THẲNG
+    if (ekycStepRef.current === 1) {
+      if (pose.isFront) {
+        consecutiveFrontCountRef.current += 1;
+        setEkycMsg('✅ Đang cố định góc thẳng... Giữ yên khuôn mặt');
+        if (consecutiveFrontCountRef.current >= 3) {
+          frontSnapshotRef.current = canvas.toDataURL('image/jpeg', 0.92);
+          frontDescriptorRef.current = detection.descriptor;
+          try { soundService.playSuccess(); } catch (s) {}
+          setEkycPassedSteps(prev => ({ ...prev, front: true }));
+          ekycStepRef.current = 2;
+          setEkycStep(2);
+          hasEyeClosedRef.current = false;
+          setEkycMsg('2/4: Vui lòng CHỚP MẮT tự nhiên 1 lần 👁️');
+        }
+      } else {
+        consecutiveFrontCountRef.current = 0;
+        setEkycMsg('1/4: Vui lòng nhìn thẳng vào giữa khung tròn 🎯');
+      }
+    }
+    // STEP 2: CHỚP MẮT (LIVENESS)
+    else if (ekycStepRef.current === 2) {
+      if (pose.isBlinking) {
+        hasEyeClosedRef.current = true;
+        setEkycMsg('👁️ Đã nhắm mắt... Giờ hãy mở mắt ra');
+      } else if (hasEyeClosedRef.current && pose.isEyesOpen) {
+        try { soundService.playSuccess(); } catch (s) {}
+        setEkycPassedSteps(prev => ({ ...prev, blink: true }));
+        ekycStepRef.current = 3;
+        setEkycStep(3);
+        setEkycMsg('3/4: Từ từ quay nhẹ mặt sang TRÁI 👈');
+      } else {
+        setEkycMsg('2/4: Vui lòng CHỚP MẮT tự nhiên 1 lần 👁️');
+      }
+    }
+    // STEP 3: QUAY TRÁI
+    else if (ekycStepRef.current === 3) {
+      if (pose.isTurnLeft) {
+        consecutiveLeftCountRef.current += 1;
+        setEkycMsg('👈 Rất tốt! Đang quét góc mặt trái...');
+        if (consecutiveLeftCountRef.current >= 2) {
+          try { soundService.playSuccess(); } catch (s) {}
+          setEkycPassedSteps(prev => ({ ...prev, turnLeft: true }));
+          ekycStepRef.current = 4;
+          setEkycStep(4);
+          setEkycMsg('4/4: Từ từ quay nhẹ mặt sang PHẢI 👉');
+        }
+      } else {
+        consecutiveLeftCountRef.current = 0;
+        setEkycMsg('3/4: Từ từ quay nhẹ mặt sang TRÁI 👈');
+      }
+    }
+    // STEP 4: QUAY PHẢI
+    else if (ekycStepRef.current === 4) {
+      if (pose.isTurnRight) {
+        consecutiveRightCountRef.current += 1;
+        setEkycMsg('👉 Rất tốt! Đang quét góc mặt phải...');
+        if (consecutiveRightCountRef.current >= 2) {
+          try { soundService.playSuccess(); } catch (s) {}
+          setEkycPassedSteps(prev => ({ ...prev, turnRight: true }));
+          ekycStepRef.current = 5;
+          setEkycStep(5);
+          setEkycMsg('🎉 Xác thực sinh trắc học 3D hoàn tất! Đang lưu hồ sơ...');
+          stopRegScanLoop();
+          const finalPhoto = frontSnapshotRef.current || canvas.toDataURL('image/jpeg', 0.92);
+          await handleSaveFaceData(finalPhoto, detection.box);
+        }
+      } else {
+        consecutiveRightCountRef.current = 0;
+        setEkycMsg('4/4: Từ từ quay nhẹ mặt sang PHẢI 👉');
+      }
+    }
+  };
+
   const startRegCamera = async () => {
     setRegError('');
     setRegSuccess('');
@@ -501,13 +656,15 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         regVideoRef.current.srcObject = stream;
         regVideoRef.current.play().catch(e => console.warn(e));
       }
+      setTimeout(() => startRegScanLoop(), 400);
     } catch (err) {
       console.error("Lỗi bật camera đăng ký:", err);
-      setRegError('Không thể mở camera. Bạn có thể sử dụng nút "Chọn ảnh từ máy tính" bên dưới để tải ảnh chân dung!');
+      setRegError('Không thể mở camera. Vui lòng cấp quyền camera trên trình duyệt để đăng ký FaceID!');
     }
   };
 
   const stopRegCamera = () => {
+    stopRegScanLoop();
     if (regStreamRef.current) {
       regStreamRef.current.getTracks().forEach(t => t.stop());
       regStreamRef.current = null;
@@ -579,12 +736,12 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           localStorage.setItem('user', JSON.stringify({ ...stored, avatar: avatarUrl }));
         } catch (e) {}
 
-        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID thành công!');
+        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID (Chuẩn eKYC 3D) thành công!');
         stopRegCamera();
         setTimeout(() => {
           setShowRegisterModal(false);
           setRegSuccess('');
-        }, 1200);
+        }, 1500);
       }
     } catch (err) {
       console.error('Lỗi đăng ký khuôn mặt:', err);
@@ -595,7 +752,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
-  // Xử lý chụp từ Camera đăng ký khuôn mặt chuẩn AI
+  // Xử lý chụp thủ công từ Camera nếu người dùng muốn chụp trực tiếp
   const captureAndSaveFaceProfile = async () => {
     if (!regVideoRef.current) return;
     setRegError('');
@@ -620,7 +777,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         return;
       }
 
-      const photoData = canvas.toDataURL('image/jpeg', 0.90);
+      stopRegScanLoop();
+      const photoData = canvas.toDataURL('image/jpeg', 0.92);
       await handleSaveFaceData(photoData, detection.box);
     } catch (err) {
       setRegError(err.message || 'Lỗi chụp ảnh khuôn mặt');
@@ -1245,12 +1403,38 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               ✕
             </button>
 
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <span>📸</span> Đăng Ký Khuôn Mặt FaceID
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '19px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span>🛡️</span> Đăng Ký Sinh Trắc Học FaceID (eKYC 4 Bước)
             </h3>
-            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13px' }}>
-              Chụp ảnh trực tiếp hoặc chọn ảnh chân dung rõ mặt để lưu làm khuôn mặt mẫu đối soát khi chấm công.
+            <p style={{ margin: '0 0 14px 0', color: '#64748b', fontSize: '12px' }}>
+              Hệ thống AI tự động dẫn đường xác thực người thật: Nhìn thẳng ➔ Chớp mắt ➔ Quay trái ➔ Quay phải.
             </p>
+
+            {/* THANH TIẾN TRÌNH 4 BƯỚC eKYC */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '12px' }}>
+              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.front ? '#dcfce7' : ekycStep === 1 ? '#e0f2fe' : '#f1f5f9', color: ekycPassedSteps.front ? '#166534' : ekycStep === 1 ? '#0284c7' : '#94a3b8', border: ekycStep === 1 ? '1px solid #0284c7' : '1px solid transparent' }}>
+                {ekycPassedSteps.front ? '✅' : '1.'} Nhìn thẳng
+              </div>
+              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.blink ? '#dcfce7' : ekycStep === 2 ? '#fef3c7' : '#f1f5f9', color: ekycPassedSteps.blink ? '#166534' : ekycStep === 2 ? '#d97706' : '#94a3b8', border: ekycStep === 2 ? '1px solid #d97706' : '1px solid transparent' }}>
+                {ekycPassedSteps.blink ? '✅' : '2.'} Chớp mắt 👁️
+              </div>
+              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.turnLeft ? '#dcfce7' : ekycStep === 3 ? '#ede9fe' : '#f1f5f9', color: ekycPassedSteps.turnLeft ? '#166534' : ekycStep === 3 ? '#7c3aed' : '#94a3b8', border: ekycStep === 3 ? '1px solid #7c3aed' : '1px solid transparent' }}>
+                {ekycPassedSteps.turnLeft ? '✅' : '3.'} Quay trái 👈
+              </div>
+              <div style={{ padding: '6px 4px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', background: ekycPassedSteps.turnRight ? '#dcfce7' : ekycStep === 4 ? '#ede9fe' : '#f1f5f9', color: ekycPassedSteps.turnRight ? '#166534' : ekycStep === 4 ? '#7c3aed' : '#94a3b8', border: ekycStep === 4 ? '1px solid #7c3aed' : '1px solid transparent' }}>
+                {ekycPassedSteps.turnRight ? '✅' : '4.'} Quay phải 👉
+              </div>
+            </div>
+
+            {/* THANH PROGRESS NẰM NGANG */}
+            <div style={{ width: '100%', height: '5px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden', marginBottom: '14px' }}>
+              <div style={{
+                height: '100%',
+                width: ekycStep === 5 ? '100%' : ekycStep === 4 ? '75%' : ekycStep === 3 ? '50%' : ekycStep === 2 ? '25%' : '10%',
+                background: ekycStep === 5 ? '#10b981' : 'linear-gradient(90deg, #0284c7 0%, #10b981 100%)',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
 
             {regError && (
               <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', fontSize: '12px', fontWeight: '700', marginBottom: '14px', textAlign: 'left', border: '1px solid #fecaca' }}>
@@ -1264,17 +1448,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               </div>
             )}
 
-            {/* KHUNG CAMERA ĐĂNG KÝ */}
+            {/* KHUNG CAMERA ĐĂNG KÝ VỚI VIỀN PHẢN HỒI REALTIME */}
             <div style={{
               width: '230px',
               height: '230px',
-              margin: '0 auto 18px auto',
+              margin: '0 auto 14px auto',
               borderRadius: '50%',
               overflow: 'hidden',
-              border: '4px solid #0284c7',
-              boxShadow: '0 0 25px rgba(2, 132, 199, 0.4)',
+              border: `4px solid ${ekycStep === 5 ? '#10b981' : ekycStep === 4 ? '#ec4899' : ekycStep === 3 ? '#8b5cf6' : ekycStep === 2 ? '#f59e0b' : '#0284c7'}`,
+              boxShadow: `0 0 25px ${ekycStep === 5 ? 'rgba(16, 185, 129, 0.45)' : 'rgba(2, 132, 199, 0.4)'}`,
               position: 'relative',
-              background: '#0f172a'
+              background: '#0f172a',
+              transition: 'border-color 0.3s ease, box-shadow 0.3s ease'
             }}>
               <video 
                 ref={regVideoRef} 
@@ -1296,20 +1481,39 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               }} />
             </div>
 
+            {/* BANNER THÔNG BÁO CHỈ DẪN TRỰC TIẾP */}
+            <div style={{
+              background: ekycStep === 5 ? '#f0fdf4' : ekycStep === 2 ? '#fefce8' : ekycStep >= 3 ? '#faf5ff' : '#f0f9ff',
+              color: ekycStep === 5 ? '#166534' : ekycStep === 2 ? '#854d0e' : ekycStep >= 3 ? '#6b21a8' : '#0369a1',
+              border: '1px solid',
+              borderColor: ekycStep === 5 ? '#bbf7d0' : ekycStep === 2 ? '#fef08a' : ekycStep >= 3 ? '#e9d5ff' : '#bae6fd',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '800',
+              marginBottom: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}>
+              {ekycMsg}
+            </div>
+
             {/* CÁC NÚT THAO TÁC */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
                 onClick={captureAndSaveFaceProfile}
                 disabled={regLoading}
                 style={{
                   width: '100%',
-                  padding: '14px',
+                  padding: '12px',
                   borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  background: regLoading ? '#94a3b8' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                   border: 'none',
                   color: '#ffffff',
                   fontWeight: '800',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   cursor: regLoading ? 'wait' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1318,8 +1522,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                   boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
                 }}
               >
-                <span>{regLoading ? '⏳' : '📸'}</span>
-                <span>{regLoading ? 'Đang trích xuất AI & lưu hồ sơ...' : 'Chụp Trực Tiếp Để Đăng Ký FaceID'}</span>
+                <span>{regLoading ? '⏳' : '⚡'}</span>
+                <span>{regLoading ? 'Đang trích xuất AI & lưu hồ sơ...' : 'Chụp Trực Tiếp (Bỏ qua eKYC)'}</span>
               </button>
 
               <div style={{
@@ -1327,15 +1531,15 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                 color: '#64748b',
                 textAlign: 'center',
                 lineHeight: '1.4',
-                padding: '4px 8px'
+                padding: '2px 8px'
               }}>
-                🔒 <strong>Chuẩn bảo mật sinh trắc học:</strong> Bắt buộc chụp trực tiếp từ Camera để đảm bảo xác thực chính chủ và chống mạo danh ảnh hồ sơ.
+                🔒 <strong>AI Tự Động:</strong> Hệ thống sẽ tự động lưu khi bạn hoàn thành 4 bước quay mặt và chớp mắt.
               </div>
 
               <button
                 onClick={() => { stopRegCamera(); setShowRegisterModal(false); }}
                 style={{
-                  padding: '10px',
+                  padding: '8px',
                   borderRadius: '10px',
                   background: 'none',
                   border: 'none',
