@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { 
+  initFaceModels,
   detectFaceInCanvas, 
   extractFaceDescriptor, 
   compareFaceDescriptors, 
@@ -49,6 +50,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const fileInputRef = useRef(null);
 
   // Refs hỗ trợ làm mịn điểm số và khóa trạng thái xác thực chống giật lag
+  const isScanningRef = useRef(false);
   const smoothedScoreRef = useRef(0);
   const verifiedLockUntilRef = useRef(0);
   const bestConfRef = useRef(0);
@@ -82,8 +84,9 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   }, [cameraActive]);
 
-  // Giải phóng camera khi unmount
+  // Khởi động trước mô hình AI sinh trắc học và giải phóng camera khi unmount
   useEffect(() => {
+    initFaceModels().catch(err => console.warn("Lỗi nạp trước mô hình AI FaceID:", err));
     return () => {
       stopCamera();
       stopLiveScanningLoop();
@@ -255,12 +258,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     hasAutoTriggeredRef.current = false;
   };
 
-  // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG (220ms/lần siêu mượt)
+  // VÒNG LẶP QUÉT VÀ ĐỐI SOÁT FACEID LIÊN TỤC KHI CAMERA HOẠT ĐỘNG (200ms/lần siêu mượt qua AI)
   const startLiveScanningLoop = () => {
     stopLiveScanningLoop();
-    scanIntervalRef.current = setInterval(() => {
-      runFaceVerificationStep();
-    }, 220);
+    scanIntervalRef.current = setInterval(async () => {
+      if (isScanningRef.current) return;
+      isScanningRef.current = true;
+      try {
+        await runFaceVerificationStep();
+      } finally {
+        isScanningRef.current = false;
+      }
+    }, 200);
   };
 
   const stopLiveScanningLoop = () => {
@@ -270,8 +279,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
-  // BƯỚC ĐỐI SOÁT SINH TRẮC HỌC TỪNG KHUNG HÌNH (FACEID SCAN STEP KÈM BỘ LỌC CHỐNG NHẢY ĐIỂM)
-  const runFaceVerificationStep = () => {
+  // BƯỚC ĐỐI SOÁT SINH TRẮC HỌC TỪNG KHUNG HÌNH (FACEID SCAN STEP QUA DEEP LEARNING & LANDMARKS)
+  const runFaceVerificationStep = async () => {
     if (!videoRef.current || !canvasRef.current || !cameraActive) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -290,20 +299,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     ctx.drawImage(video, 0, 0, w, h);
     ctx.restore();
 
-    // 1. Phát hiện khuôn mặt trong khung hình
-    const detection = detectFaceInCanvas(canvas);
+    // 1. Phát hiện khuôn mặt bằng AI Deep Learning
+    const detection = await detectFaceInCanvas(canvas);
 
     if (!detection.detected) {
-      // Nếu đã từng xác thực thành công trong 4 giây gần nhất, không đột ngột tắt báo lỗi do chớp mắt/nhấp nháy
-      if (Date.now() < verifiedLockUntilRef.current) {
-        return;
-      }
+      // Khi không có mặt hoặc bị che khuất -> LẬP TỨC hủy trạng thái xác thực
+      verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
       smoothedScoreRef.current = 0;
       setScanStatus({
-        status: 'NO_FACE',
+        status: detection.reason === 'FACE_OCCLUDED' ? 'OCCLUDED' : 'NO_FACE',
         message: detection.message || '⚠️ Không phát hiện khuôn mặt trước camera',
-        box: null,
+        box: detection.box || null,
         metrics: null
       });
       return;
@@ -311,6 +318,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
     // 2. Kiểm tra hồ sơ nhân viên đã có khuôn mặt mẫu (FaceID profile) chưa
     if (!profileDescriptor) {
+      verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
       setScanStatus({
         status: 'NO_PROFILE',
@@ -321,27 +329,23 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       return;
     }
 
-    // 3. Trích xuất đặc trưng sinh trắc học từ khuôn mặt camera trực tiếp
-    const liveDescriptor = extractFaceDescriptor(canvas, detection.box);
-
-    // 4. Đối soát sinh trắc học với ảnh khuôn mặt gốc đã đăng ký
+    // 3. Trích xuất đặc trưng sinh trắc học và đối soát với ảnh gốc
+    const liveDescriptor = detection.descriptor;
     const matchResult = compareFaceDescriptors(liveDescriptor, profileDescriptor);
     const rawConf = matchResult.confidence;
 
-    // 🌟 BỘ LỌC LÀM MỊN ĐIỂM SỐ (EXPONENTIAL MOVING AVERAGE - EMA) ĐỂ CHỐNG NHẢY SỐ LIÊN TỤC
+    // 🌟 BỘ LỌC LÀM MỊN ĐIỂM SỐ EMA
     const prevSmoothed = smoothedScoreRef.current;
-    const smoothed = prevSmoothed > 0 ? (prevSmoothed * 0.70 + rawConf * 0.30) : rawConf;
+    const smoothed = prevSmoothed > 0 ? (prevSmoothed * 0.65 + rawConf * 0.35) : rawConf;
     smoothedScoreRef.current = smoothed;
     const finalScore = parseFloat(smoothed.toFixed(1));
 
-    const isMatchNow = matchResult.matched || finalScore >= 65.0;
-    const isLockedVerified = Date.now() < verifiedLockUntilRef.current;
+    const isMatchNow = matchResult.matched;
     const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
     if (isMatchNow) {
       mismatchCountRef.current = 0;
-      // 🔒 KHÓA TRẠNG THÁI XÁC THỰC THÀNH CÔNG TRONG 8 GIÂY (LATCH LOCK)
-      verifiedLockUntilRef.current = Date.now() + 8000;
+      verifiedLockUntilRef.current = Date.now() + 1500;
       setFaceVerified(true);
       setConfidenceScore(finalScore);
 
@@ -353,13 +357,13 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
       setScanStatus({
         status: 'MATCHED',
-        message: `✅ KHUÔN MẶT CHÍNH CHỦ: Đã khớp ${finalScore}% (Đạt chuẩn - Sẵn sàng điểm danh)`,
+        message: `✅ KHUÔN MẶT CHÍNH CHỦ: Đã khớp ${finalScore}% (Đạt chuẩn AI - Sẵn sàng điểm danh)`,
         box: detection.box,
         metrics: matchResult.metrics,
         confidence: finalScore
       });
 
-      // 🚀 TỰ ĐỘNG CHẤM CÔNG NGAY KHI KHỚP MẶT (Đạt từ 65% là tự động ghi nhận ngay, không bắt đợi 100%)
+      // 🚀 TỰ ĐỘNG CHẤM CÔNG NGAY KHI KHỚP MẶT
       if (!isCheckedOut && !hasAutoTriggeredRef.current && !actionLoading) {
         hasAutoTriggeredRef.current = true;
         setScanStatus({
@@ -375,28 +379,16 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       }
     } else {
       mismatchCountRef.current += 1;
-
-      // Nếu đang trong thời gian khóa nhận diện và chỉ mới trượt vài frame (nhấp nháy ánh sáng/chớp mắt): VẪN GIỮ NGUYÊN TRẠNG THÁI KHỚP
-      if (isLockedVerified && mismatchCountRef.current < 4) {
-        setConfidenceScore(finalScore);
-        setScanStatus(prev => ({
-          ...prev,
-          confidence: finalScore,
-          box: detection.box
-        }));
-      } else {
-        // Thực sự không khớp kéo dài
-        verifiedLockUntilRef.current = 0;
-        setFaceVerified(false);
-        setConfidenceScore(finalScore);
-        setScanStatus({
-          status: 'MISMATCHED',
-          message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${finalScore}% (Yêu cầu >= 65%)`,
-          box: detection.box,
-          metrics: matchResult.metrics,
-          confidence: finalScore
-        });
-      }
+      verifiedLockUntilRef.current = 0;
+      setFaceVerified(false);
+      setConfidenceScore(finalScore);
+      setScanStatus({
+        status: 'MISMATCHED',
+        message: `❌ KHUÔN MẶT KHÔNG KHỚP: Chỉ đạt ${finalScore}% (Yêu cầu >= 70% chính chủ)`,
+        box: detection.box,
+        metrics: matchResult.metrics,
+        confidence: finalScore
+      });
     }
   };
 
@@ -590,7 +582,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
-  // Xử lý chụp từ Camera đăng ký
+  // Xử lý chụp từ Camera đăng ký khuôn mặt chuẩn AI
   const captureAndSaveFaceProfile = async () => {
     if (!regVideoRef.current) return;
     setRegError('');
@@ -608,14 +600,14 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      // Kiểm tra có khuôn mặt người trước khi đăng ký
-      const detection = detectFaceInCanvas(canvas);
+      // Kiểm tra có khuôn mặt người đạt chuẩn AI (đủ ngũ quan, không che mặt)
+      const detection = await detectFaceInCanvas(canvas);
       if (!detection.detected) {
-        setRegError('⚠️ ' + (detection.message || 'Không phát hiện khuôn mặt rõ ràng để lưu hồ sơ! Vui lòng nhìn thẳng vào camera.'));
+        setRegError('⚠️ ' + (detection.message || 'Không phát hiện khuôn mặt đạt chuẩn để lưu hồ sơ! Vui lòng nhìn thẳng vào camera.'));
         return;
       }
 
-      const photoData = canvas.toDataURL('image/jpeg', 0.85);
+      const photoData = canvas.toDataURL('image/jpeg', 0.90);
       await handleSaveFaceData(photoData, detection.box);
     } catch (err) {
       setRegError(err.message || 'Lỗi chụp ảnh khuôn mặt');
@@ -859,14 +851,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             overflow: 'hidden',
             border: faceVerified 
               ? '4px solid #10b981' 
-              : scanStatus.status === 'MISMATCHED' 
-                ? '4px solid #ef4444' 
-                : '4px solid #38bdf8',
+              : scanStatus.status === 'OCCLUDED'
+                ? '4px solid #f59e0b'
+                : scanStatus.status === 'MISMATCHED' 
+                  ? '4px solid #ef4444' 
+                  : '4px solid #38bdf8',
             boxShadow: faceVerified 
               ? '0 0 30px rgba(16, 185, 129, 0.6)' 
-              : scanStatus.status === 'MISMATCHED' 
-                ? '0 0 30px rgba(239, 68, 68, 0.6)' 
-                : '0 0 25px rgba(56, 189, 248, 0.4)',
+              : scanStatus.status === 'OCCLUDED'
+                ? '0 0 30px rgba(245, 158, 11, 0.6)'
+                : scanStatus.status === 'MISMATCHED' 
+                  ? '0 0 30px rgba(239, 68, 68, 0.6)' 
+                  : '0 0 25px rgba(56, 189, 248, 0.4)',
             transition: 'border 0.3s ease, box-shadow 0.3s ease'
           }}>
             <video 
@@ -885,7 +881,13 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               transform: 'translate(-50%, -50%)',
               width: '160px',
               height: '180px',
-              border: faceVerified ? '2px solid #10b981' : scanStatus.status === 'MISMATCHED' ? '2px dashed #ef4444' : '2px dashed #38bdf8',
+              border: faceVerified 
+                ? '2px solid #10b981' 
+                : scanStatus.status === 'OCCLUDED'
+                  ? '2px dashed #f59e0b'
+                  : scanStatus.status === 'MISMATCHED' 
+                    ? '2px dashed #ef4444' 
+                    : '2px dashed #38bdf8',
               borderRadius: '50%',
               pointerEvents: 'none'
             }} />
@@ -899,8 +901,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               height: '3px',
               background: faceVerified 
                 ? 'linear-gradient(90deg, transparent, #10b981, transparent)' 
-                : 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
-              boxShadow: '0 0 10px #38bdf8',
+                : scanStatus.status === 'OCCLUDED'
+                  ? 'linear-gradient(90deg, transparent, #f59e0b, transparent)'
+                  : 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
+              boxShadow: scanStatus.status === 'OCCLUDED' ? '0 0 10px #f59e0b' : '0 0 10px #38bdf8',
               animation: 'scanLine 2s linear infinite'
             }} />
 
@@ -912,9 +916,11 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               right: 0,
               background: faceVerified 
                 ? 'rgba(16, 185, 129, 0.95)' 
-                : scanStatus.status === 'MISMATCHED' 
-                  ? 'rgba(239, 68, 68, 0.95)' 
-                  : 'rgba(15, 23, 42, 0.85)',
+                : scanStatus.status === 'OCCLUDED'
+                  ? 'rgba(245, 158, 11, 0.95)'
+                  : scanStatus.status === 'MISMATCHED' 
+                    ? 'rgba(239, 68, 68, 0.95)' 
+                    : 'rgba(15, 23, 42, 0.85)',
               color: '#ffffff',
               fontSize: '11px',
               fontWeight: '800',
@@ -923,11 +929,13 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             }}>
               {faceVerified 
                 ? `🎯 ĐÃ KHỚP: ${confidenceScore.toFixed(1)}%` 
-                : scanStatus.status === 'MISMATCHED' 
-                  ? `❌ KHÔNG KHỚP: ${confidenceScore.toFixed(1)}%` 
-                  : scanStatus.status === 'NO_PROFILE'
-                    ? '⚠️ CHƯA ĐĂNG KÝ FACEID'
-                    : '🔍 ĐANG QUÉT MẶT...'}
+                : scanStatus.status === 'OCCLUDED'
+                  ? '⚠️ MẶT ĐANG BỊ CHE'
+                  : scanStatus.status === 'MISMATCHED' 
+                    ? `❌ KHÔNG KHỚP: ${confidenceScore.toFixed(1)}%` 
+                    : scanStatus.status === 'NO_PROFILE'
+                      ? '⚠️ CHƯA ĐĂNG KÝ FACEID'
+                      : '🔍 ĐANG QUÉT MẶT...'}
             </div>
           </div>
         ) : faceSnapshot ? (
@@ -954,10 +962,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           fontWeight: '700',
           background: faceVerified 
             ? 'rgba(16, 185, 129, 0.15)' 
-            : scanStatus.status === 'MISMATCHED' 
-              ? 'rgba(239, 68, 68, 0.15)' 
-              : 'rgba(255, 255, 255, 0.05)',
-          color: faceVerified ? '#34d399' : scanStatus.status === 'MISMATCHED' ? '#f87171' : '#94a3b8'
+            : scanStatus.status === 'OCCLUDED'
+              ? 'rgba(245, 158, 11, 0.15)'
+              : scanStatus.status === 'MISMATCHED' 
+                ? 'rgba(239, 68, 68, 0.15)' 
+                : 'rgba(255, 255, 255, 0.05)',
+          color: faceVerified 
+            ? '#34d399' 
+            : scanStatus.status === 'OCCLUDED'
+              ? '#fbbf24'
+              : scanStatus.status === 'MISMATCHED' 
+                ? '#f87171' 
+                : '#94a3b8'
         }}>
           {scanStatus.message}
         </div>
@@ -1267,64 +1283,40 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               }} />
             </div>
 
-            {/* INPUT FILE ẨN CHO TÍNH NĂNG TẢI ẢNH */}
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              accept="image/*" 
-              onChange={handleFileUpload} 
-              style={{ display: 'none' }} 
-            />
-
             {/* CÁC NÚT THAO TÁC */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={captureAndSaveFaceProfile}
-                  disabled={regLoading}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                    border: 'none',
-                    color: '#ffffff',
-                    fontWeight: '800',
-                    fontSize: '13px',
-                    cursor: regLoading ? 'wait' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span>{regLoading ? '⏳' : '📸'}</span>
-                  <span>{regLoading ? 'Đang lưu...' : 'Chụp từ Camera'}</span>
-                </button>
+              <button
+                onClick={captureAndSaveFaceProfile}
+                disabled={regLoading}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '14px',
+                  cursor: regLoading ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
+                }}
+              >
+                <span>{regLoading ? '⏳' : '📸'}</span>
+                <span>{regLoading ? 'Đang trích xuất AI & lưu hồ sơ...' : 'Chụp Trực Tiếp Để Đăng Ký FaceID'}</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={regLoading}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    color: '#334155',
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    cursor: regLoading ? 'wait' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span>📁</span>
-                  <span>Chọn ảnh từ máy</span>
-                </button>
+              <div style={{
+                fontSize: '11px',
+                color: '#64748b',
+                textAlign: 'center',
+                lineHeight: '1.4',
+                padding: '4px 8px'
+              }}>
+                🔒 <strong>Chuẩn bảo mật sinh trắc học:</strong> Bắt buộc chụp trực tiếp từ Camera để đảm bảo xác thực chính chủ và chống mạo danh ảnh hồ sơ.
               </div>
 
               <button
