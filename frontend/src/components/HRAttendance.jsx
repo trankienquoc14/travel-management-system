@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import GPSCheckInWidget from './GPSCheckInWidget';
 import HRLeaveRequest from './HRLeaveRequest';
+import { getBaseApiUrl } from '../utils/imageUrl';
 
 const HRAttendance = () => {
+  const API_BASE = getBaseApiUrl();
   const [activeSubTab, setActiveSubTab] = useState('summary'); // Mặc định là 'summary' (Tổng hợp theo nhân viên dạng lưới tháng)
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceList, setAttendanceList] = useState([]);
@@ -43,6 +45,18 @@ const HRAttendance = () => {
   // Mẫu Đơn nghỉ phép
   const [leaveRequests, setLeaveRequests] = useState([]);
 
+  // States cho Cấu hình Vị trí Trụ sở Văn phòng & Bán kính GPS (Geofencing)
+  const [officeSettings, setOfficeSettings] = useState({
+    address: '190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh',
+    latitude: 10.784507,
+    longitude: 106.690842,
+    radius: 500
+  });
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [detectingGps, setDetectingGps] = useState(false);
+  const [settingsAlert, setSettingsAlert] = useState(null);
+
   // Tính số ngày trong tháng được chọn
   const getDaysInMonth = (month, year) => {
     return new Date(year, month, 0).getDate();
@@ -66,12 +80,102 @@ const HRAttendance = () => {
     fetchMonthlyAttendanceHistory();
   }, [selectedMonth, selectedYear, filterStatus, filterRole, searchTerm]);
 
+  // Nạp cấu hình vị trí khi mở tab Cấu hình GPS
+  useEffect(() => {
+    if (activeSubTab === 'location_settings') {
+      fetchOfficeSettings();
+    }
+  }, [activeSubTab]);
+
+  // Tải cấu hình vị trí văn phòng từ backend
+  const fetchOfficeSettings = async () => {
+    try {
+      setLoadingSettings(true);
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/api/hr/settings/office-location`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data?.success && res.data?.data) {
+        setOfficeSettings(res.data.data);
+      }
+    } catch (err) {
+      console.warn("Lỗi tải cấu hình vị trí văn phòng:", err.message);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  // Lưu cấu hình vị trí văn phòng & bán kính
+  const handleSaveOfficeSettings = async (e) => {
+    e?.preventDefault();
+    try {
+      setSavingSettings(true);
+      setSettingsAlert(null);
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`${API_BASE}/api/hr/settings/office-location`, officeSettings, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data?.success) {
+        setSettingsAlert({ type: 'success', message: '✅ ' + (res.data.message || 'Lưu cấu hình vị trí thành công!') });
+      } else {
+        setSettingsAlert({ type: 'error', message: res.data?.message || 'Không thể lưu cấu hình' });
+      }
+    } catch (err) {
+      setSettingsAlert({ type: 'error', message: err.response?.data?.message || err.message });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  // Tự động lấy tọa độ hiện tại của Admin làm tọa độ trụ sở mới
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Trình duyệt không hỗ trợ Geolocation!");
+      return;
+    }
+    setDetectingGps(true);
+    setSettingsAlert(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        
+        let fetchedAddress = officeSettings.address;
+        try {
+          // Thử reverse geocoding qua OpenStreetMap để lấy tên đường
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+          const geoData = await geoRes.json();
+          if (geoData && geoData.display_name) {
+            fetchedAddress = geoData.display_name;
+          }
+        } catch (e) {}
+
+        setOfficeSettings(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+          address: fetchedAddress
+        }));
+        setDetectingGps(false);
+        setSettingsAlert({ 
+          type: 'success', 
+          message: `📍 Đã lấy thành công tọa độ hiện tại của bạn: ${lat}, ${lng}! Nhấn "Lưu cấu hình" để áp dụng.` 
+        });
+      },
+      (err) => {
+        setDetectingGps(false);
+        setSettingsAlert({ type: 'error', message: `❌ Lỗi lấy GPS: ${err.message}. Vui lòng cấp quyền vị trí cho trình duyệt.` });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   const fetchDailyAttendance = async () => {
     setLoading(true);
     setMessage(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5000/api/hr/attendance?date=${date}`, {
+      const res = await axios.get(`${API_BASE}/api/hr/attendance?date=${date}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -103,7 +207,7 @@ const HRAttendance = () => {
       const startDate = `${selectedYear}-${formattedMonth}-01`;
       const endDate = `${selectedYear}-${formattedMonth}-${daysInMonth}`;
 
-      const res = await axios.get(`http://localhost:5000/api/hr/attendance/history`, {
+      const res = await axios.get(`${API_BASE}/api/hr/attendance/history`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           startDate,
@@ -181,7 +285,7 @@ const HRAttendance = () => {
         }))
       };
 
-      const res = await axios.post('http://localhost:5000/api/hr/attendance', payload, {
+      const res = await axios.post(`${API_BASE}/api/hr/attendance`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -331,7 +435,7 @@ const HRAttendance = () => {
       </div>
 
       {/* Sub-navigation Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '24px', gap: '24px' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '24px', gap: '24px', flexWrap: 'wrap' }}>
         <button onClick={() => setActiveSubTab('summary')} style={{ padding: '12px 4px', border: 'none', background: 'none', borderBottom: activeSubTab === 'summary' ? '3px solid #1e3a8a' : '3px solid transparent', color: activeSubTab === 'summary' ? '#1e3a8a' : '#64748b', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
           Tổng hợp theo nhân viên (Bảng tháng)
         </button>
@@ -340,6 +444,9 @@ const HRAttendance = () => {
         </button>
         <button onClick={() => setActiveSubTab('requests')} style={{ padding: '12px 4px', border: 'none', background: 'none', borderBottom: activeSubTab === 'requests' ? '3px solid #1e3a8a' : '3px solid transparent', color: activeSubTab === 'requests' ? '#1e3a8a' : '#64748b', fontWeight: '600', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           Quản lý đơn {leaveRequests.filter(r => r.status === 'Pending').length > 0 && <span style={{ padding: '2px 6px', background: '#ef4444', color: '#fff', fontSize: '11px', borderRadius: '10px', fontWeight: '700' }}>{leaveRequests.filter(r => r.status === 'Pending').length}</span>}
+        </button>
+        <button onClick={() => setActiveSubTab('location_settings')} style={{ padding: '12px 4px', border: 'none', background: 'none', borderBottom: activeSubTab === 'location_settings' ? '3px solid #1e3a8a' : '3px solid transparent', color: activeSubTab === 'location_settings' ? '#1e3a8a' : '#64748b', fontWeight: '600', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          ⚙️ Cấu hình Vị trí & Bán kính GPS
         </button>
       </div>
 
@@ -578,7 +685,7 @@ const HRAttendance = () => {
                           title="Bấm để xem ảnh phóng to và chi tiết đối soát FaceID"
                         >
                           <img 
-                            src={emp.face_image_url.startsWith('http') ? emp.face_image_url : `http://localhost:5000${emp.face_image_url}`} 
+                            src={emp.face_image_url.startsWith('http') ? emp.face_image_url : `${API_BASE}${emp.face_image_url}`} 
                             alt="Selfie Checkin" 
                             style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }} 
                           />
@@ -635,6 +742,274 @@ const HRAttendance = () => {
 
       {activeSubTab === 'requests' && (
         <HRLeaveRequest mode="approval" />
+      )}
+
+      {/* ========================================================= */}
+      {/* 🚀 SUBTAB 4: CẤU HÌNH VỊ TRÍ VĂN PHÒNG & BÁN KÍNH GPS       */}
+      {/* ========================================================= */}
+      {activeSubTab === 'location_settings' && (
+        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '28px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📍 Cấu Hình Vị Trí Trụ Sở & Bán Kính Chấm Công (Geofencing)
+              </h2>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                Quản trị viên và Quản lý HR có thể điều chỉnh địa chỉ văn phòng, tọa độ GPS và bán kính hợp lệ cho nhân sự chấm công.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleGetCurrentLocation}
+                disabled={detectingGps}
+                style={{
+                  padding: '10px 18px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: detectingGps ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {detectingGps ? '🔄 Đang dò GPS hiện tại...' : '📍 Lấy vị trí tôi đang đứng làm tọa độ văn phòng'}
+              </button>
+              
+              <a
+                href={`https://www.google.com/maps?q=${officeSettings.latitude},${officeSettings.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: '10px 18px',
+                  background: '#f8fafc',
+                  color: '#2563eb',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🗺️ Xem thử trên Google Maps ↗
+              </a>
+            </div>
+          </div>
+
+          {settingsAlert && (
+            <div style={{
+              padding: '14px 18px',
+              borderRadius: '10px',
+              marginBottom: '20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              background: settingsAlert.type === 'success' ? '#ecfdf5' : '#fef2f2',
+              color: settingsAlert.type === 'success' ? '#065f46' : '#991b1b',
+              border: `1px solid ${settingsAlert.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span>{settingsAlert.message}</span>
+              <button onClick={() => setSettingsAlert(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'inherit' }}>&times;</button>
+            </div>
+          )}
+
+          {loadingSettings ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+              Đang tải cấu hình vị trí văn phòng...
+            </div>
+          ) : (
+            <form onSubmit={handleSaveOfficeSettings} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+              
+              {/* Cột 1: Thông tin vị trí */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+                    🏢 Tên & Địa chỉ trụ sở văn phòng:
+                  </label>
+                  <input
+                    type="text"
+                    value={officeSettings.address}
+                    onChange={(e) => setOfficeSettings({ ...officeSettings, address: e.target.value })}
+                    placeholder="VD: 190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP.HCM"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    required
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Hiển thị trên thông báo và widget chấm công của nhân viên.
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+                      🌐 Vĩ độ (Latitude):
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={officeSettings.latitude}
+                      onChange={(e) => setOfficeSettings({ ...officeSettings, latitude: parseFloat(e.target.value) || 0 })}
+                      placeholder="VD: 10.784507"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+                      🌐 Kinh độ (Longitude):
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={officeSettings.longitude}
+                      onChange={(e) => setOfficeSettings({ ...officeSettings, longitude: parseFloat(e.target.value) || 0 })}
+                      placeholder="VD: 106.690842"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+                    🎯 Bán kính cho phép chấm công (Mét):
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="50"
+                      max="50000"
+                      step="50"
+                      value={officeSettings.radius}
+                      onChange={(e) => setOfficeSettings({ ...officeSettings, radius: parseInt(e.target.value, 10) || 500 })}
+                      style={{
+                        width: '140px',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>mét</span>
+                  </div>
+
+                  {/* Nút chọn nhanh bán kính */}
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '11px', color: '#64748b', alignSelf: 'center' }}>Chọn nhanh:</span>
+                    {[200, 300, 500, 1000, 2000, 5000].map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setOfficeSettings({ ...officeSettings, radius: r })}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: officeSettings.radius === r ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                          background: officeSettings.radius === r ? '#eff6ff' : '#fff',
+                          color: officeSettings.radius === r ? '#1d4ed8' : '#475569',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {r >= 1000 ? `${r/1000}km` : `${r}m`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột 2: Quy tắc nghiệp vụ & Nút lưu */}
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ background: '#f8fafc', padding: '18px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '13px', lineHeight: '1.6' }}>
+                  <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🛡️ Phân quyền & Quy tắc Geofencing:
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '18px', color: '#475569' }}>
+                    <li style={{ marginBottom: '6px' }}>
+                      <strong style={{ color: '#0f172a' }}>Khối Văn Phòng (Nhân viên VP & Quản lý HR):</strong> Bắt buộc bật GPS và đứng trong bán kính <strong style={{ color: '#2563eb' }}>{officeSettings.radius}m</strong> so với tọa độ trên để chấm công FaceID.
+                    </li>
+                    <li style={{ marginBottom: '6px' }}>
+                      <strong style={{ color: '#0f172a' }}>Khối Hiện Trường (Hướng dẫn viên, Tài xế):</strong> Được chấm công linh động tại điểm đón khách, sân bay, tour... Hệ thống lưu tọa độ GPS thực tế mà không giới hạn bán kính.
+                    </li>
+                    <li>
+                      <strong style={{ color: '#0f172a' }}>Quản trị viên (Admin):</strong> Được quyền chấm công và giám sát toàn bộ.
+                    </li>
+                  </ul>
+                </div>
+
+                <div style={{ marginTop: '20px' }}>
+                  <button
+                    type="submit"
+                    disabled={savingSettings}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '15px',
+                      fontWeight: '800',
+                      cursor: savingSettings ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.3)',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {savingSettings ? '⏳ Đang lưu cấu hình...' : '💾 Lưu Cấu Hình Vị Trí & Bán Kính'}
+                  </button>
+                </div>
+              </div>
+
+            </form>
+          )}
+        </div>
       )}
 
       {/* ========================================================= */}
@@ -829,7 +1204,7 @@ const HRAttendance = () => {
             {selectedFaceModal.face_image_url && (
               <div style={{ width: '220px', height: '220px', margin: '0 auto 16px auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 8px 20px rgba(16,185,129,0.35)' }}>
                 <img 
-                  src={selectedFaceModal.face_image_url.startsWith('http') ? selectedFaceModal.face_image_url : `http://localhost:5000${selectedFaceModal.face_image_url}`} 
+                  src={selectedFaceModal.face_image_url.startsWith('http') ? selectedFaceModal.face_image_url : `${API_BASE}${selectedFaceModal.face_image_url}`} 
                   alt="Full Selfie FaceID" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                 />

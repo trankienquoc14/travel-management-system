@@ -92,8 +92,31 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   useEffect(() => {
     fetchMyStatus();
     fetchMyFaceProfile();
+    fetchOfficeConfig();
     getGPSLocation();
   }, []);
+
+  // Cấu hình vị trí trụ sở văn phòng và bán kính GPS từ hệ thống (Dynamic Geofencing)
+  const [officeConfig, setOfficeConfig] = useState({
+    address: '190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh',
+    latitude: 10.784507,
+    longitude: 106.690842,
+    radius: 500
+  });
+
+  const fetchOfficeConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/api/hr/settings/office-location`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data?.success && res.data?.data) {
+        setOfficeConfig(res.data.data);
+      }
+    } catch (err) {
+      console.warn("Lỗi nạp cấu hình vị trí văn phòng:", err.message);
+    }
+  };
 
   // Gắn stream vào video element khi cameraActive thay đổi
   useEffect(() => {
@@ -1313,12 +1336,15 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               <span>🎯 Sai số: <strong>±{location.accuracy}m</strong></span>
             </div>
 
-            {/* HUY HIỆU KIỂM TRA BÁN KÍNH TRỤ SỞ VĂN PHÒNG */}
+            {/* HUY HIỆU KIỂM TRA BÁN KÍNH TRỤ SỞ VĂN PHÒNG DYNAMIC GEOFENCING */}
             {(() => {
               const R = 6371e3;
-              const dLat = (10.784507 - location.lat) * Math.PI / 180;
-              const dLon = (106.690842 - location.lng) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(10.784507 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const officeLat = officeConfig.latitude || 10.784507;
+              const officeLng = officeConfig.longitude || 106.690842;
+              const officeRadius = officeConfig.radius || 500;
+              const dLat = (officeLat - location.lat) * Math.PI / 180;
+              const dLon = (officeLng - location.lng) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(officeLat * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
               const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
               
               let storedRole = null;
@@ -1333,13 +1359,13 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               return (
                 <div style={{ marginTop: '8px', fontSize: '11px' }}>
                   {isOffice ? (
-                    dist <= 500 ? (
+                    dist <= officeRadius ? (
                       <span style={{ color: '#15803d', fontWeight: '700', background: '#dcfce7', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        🏢 Trụ sở 190 Pasteur: Cách {dist}m (Hợp lệ: Trong bán kính 500m)
+                        🏢 Trụ sở ({officeConfig.address ? (officeConfig.address.length > 30 ? officeConfig.address.slice(0, 30) + '...' : officeConfig.address) : 'Văn phòng'}): Cách {dist}m (Hợp lệ: Trong bán kính {officeRadius}m)
                       </span>
                     ) : (
                       <span style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '3px 8px', borderRadius: '6px', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        ⚠️ Ngoài bán kính: Cách văn phòng {dist}m (&gt; 500m)
+                        ⚠️ Ngoài bán kính: Cách văn phòng {dist}m (&gt; {officeRadius}m)
                       </span>
                     )
                   ) : isField ? (

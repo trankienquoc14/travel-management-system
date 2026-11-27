@@ -47,13 +47,60 @@ const ensureBiometricAndAttendanceSchema = async () => {
       `);
       console.log('✅ Đã thêm các cột checkout location vào bảng timekeeping');
     }
+
+    // 3. Bảng company_settings lưu cấu hình vị trí văn phòng & bán kính
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS company_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value TEXT,
+        description VARCHAR(255),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Khởi tạo các giá trị mặc định nếu chưa có
+    await sequelize.query(`
+      INSERT IGNORE INTO company_settings (setting_key, setting_value, description) VALUES
+      ('office_address', '190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh', 'Địa chỉ trụ sở văn phòng'),
+      ('office_latitude', '10.784507', 'Vĩ độ GPS trụ sở'),
+      ('office_longitude', '106.690842', 'Kinh độ GPS trụ sở'),
+      ('office_radius', '500', 'Bán kính chấm công tối đa (mét)')
+    `);
+
     schemaChecked = true;
   } catch (err) {
-    console.warn('Lỗi kiểm tra schema sinh trắc học:', err.message);
+    console.warn('Lỗi kiểm tra schema sinh trắc học & settings:', err.message);
   }
 };
 // Kích hoạt kiểm tra CSDL
 ensureBiometricAndAttendanceSchema();
+
+// Hàm lấy thông tin cấu hình trụ sở văn phòng từ CSDL
+async function getOfficeSettingsHelper() {
+  try {
+    const [rows] = await sequelize.query(`
+      SELECT setting_key, setting_value FROM company_settings 
+      WHERE setting_key IN ('office_address', 'office_latitude', 'office_longitude', 'office_radius')
+    `);
+    const map = {};
+    if (rows && rows.length > 0) {
+      rows.forEach(r => { map[r.setting_key] = r.setting_value; });
+    }
+    return {
+      address: map.office_address || '190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh',
+      latitude: map.office_latitude ? parseFloat(map.office_latitude) : 10.784507,
+      longitude: map.office_longitude ? parseFloat(map.office_longitude) : 106.690842,
+      radius: map.office_radius ? parseInt(map.office_radius, 10) : 500
+    };
+  } catch (err) {
+    return {
+      address: '190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh',
+      latitude: 10.784507,
+      longitude: 106.690842,
+      radius: 500
+    };
+  }
+}
 
 // 1. Lấy danh sách nhân viên
 exports.getAllEmployees = async (req, res) => {
@@ -1097,17 +1144,18 @@ exports.gpsCheckIn = async (req, res) => {
         });
       }
 
+      const officeConfig = await getOfficeSettingsHelper();
       currentDistance = calculateDistanceMeters(
         parseFloat(latitude), 
         parseFloat(longitude), 
-        COMPANY_OFFICE_COORDS.lat, 
-        COMPANY_OFFICE_COORDS.lng
+        officeConfig.latitude, 
+        officeConfig.longitude
       );
 
-      if (currentDistance > MAX_OFFICE_RADIUS_METERS) {
+      if (currentDistance > officeConfig.radius) {
         return res.status(400).json({
           success: false,
-          message: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH VĂN PHÒNG: Bạn đang ở cách trụ sở ${currentDistance}m (Vượt quá bán kính cho phép ${MAX_OFFICE_RADIUS_METERS}m). Nhân viên văn phòng bắt buộc phải có mặt tại 190 Pasteur, Quận 3 để chấm công!`
+          message: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH VĂN PHÒNG: Bạn đang ở cách trụ sở ${currentDistance}m (Vượt quá bán kính cho phép ${officeConfig.radius}m). Nhân viên văn phòng bắt buộc phải có mặt tại ${officeConfig.address} để chấm công!`
         });
       }
     }
@@ -1632,6 +1680,67 @@ exports.deleteLeaveRequest = async (req, res) => {
     res.status(200).json({ success: true, message: 'Rút lại đơn thành công!' });
   } catch (error) {
     console.error("Lỗi deleteLeaveRequest:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 6. Lấy cấu hình vị trí văn phòng & bán kính GPS (Dành cho tất cả nhân viên đã đăng nhập)
+exports.getOfficeLocationSettings = async (req, res) => {
+  try {
+    await ensureBiometricAndAttendanceSchema();
+    const settings = await getOfficeSettingsHelper();
+    res.status(200).json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error("Lỗi getOfficeLocationSettings:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 7. Cập nhật cấu hình vị trí văn phòng & bán kính GPS (Dành riêng cho Admin [1] & HR Manager [2])
+exports.updateOfficeLocationSettings = async (req, res) => {
+  try {
+    await ensureBiometricAndAttendanceSchema();
+    const { address, latitude, longitude, radius } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({ success: false, message: 'Tọa độ vĩ độ và kinh độ không được để trống!' });
+    }
+
+    const latVal = parseFloat(latitude);
+    const lngVal = parseFloat(longitude);
+    const radVal = parseInt(radius, 10) || 500;
+    const addrVal = (address || '').trim() || 'Trụ sở công ty';
+
+    const queries = [
+      { key: 'office_address', val: addrVal, desc: 'Địa chỉ trụ sở văn phòng' },
+      { key: 'office_latitude', val: latVal.toString(), desc: 'Vĩ độ GPS trụ sở' },
+      { key: 'office_longitude', val: lngVal.toString(), desc: 'Kinh độ GPS trụ sở' },
+      { key: 'office_radius', val: radVal.toString(), desc: 'Bán kính chấm công tối đa (mét)' }
+    ];
+
+    for (const q of queries) {
+      await sequelize.query(`
+        INSERT INTO company_settings (setting_key, setting_value, description)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), description = VALUES(description)
+      `, { replacements: [q.key, q.val, q.desc] });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: '✅ Cập nhật cấu hình vị trí văn phòng & bán kính chấm công thành công!',
+      data: {
+        address: addrVal,
+        latitude: latVal,
+        longitude: lngVal,
+        radius: radVal
+      }
+    });
+  } catch (error) {
+    console.error("Lỗi updateOfficeLocationSettings:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
