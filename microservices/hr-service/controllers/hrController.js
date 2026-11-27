@@ -1131,9 +1131,9 @@ exports.gpsCheckIn = async (req, res) => {
     }
 
     // 🏢 KIỂM TRA BÁN KÍNH GPS THEO VAI TRÒ (ROLE-BASED GEOFENCING)
-    // Khối văn phòng (Office Staff: 4, HR Manager: 2): Bắt buộc ở trong bán kính văn phòng (<= 500m)
-    // Khối hiện trường (Tour Guide: 5, Driver: 8) & Admin (1): Được tự do chấm công hiện trường
-    const isStrictOfficeStaff = (Number(userRole) === 4 || Number(userRole) === 2);
+    // Khối văn phòng (Office Staff: 4, HR Manager: 2, Admin: 1): Bắt buộc ở trong bán kính văn phòng cấu hình
+    // Khối hiện trường (Tour Guide: 5, Driver: 8): Được tự do chấm công hiện trường theo tour/điểm đón
+    const isStrictOfficeStaff = (Number(userRole) === 4 || Number(userRole) === 2 || Number(userRole) === 1);
     let currentDistance = null;
 
     if (isStrictOfficeStaff) {

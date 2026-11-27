@@ -118,6 +118,27 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     }
   };
 
+  // Tính toán khoảng cách tới trụ sở văn phòng và kiểm tra bán kính geofencing
+  let storedRole = null;
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    storedRole = Number(u.role_id || u.role);
+  } catch (e) {}
+
+  const isOfficeStaffRole = (storedRole === 4 || storedRole === 2 || storedRole === 1);
+  const officeRadius = officeConfig?.radius || 500;
+  let currentDist = null;
+  let isOutOfRadius = false;
+
+  if (location && officeConfig?.latitude && officeConfig?.longitude) {
+    const R = 6371e3;
+    const dLat = (officeConfig.latitude - location.lat) * Math.PI / 180;
+    const dLon = (officeConfig.longitude - location.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(officeConfig.latitude * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    currentDist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    isOutOfRadius = isOfficeStaffRole && (currentDist > officeRadius);
+  }
+
   // Gắn stream vào video element khi cameraActive thay đổi
   useEffect(() => {
     if (cameraActive && streamRef.current && videoRef.current) {
@@ -514,6 +535,16 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       setAlertMsg({
         type: 'error',
         text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${scoreToUse.toFixed(1)}% (yêu cầu tối thiểu 75.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
+      });
+      return;
+    }
+
+    // 🔒 CHẶN CHẤM CÔNG NẾU ĐANG Ở NGOÀI BÁN KÍNH TRỤ SỞ VĂN PHÒNG
+    if (isOutOfRadius) {
+      soundService.playWarning();
+      setAlertMsg({
+        type: 'error',
+        text: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH: Bạn đang cách trụ sở ${currentDist}m (vượt quá bán kính cho phép ${officeRadius}m). Nhân viên văn phòng bắt buộc phải có mặt tại ${officeConfig.address || 'trụ sở'} để chấm công!`
       });
       return;
     }
@@ -1272,41 +1303,74 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         {/* 🚀 NÚT BẤM ĐIỂM DANH TRỰC TIẾP NGAY DƯỚI CAMERA KHI ĐÃ KHỚP MẶT */}
         {cameraActive && faceVerified && (
           <div style={{ marginTop: '14px' }}>
-            <button
-              onClick={() => handleGPSCheckIn()}
-              disabled={actionLoading || isCheckedOut}
-              style={{
-                width: '100%',
-                maxWidth: '340px',
-                padding: '12px 20px',
-                borderRadius: '24px',
-                border: 'none',
-                background: isCheckedOut
-                  ? '#94a3b8'
-                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: '#ffffff',
-                fontWeight: '800',
-                fontSize: '14px',
-                cursor: isCheckedOut ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 0 20px rgba(16, 185, 129, 0.55)',
-                animation: 'pulse 2s infinite'
-              }}
-            >
-              <span>{actionLoading ? '⏳' : isCheckedIn ? '🏁' : '🚀'}</span>
-              <span>
-                {actionLoading 
-                  ? 'Đang ghi nhận công...' 
-                  : isCheckedOut 
-                    ? 'Đã hoàn thành ca làm' 
-                    : isCheckedIn 
-                      ? `Bấm Ra Ca / Check-out (${confidenceScore.toFixed(1)}%)` 
-                      : `Bấm Chấm Công Ngay (${confidenceScore.toFixed(1)}%)`}
-              </span>
-            </button>
+            {isOutOfRadius ? (
+              <button
+                type="button"
+                onClick={() => {
+                  soundService.playWarning();
+                  setAlertMsg({
+                    type: 'error',
+                    text: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH: Bạn đang cách trụ sở ${currentDist}m (vượt quá bán kính cho phép ${officeRadius}m). Nhân viên văn phòng bắt buộc phải có mặt tại ${officeConfig.address || 'văn phòng'} để chấm công!`
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  maxWidth: '380px',
+                  padding: '12px 18px',
+                  borderRadius: '24px',
+                  border: '1px solid #ef4444',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 0 16px rgba(239, 68, 68, 0.45)'
+                }}
+              >
+                <span>🚫</span>
+                <span>Ngoài Bán Kính: Cách Trụ Sở {currentDist}m (&gt; {officeRadius}m)</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => handleGPSCheckIn()}
+                disabled={actionLoading || isCheckedOut}
+                style={{
+                  width: '100%',
+                  maxWidth: '340px',
+                  padding: '12px 20px',
+                  borderRadius: '24px',
+                  border: 'none',
+                  background: isCheckedOut
+                    ? '#94a3b8'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '14px',
+                  cursor: isCheckedOut ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.55)',
+                  animation: 'pulse 2s infinite'
+                }}
+              >
+                <span>{actionLoading ? '⏳' : isCheckedIn ? '🏁' : '🚀'}</span>
+                <span>
+                  {actionLoading 
+                    ? 'Đang ghi nhận công...' 
+                    : isCheckedOut 
+                      ? 'Đã hoàn thành ca làm' 
+                      : isCheckedIn 
+                        ? `Bấm Ra Ca / Check-out (${confidenceScore.toFixed(1)}%)` 
+                        : `Bấm Chấm Công Ngay (${confidenceScore.toFixed(1)}%)`}
+                </span>
+              </button>
+            )}
           </div>
         )}
 
