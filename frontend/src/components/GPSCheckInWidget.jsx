@@ -78,6 +78,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const bestConfRef = useRef(0);
   const mismatchCountRef = useRef(0);
   const hasAutoTriggeredRef = useRef(false);
+  const autoTriggerTimeoutRef = useRef(null);
 
   const isCheckedIn = !!(attendanceStatus && attendanceStatus.check_in);
   const isCheckedOut = !!(attendanceStatus && attendanceStatus.check_out);
@@ -319,7 +320,21 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const startCamera = async () => {
     setCameraError('');
     setAlertMsg({ type: '', text: '' });
+    // Reset toàn bộ trạng thái xác thực cũ chống rò rỉ kết quả từ ca trước
+    setFaceVerified(false);
+    setFaceSnapshot(null);
+    setConfidenceScore(0);
+    smoothedScoreRef.current = 0;
+    verifiedLockUntilRef.current = 0;
+    bestConfRef.current = 0;
+    mismatchCountRef.current = 0;
+    consecutiveMatchesRef.current = 0;
     hasAutoTriggeredRef.current = false;
+    if (autoTriggerTimeoutRef.current) {
+      clearTimeout(autoTriggerTimeoutRef.current);
+      autoTriggerTimeoutRef.current = null;
+    }
+
     // Tự động làm mới vị trí GPS tức thì khi bật camera ra ca/vào ca
     getGPSLocation();
     try {
@@ -343,15 +358,23 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   // TẮT CAMERA
   const stopCamera = () => {
     stopLiveScanningLoop();
+    if (autoTriggerTimeoutRef.current) {
+      clearTimeout(autoTriggerTimeoutRef.current);
+      autoTriggerTimeoutRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     setCameraActive(false);
+    setFaceVerified(false);
+    setFaceSnapshot(null);
+    setConfidenceScore(0);
     smoothedScoreRef.current = 0;
     verifiedLockUntilRef.current = 0;
     bestConfRef.current = 0;
     mismatchCountRef.current = 0;
+    consecutiveMatchesRef.current = 0;
     hasAutoTriggeredRef.current = false;
   };
 
@@ -400,9 +423,15 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     const detection = await detectFaceInCanvas(canvas);
 
     if (!detection.detected) {
-      // Khi không có mặt hoặc bị che khuất -> LẬP TỨC hủy trạng thái xác thực
+      // Khi không có mặt hoặc bị che khuất -> LẬP TỨC hủy mọi trigger tự động và hủy trạng thái xác thực
+      if (autoTriggerTimeoutRef.current) {
+        clearTimeout(autoTriggerTimeoutRef.current);
+        autoTriggerTimeoutRef.current = null;
+      }
+      hasAutoTriggeredRef.current = false;
       verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
+      setFaceSnapshot(null);
       smoothedScoreRef.current = 0;
       setScanStatus({
         status: detection.reason === 'FACE_OCCLUDED' ? 'OCCLUDED' : 'NO_FACE',
@@ -483,15 +512,26 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           metrics: matchResult.metrics,
           confidence: finalScore
         });
-        setTimeout(() => {
+        if (autoTriggerTimeoutRef.current) {
+          clearTimeout(autoTriggerTimeoutRef.current);
+        }
+        autoTriggerTimeoutRef.current = setTimeout(() => {
+          autoTriggerTimeoutRef.current = null;
           handleGPSCheckIn(liveDataUrl, finalScore);
         }, 500);
       }
     } else {
+      // ❌ MẶT KHÔNG KHỚP -> HỦY NGAY LẬP TỨC MỌI TRIGGER TỰ ĐỘNG VÀ XÓA SNAPSHOT CŨ
+      if (autoTriggerTimeoutRef.current) {
+        clearTimeout(autoTriggerTimeoutRef.current);
+        autoTriggerTimeoutRef.current = null;
+      }
+      hasAutoTriggeredRef.current = false;
       consecutiveMatchesRef.current = 0;
       mismatchCountRef.current += 1;
       verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
+      setFaceSnapshot(null); // XÓA NGAY ẢNH CŨ KHÔNG ĐỂ RÒ RỈ
       setConfidenceScore(finalScore);
       setScanStatus({
         status: 'MISMATCHED',
@@ -512,8 +552,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const handleGPSCheckIn = async (customSnapshot, customScore) => {
     setAlertMsg({ type: '', text: '' });
 
+    // BẮT BUỘC CAMERA PHẢI ĐANG HOẠT ĐỘNG
+    if (!cameraActive) {
+      soundService.playWarning();
+      setAlertMsg({
+        type: 'error',
+        text: '⚠️ Vui lòng bật Camera và nhìn thẳng để xác thực FaceID chính chủ trước khi chấm công!'
+      });
+      return;
+    }
+
     const snapToUse = customSnapshot || faceSnapshot;
-    const scoreToUse = customScore || confidenceScore;
+    const scoreToUse = customScore !== undefined ? customScore : confidenceScore;
 
     if (!profileDescriptor) {
       setAlertMsg({
@@ -531,7 +581,9 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       return;
     }
 
+    // BẮT BUỘC PHẢI CÓ faceVerified === true VÀ ĐỘ KHỚP >= 75%
     if (!faceVerified || scoreToUse < 75.0) {
+      soundService.playWarning();
       setAlertMsg({
         type: 'error',
         text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${scoreToUse.toFixed(1)}% (yêu cầu tối thiểu 75.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
@@ -577,6 +629,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           metrics: null,
           confidence: scoreToUse
         });
+        // NGAY LẬP TỨC XÓA TRẠNG THÁI XÁC THỰC VÀ SNAPSHOT CŨ ĐỂ TRÁNH TÁI SỬ DỤNG
+        setFaceVerified(false);
+        setFaceSnapshot(null);
+        setConfidenceScore(0);
         await fetchMyStatus();
         if (onCheckInSuccess) onCheckInSuccess();
         setTimeout(() => {
@@ -1501,7 +1557,25 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
       {/* NÚT THỰC HIỆN CHẤM CÔNG GPS & FACEID */}
       <button
-        onClick={handleGPSCheckIn}
+        onClick={() => {
+          if (!cameraActive) {
+            startCamera();
+            setAlertMsg({
+              type: 'info',
+              text: '📸 Đang bật camera... Vui lòng nhìn thẳng vào camera để quét FaceID chính chủ!'
+            });
+            return;
+          }
+          if (!faceVerified || confidenceScore < 75.0) {
+            soundService.playWarning();
+            setAlertMsg({
+              type: 'error',
+              text: `❌ KHUÔN MẶT CHƯA KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 75.0%). Vui lòng nhìn thẳng vào khung tròn!`
+            });
+            return;
+          }
+          handleGPSCheckIn();
+        }}
         disabled={actionLoading || gpsLoading || isCheckedOut}
         style={{
           width: '100%',
@@ -1510,7 +1584,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           border: 'none',
           background: isCheckedOut
             ? '#94a3b8'
-            : !faceVerified && cameraActive
+            : !cameraActive || !faceVerified
               ? 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
               : isCheckedIn
                 ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
@@ -1527,17 +1601,19 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           gap: '10px'
         }}
       >
-        <span>{actionLoading ? '⏳' : isCheckedOut ? '✅' : isCheckedIn ? '🏁' : '🚀'}</span>
+        <span>{actionLoading ? '⏳' : isCheckedOut ? '✅' : !cameraActive ? '📷' : isCheckedIn ? '🏁' : '🚀'}</span>
         <span>
           {actionLoading 
             ? 'Đang đối soát FaceID & Ghi nhận công...' 
             : isCheckedOut 
               ? 'Hôm nay bạn đã hoàn thành ca làm việc' 
-              : !faceVerified && cameraActive
-                ? '⚠️ CHỜ QUÉT ĐÚNG KHUÔN MẶT CHÍNH CHỦ...'
-                : isCheckedIn 
-                  ? '🏁 CHECK-OUT GPS & FACE ID' 
-                  : '🚀 CHẤM CÔNG GPS & QUÉT MẶT FACE ID'}
+              : !cameraActive
+                ? `Bật Camera Để Quét FaceID ${isCheckedIn ? 'Ra Ca (Check-out)' : 'Vào Ca (Check-in)'}`
+                : !faceVerified
+                  ? `⚠️ KHUÔN MẶT CHƯA KHỚP (${confidenceScore.toFixed(1)}% < 75%)`
+                  : isCheckedIn 
+                    ? `🏁 XÁC NHẬN RA CA / CHECK-OUT (${confidenceScore.toFixed(1)}%)` 
+                    : `🚀 XÁC NHẬN VÀO CA / CHECK-IN (${confidenceScore.toFixed(1)}%)`}
         </span>
       </button>
 
