@@ -56,6 +56,9 @@ const HRAttendance = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [detectingGps, setDetectingGps] = useState(false);
   const [settingsAlert, setSettingsAlert] = useState(null);
+  const [searchAddressQuery, setSearchAddressQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
 
   // Tính số ngày trong tháng được chọn
   const getDaysInMonth = (month, year) => {
@@ -202,6 +205,89 @@ const HRAttendance = () => {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  // Tìm kiếm địa điểm bất kỳ hoặc nhận diện tọa độ Google Maps dán vào
+  const handleSearchLocation = async (e) => {
+    e?.preventDefault();
+    if (!searchAddressQuery || !searchAddressQuery.trim()) return;
+
+    const raw = searchAddressQuery.trim();
+
+    // 1. Kiểm tra nếu người dùng dán cặp tọa độ (VD: "10.776889, 106.700806" hoặc "10.776889 106.700806")
+    const coordRegex = /(-?\d+\.\d{3,})[\s,]+(-?\d+\.\d{3,})/;
+    const match = raw.match(coordRegex);
+    if (match) {
+      const lat = parseFloat(parseFloat(match[1]).toFixed(6));
+      const lng = parseFloat(parseFloat(match[2]).toFixed(6));
+      
+      let placeName = `Địa điểm mới (Tọa độ: ${lat}, ${lng})`;
+      // Thử reverse geocode lấy tên đường
+      try {
+        const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=vi`);
+        if (bdcRes.ok) {
+          const bdc = await bdcRes.json();
+          const p = [bdc.locality, bdc.city, bdc.principalSubdivision].filter(Boolean);
+          if (p.length > 0) placeName = p.join(', ');
+        }
+      } catch (err) {}
+
+      setOfficeSettings(prev => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng,
+        address: placeName
+      }));
+      setSearchResults([]);
+      setSettingsAlert({
+        type: 'success',
+        message: `📍 Đã nhận diện tọa độ: ${lat}, ${lng} ("${placeName}")! Nhấn "Lưu cấu hình" để áp dụng.`
+      });
+      return;
+    }
+
+    // 2. Tìm kiếm theo tên địa danh/địa chỉ qua OpenStreetMap
+    setSearchLoading(true);
+    setSearchResults([]);
+    setSettingsAlert(null);
+    try {
+      const query = encodeURIComponent(raw);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=5&accept-language=vi`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setSearchResults(data);
+        } else {
+          setSettingsAlert({ 
+            type: 'error', 
+            message: `❌ Không tìm thấy địa điểm "${raw}". Bạn có thể mở Google Maps, click chuột phải vào vị trí cần chọn để copy tọa độ rồi dán vào đây!` 
+          });
+        }
+      } else {
+        setSettingsAlert({ type: 'error', message: 'Không thể kết nối đến máy chủ tìm kiếm bản đồ. Vui lòng thử lại hoặc nhập tọa độ thủ công.' });
+      }
+    } catch (err) {
+      setSettingsAlert({ type: 'error', message: 'Lỗi tìm kiếm: ' + err.message });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Chọn địa điểm từ danh sách kết quả tìm kiếm
+  const handleSelectSearchResult = (item) => {
+    const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+    const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+    setOfficeSettings(prev => ({
+      ...prev,
+      address: item.display_name,
+      latitude: lat,
+      longitude: lng
+    }));
+    setSearchResults([]);
+    setSettingsAlert({
+      type: 'success',
+      message: `📍 Đã chọn: "${item.display_name}" (${lat}, ${lng})! Nhấn nút "💾 Lưu Cấu Hình Vị Trí & Bán Kính" để áp dụng.`
+    });
   };
 
   const fetchDailyAttendance = async () => {
@@ -858,6 +944,92 @@ const HRAttendance = () => {
               <button onClick={() => setSettingsAlert(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'inherit' }}>&times;</button>
             </div>
           )}
+
+          {/* THANH TÌM KIẾM ĐỊA ĐIỂM HOẶC DÁN TỌA ĐỘ GOOGLE MAPS */}
+          <div style={{
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+            border: '1px solid #bbf7d0',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '24px'
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: '#166534', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>🔍</span> Chọn Vị Trí Bất Kỳ (Tìm Kiếm Địa Chỉ Hoặc Dán Tọa Độ Từ Google Maps):
+            </div>
+            
+            <form onSubmit={handleSearchLocation} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={searchAddressQuery}
+                onChange={(e) => setSearchAddressQuery(e.target.value)}
+                placeholder="Nhập tên địa điểm (VD: Bitexco, Sân bay Tân Sơn Nhất, Hồ Gươm...) hoặc dán tọa độ Google Maps (VD: 10.7769, 106.7008)"
+                style={{
+                  flex: '1',
+                  minWidth: '280px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #86efac',
+                  fontSize: '13px',
+                  outline: 'none',
+                  background: '#fff'
+                }}
+              />
+              <button
+                type="submit"
+                disabled={searchLoading}
+                style={{
+                  padding: '10px 20px',
+                  background: '#15803d',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: searchLoading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {searchLoading ? '🔄 Đang tìm...' : '🔍 Tìm & Nhận Diện'}
+              </button>
+            </form>
+
+            {/* DANH SÁCH KẾT QUẢ TÌM KIẾM GỢI Ý */}
+            {searchResults.length > 0 && (
+              <div style={{ marginTop: '12px', background: '#fff', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                <div style={{ padding: '8px 12px', fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  🎯 Kết quả tìm kiếm (Bấm vào một địa điểm để chọn):
+                </div>
+                {searchResults.map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => handleSelectSearchResult(item)}
+                    style={{
+                      padding: '10px 14px',
+                      borderBottom: idx < searchResults.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      color: '#0f172a',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                  >
+                    <div style={{ fontWeight: '600' }}>📍 {item.display_name}</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                      Vĩ độ: {parseFloat(item.lat).toFixed(6)} | Kinh độ: {parseFloat(item.lon).toFixed(6)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ fontSize: '11px', color: '#15803d', marginTop: '8px', lineHeight: '1.4' }}>
+              💡 <strong>Mẹo chọn vị trí bất kỳ từ Google Maps:</strong> Bạn mở <a href="https://www.google.com/maps" target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: '700' }}>Google Maps ↗</a>, click chuột phải vào vị trí mong muốn &rarr; click dòng số đầu tiên để copy tọa độ (VD: <code>10.776889, 106.700806</code>) &rarr; dán vào ô trên rồi bấm <strong>Tìm & Nhận diện</strong>! Hoặc bạn cũng có thể gõ trực tiếp vào 2 ô Vĩ độ và Kinh độ bên dưới.
+            </div>
+          </div>
 
           {loadingSettings ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
