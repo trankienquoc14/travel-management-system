@@ -225,18 +225,31 @@ const PersonalAttendance = () => {
                       </td>
 
                       <td style={{ padding: '12px 14px', fontSize: '12px', color: '#64748b' }}>
-                        {row.latitude && row.longitude ? (
-                          <a 
-                            href={`https://www.google.com/maps?q=${row.latitude},${row.longitude}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: '#0284c7', fontWeight: '600', textDecoration: 'none' }}
-                          >
-                            📍 Xem vị trí ↗
-                          </a>
-                        ) : (
-                          'Tự động theo đơn'
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {row.latitude && row.longitude && (
+                            <a 
+                              href={`https://www.google.com/maps?q=${row.latitude},${row.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#059669', fontWeight: '700', textDecoration: 'none', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              title={row.location_address || 'Vị trí vào ca sáng'}
+                            >
+                              📍 Vào ca ↗
+                            </a>
+                          )}
+                          {row.checkout_latitude && row.checkout_longitude ? (
+                            <a 
+                              href={`https://www.google.com/maps?q=${row.checkout_latitude},${row.checkout_longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#0284c7', fontWeight: '700', textDecoration: 'none', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              title={row.checkout_location_address || 'Vị trí ra ca chiều'}
+                            >
+                              🏁 Ra ca ↗
+                            </a>
+                          ) : null}
+                          {!row.latitude && !row.checkout_latitude && 'Tự động theo đơn'}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -277,7 +290,8 @@ const PersonalAttendance = () => {
               <div>📅 <strong>Ngày làm:</strong> {formatDateVN(selectedFaceModal.work_date)}</div>
               <div>⏱️ <strong>Giờ Check-in:</strong> <span style={{ color: '#059669', fontWeight: '700' }}>{selectedFaceModal.check_in || '--:--'}</span> | <strong>Check-out:</strong> <span style={{ color: '#0284c7', fontWeight: '700' }}>{selectedFaceModal.check_out || '--:--'}</span></div>
               <div>🎯 <strong>Độ khớp AI:</strong> <span style={{ color: '#166534', fontWeight: '800' }}>{selectedFaceModal.match_confidence || 98.5}% (Chính chủ)</span></div>
-              {selectedFaceModal.location_address && <div>🏠 <strong>Vị trí GPS:</strong> {selectedFaceModal.location_address}</div>}
+              {selectedFaceModal.location_address && <div>📍 <strong>Vị trí vào ca:</strong> {selectedFaceModal.location_address}</div>}
+              {selectedFaceModal.checkout_location_address && <div>🏁 <strong>Vị trí ra ca:</strong> {selectedFaceModal.checkout_location_address}</div>}
             </div>
 
             <button

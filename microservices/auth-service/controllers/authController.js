@@ -153,7 +153,7 @@ exports.getProfile = async (req, res) => {
     const userId = req.user.user_id || req.user.id;
 
     const [users] = await sequelize.query(`
-      SELECT u.user_id, u.role_id, u.full_name, u.email, u.phone, u.avatar, u.gender, u.date_of_birth, u.address, u.status, u.created_at, r.role_name
+      SELECT u.user_id, u.role_id, u.full_name, u.email, u.phone, u.avatar, u.face_descriptor, u.gender, u.date_of_birth, u.address, u.status, u.created_at, r.role_name
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.role_id
       WHERE u.user_id = ?
@@ -177,7 +177,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const sequelize = require('../config/database');
     const userId = req.user.user_id || req.user.id;
-    const { full_name, phone, gender, date_of_birth, address, avatar } = req.body;
+    const { full_name, phone, gender, date_of_birth, address, avatar, face_descriptor } = req.body;
 
     // Kiểm tra định dạng số điện thoại nếu có nhập (Luồng 5)
     if (phone && phone.trim()) {
@@ -222,13 +222,10 @@ exports.updateProfile = async (req, res) => {
         const filename = `avatar_${userId}_${Date.now()}.${ext}`;
         const filepath = path.join(uploadsDir, filename);
         fs.writeFileSync(filepath, base64Content, 'base64');
-        avatarPath = `/uploads/${filename}`;
+        avatarPath = avatar.length < 500000 ? avatar : `/uploads/${filename}`;
       } catch (imgErr) {
         console.error('Lỗi lưu file ảnh avatar:', imgErr);
-        return res.status(400).json({
-          success: false,
-          message: 'Không thể tải lên ảnh đại diện. Vui lòng kiểm tra dung lượng ảnh (< 3MB) và thử lại'
-        });
+        avatarPath = avatar;
       }
     }
 
@@ -261,6 +258,11 @@ exports.updateProfile = async (req, res) => {
     if (avatar !== undefined) { 
       updateFields.push('avatar = ?'); 
       replacements.push(avatarPath); 
+    }
+    if (face_descriptor !== undefined) {
+      updateFields.push('face_descriptor = ?');
+      const descStr = typeof face_descriptor === 'string' ? face_descriptor : JSON.stringify(face_descriptor);
+      replacements.push(descStr);
     }
 
     if (updateFields.length === 0) {

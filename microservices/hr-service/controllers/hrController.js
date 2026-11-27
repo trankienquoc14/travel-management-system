@@ -1,6 +1,60 @@
 const sequelize = require('../config/database');
 const bcrypt = require('bcryptjs');
 
+// Tọa độ Trụ sở công ty (Tòa nhà VietTravel Tower, 190 Pasteur, Phường Võ Thị Sáu / Phường 6, Quận 3, TP. Hồ Chí Minh)
+const COMPANY_OFFICE_COORDS = { lat: 10.784507, lng: 106.690842 };
+const MAX_OFFICE_RADIUS_METERS = 500; // Bán kính 500m (đã cộng sai số GPS điện thoại/máy tính)
+
+// Công thức Haversine tính khoảng cách giữa 2 tọa độ GPS (mét)
+function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+// Tự động kiểm tra và nâng cấp CSDL cho Sinh trắc học FaceID vĩnh viễn & Tách vị trí Check-out
+let schemaChecked = false;
+const ensureBiometricAndAttendanceSchema = async () => {
+  if (schemaChecked) return;
+  try {
+    // 1. Cột face_descriptor trong bảng users
+    const [userCols] = await sequelize.query(`SHOW COLUMNS FROM users LIKE 'face_descriptor'`);
+    if (userCols.length === 0) {
+      await sequelize.query(`ALTER TABLE users ADD COLUMN face_descriptor TEXT NULL`);
+      console.log('✅ Đã thêm cột face_descriptor vào bảng users');
+    }
+    // Nâng cấp cột avatar lên LONGTEXT để lưu cả ảnh Base64 vĩnh viễn
+    try {
+      await sequelize.query(`ALTER TABLE users MODIFY COLUMN avatar LONGTEXT NULL`);
+    } catch (e) {}
+
+    // 2. Cột checkout trong bảng timekeeping
+    const [tCols] = await sequelize.query(`SHOW COLUMNS FROM timekeeping LIKE 'checkout_latitude'`);
+    if (tCols.length === 0) {
+      await sequelize.query(`
+        ALTER TABLE timekeeping 
+        ADD COLUMN checkout_latitude DECIMAL(10,8) NULL,
+        ADD COLUMN checkout_longitude DECIMAL(11,8) NULL,
+        ADD COLUMN checkout_location_address VARCHAR(255) NULL,
+        ADD COLUMN checkout_face_image_url LONGTEXT NULL,
+        ADD COLUMN checkout_match_confidence DECIMAL(5,2) NULL
+      `);
+      console.log('✅ Đã thêm các cột checkout location vào bảng timekeeping');
+    }
+    schemaChecked = true;
+  } catch (err) {
+    console.warn('Lỗi kiểm tra schema sinh trắc học:', err.message);
+  }
+};
+// Kích hoạt kiểm tra CSDL
+ensureBiometricAndAttendanceSchema();
+
 // 1. Lấy danh sách nhân viên
 exports.getAllEmployees = async (req, res) => {
   try {
@@ -440,7 +494,9 @@ exports.getAttendance = async (req, res) => {
           u.user_id, u.full_name, u.email, r.role_name,
           t.timekeeping_id, t.status, t.check_in, t.check_out, t.notes,
           t.latitude, t.longitude, t.location_address, t.device_info,
-          t.face_image_url, t.face_verified, t.match_confidence
+          t.face_image_url, t.face_verified, t.match_confidence,
+          t.checkout_latitude, t.checkout_longitude, t.checkout_location_address,
+          t.checkout_face_image_url, t.checkout_match_confidence
         FROM users u
         JOIN roles r ON u.role_id = r.role_id
         LEFT JOIN timekeeping t ON u.user_id = t.employee_id AND t.work_date = ?
@@ -874,6 +930,8 @@ exports.getAttendanceHistory = async (req, res) => {
         t.timekeeping_id, t.work_date, t.status, t.check_in, t.check_out, t.notes,
         t.latitude, t.longitude, t.location_address, t.device_info,
         t.face_image_url, t.face_verified, t.match_confidence,
+        t.checkout_latitude, t.checkout_longitude, t.checkout_location_address,
+        t.checkout_face_image_url, t.checkout_match_confidence,
         u.user_id, u.full_name, u.email, r.role_name
       FROM timekeeping t
       JOIN users u ON t.employee_id = u.user_id
@@ -985,6 +1043,8 @@ exports.updateUserRole = async (req, res) => {
 // 17. ĐIỂM DANH / CHẤM CÔNG GPS REALTIME & FACE ID (Dành cho tất cả nhân sự, trừ Customer)
 exports.gpsCheckIn = async (req, res) => {
   try {
+    await ensureBiometricAndAttendanceSchema();
+
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
     const userRole = req.user?.role_id || req.user?.role;
 
@@ -1023,6 +1083,35 @@ exports.gpsCheckIn = async (req, res) => {
       });
     }
 
+    // 🏢 KIỂM TRA BÁN KÍNH GPS THEO VAI TRÒ (ROLE-BASED GEOFENCING)
+    // Khối văn phòng (Office Staff: 4, HR Manager: 2): Bắt buộc ở trong bán kính văn phòng (<= 500m)
+    // Khối hiện trường (Tour Guide: 5, Driver: 8) & Admin (1): Được tự do chấm công hiện trường
+    const isStrictOfficeStaff = (Number(userRole) === 4 || Number(userRole) === 2);
+    let currentDistance = null;
+
+    if (isStrictOfficeStaff) {
+      if (!latitude || !longitude) {
+        return res.status(400).json({
+          success: false,
+          message: '❌ Nhân viên văn phòng bắt buộc phải bật định vị GPS để xác thực có mặt tại trụ sở công ty!'
+        });
+      }
+
+      currentDistance = calculateDistanceMeters(
+        parseFloat(latitude), 
+        parseFloat(longitude), 
+        COMPANY_OFFICE_COORDS.lat, 
+        COMPANY_OFFICE_COORDS.lng
+      );
+
+      if (currentDistance > MAX_OFFICE_RADIUS_METERS) {
+        return res.status(400).json({
+          success: false,
+          message: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH VĂN PHÒNG: Bạn đang ở cách trụ sở ${currentDistance}m (Vượt quá bán kính cho phép ${MAX_OFFICE_RADIUS_METERS}m). Nhân viên văn phòng bắt buộc phải có mặt tại 190 Pasteur, Quận 3 để chấm công!`
+        });
+      }
+    }
+
     // Xử lý lưu ảnh selfie xác thực khuôn mặt từ camera
     let face_image_url = null;
     try {
@@ -1051,10 +1140,15 @@ exports.gpsCheckIn = async (req, res) => {
     if (existing.length === 0) {
       // 🚀 CHƯA CHẤM CÔNG HÔM NAY -> CHECK-IN VÀO CA
       const status = nowTime <= '08:15:00' ? 'Present' : 'Late';
-      const defaultNote = (notes || `Điểm danh FaceID chính chủ (${confidenceScore.toFixed(1)}%) Check-in lúc ${nowTime}`).slice(0, 245);
+      const locNote = currentDistance !== null ? ` (Tại văn phòng ${currentDistance}m)` : '';
+      const defaultNote = (notes || `Điểm danh FaceID chính chủ (${confidenceScore.toFixed(1)}%)${locNote} Check-in lúc ${nowTime}`).slice(0, 245);
 
       await sequelize.query(`
-        INSERT INTO timekeeping (employee_id, work_date, status, check_in, latitude, longitude, location_address, device_info, face_image_url, face_verified, match_confidence, notes)
+        INSERT INTO timekeeping (
+          employee_id, work_date, status, check_in, 
+          latitude, longitude, location_address, device_info, 
+          face_image_url, face_verified, match_confidence, notes
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
       `, {
         replacements: [
@@ -1072,23 +1166,37 @@ exports.gpsCheckIn = async (req, res) => {
         success: true,
         type: 'check_in',
         message: `📍 Điểm danh FaceID & GPS thành công (${status === 'Present' ? 'Đúng giờ' : 'Đến muộn'} - Độ khớp ${confidenceScore.toFixed(1)}%)!`,
-        data: { work_date: today, check_in: nowTime, status, latitude, longitude, location_address: safeAddress, face_image_url, match_confidence: confidenceScore, face_verified: 1 }
+        data: { 
+          work_date: today, 
+          check_in: nowTime, 
+          status, 
+          latitude, 
+          longitude, 
+          location_address: safeAddress, 
+          face_image_url, 
+          match_confidence: confidenceScore, 
+          face_verified: 1 
+        }
       });
 
     } else {
       // 🚀 ĐÃ CHẤM CÔNG VÀO CA -> CHECK-OUT RA CA
-      const checkoutNote = (notes || `Ra ca FaceID chính chủ (${confidenceScore.toFixed(1)}%) Check-out lúc ${nowTime}`).slice(0, 245);
+      const locNote = currentDistance !== null ? ` (Tại văn phòng ${currentDistance}m)` : '';
+      const checkoutNote = (notes || `Ra ca FaceID chính chủ (${confidenceScore.toFixed(1)}%)${locNote} Check-out lúc ${nowTime}`).slice(0, 245);
 
       await sequelize.query(`
         UPDATE timekeeping 
         SET check_out = ?, 
-            latitude = COALESCE(?, latitude), 
-            longitude = COALESCE(?, longitude),
-            location_address = COALESCE(?, location_address),
+            checkout_latitude = ?, 
+            checkout_longitude = ?, 
+            checkout_location_address = ?, 
+            checkout_face_image_url = ?, 
+            checkout_match_confidence = ?, 
+            latitude = COALESCE(latitude, ?),
+            longitude = COALESCE(longitude, ?),
+            location_address = COALESCE(location_address, ?),
             device_info = COALESCE(?, device_info),
-            face_image_url = COALESCE(?, face_image_url),
             face_verified = 1,
-            match_confidence = ?,
             notes = SUBSTRING(CONCAT(COALESCE(notes, ''), ' | ', ?), 1, 245)
         WHERE timekeeping_id = ?
       `, {
@@ -1096,9 +1204,11 @@ exports.gpsCheckIn = async (req, res) => {
           nowTime,
           latitude || null, longitude || null,
           safeAddress,
-          safeDevice,
           face_image_url,
           confidenceScore,
+          latitude || null, longitude || null,
+          safeAddress,
+          safeDevice,
           checkoutNote,
           existing[0].timekeeping_id
         ]
@@ -1108,7 +1218,21 @@ exports.gpsCheckIn = async (req, res) => {
         success: true,
         type: 'check_out',
         message: `🏁 Ra ca làm việc (Check-out FaceID & GPS) lúc ${nowTime} thành công (Độ khớp ${confidenceScore.toFixed(1)}%)!`,
-        data: { work_date: today, check_in: existing[0].check_in, check_out: nowTime, status: existing[0].status, latitude, longitude, location_address, face_image_url, match_confidence: confidenceScore, face_verified: 1 }
+        data: { 
+          work_date: today, 
+          check_in: existing[0].check_in, 
+          check_out: nowTime, 
+          status: existing[0].status, 
+          latitude: existing[0].latitude, 
+          longitude: existing[0].longitude, 
+          location_address: existing[0].location_address,
+          checkout_latitude: latitude,
+          checkout_longitude: longitude,
+          checkout_location_address: safeAddress,
+          face_image_url, 
+          match_confidence: confidenceScore, 
+          face_verified: 1 
+        }
       });
     }
   } catch (error) {
@@ -1120,6 +1244,7 @@ exports.gpsCheckIn = async (req, res) => {
 // 18. LẤY TRẠNG THÁI CHẤM CÔNG CỦA BẢN THÂN HÔM NAY
 exports.getMyAttendanceStatus = async (req, res) => {
   try {
+    await ensureBiometricAndAttendanceSchema();
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
     const now = new Date();
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(now);
@@ -1140,9 +1265,10 @@ exports.getMyAttendanceStatus = async (req, res) => {
 // 18b. LẤY HỒ SƠ KHUÔN MẶT FACE ID CỦA NHÂN VIÊN
 exports.getMyFaceProfile = async (req, res) => {
   try {
+    await ensureBiometricAndAttendanceSchema();
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
     const [rows] = await sequelize.query(`
-      SELECT user_id, full_name, email, role_id, avatar
+      SELECT user_id, full_name, email, role_id, avatar, face_descriptor
       FROM users WHERE user_id = ?
     `, { replacements: [userId] });
 
@@ -1158,7 +1284,8 @@ exports.getMyFaceProfile = async (req, res) => {
         full_name: user.full_name,
         email: user.email,
         avatar: user.avatar,
-        has_face_profile: !!user.avatar
+        face_descriptor: user.face_descriptor,
+        has_face_profile: !!(user.face_descriptor || user.avatar)
       }
     });
   } catch (error) {
@@ -1167,44 +1294,52 @@ exports.getMyFaceProfile = async (req, res) => {
   }
 };
 
-// 18c. ĐĂNG KÝ HOẶC CẬP NHẬT ẢNH KHUÔN MẶT MẪU FACE ID
+// 18c. ĐĂNG KÝ HOẶC CẬP NHẬT ẢNH KHUÔN MẶT MẪU FACE ID (LƯU VĨNH VIỄN CSDL)
 exports.updateMyFaceProfile = async (req, res) => {
   try {
+    await ensureBiometricAndAttendanceSchema();
     const userId = req.user?.user_id || req.user?.id || req.user?.userId;
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại!' });
     }
 
-    const { face_image } = req.body;
+    const { face_image, face_descriptor } = req.body;
     if (!face_image || typeof face_image !== 'string' || !face_image.startsWith('data:image')) {
       return res.status(400).json({ success: false, message: 'Thiếu dữ liệu ảnh khuôn mặt FaceID hợp lệ!' });
     }
 
-    const fs = require('fs');
-    const path = require('path');
-    const sharedUploadsDir = path.join(__dirname, '../../shared-uploads');
-    if (!fs.existsSync(sharedUploadsDir)) fs.mkdirSync(sharedUploadsDir, { recursive: true });
-    const localUploadsDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(localUploadsDir)) fs.mkdirSync(localUploadsDir, { recursive: true });
-
-    const base64Data = face_image.replace(/^data:image\/\w+;base64,/, "");
-    const filename = `avatar_${userId}_${Date.now()}.jpg`;
-
-    fs.writeFileSync(path.join(sharedUploadsDir, filename), base64Data, 'base64');
+    // Mặc định lưu trực tiếp Base64 vào database để Render restart KHÔNG BAO GIỜ BỊ MẤT
+    let avatarUrl = face_image;
     try {
-      fs.writeFileSync(path.join(localUploadsDir, filename), base64Data, 'base64');
-    } catch (e) {}
+      const fs = require('fs');
+      const path = require('path');
+      const sharedUploadsDir = path.join(__dirname, '../../shared-uploads');
+      if (!fs.existsSync(sharedUploadsDir)) fs.mkdirSync(sharedUploadsDir, { recursive: true });
+      const base64Data = face_image.replace(/^data:image\/\w+;base64,/, "");
+      const filename = `avatar_${userId}_${Date.now()}.jpg`;
+      fs.writeFileSync(path.join(sharedUploadsDir, filename), base64Data, 'base64');
+      if (face_image.length >= 600000) {
+        avatarUrl = `/uploads/${filename}`;
+      }
+    } catch (e) {
+      avatarUrl = face_image;
+    }
 
-    const avatarUrl = `/uploads/${filename}`;
+    const descriptorStr = face_descriptor 
+      ? (typeof face_descriptor === 'string' ? face_descriptor : JSON.stringify(face_descriptor))
+      : null;
 
     await sequelize.query(`
-      UPDATE users SET avatar = ? WHERE user_id = ?
-    `, { replacements: [avatarUrl, userId] });
+      UPDATE users 
+      SET avatar = ?, 
+          face_descriptor = COALESCE(?, face_descriptor) 
+      WHERE user_id = ?
+    `, { replacements: [avatarUrl, descriptorStr, userId] });
 
     res.status(200).json({
       success: true,
-      message: 'Đăng ký khuôn mặt mẫu FaceID vào hồ sơ thành công!',
-      data: { avatar: avatarUrl, has_face_profile: true }
+      message: 'Đăng ký khuôn mặt mẫu FaceID vào hồ sơ thành công (Lưu vĩnh viễn trên CSDL)!',
+      data: { avatar: avatarUrl, face_descriptor: descriptorStr, has_face_profile: true }
     });
   } catch (error) {
     console.error("Lỗi updateMyFaceProfile:", error);

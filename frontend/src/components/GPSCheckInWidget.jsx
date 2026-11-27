@@ -184,7 +184,23 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
 
       if (userData) {
         setFaceProfile(userData);
-        if (userData.avatar) {
+        let loadedDescriptor = null;
+        // 1. Ưu tiên nạp thẳng vector 128 số từ CSDL (Chống mất khi Render redeploy)
+        if (userData.face_descriptor) {
+          try {
+            const parsed = typeof userData.face_descriptor === 'string'
+              ? JSON.parse(userData.face_descriptor)
+              : userData.face_descriptor;
+            if (Array.isArray(parsed) && parsed.length === 128) {
+              loadedDescriptor = new Float32Array(parsed);
+              setProfileDescriptor(loadedDescriptor);
+            }
+          } catch (dErr) {
+            console.warn("Lỗi parse face_descriptor từ DB:", dErr);
+          }
+        }
+        // 2. Nếu chưa có vector trong CSDL thì nạp từ ảnh avatar
+        if (!loadedDescriptor && userData.avatar) {
           const avatarFullUrl = getImageUrl(userData.avatar);
           const descriptor = await loadFaceDescriptorFromImage(avatarFullUrl);
           if (descriptor) {
@@ -674,10 +690,14 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       let avatarUrl = '';
       let saveSuccess = false;
 
+      // Chuẩn bị vector 128 số float để lưu vĩnh viễn trên CSDL
+      const descJson = frontDescriptorRef.current ? JSON.stringify(Array.from(frontDescriptorRef.current)) : null;
+
       // 1. Thử gọi PUT /api/auth/profile trước (luôn tồn tại trên auth-service)
       try {
         const authRes = await axios.put(`${API_BASE}/api/auth/profile`, {
-          avatar: photoData
+          avatar: photoData,
+          face_descriptor: descJson
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -693,7 +713,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       if (!saveSuccess) {
         try {
           const hrRes = await axios.post(`${API_BASE}/api/hr/attendance/face-profile`, {
-            face_image: photoData
+            face_image: photoData,
+            face_descriptor: descJson
           }, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -713,22 +734,26 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         setFaceProfile(prev => ({
           ...(prev || {}),
           avatar: avatarUrl,
+          face_descriptor: descJson,
           has_face_profile: true
         }));
 
-        // Trích xuất descriptor trực tiếp từ ảnh vừa chụp
-        const descriptor = await loadFaceDescriptorFromImage(photoData);
-        if (descriptor) {
-          setProfileDescriptor(descriptor);
+        if (frontDescriptorRef.current) {
+          setProfileDescriptor(frontDescriptorRef.current);
+        } else {
+          const descriptor = await loadFaceDescriptorFromImage(photoData);
+          if (descriptor) {
+            setProfileDescriptor(descriptor);
+          }
         }
 
         // Cập nhật localStorage để đồng bộ toàn bộ app
         try {
           const stored = JSON.parse(localStorage.getItem('user') || '{}');
-          localStorage.setItem('user', JSON.stringify({ ...stored, avatar: avatarUrl }));
+          localStorage.setItem('user', JSON.stringify({ ...stored, avatar: avatarUrl, face_descriptor: descJson }));
         } catch (e) {}
 
-        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID (Chuẩn eKYC 3D) thành công!');
+        setRegSuccess('🎉 Đăng ký khuôn mặt mẫu FaceID (Lưu CSDL vĩnh viễn) thành công!');
         stopRegCamera();
         setTimeout(() => {
           setShowRegisterModal(false);
@@ -1282,18 +1307,56 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
             <div style={{ fontSize: '12px', color: '#0f172a', fontWeight: '600', marginBottom: '4px', lineHeight: '1.4' }}>
               🏠 {address || 'Đang cập nhật địa chỉ...'}
             </div>
-            <div style={{ display: 'flex', gap: '14px', fontSize: '11px', color: '#475569', fontWeight: '600' }}>
+            <div style={{ display: 'flex', gap: '14px', fontSize: '11px', color: '#475569', fontWeight: '600', flexWrap: 'wrap' }}>
               <span>📐 Vĩ độ: <strong>{location.lat.toFixed(5)}°</strong></span>
               <span>📐 Kinh độ: <strong>{location.lng.toFixed(5)}°</strong></span>
               <span>🎯 Sai số: <strong>±{location.accuracy}m</strong></span>
             </div>
+
+            {/* HUY HIỆU KIỂM TRA BÁN KÍNH TRỤ SỞ VĂN PHÒNG */}
+            {(() => {
+              const R = 6371e3;
+              const dLat = (10.784507 - location.lat) * Math.PI / 180;
+              const dLon = (106.690842 - location.lng) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(10.784507 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+              
+              let storedRole = null;
+              try {
+                const u = JSON.parse(localStorage.getItem('user') || '{}');
+                storedRole = Number(u.role_id || u.role);
+              } catch (e) {}
+
+              const isOffice = (storedRole === 4 || storedRole === 2);
+              const isField = (storedRole === 5 || storedRole === 8);
+
+              return (
+                <div style={{ marginTop: '8px', fontSize: '11px' }}>
+                  {isOffice ? (
+                    dist <= 500 ? (
+                      <span style={{ color: '#15803d', fontWeight: '700', background: '#dcfce7', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        🏢 Trụ sở 190 Pasteur: Cách {dist}m (Hợp lệ: Trong bán kính 500m)
+                      </span>
+                    ) : (
+                      <span style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '3px 8px', borderRadius: '6px', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        ⚠️ Ngoài bán kính: Cách văn phòng {dist}m (&gt; 500m)
+                      </span>
+                    )
+                  ) : isField ? (
+                    <span style={{ color: '#0369a1', fontWeight: '700', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      🚌 Hiện trường lưu động: Cách trụ sở chính {dist >= 1000 ? `${(dist/1000).toFixed(1)}km` : `${dist}m`}
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <div style={{ color: '#64748b', fontSize: '12px' }}>⏳ Đang bật định vị GPS...</div>
         )}
       </div>
 
-      {/* TRẠNG THÁI CA LÀM VIỆC HÔM NAY */}
+      {/* TRẠNG THÁI CA LÀM VIỆC HÔM NAY - TÁCH BIỆT 2 VỊ TRÍ SÁNG & CHIỀU */}
       <div style={{
         background: '#ffffff',
         borderRadius: '14px',
@@ -1309,6 +1372,11 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           <div style={{ fontSize: '15px', fontWeight: '800', color: attendanceStatus?.check_in ? '#059669' : '#94a3b8', marginTop: '2px' }}>
             {attendanceStatus?.check_in || 'Chưa ghi nhận'}
           </div>
+          {attendanceStatus?.location_address && (
+            <div style={{ fontSize: '10.5px', color: '#475569', marginTop: '4px', lineHeight: '1.3' }}>
+              📍 {attendanceStatus.location_address.slice(0, 50)}...
+            </div>
+          )}
         </div>
 
         <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
@@ -1316,6 +1384,11 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           <div style={{ fontSize: '15px', fontWeight: '800', color: attendanceStatus?.check_out ? '#0284c7' : '#94a3b8', marginTop: '2px' }}>
             {attendanceStatus?.check_out || 'Chưa ghi nhận'}
           </div>
+          {(attendanceStatus?.checkout_location_address || (attendanceStatus?.check_out && attendanceStatus?.location_address)) && (
+            <div style={{ fontSize: '10.5px', color: '#475569', marginTop: '4px', lineHeight: '1.3' }}>
+              🏁 {(attendanceStatus.checkout_location_address || attendanceStatus.location_address).slice(0, 50)}...
+            </div>
+          )}
         </div>
       </div>
 
