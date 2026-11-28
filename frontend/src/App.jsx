@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Import toàn bộ các trang
 import Login from './components/Login';
@@ -24,9 +24,11 @@ import ArticlesPage from './components/ArticlesPage';
 const ProtectedRoute = ({ children }) => {
   const userStr = localStorage.getItem('user');
   const token = localStorage.getItem('token');
+  const location = useLocation();
   
   if (!userStr || !token) {
-    return <Navigate to="/login" replace />;
+    const fullPath = location.pathname + location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(fullPath)}`} replace />;
   }
   return children;
 };

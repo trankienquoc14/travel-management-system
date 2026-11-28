@@ -607,7 +607,18 @@ const MyBookings = () => {
                 const nowTime = Date.now();
                 setFetchedAtMs(nowTime);
                 setNowMs(nowTime);
-                setBookings(response.data.data || []);
+                const list = response.data.data || [];
+                setBookings(list);
+
+                // Tự động mở modal xem chi tiết đơn hàng nếu truy cập từ link email (?booking_id=... hoặc ?id=...)
+                const searchParams = new URLSearchParams(window.location.search);
+                const targetBookingId = searchParams.get('booking_id') || searchParams.get('id');
+                if (targetBookingId) {
+                    const found = list.find((b) => Number(b.booking_id) === Number(targetBookingId));
+                    if (found) {
+                        setDetailBooking(found);
+                    }
+                }
             }
         } catch (error) {
             console.error("Lỗi khi tải danh sách đơn hàng:", error);

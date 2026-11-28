@@ -109,9 +109,12 @@ const Login = ({ defaultRegister = false }) => {
           navigate('/home');
         }, 1200);
       } else {
-        // Chuyển hướng mượt mà theo vai trò
+        // Chuyển hướng mượt mà theo vai trò hoặc theo URL redirect nếu truy cập từ link email
+        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
         const userRole = Number(user.role_id || user.role);
-        if (userRole !== 6) {
+        if (redirectParam && redirectParam.startsWith('/')) {
+          navigate(redirectParam);
+        } else if (userRole !== 6) {
           navigate('/dashboard');
         } else {
           navigate('/home');

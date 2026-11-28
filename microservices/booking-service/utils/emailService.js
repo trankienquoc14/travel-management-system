@@ -617,7 +617,7 @@ async function sendBookingConfirmationEmail(bookingId) {
 
             <!-- Nút truy cập đơn hàng -->
             <div style="text-align: center; margin-top: 32px; margin-bottom: 16px;">
-              <a href="http://localhost:5173/my-bookings?pay=${booking.booking_id}&type=tour" 
+              <a href="${FRONTEND_URL}/my-bookings?booking_id=${booking.booking_id}" 
                  style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
                 Xem Chi Tiết Đơn Hàng & Vé Điện Tử
               </a>
@@ -759,7 +759,7 @@ async function sendPaymentSuccessEmail(bookingId) {
             </div>
 
             <div style="text-align: center; margin-top: 28px; margin-bottom: 12px;">
-              <a href="${FRONTEND_URL}/my-bookings" 
+              <a href="${FRONTEND_URL}/my-bookings?booking_id=${booking.booking_id}" 
                  style="display: inline-block; background: #16a34a; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
                 Mở Vé Điện Tử & Mã QR Check-in
               </a>
@@ -920,7 +920,7 @@ async function sendBookingCancelledUnpaidEmail(bookingId, cancelReason = 'Đơn 
 
             <!-- CTA BUTTON -->
             <div style="text-align: center; margin-top: 28px; margin-bottom: 12px;">
-              <a href="${FRONTEND_URL}/my-bookings" 
+              <a href="${FRONTEND_URL}/my-bookings?booking_id=${booking.booking_id}" 
                  style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
                 Xem Lại Đơn Hàng & Đặt Lại Tour
               </a>
