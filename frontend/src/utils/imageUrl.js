@@ -37,9 +37,9 @@ export const getImageUrl = (url) => {
 
     const baseUrl = getBaseApiUrl();
 
-    // Nếu ảnh gắn cứng localhost:5000, thay thế bằng baseUrl (Render trên production)
-    if (url.includes('localhost:5000') || url.includes('127.0.0.1:5000')) {
-        return url.replace(/https?:\/\/(localhost|127\.0\.0\.1):5000/g, baseUrl);
+    // Nếu ảnh gắn cứng localhost, thay thế bằng baseUrl (Render trên production)
+    if (url.includes('localhost') || url.includes('127.0.0.1')) {
+        return url.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g, baseUrl);
     }
 
     if (url.startsWith('http://') || url.startsWith('https://')) {

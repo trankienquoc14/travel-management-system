@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TimelineBuilder from './TourBuilder/TimelineBuilder';
 import { formatVehicleDisplayName } from '../utils/vehicleDisplayHelper';
+import { getImageUrl } from '../utils/imageUrl';
 import { 
     Search, 
     Filter, 
@@ -536,16 +537,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
         };
 
         const resolveTourImage = (url) => {
-            if (!url || url === 'undefined' || url === 'null') {
-                return 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=800';
-            }
-            if (url.startsWith('http://') || url.startsWith('https://')) {
-                return url;
-            }
-            if (url.startsWith('/')) {
-                return `http://localhost:5002${url}`;
-            }
-            return `http://localhost:5002/uploads/${url}`;
+            return getImageUrl(url);
         };
 
         const getStatusBadge = (status) => {
@@ -1641,7 +1633,7 @@ const StaffFixedTourDesigner = ({ editTourData }) => {
                             {(formData.image || formData.image_url) ? (
                                 <>
                                     <img 
-                                        src={formData.image instanceof File ? URL.createObjectURL(formData.image) : (formData.image_url.startsWith('http') ? formData.image_url : `http://localhost:5000${formData.image_url}`)} 
+                                        src={formData.image instanceof File ? URL.createObjectURL(formData.image) : getImageUrl(formData.image_url)} 
                                         style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
                                         alt="Preview"
                                     />
