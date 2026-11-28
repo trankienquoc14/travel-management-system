@@ -16,6 +16,84 @@ let cachedTransporter = null;
 let isEthereal = false;
 
 /**
+ * Điều phối gửi email thông minh đa kênh (Brevo HTTPS REST API, Resend HTTPS REST API, Gmail SMTP fallback)
+ */
+async function dispatchEmail({ to, subject, html, text }) {
+  const emailUser = (process.env.EMAIL_USER || 'doantram0901@gmail.com').replace(/["'\s]/g, '');
+  const emailPass = (process.env.EMAIL_PASS || 'gzqf tdxk bywf pali').replace(/["'\s]/g, '');
+
+  // 1. Kênh Brevo HTTP REST API (Port 443 HTTPS - không bị chặn trên Cloud)
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  if (brevoKey) {
+    try {
+      const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'TravelERP Du Lịch', email: emailUser },
+          to: [{ email: to }],
+          subject: subject,
+          htmlContent: html,
+          textContent: text || ''
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        console.log(`✅ [EmailService:Tour] Gửi thành công qua Brevo HTTPS API tới <${to}> (MsgId: ${data?.messageId})`);
+        return { success: true, messageId: data?.messageId, method: 'brevo_https' };
+      } else {
+        const errJson = await resp.json().catch(() => ({}));
+        console.warn('⚠️ [EmailService:Tour] Brevo API trả về lỗi:', errJson);
+      }
+    } catch (brevoErr) {
+      console.warn('⚠️ [EmailService:Tour] Gửi qua Brevo API lỗi, chuyển sang kênh dự phòng:', brevoErr.message);
+    }
+  }
+
+  // 2. Kênh Resend HTTP REST API (Port 443 HTTPS)
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+  if (resendKey) {
+    try {
+      const fromAddr = (process.env.RESEND_FROM || 'TravelERP <onboarding@resend.dev>').trim();
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: fromAddr,
+          to: [to],
+          subject: subject,
+          html: html,
+          text: text || ''
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        console.log(`✅ [EmailService:Tour] Gửi thành công qua Resend HTTPS API tới <${to}> (Id: ${data?.id})`);
+        return { success: true, messageId: data?.id, method: 'resend_https' };
+      } else {
+        const errJson = await resp.json().catch(() => ({}));
+        console.warn('⚠️ [EmailService:Tour] Resend API trả về lỗi:', errJson);
+      }
+    } catch (resendErr) {
+      console.warn('⚠️ [EmailService:Tour] Gửi qua Resend API lỗi, chuyển sang kênh dự phòng:', resendErr.message);
+    }
+  }
+
+  // 3. Kênh SMTP qua Nodemailer (Thử gửi trực tiếp)
+  const transporter = await getTransporter();
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || `"TravelERP Du Lịch" <${emailUser}>`,
+    to,
+    subject,
+    text,
+    html
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  return { success: true, messageId: info.messageId, method: 'smtp' };
+}
+
+/**
  * Khởi tạo hoặc lấy Transporter gửi mail
  */
 async function getTransporter() {
@@ -679,8 +757,122 @@ async function sendPaymentSuccessEmail(bookingId) {
   }
 }
 
+/**
+ * Gửi email thông báo hủy đợt khởi hành cho khách hàng (Mốc xét duyệt T-30)
+ */
+async function sendTourCancellationEmail({ to, recipientName, bookingId, tourName, departureDate, totalAmount, note }) {
+  try {
+    const formattedDate = formatDateVN(departureDate);
+    const formattedAmount = formatVND(totalAmount);
+    const detailUrl = `${FRONTEND_URL}/my-bookings?booking_id=${bookingId}`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <title>Thông báo hủy đợt khởi hành</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b;">
+        <div style="max-width: 650px; margin: 30px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); padding: 32px 30px; text-align: center; color: #ffffff;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
+              📢 THÔNG BÁO HỦY ĐỢT KHỞI HÀNH TOUR
+            </h1>
+            <p style="margin: 8px 0 0; font-size: 14px; opacity: 0.95;">
+              Áp dụng chính sách rà soát vận hành Mốc T-30
+            </p>
+          </div>
+
+          <div style="padding: 30px 32px;">
+            <p style="font-size: 15px; line-height: 1.6; margin-top: 0;">
+              Kính chào <strong>${recipientName}</strong>,
+            </p>
+            <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+              TravelERP xin chân thành cảm ơn Quý khách đã tin tưởng và đăng ký tham gia chương trình du lịch cùng chúng tôi. 
+              Căn cứ theo quy định vận hành an toàn và cam kết chất lượng dịch vụ (Mốc xét duyệt T-30), chúng tôi rất tiếc phải thông báo đợt khởi hành sau đây đã <strong>tạm ngưng tổ chức</strong> do chưa đạt số lượng khách đoàn tối thiểu để khởi hành:
+            </p>
+
+            <!-- Tour Info Card -->
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 18px 20px; margin: 20px 0;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; width: 140px;">Mã đơn hàng:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #b91c1c;">#${bookingId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Tên tour:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${tourName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Ngày khởi hành cũ:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #ef4444;">${formattedDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Tổng tiền:</td>
+                  <td style="padding: 6px 0; font-weight: 700; color: #059669;">${formattedAmount}</td>
+                </tr>
+                ${note ? `
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Lý do vận hành:</td>
+                  <td style="padding: 6px 0; font-style: italic; color: #475569;">${note}</td>
+                </tr>` : ''}
+              </table>
+            </div>
+
+            <!-- Quyền lợi khách hàng -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
+              <div style="font-weight: 700; color: #166534; font-size: 14px; margin-bottom: 8px;">
+                🛡️ CHÍNH SÁCH BẢO VỆ QUYỀN LỢI KHÁCH HÀNG 100%:
+              </div>
+              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #15803d; line-height: 1.6;">
+                <li><strong>Lựa chọn 1 (Hoàn tiền 100%):</strong> Quý khách được hoàn lại toàn bộ 100% số tiền đã cọc/thanh toán mà không mất bất kỳ khoản phí nào trong vòng 1-3 ngày làm việc.</li>
+                <li><strong>Lựa chọn 2 (Đổi lịch trình / Đổi tour):</strong> Hỗ trợ chuyển sang đợt khởi hành tiếp theo hoặc chuyển sang bất kỳ tour nào khác kèm voucher ưu đãi đặc quyền cho chuyến đi.</li>
+              </ul>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 28px 0 20px;">
+              <a href="${detailUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+                Kiểm Tra Chi Tiết Đơn Hàng & Chọn Phương Án
+              </a>
+            </div>
+            <div style="text-align: center; font-size: 12px; color: #94a3b8; margin-bottom: 24px;">
+              (Hoặc truy cập: <a href="${detailUrl}" style="color: #2563eb; word-break: break-all;">${detailUrl}</a>)
+            </div>
+
+            <!-- Footer contact -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; font-size: 13px; color: #64748b; line-height: 1.6;">
+              Quý khách có thể phản hồi trực tiếp email này hoặc liên hệ hotline <strong>1900 1800</strong> để nhân viên chăm sóc khách hàng hỗ trợ ngay lập tức 24/7.
+              <br/><br/>
+              Trân trọng,<br/>
+              <strong>Ban Quản lý & Vận hành Tour - TravelERP</strong>
+            </div>
+
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await dispatchEmail({
+      to,
+      subject: `[TravelERP] 📢 Thông báo hủy đợt khởi hành tour #${bookingId} - ${tourName}`,
+      text: `Kính chào ${recipientName},\n\nĐợt khởi hành ngày ${formattedDate} của tour "${tourName}" (Đơn #${bookingId}) đã bị hủy do chưa đạt số khách tối thiểu theo chính sách Mốc T-30.\n\nQuý khách được đảm bảo hoàn 100% chi phí hoặc hỗ trợ đổi tour ưu đãi. Vui lòng truy cập ${detailUrl} hoặc liên hệ hotline 1900 1800 để được hỗ trợ.\n\nTrân trọng!`,
+      html: htmlContent
+    });
+  } catch (error) {
+    console.error(`❌ [EmailService] Lỗi khi gửi email hủy tour #${bookingId}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   sendBookingConfirmationEmail,
   sendPaymentSuccessEmail,
+  sendTourCancellationEmail,
+  dispatchEmail,
   getBookingFullDetails
 };

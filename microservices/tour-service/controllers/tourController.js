@@ -1,4 +1,5 @@
 const { calculateDepartureCrossBooking } = require('../utils/roomCalculator');
+const { sendTourCancellationEmail } = require('../utils/emailService');
 const sequelize = require('../config/database');
 const Tour = require('../models/Tour');
 const jwt = require('jsonwebtoken');
@@ -1199,24 +1200,37 @@ exports.makeOperationalDecision = async (req, res) => {
         
         let decHistory = [];
         if (dep.decision_history) {
-            decHistory = typeof dep.decision_history === 'string' ? JSON.parse(dep.decision_history) : dep.decision_history;
+            if (Array.isArray(dep.decision_history)) {
+                decHistory = dep.decision_history;
+            } else if (typeof dep.decision_history === 'string' && dep.decision_history.trim().length > 0) {
+                try {
+                    const parsed = JSON.parse(dep.decision_history);
+                    decHistory = Array.isArray(parsed) ? parsed : [];
+                } catch (parseErr) {
+                    console.warn('⚠️ Lỗi parse decision_history:', parseErr.message);
+                    decHistory = [];
+                }
+            }
         }
         
         const currentPax = Math.max(0, (dep.max_slots || 0) - (dep.available_slots || 0));
+        const resolvedUserId = user_id || req.user?.id || req.user?.user_id || 'System';
+        const resolvedUserName = user_name || req.user?.full_name || req.user?.name || 'Quản lý Vận hành';
         
         decHistory.push({
             timestamp: new Date().toISOString(),
-            user_id: user_id || req.user?.id || 'System',
-            user_name: user_name || req.user?.full_name || 'System',
+            user_id: resolvedUserId,
+            user_name: resolvedUserName,
             action: action,
-            pax_at_time: currentPax + '/' + dep.max_slots,
+            pax_at_time: currentPax + '/' + (dep.max_slots || 0),
             note: note || ''
         });
         
+        let affectedBookings = [];
         // NẾU HỦY TOUR (DO THIẾU KHÁCH MỐC T-30 HOẶC QUẢN LÝ QUYẾT ĐỊNH HỦY)
         if (action === 'Đóng tour' || action === 'Hủy tour' || action === 'Đóng / Hủy tour') {
             // 1. LẤY TẤT CẢ BOOKING THUỘC ĐỢT KHỞI HÀNH NÀY (TRỪ NHỮNG ĐƠN ĐÃ HỦY TRƯỚC ĐÓ)
-            const [affectedBookings] = await sequelize.query(`
+            const [queryBookings] = await sequelize.query(`
                 SELECT b.booking_id, b.customer_id, b.num_people, b.total_amount, b.payment_status,
                        b.contact_name, b.contact_phone, b.contact_email, b.notes,
                        u.full_name AS customer_name, u.email AS customer_email, u.phone AS customer_phone
@@ -1225,6 +1239,7 @@ exports.makeOperationalDecision = async (req, res) => {
                 WHERE b.departure_id = ? AND b.booking_status != 'Cancelled'
             `, { replacements: [id], transaction });
 
+            affectedBookings = queryBookings || [];
             const paidBookings = [];
             const unpaidBookings = [];
 
@@ -1235,11 +1250,10 @@ exports.makeOperationalDecision = async (req, res) => {
 
                 if (bk.payment_status === 'Paid') {
                     paidBookings.push(bk);
-                    // Cập nhật đơn hàng sang Cancelled và payment_status sang Pending_Refund (Chờ kế toán hoàn 100%)
+                    // Cập nhật đơn hàng sang Cancelled (giữ payment_status = 'Paid' đúng ENUM chờ kế toán đối soát hoàn tiền)
                     await sequelize.query(`
                         UPDATE bookings 
                         SET booking_status = 'Cancelled',
-                            payment_status = 'Pending_Refund',
                             notes = CONCAT(COALESCE(notes, ''), '\n[HỦY TOUR T-30 THIẾU KHÁCH: Hoàn 100% (', ?, ' ₫) - Chờ hoàn tiền]')
                         WHERE booking_id = ?
                     `, {
@@ -1259,7 +1273,7 @@ exports.makeOperationalDecision = async (req, res) => {
                             'Hủy tour mốc T-30 do không đủ số khách tối thiểu',
                             `Hệ thống tự động duyệt hủy do tour thiếu khách mốc T-30. Hoàn 100% (${totalAmt.toLocaleString('vi-VN')} ₫). Cần CSKH/Kế toán liên hệ đối soát và chuyển khoản.`,
                             totalAmt,
-                            user_id || null
+                            resolvedUserId || null
                         ],
                         transaction
                     });
@@ -1277,11 +1291,11 @@ exports.makeOperationalDecision = async (req, res) => {
                     });
                 } else {
                     unpaidBookings.push(bk);
-                    // Đơn chưa thanh toán: hủy tự động
+                    // Đơn chưa thanh toán: hủy tự động (giữ payment_status = 'Unpaid' đúng ENUM)
                     await sequelize.query(`
                         UPDATE bookings 
                         SET booking_status = 'Cancelled',
-                            payment_status = 'Cancelled',
+                            payment_status = 'Unpaid',
                             notes = CONCAT(COALESCE(notes, ''), '\n[HỦY TOUR T-30 THIẾU KHÁCH: Hủy đơn chưa thanh toán]')
                         WHERE booking_id = ?
                     `, { replacements: [bk.booking_id], transaction });
@@ -1428,6 +1442,28 @@ exports.makeOperationalDecision = async (req, res) => {
         }
 
         await transaction.commit();
+
+        // Gửi email chính thức thông báo hủy tour và hướng dẫn hoàn tiền 100% đến từng khách hàng
+        if (action === 'Đóng tour' || action === 'Hủy tour' || action === 'Đóng / Hủy tour') {
+            if (typeof affectedBookings !== 'undefined' && affectedBookings && affectedBookings.length > 0) {
+                for (const bk of affectedBookings) {
+                    const recipientEmail = bk.contact_email || bk.customer_email;
+                    if (recipientEmail && recipientEmail.includes('@')) {
+                        sendTourCancellationEmail({
+                            to: recipientEmail,
+                            recipientName: bk.contact_name || bk.customer_name || 'Quý khách',
+                            bookingId: bk.booking_id,
+                            tourName: dep.tour_name,
+                            departureDate: dep.departure_date,
+                            totalAmount: bk.total_amount,
+                            note: note || 'Chưa đạt số lượng khách tối thiểu theo mốc xem xét vận hành T-30.'
+                        }).catch(eErr => {
+                            console.warn(`⚠️ [EmailService] Lỗi gửi email hủy tour tới <${recipientEmail}>:`, eErr.message);
+                        });
+                    }
+                }
+            }
+        }
 
         // Broadcast realtime
         notifyTourEvent('departure_updated', { departure_id: id, action });

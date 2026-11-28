@@ -59,8 +59,8 @@ const TourOperations = () => {
             const payload = {
                 action: action,
                 note: actionNote,
-                user_id: user.id || null,
-                user_name: user.full_name || 'System'
+                user_id: user.user_id || user.id || null,
+                user_name: user.full_name || user.name || 'Quản lý Vận hành'
             };
 
             const res = await axios.post(`http://localhost:5000/api/tours/operations/departures/${selectedDep.departure_id}/decision`, payload, {
@@ -75,7 +75,8 @@ const TourOperations = () => {
             }
         } catch (error) {
             console.error('Lỗi ghi nhận quyết định:', error);
-            alert(error.response?.data?.message || 'Có lỗi xảy ra khi lưu quyết định.');
+            const errMsg = error.response?.data?.error || error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu quyết định.';
+            alert(`⚠️ Lỗi ghi nhận quyết định: ${errMsg}`);
         }
     };
 
