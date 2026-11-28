@@ -970,7 +970,7 @@ const applyRescheduleBooking = async ({ bookingId, changeId, newDepartureId, pay
       FROM departures WHERE departure_id = ?
     `, { replacements: [newDepartureId], transaction });
 
-    if (targetDep.length === 0 || targetDep[0].status !== 'Open') {
+    if (targetDep.length === 0 || ['Closed', 'Completed', 'Cancelled'].includes(targetDep[0].status)) {
       await transaction.rollback();
       throw new Error('Đợt khởi hành mới không tồn tại hoặc đã đóng bán!');
     }
@@ -1020,7 +1020,7 @@ const applyRescheduleBooking = async ({ bookingId, changeId, newDepartureId, pay
     // Ghi nhận thanh toán vào payments nếu có giao dịch chuyển khoản
     if (paymentCode && txAmount > 0) {
       await sequelize.query(`
-        INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status, payment_date)
+        INSERT INTO payments (booking_id, payment_method, amount, transaction_code, payment_status, paid_at)
         VALUES (?, 'VNPAY_QR', ?, ?, 'Success', NOW())
       `, { replacements: [bookingId, txAmount, paymentCode], transaction });
     }
