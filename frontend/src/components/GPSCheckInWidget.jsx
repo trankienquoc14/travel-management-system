@@ -78,6 +78,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const bestConfRef = useRef(0);
   const mismatchCountRef = useRef(0);
   const hasAutoTriggeredRef = useRef(false);
+  const autoTriggerTimeoutRef = useRef(null);
 
   const isCheckedIn = !!(attendanceStatus && attendanceStatus.check_in);
   const isCheckedOut = !!(attendanceStatus && attendanceStatus.check_out);
@@ -92,8 +93,52 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   useEffect(() => {
     fetchMyStatus();
     fetchMyFaceProfile();
+    fetchOfficeConfig();
     getGPSLocation();
   }, []);
+
+  // Cấu hình vị trí trụ sở văn phòng và bán kính GPS từ hệ thống (Dynamic Geofencing)
+  const [officeConfig, setOfficeConfig] = useState({
+    address: '190 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh',
+    latitude: 10.784507,
+    longitude: 106.690842,
+    radius: 500
+  });
+
+  const fetchOfficeConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/api/hr/settings/office-location`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data?.success && res.data?.data) {
+        setOfficeConfig(res.data.data);
+      }
+    } catch (err) {
+      console.warn("Lỗi nạp cấu hình vị trí văn phòng:", err.message);
+    }
+  };
+
+  // Tính toán khoảng cách tới trụ sở văn phòng và kiểm tra bán kính geofencing
+  let storedRole = null;
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    storedRole = Number(u.role_id || u.role);
+  } catch (e) {}
+
+  const isOfficeStaffRole = (storedRole === 4 || storedRole === 2 || storedRole === 1);
+  const officeRadius = officeConfig?.radius || 500;
+  let currentDist = null;
+  let isOutOfRadius = false;
+
+  if (location && officeConfig?.latitude && officeConfig?.longitude) {
+    const R = 6371e3;
+    const dLat = (officeConfig.latitude - location.lat) * Math.PI / 180;
+    const dLon = (officeConfig.longitude - location.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(officeConfig.latitude * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    currentDist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    isOutOfRadius = isOfficeStaffRole && (currentDist > officeRadius);
+  }
 
   // Gắn stream vào video element khi cameraActive thay đổi
   useEffect(() => {
@@ -125,10 +170,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       });
       if (res.data.success && res.data.data) {
         setAttendanceStatus(res.data.data);
-        if (res.data.data.face_image_url) {
-          const imgUrl = getImageUrl(res.data.data.face_image_url);
-          setFaceSnapshot(imgUrl);
-        }
       }
     } catch (err) {
       console.error('Lỗi tải trạng thái chấm công cá nhân:', err);
@@ -218,6 +259,9 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     setGpsLoading(true);
     setGpsError('');
 
+    // Đồng bộ lại cấu hình trụ sở văn phòng mới nhất từ server
+    fetchOfficeConfig();
+
     if (!navigator.geolocation) {
       setGpsError('Trình duyệt không hỗ trợ Geolocation!');
       setGpsLoading(false);
@@ -230,19 +274,33 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         const coordsData = { lat: latitude, lng: longitude, accuracy: Math.round(accuracy) };
         setLocation(coordsData);
 
+        let detectedAddr = '';
+        // Thử 1: BigDataCloud (Rất nhanh, CORS)
         try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=vi`);
-          const geoData = await geoRes.json();
-          if (geoData && geoData.display_name) {
-            setAddress(geoData.display_name);
-          } else {
-            setAddress(`Tọa độ: ${latitude.toFixed(5)}°N, ${longitude.toFixed(5)}°E`);
+          const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=vi`);
+          if (bdcRes.ok) {
+            const bdcData = await bdcRes.json();
+            const parts = [];
+            if (bdcData.locality) parts.push(bdcData.locality);
+            if (bdcData.city && bdcData.city !== bdcData.locality) parts.push(bdcData.city);
+            if (bdcData.principalSubdivision) parts.push(bdcData.principalSubdivision);
+            if (parts.length > 0) detectedAddr = parts.join(', ');
           }
-        } catch (e) {
-          setAddress(`Tọa độ GPS: ${latitude.toFixed(5)}°N, ${longitude.toFixed(5)}°E (±${Math.round(accuracy)}m)`);
-        } finally {
-          setGpsLoading(false);
+        } catch (e) {}
+
+        // Thử 2: OpenStreetMap Nominatim
+        if (!detectedAddr) {
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=vi`);
+            const geoData = await geoRes.json();
+            if (geoData && geoData.display_name) {
+              detectedAddr = geoData.display_name;
+            }
+          } catch (e) {}
         }
+
+        setAddress(detectedAddr || `Tọa độ GPS: ${latitude.toFixed(5)}°N, ${longitude.toFixed(5)}°E (±${Math.round(accuracy)}m)`);
+        setGpsLoading(false);
       },
       (error) => {
         let msg = 'Không thể lấy vị trí GPS.';
@@ -258,7 +316,21 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const startCamera = async () => {
     setCameraError('');
     setAlertMsg({ type: '', text: '' });
+    // Reset toàn bộ trạng thái xác thực cũ chống rò rỉ kết quả từ ca trước
+    setFaceVerified(false);
+    setFaceSnapshot(null);
+    setConfidenceScore(0);
+    smoothedScoreRef.current = 0;
+    verifiedLockUntilRef.current = 0;
+    bestConfRef.current = 0;
+    mismatchCountRef.current = 0;
+    consecutiveMatchesRef.current = 0;
     hasAutoTriggeredRef.current = false;
+    if (autoTriggerTimeoutRef.current) {
+      clearTimeout(autoTriggerTimeoutRef.current);
+      autoTriggerTimeoutRef.current = null;
+    }
+
     // Tự động làm mới vị trí GPS tức thì khi bật camera ra ca/vào ca
     getGPSLocation();
     try {
@@ -282,15 +354,23 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   // TẮT CAMERA
   const stopCamera = () => {
     stopLiveScanningLoop();
+    if (autoTriggerTimeoutRef.current) {
+      clearTimeout(autoTriggerTimeoutRef.current);
+      autoTriggerTimeoutRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     setCameraActive(false);
+    setFaceVerified(false);
+    setFaceSnapshot(null);
+    setConfidenceScore(0);
     smoothedScoreRef.current = 0;
     verifiedLockUntilRef.current = 0;
     bestConfRef.current = 0;
     mismatchCountRef.current = 0;
+    consecutiveMatchesRef.current = 0;
     hasAutoTriggeredRef.current = false;
   };
 
@@ -339,9 +419,15 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
     const detection = await detectFaceInCanvas(canvas);
 
     if (!detection.detected) {
-      // Khi không có mặt hoặc bị che khuất -> LẬP TỨC hủy trạng thái xác thực
+      // Khi không có mặt hoặc bị che khuất -> LẬP TỨC hủy mọi trigger tự động và hủy trạng thái xác thực
+      if (autoTriggerTimeoutRef.current) {
+        clearTimeout(autoTriggerTimeoutRef.current);
+        autoTriggerTimeoutRef.current = null;
+      }
+      hasAutoTriggeredRef.current = false;
       verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
+      setFaceSnapshot(null);
       smoothedScoreRef.current = 0;
       setScanStatus({
         status: detection.reason === 'FACE_OCCLUDED' ? 'OCCLUDED' : 'NO_FACE',
@@ -422,15 +508,26 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           metrics: matchResult.metrics,
           confidence: finalScore
         });
-        setTimeout(() => {
+        if (autoTriggerTimeoutRef.current) {
+          clearTimeout(autoTriggerTimeoutRef.current);
+        }
+        autoTriggerTimeoutRef.current = setTimeout(() => {
+          autoTriggerTimeoutRef.current = null;
           handleGPSCheckIn(liveDataUrl, finalScore);
         }, 500);
       }
     } else {
+      // ❌ MẶT KHÔNG KHỚP -> HỦY NGAY LẬP TỨC MỌI TRIGGER TỰ ĐỘNG VÀ XÓA SNAPSHOT CŨ
+      if (autoTriggerTimeoutRef.current) {
+        clearTimeout(autoTriggerTimeoutRef.current);
+        autoTriggerTimeoutRef.current = null;
+      }
+      hasAutoTriggeredRef.current = false;
       consecutiveMatchesRef.current = 0;
       mismatchCountRef.current += 1;
       verifiedLockUntilRef.current = 0;
       setFaceVerified(false);
+      setFaceSnapshot(null); // XÓA NGAY ẢNH CŨ KHÔNG ĐỂ RÒ RỈ
       setConfidenceScore(finalScore);
       setScanStatus({
         status: 'MISMATCHED',
@@ -451,8 +548,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
   const handleGPSCheckIn = async (customSnapshot, customScore) => {
     setAlertMsg({ type: '', text: '' });
 
+    // BẮT BUỘC CAMERA PHẢI ĐANG HOẠT ĐỘNG
+    if (!cameraActive) {
+      soundService.playWarning();
+      setAlertMsg({
+        type: 'error',
+        text: '⚠️ Vui lòng bật Camera và nhìn thẳng để xác thực FaceID chính chủ trước khi chấm công!'
+      });
+      return;
+    }
+
     const snapToUse = customSnapshot || faceSnapshot;
-    const scoreToUse = customScore || confidenceScore;
+    const scoreToUse = customScore !== undefined ? customScore : confidenceScore;
 
     if (!profileDescriptor) {
       setAlertMsg({
@@ -470,10 +577,22 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
       return;
     }
 
+    // BẮT BUỘC PHẢI CÓ faceVerified === true VÀ ĐỘ KHỚP >= 75%
     if (!faceVerified || scoreToUse < 75.0) {
+      soundService.playWarning();
       setAlertMsg({
         type: 'error',
         text: `❌ KHUÔN MẶT KHÔNG TRÙNG KHỚP! Độ khớp chỉ đạt ${scoreToUse.toFixed(1)}% (yêu cầu tối thiểu 75.0%). Hệ thống chỉ ghi nhận khi đúng khuôn mặt chính chủ!`
+      });
+      return;
+    }
+
+    // 🔒 CHẶN CHẤM CÔNG NẾU ĐANG Ở NGOÀI BÁN KÍNH TRỤ SỞ VĂN PHÒNG
+    if (isOutOfRadius) {
+      soundService.playWarning();
+      setAlertMsg({
+        type: 'error',
+        text: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH: Bạn đang cách trụ sở ${currentDist}m (vượt quá bán kính cho phép ${officeRadius}m). Nhân viên văn phòng bắt buộc phải có mặt tại ${officeConfig.address || 'trụ sở'} để chấm công!`
       });
       return;
     }
@@ -506,6 +625,10 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           metrics: null,
           confidence: scoreToUse
         });
+        // NGAY LẬP TỨC XÓA TRẠNG THÁI XÁC THỰC VÀ SNAPSHOT CŨ ĐỂ TRÁNH TÁI SỬ DỤNG
+        setFaceVerified(false);
+        setFaceSnapshot(null);
+        setConfidenceScore(0);
         await fetchMyStatus();
         if (onCheckInSuccess) onCheckInSuccess();
         setTimeout(() => {
@@ -1126,13 +1249,6 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
                       : '🔍 ĐANG QUÉT MẶT...'}
             </div>
           </div>
-        ) : faceSnapshot ? (
-          <div style={{ position: 'relative', width: '160px', height: '160px', margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10b981', boxShadow: '0 0 20px rgba(16,185,129,0.4)' }}>
-            <img src={faceSnapshot} alt="Face Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#10b981', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '4px 0' }}>
-              ✅ ĐÃ CHỤP ẢNH XÁC THỰC
-            </div>
-          </div>
         ) : (
           <div style={{ padding: '24px 10px', color: '#94a3b8' }}>
             <div style={{ fontSize: '44px', marginBottom: '10px' }}>👁️‍🗨️</div>
@@ -1232,41 +1348,74 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
         {/* 🚀 NÚT BẤM ĐIỂM DANH TRỰC TIẾP NGAY DƯỚI CAMERA KHI ĐÃ KHỚP MẶT */}
         {cameraActive && faceVerified && (
           <div style={{ marginTop: '14px' }}>
-            <button
-              onClick={() => handleGPSCheckIn()}
-              disabled={actionLoading || isCheckedOut}
-              style={{
-                width: '100%',
-                maxWidth: '340px',
-                padding: '12px 20px',
-                borderRadius: '24px',
-                border: 'none',
-                background: isCheckedOut
-                  ? '#94a3b8'
-                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: '#ffffff',
-                fontWeight: '800',
-                fontSize: '14px',
-                cursor: isCheckedOut ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 0 20px rgba(16, 185, 129, 0.55)',
-                animation: 'pulse 2s infinite'
-              }}
-            >
-              <span>{actionLoading ? '⏳' : isCheckedIn ? '🏁' : '🚀'}</span>
-              <span>
-                {actionLoading 
-                  ? 'Đang ghi nhận công...' 
-                  : isCheckedOut 
-                    ? 'Đã hoàn thành ca làm' 
-                    : isCheckedIn 
-                      ? `Bấm Ra Ca / Check-out (${confidenceScore.toFixed(1)}%)` 
-                      : `Bấm Chấm Công Ngay (${confidenceScore.toFixed(1)}%)`}
-              </span>
-            </button>
+            {isOutOfRadius ? (
+              <button
+                type="button"
+                onClick={() => {
+                  soundService.playWarning();
+                  setAlertMsg({
+                    type: 'error',
+                    text: `❌ TỌA ĐỘ NGOÀI BÁN KÍNH: Bạn đang cách trụ sở ${currentDist}m (vượt quá bán kính cho phép ${officeRadius}m). Nhân viên văn phòng bắt buộc phải có mặt tại ${officeConfig.address || 'văn phòng'} để chấm công!`
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  maxWidth: '380px',
+                  padding: '12px 18px',
+                  borderRadius: '24px',
+                  border: '1px solid #ef4444',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 0 16px rgba(239, 68, 68, 0.45)'
+                }}
+              >
+                <span>🚫</span>
+                <span>Ngoài Bán Kính: Cách Trụ Sở {currentDist}m (&gt; {officeRadius}m)</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => handleGPSCheckIn()}
+                disabled={actionLoading || isCheckedOut}
+                style={{
+                  width: '100%',
+                  maxWidth: '340px',
+                  padding: '12px 20px',
+                  borderRadius: '24px',
+                  border: 'none',
+                  background: isCheckedOut
+                    ? '#94a3b8'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '14px',
+                  cursor: isCheckedOut ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.55)',
+                  animation: 'pulse 2s infinite'
+                }}
+              >
+                <span>{actionLoading ? '⏳' : isCheckedIn ? '🏁' : '🚀'}</span>
+                <span>
+                  {actionLoading 
+                    ? 'Đang ghi nhận công...' 
+                    : isCheckedOut 
+                      ? 'Đã hoàn thành ca làm' 
+                      : isCheckedIn 
+                        ? `Bấm Ra Ca / Check-out (${confidenceScore.toFixed(1)}%)` 
+                        : `Bấm Chấm Công Ngay (${confidenceScore.toFixed(1)}%)`}
+                </span>
+              </button>
+            )}
           </div>
         )}
 
@@ -1304,8 +1453,8 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           </div>
         ) : location ? (
           <div>
-            <div style={{ fontSize: '12px', color: '#0f172a', fontWeight: '600', marginBottom: '4px', lineHeight: '1.4' }}>
-              🏠 {address || 'Đang cập nhật địa chỉ...'}
+            <div style={{ fontSize: '12px', color: '#0f172a', fontWeight: '700', marginBottom: '4px', lineHeight: '1.4' }}>
+              📍 Vị trí bạn đang đứng: <span style={{ fontWeight: '500', color: '#1e293b' }}>{address || 'Đang cập nhật địa chỉ...'}</span>
             </div>
             <div style={{ display: 'flex', gap: '14px', fontSize: '11px', color: '#475569', fontWeight: '600', flexWrap: 'wrap' }}>
               <span>📐 Vĩ độ: <strong>{location.lat.toFixed(5)}°</strong></span>
@@ -1313,12 +1462,15 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               <span>🎯 Sai số: <strong>±{location.accuracy}m</strong></span>
             </div>
 
-            {/* HUY HIỆU KIỂM TRA BÁN KÍNH TRỤ SỞ VĂN PHÒNG */}
+            {/* HUY HIỆU KIỂM TRA BÁN KÍNH TRỤ SỞ VĂN PHÒNG DYNAMIC GEOFENCING */}
             {(() => {
               const R = 6371e3;
-              const dLat = (10.784507 - location.lat) * Math.PI / 180;
-              const dLon = (106.690842 - location.lng) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(10.784507 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const officeLat = officeConfig.latitude || 10.784507;
+              const officeLng = officeConfig.longitude || 106.690842;
+              const officeRadius = officeConfig.radius || 500;
+              const dLat = (officeLat - location.lat) * Math.PI / 180;
+              const dLon = (officeLng - location.lng) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(location.lat * Math.PI / 180) * Math.cos(officeLat * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
               const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
               
               let storedRole = null;
@@ -1333,18 +1485,18 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               return (
                 <div style={{ marginTop: '8px', fontSize: '11px' }}>
                   {isOffice ? (
-                    dist <= 500 ? (
-                      <span style={{ color: '#15803d', fontWeight: '700', background: '#dcfce7', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        🏢 Trụ sở 190 Pasteur: Cách {dist}m (Hợp lệ: Trong bán kính 500m)
+                    dist <= officeRadius ? (
+                      <span style={{ color: '#15803d', fontWeight: '700', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        🏢 Trụ sở ({officeConfig.address ? (officeConfig.address.length > 30 ? officeConfig.address.slice(0, 30) + '...' : officeConfig.address) : 'Văn phòng'}): Cách {dist}m (Hợp lệ: Trong bán kính {officeRadius}m)
                       </span>
                     ) : (
-                      <span style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '3px 8px', borderRadius: '6px', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        ⚠️ Ngoài bán kính: Cách văn phòng {dist}m (&gt; 500m)
+                      <span style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        ⚠️ Ngoài bán kính: Cách trụ sở ({officeConfig.address ? (officeConfig.address.length > 30 ? officeConfig.address.slice(0, 30) + '...' : officeConfig.address) : 'Văn phòng'}) {dist}m (&gt; {officeRadius}m)
                       </span>
                     )
                   ) : isField ? (
-                    <span style={{ color: '#0369a1', fontWeight: '700', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      🚌 Hiện trường lưu động: Cách trụ sở chính {dist >= 1000 ? `${(dist/1000).toFixed(1)}km` : `${dist}m`}
+                    <span style={{ color: '#0369a1', fontWeight: '700', background: '#e0f2fe', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      🚌 Hiện trường lưu động: Cách trụ sở ({officeConfig.address ? (officeConfig.address.length > 25 ? officeConfig.address.slice(0, 25) + '...' : officeConfig.address) : 'Trụ sở chính'}) {dist >= 1000 ? `${(dist/1000).toFixed(1)}km` : `${dist}m`}
                     </span>
                   ) : null}
                 </div>
@@ -1377,6 +1529,16 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               📍 {attendanceStatus.location_address.slice(0, 50)}...
             </div>
           )}
+          {attendanceStatus?.face_image_url && (
+            <a 
+              href={getImageUrl(attendanceStatus.face_image_url)} 
+              target="_blank" 
+              rel="noreferrer"
+              style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700', textDecoration: 'underline', marginTop: '4px', display: 'inline-block' }}
+            >
+              👁️ Xem ảnh vào ca ↗
+            </a>
+          )}
         </div>
 
         <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
@@ -1389,12 +1551,40 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
               🏁 {(attendanceStatus.checkout_location_address || attendanceStatus.location_address).slice(0, 50)}...
             </div>
           )}
+          {attendanceStatus?.checkout_face_image_url && (
+            <a 
+              href={getImageUrl(attendanceStatus.checkout_face_image_url)} 
+              target="_blank" 
+              rel="noreferrer"
+              style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: '700', textDecoration: 'underline', marginTop: '4px', display: 'inline-block' }}
+            >
+              👁️ Xem ảnh ra ca ↗
+            </a>
+          )}
         </div>
       </div>
 
       {/* NÚT THỰC HIỆN CHẤM CÔNG GPS & FACEID */}
       <button
-        onClick={handleGPSCheckIn}
+        onClick={() => {
+          if (!cameraActive) {
+            startCamera();
+            setAlertMsg({
+              type: 'info',
+              text: '📸 Đang bật camera... Vui lòng nhìn thẳng vào camera để quét FaceID chính chủ!'
+            });
+            return;
+          }
+          if (!faceVerified || confidenceScore < 75.0) {
+            soundService.playWarning();
+            setAlertMsg({
+              type: 'error',
+              text: `❌ KHUÔN MẶT CHƯA KHỚP! Độ khớp chỉ đạt ${confidenceScore.toFixed(1)}% (yêu cầu tối thiểu 75.0%). Vui lòng nhìn thẳng vào khung tròn!`
+            });
+            return;
+          }
+          handleGPSCheckIn();
+        }}
         disabled={actionLoading || gpsLoading || isCheckedOut}
         style={{
           width: '100%',
@@ -1403,7 +1593,7 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           border: 'none',
           background: isCheckedOut
             ? '#94a3b8'
-            : !faceVerified && cameraActive
+            : !cameraActive || !faceVerified
               ? 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
               : isCheckedIn
                 ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
@@ -1420,17 +1610,19 @@ const GPSCheckInWidget = ({ compact = false, onCheckInSuccess }) => {
           gap: '10px'
         }}
       >
-        <span>{actionLoading ? '⏳' : isCheckedOut ? '✅' : isCheckedIn ? '🏁' : '🚀'}</span>
+        <span>{actionLoading ? '⏳' : isCheckedOut ? '✅' : !cameraActive ? '📷' : isCheckedIn ? '🏁' : '🚀'}</span>
         <span>
           {actionLoading 
             ? 'Đang đối soát FaceID & Ghi nhận công...' 
             : isCheckedOut 
               ? 'Hôm nay bạn đã hoàn thành ca làm việc' 
-              : !faceVerified && cameraActive
-                ? '⚠️ CHỜ QUÉT ĐÚNG KHUÔN MẶT CHÍNH CHỦ...'
-                : isCheckedIn 
-                  ? '🏁 CHECK-OUT GPS & FACE ID' 
-                  : '🚀 CHẤM CÔNG GPS & QUÉT MẶT FACE ID'}
+              : !cameraActive
+                ? `Bật Camera Để Quét FaceID ${isCheckedIn ? 'Ra Ca (Check-out)' : 'Vào Ca (Check-in)'}`
+                : !faceVerified
+                  ? `⚠️ KHUÔN MẶT CHƯA KHỚP (${confidenceScore.toFixed(1)}% < 75%)`
+                  : isCheckedIn 
+                    ? `🏁 XÁC NHẬN RA CA / CHECK-OUT (${confidenceScore.toFixed(1)}%)` 
+                    : `🚀 XÁC NHẬN VÀO CA / CHECK-IN (${confidenceScore.toFixed(1)}%)`}
         </span>
       </button>
 

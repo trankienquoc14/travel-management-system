@@ -157,9 +157,9 @@ async function searchTours(pool, args = {}) {
   if (isFar) {
     where.push(`(t.duration_days >= 3 OR t.destination NOT IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho'))`);
   }
-  // Filter for near/short tours
+  // Filter for near/short tours (cuối tuần, ngắn ngày bao gồm cả tour 2N1Đ hoặc 3N2Đ)
   if (isNear) {
-    where.push(`(t.duration_days <= 2 OR t.destination IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho'))`);
+    where.push(`(t.duration_days <= 3 OR t.destination IN ('Vũng Tàu', 'Tây Ninh', 'Đồng Tháp', 'Bến Tre', 'Cần Thơ', 'Mỹ Tho', 'Đà Lạt', 'Phú Quốc'))`);
   }
 
   // Filter for region
@@ -191,8 +191,21 @@ async function searchTours(pool, args = {}) {
       t.duration_days,
       t.base_price,
       LEFT(COALESCE(t.description, ''), 240) AS short_description,
-      MIN(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.departure_date ELSE NULL END) AS next_departure_date,
-      COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
+      (
+        SELECT d.departure_date
+        FROM departures d
+        WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+        ORDER BY d.departure_date ASC
+        LIMIT 1
+      ) AS next_departure_date,
+      (
+        SELECT d.available_slots
+        FROM departures d
+        WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+        ORDER BY d.departure_date ASC
+        LIMIT 1
+      ) AS next_departure_slots,
+      COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
     FROM tours t
     LEFT JOIN departures d ON t.tour_id = d.tour_id
     WHERE ${where.join(' AND ')}
@@ -203,10 +216,10 @@ async function searchTours(pool, args = {}) {
 
   const [rows] = await pool.query(sql, params);
 
-  // If no tours match budget constraint, find closest/cheapest alternative active tours
+  // If no tours match constraint, find closest/alternative active tours
   let suggestedAlternatives = [];
   let minPriceInDb = null;
-  if (rows.length === 0 && typeof maxPrice === 'number' && maxPrice > 0) {
+  if (rows.length === 0) {
     try {
       const altWhere = [`t.status = 'Active'`, `(t.is_custom IS NULL OR t.is_custom = 0)`];
       const altParams = [];
@@ -215,6 +228,10 @@ async function searchTours(pool, args = {}) {
         altWhere.push(`(t.destination LIKE ? OR t.tour_name LIKE ?)`);
         altParams.push(like, like);
       }
+      const altOrder = isNear || (typeof maxDays === 'number' && maxDays > 0)
+        ? 't.duration_days ASC, t.base_price ASC'
+        : 't.base_price ASC';
+
       const altSql = `
         SELECT
           t.tour_id,
@@ -223,13 +240,26 @@ async function searchTours(pool, args = {}) {
           t.duration_days,
           t.base_price,
           LEFT(COALESCE(t.description, ''), 240) AS short_description,
-          MIN(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.departure_date ELSE NULL END) AS next_departure_date,
-          COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
+          (
+            SELECT d.departure_date
+            FROM departures d
+            WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+            ORDER BY d.departure_date ASC
+            LIMIT 1
+          ) AS next_departure_date,
+          (
+            SELECT d.available_slots
+            FROM departures d
+            WHERE d.tour_id = t.tour_id AND d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0
+            ORDER BY d.departure_date ASC
+            LIMIT 1
+          ) AS next_departure_slots,
+          COALESCE(SUM(CASE WHEN d.departure_date >= CURDATE() AND d.status = 'Open' AND d.available_slots > 0 THEN d.available_slots ELSE 0 END), 0) AS total_available_slots
         FROM tours t
         LEFT JOIN departures d ON t.tour_id = d.tour_id
         WHERE ${altWhere.join(' AND ')}
         GROUP BY t.tour_id, t.tour_name, t.destination, t.duration_days, t.base_price, t.description
-        ORDER BY t.base_price ASC
+        ORDER BY ${altOrder}
         LIMIT 4
       `;
       const [altRows] = await pool.query(altSql, altParams);
@@ -243,6 +273,7 @@ async function searchTours(pool, args = {}) {
           base_price_vnd: Number(r.base_price || 0),
           short_description: r.short_description,
           next_departure_date: formatDateVi(r.next_departure_date),
+          next_departure_slots: Number(r.next_departure_slots || 0),
           total_available_slots: Number(r.total_available_slots || 0),
           detail_path: `/tour/${r.tour_id}`
         }));
@@ -262,6 +293,7 @@ async function searchTours(pool, args = {}) {
       base_price_vnd: Number(r.base_price || 0),
       short_description: r.short_description,
       next_departure_date: formatDateVi(r.next_departure_date),
+      next_departure_slots: Number(r.next_departure_slots || 0),
       total_available_slots: Number(r.total_available_slots || 0),
       detail_path: `/tour/${r.tour_id}`
     })),
