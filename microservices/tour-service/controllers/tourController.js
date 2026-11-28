@@ -1167,7 +1167,7 @@ exports.makeOperationalDecision = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const [depRows] = await sequelize.query(`
-            SELECT d.*, t.tour_name, t.min_participants, t.tour_id
+            SELECT d.*, t.tour_name, t.design_data, t.tour_id
             FROM departures d
             JOIN tours t ON d.tour_id = t.tour_id
             WHERE d.departure_id = ?
@@ -1183,6 +1183,14 @@ exports.makeOperationalDecision = async (req, res) => {
         
         const dep = depRows[0];
         const depDateStr = dep.departure_date ? new Date(dep.departure_date).toLocaleDateString('vi-VN') : 'Sắp tới';
+        
+        let minPax = 15;
+        if (dep.design_data) {
+            try {
+                const parsed = typeof dep.design_data === 'string' ? JSON.parse(dep.design_data) : dep.design_data;
+                if (parsed?.costConfig?.minimumPax) minPax = Number(parsed.costConfig.minimumPax) || 15;
+            } catch(e) {}
+        }
         
         let newOperationalStatus = dep.operational_status;
         let newStatus = dep.status;
@@ -1322,7 +1330,7 @@ exports.makeOperationalDecision = async (req, res) => {
 
             // 2. GỬI THÔNG BÁO ĐẾN CHUÔNG CỦA NHÂN VIÊN VĂN PHÒNG & KẾ TOÁN (STAFF)
             const staffNotifTitle = `⚠️ Cần liên hệ & Hoàn tiền 100%: Tour ${dep.tour_name} đã hủy (Mốc T-30)`;
-            const staffNotifContent = `Đợt khởi hành ${depDateStr} của tour "${dep.tour_name}" đã chính thức hủy do không đạt số khách tối thiểu (${currentPax}/${dep.min_participants || 5} khách). ${paidBookings.length > 0 ? `Có ${paidBookings.length} đơn hàng đã thanh toán cần chuyên viên CSKH liên hệ khách hàng xác nhận tài khoản và thực hiện hoàn tiền 100% tại Quản lý Đặt Tour.` : 'Tất cả đơn đặt tour đều chưa thanh toán và đã được hệ thống hủy tự động.'}`;
+            const staffNotifContent = `Đợt khởi hành ${depDateStr} của tour "${dep.tour_name}" đã chính thức hủy do không đạt số khách tối thiểu (${currentPax}/${minPax} khách). ${paidBookings.length > 0 ? `Có ${paidBookings.length} đơn hàng đã thanh toán cần chuyên viên CSKH liên hệ khách hàng xác nhận tài khoản và thực hiện hoàn tiền 100% tại Quản lý Đặt Tour.` : 'Tất cả đơn đặt tour đều chưa thanh toán và đã được hệ thống hủy tự động.'}`;
 
             await sequelize.query(`
                 INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, tour_id, is_read, action_url, created_at)
