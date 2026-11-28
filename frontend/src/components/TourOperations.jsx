@@ -39,6 +39,18 @@ const TourOperations = () => {
 
     const handleAction = async (action) => {
         if (!selectedDep) return;
+
+        if (action === 'Đóng / Hủy tour' || action === 'Hủy tour') {
+            const confirmMsg = `⚠️ BẠN CÓ CHẮC CHẮN MUỐN ĐÓNG / HỦY ĐỢT KHỞI HÀNH NÀY?\n\n` +
+                `Quy trình tự động sau sẽ được kích hoạt:\n` +
+                `1. Đóng đợt khởi hành và hủy các đơn đặt tour.\n` +
+                `2. Gửi thông báo đến chuông của KHÁCH HÀNG: cam kết hoàn 100% số tiền đã đóng.\n` +
+                `3. Chuyển danh sách khách cần hoàn tiền đến NHÂN VIÊN VĂN PHÒNG (CSKH) tại Quản lý Đặt tour.\n` +
+                `4. Tự động giải phóng phân công HƯỚNG DẪN VIÊN & TÀI XẾ (hoàn xe về bãi) và gửi thông báo.\n\n` +
+                `Nhấn OK để tiến hành hủy tour.`;
+            if (!window.confirm(confirmMsg)) return;
+        }
+
         try {
             const token = localStorage.getItem('token');
             const userStr = localStorage.getItem('user');
@@ -56,13 +68,14 @@ const TourOperations = () => {
             });
 
             if (res.data.success) {
+                alert(res.data.message || '✅ Đã lưu quyết định thành công!');
                 setActionNote('');
                 setSelectedDep(null);
                 fetchDepartures(); 
             }
         } catch (error) {
             console.error('Lỗi ghi nhận quyết định:', error);
-            alert('Có lỗi xảy ra khi lưu quyết định.');
+            alert(error.response?.data?.message || 'Có lỗi xảy ra khi lưu quyết định.');
         }
     };
 

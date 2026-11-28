@@ -16,12 +16,14 @@ const { analyzeDayLegs, getPlaceCoordinates, calculateRouteDistance, sortPlacesB
 
 const CANDIDATE_MODELS = [
   process.env.GEMINI_MODEL,
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro'
+  'gemini-3.5-flash',
+  'gemini-3.8-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-3.7-flash',
+  'gemini-2.5-flash'
 ].filter(Boolean);
-const DEFAULT_MODEL = CANDIDATE_MODELS[0] || 'gemini-2.0-flash';
-const GEMINI_TIMEOUT_MS = 25000;
+const DEFAULT_MODEL = CANDIDATE_MODELS[0] || 'gemini-3.5-flash';
+const GEMINI_TIMEOUT_MS = 45000;
 const MAX_TOOL_ROUNDS = 4;
 
 const SYSTEM_INSTRUCTION = `Bạn là Trợ lý AI Du lịch Thông minh chính thức của Hệ thống Quản trị & Đặt tour TravelVN ERP.

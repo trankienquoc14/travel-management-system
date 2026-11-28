@@ -9,7 +9,6 @@ const ReschedulePaymentModal = ({ bookingId, onClose, onSuccess }) => {
     const [isPaid, setIsPaid] = useState(false);
     const [copiedField, setCopiedField] = useState('');
     const [countdown, setCountdown] = useState(600); // 10 phút
-    const [simulating, setSimulating] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     const pollIntervalRef = useRef(null);
@@ -103,28 +102,6 @@ const ReschedulePaymentModal = ({ bookingId, onClose, onSuccess }) => {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         };
     }, [bookingId, isPaid, loading]);
-
-    // 4. Mô phỏng thanh toán thành công (dành cho kiểm thử demo)
-    const handleSimulatePayment = async () => {
-        try {
-            setSimulating(true);
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${GATEWAY_URL}/api/bookings/${bookingId}/check-reschedule-sepay?simulate=true`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data && res.data.paid) {
-                setIsPaid(true);
-                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                if (onSuccess) onSuccess(res.data);
-            }
-        } catch (err) {
-            console.error('Lỗi mô phỏng thanh toán:', err);
-            alert(err.response?.data?.message || 'Không thể mô phỏng thanh toán!');
-        } finally {
-            setSimulating(false);
-        }
-    };
 
     const formatTime = (sec) => {
         const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -386,31 +363,26 @@ const ReschedulePaymentModal = ({ bookingId, onClose, onSuccess }) => {
                             </div>
                         </div>
 
-                        {/* FOOTER & NÚT MÔ PHỎNG DÀNH CHO DEMO/KIỂM THỬ */}
+                        {/* FOOTER TRẠNG THÁI REALTIME SEPAY */}
                         <div style={{
                             marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f1f5f9',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px'
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'
                         }}>
-                            <button
-                                type="button"
-                                onClick={handleSimulatePayment}
-                                disabled={simulating}
-                                style={{
-                                    padding: '10px 18px', borderRadius: '12px', border: '1px dashed #2563eb',
-                                    background: '#eff6ff', color: '#1d4ed8', fontSize: '13px', fontWeight: '700',
-                                    cursor: simulating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-                                }}
-                                title="Bấm vào đây để mô phỏng khách hàng đã quét mã QR chuyển khoản thành công"
-                            >
-                                <span>⚡ {simulating ? 'Đang mô phỏng...' : 'Mô Phỏng Chuyển Khoản QR Thành Công (Demo)'}</span>
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#059669', fontWeight: '600' }}>
+                                <span style={{
+                                    width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10b981',
+                                    display: 'inline-block', boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)'
+                                }}></span>
+                                <span>Cổng SePay đang lắng nghe giao dịch chuyển khoản thật 24/7...</span>
+                            </div>
 
                             <button
                                 type="button"
                                 onClick={onClose}
                                 style={{
-                                    padding: '10px 22px', borderRadius: '12px', border: '1px solid #cbd5e1',
-                                    background: '#ffffff', color: '#475569', fontSize: '13.5px', fontWeight: '700', cursor: 'pointer'
+                                    padding: '10px 24px', borderRadius: '12px', border: '1px solid #cbd5e1',
+                                    background: '#ffffff', color: '#475569', fontSize: '13.5px', fontWeight: '700', cursor: 'pointer',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                 }}
                             >
                                 Đóng lại

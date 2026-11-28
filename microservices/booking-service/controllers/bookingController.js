@@ -2762,27 +2762,8 @@ exports.checkReschedulePaymentStatus = async (req, res) => {
             });
         }
 
-        // Hỗ trợ mô phỏng thanh toán thành công (Dành cho kiểm thử)
-        if (simulate) {
-            const fakeRef = 'TEST' + Date.now().toString().slice(-6);
-            await applyRescheduleBooking({
-                bookingId: Number(bookingId),
-                changeId: cr.change_id,
-                newDepartureId: cr.new_departure_id,
-                paymentCode: `DOILICH${bookingId} (Demo #${fakeRef})`,
-                txAmount: expectedFee,
-                note: `Mô phỏng thanh toán VietQR thành công (${fakeRef}) - Hệ thống tự động đổi lịch`
-            });
-            return res.status(200).json({
-                success: true,
-                paid: true,
-                source: 'simulation',
-                message: '🎉 Mô phỏng thanh toán VietQR thành công! Hệ thống đã tự động chuyển lịch trình cho đơn hàng.'
-            });
-        }
-
-        // 2. Tra cứu lịch sử giao dịch từ ngân hàng qua SePay API
-        const transactions = await fetchSepayTransactions(30);
+        // 2. Tra cứu lịch sử giao dịch thật từ ngân hàng qua SePay API
+        const transactions = await fetchSepayTransactions(40);
         const pattern = new RegExp(`(?:DOILICH|DL)0*${bookingId}(?!\\d)`, 'i');
 
         // Lấy danh sách mã tham chiếu đã được dùng để tránh trùng lặp
@@ -2802,12 +2783,11 @@ exports.checkReschedulePaymentStatus = async (req, res) => {
             if (refNumber && usedRefs.has(refNumber)) return false;
 
             const rawContent = String(tx.transaction_content || tx.content || '');
-            const cleanContent = rawContent.replace(/[^a-zA-Z0-9]/g, '');
+            const cleanContent = rawContent.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
             const isCodeMatched = pattern.test(cleanContent) || cleanContent.includes(`DOILICH${bookingId}`) || cleanContent.includes(`DL${bookingId}`);
             if (!isCodeMatched) return false;
 
-            const allowDemo = process.env.SEPAY_ALLOW_DEMO_AMOUNT !== 'false';
-            return (amountIn >= expectedFee) || (allowDemo && amountIn >= 1000);
+            return (amountIn >= expectedFee);
         });
 
         if (matchedTx) {
@@ -2817,14 +2797,14 @@ exports.checkReschedulePaymentStatus = async (req, res) => {
                 newDepartureId: cr.new_departure_id,
                 paymentCode: `DOILICH${bookingId} (SePay #${matchedTx.reference_number || matchedTx.id})`,
                 txAmount: Number(matchedTx.amount_in || expectedFee),
-                note: `Đã thanh toán VietQR tự động qua SePay (GD: SePay #${matchedTx.reference_number || matchedTx.id}) - Hệ thống tự động đổi lịch thành công`
+                note: `Đã thanh toán VietQR thật tự động qua SePay (GD: SePay #${matchedTx.reference_number || matchedTx.id}) - Hệ thống tự động đổi lịch thành công`
             });
 
             return res.status(200).json({
                 success: true,
                 paid: true,
                 source: 'sepay_realtime_api',
-                message: '🎉 Hệ thống SePay đã nhận khoản chuyển khoản phí đổi lịch! Đơn hàng đã được tự động cập nhật lịch trình mới.',
+                message: '🎉 Hệ thống SePay đã nhận khoản chuyển khoản thật phí đổi lịch! Đơn hàng đã được tự động cập nhật lịch trình mới.',
                 transaction: matchedTx
             });
         }
@@ -4245,6 +4225,90 @@ exports.testEmailDiagnostic = async (req, res) => {
     });
   }
 };
+
+// XÁC NHẬN ĐÃ HOÀN TIỀN CHO KHÁCH HÀNG (HỦY TOUR DO THIẾU KHÁCH / YÊU CẦU HOÀN TIỀN)
+exports.confirmRefundByStaff = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { bookingId } = req.params;
+    const { refund_amount, transaction_code, note } = req.body;
+    const staffId = req.user?.id || req.user?.user_id || req.user?.userId;
+
+    const [bks] = await sequelize.query(`
+      SELECT b.booking_id, b.customer_id, b.total_amount, b.payment_status,
+             COALESCE(t.tour_name, CONCAT('Tour ', cr.destination), 'Tour du lịch') AS tour_name,
+             u.full_name AS customer_name, u.email AS customer_email, u.phone AS customer_phone
+      FROM bookings b
+      LEFT JOIN departures d ON b.departure_id = d.departure_id
+      LEFT JOIN tours t ON d.tour_id = t.tour_id
+      LEFT JOIN custom_tour_quotes q ON b.quote_id = q.quote_id
+      LEFT JOIN custom_tour_requests cr ON q.request_id = cr.request_id
+      LEFT JOIN users u ON b.customer_id = u.user_id
+      WHERE b.booking_id = ?
+    `, { replacements: [bookingId], transaction });
+
+    if (bks.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+    }
+
+    const bk = bks[0];
+    const finalRefundAmount = refund_amount || bk.total_amount;
+    const refCode = transaction_code || 'REFUND_' + Date.now();
+
+    // 1. Cập nhật trạng thái thanh toán trong bookings
+    await sequelize.query(`
+      UPDATE bookings 
+      SET payment_status = 'Refunded',
+          notes = CONCAT(COALESCE(notes, ''), '\n[ĐÃ HOÀN TIỀN 100%: ', ?, ' - Mã GD: ', ?, ']')
+      WHERE booking_id = ?
+    `, {
+      replacements: [
+        note || 'Kế toán đã hoàn tất chuyển khoản 100% cho khách hàng',
+        refCode,
+        bookingId
+      ],
+      transaction
+    });
+
+    // 2. Cập nhật bảng payments nếu có bản ghi
+    await sequelize.query(`
+      UPDATE payments 
+      SET payment_status = 'Refunded' 
+      WHERE booking_id = ?
+    `, { replacements: [bookingId], transaction });
+
+    // 3. Cập nhật trạng thái trong booking_change_requests nếu có
+    await sequelize.query(`
+      UPDATE booking_change_requests
+      SET status = 'Approved', staff_note = CONCAT(COALESCE(staff_note, ''), ' | Đã chuyển khoản hoàn tiền thành công.')
+      WHERE booking_id = ? AND request_type = 'Cancel'
+    `, { replacements: [bookingId], transaction });
+
+    // 4. Gửi thông báo đến chuông của khách hàng
+    const title = `💰 Hoàn tiền thành công: Tour ${bk.tour_name}`;
+    const content = `TravelVN đã hoàn tất chuyển khoản 100% số tiền ${Number(finalRefundAmount).toLocaleString('vi-VN')} ₫ cho đơn hàng #${bookingId} của quý khách (Mã GD: ${refCode}). Quý khách vui lòng kiểm tra tài khoản nhận. Chúc quý khách một ngày tốt lành!`;
+
+    await sequelize.query(`
+      INSERT INTO notifications (user_id, type, target_role, title, content, is_read, action_url, created_at)
+      VALUES (?, 'PAYMENT_REFUNDED', 'Customer', ?, ?, 0, '/my-bookings', NOW())
+    `, { replacements: [bk.customer_id, title, content], transaction });
+
+    await transaction.commit();
+
+    notifyBookingEvent('confirm_refund', { bookingId });
+
+    res.status(200).json({
+      success: true,
+      message: `✅ Đã xác nhận hoàn tiền ${Number(finalRefundAmount).toLocaleString('vi-VN')} ₫ cho đơn hàng #${bookingId}!`
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Lỗi confirmRefundByStaff:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 
 

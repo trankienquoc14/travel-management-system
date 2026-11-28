@@ -78,6 +78,9 @@ const StaffBookingManagement = () => {
   const [cancelModalBooking, setCancelModalBooking] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNote, setCancelNote] = useState('');
+  const [refundModalBooking, setRefundModalBooking] = useState(null);
+  const [refundTxCode, setRefundTxCode] = useState('');
+  const [refundNote, setRefundNote] = useState('');
   const [showPolicyAccordion, setShowPolicyAccordion] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
@@ -178,6 +181,44 @@ const StaffBookingManagement = () => {
     }
   };
 
+  const handleOpenRefundModal = (b) => {
+    setRefundModalBooking(b);
+    setRefundTxCode(`RF-${b.booking_id}-${Date.now().toString().slice(-6)}`);
+    setRefundNote(`Kế toán hoàn tất chuyển khoản 100% cho khách hàng do tour hủy mốc T-30 thiếu khách.`);
+  };
+
+  const handleConfirmRefund = async (e) => {
+    e.preventDefault();
+    if (!refundModalBooking) return;
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`${GATEWAY_URL}/api/bookings/${refundModalBooking.booking_id}/confirm-refund`, {
+        refund_amount: refundModalBooking.total_amount,
+        transaction_code: refundTxCode,
+        note: refundNote
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data?.success) {
+        setAlertMsg({ type: 'success', text: res.data.message });
+        setRefundModalBooking(null);
+        fetchBookings();
+        if (selectedBooking && selectedBooking.booking_id === refundModalBooking.booking_id) {
+          setSelectedBooking(prev => ({ ...prev, payment_status: 'Refunded' }));
+        }
+      } else {
+        setAlertMsg({ type: 'error', text: res.data?.message || 'Xác nhận hoàn tiền thất bại!' });
+      }
+    } catch (err) {
+      console.error("Lỗi xác nhận hoàn tiền:", err);
+      setAlertMsg({ type: 'error', text: err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận hoàn tiền!' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
   };
@@ -205,7 +246,13 @@ const StaffBookingManagement = () => {
   // Lọc dữ liệu đa tiêu chí
   const filteredBookings = bookings.filter(b => {
     // 1. Trạng thái Booking
-    const matchesStatus = filterStatus === 'All' || b.booking_status === filterStatus;
+    const matchesStatus = (() => {
+      if (filterStatus === 'All') return true;
+      if (filterStatus === 'Pending_Refund') {
+        return b.payment_status === 'Pending_Refund' || (b.booking_status === 'Cancelled' && (b.notes?.includes('HỦY TOUR T-30') || b.notes?.includes('Pending_Refund')));
+      }
+      return b.booking_status === filterStatus;
+    })();
 
     // 2. Trạng thái Thanh toán
     const matchesPayment = filterPayment === 'All' || 
@@ -264,6 +311,7 @@ const StaffBookingManagement = () => {
   const pendingCount = bookings.filter(b => b.booking_status === 'Pending').length;
   const confirmedCount = bookings.filter(b => b.booking_status === 'Confirmed').length;
   const cancelledCount = bookings.filter(b => b.booking_status === 'Cancelled').length;
+  const t30RefundCount = bookings.filter(b => b.payment_status === 'Pending_Refund' || (b.booking_status === 'Cancelled' && (b.notes?.includes('HỦY TOUR T-30') || b.notes?.includes('Pending_Refund')))).length;
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif", display: 'flex', justifyContent: 'center' }}>
@@ -288,10 +336,10 @@ const StaffBookingManagement = () => {
                 </span>
                 <span style={{ 
                   padding: '6px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px',
-                  backgroundColor: selectedBooking.payment_status === 'Paid' ? '#dcfce7' : '#fef2f2', 
-                  color: selectedBooking.payment_status === 'Paid' ? '#15803d' : '#dc2626' 
+                  backgroundColor: selectedBooking.payment_status === 'Paid' ? '#dcfce7' : selectedBooking.payment_status === 'Pending_Refund' ? '#fee2e2' : selectedBooking.payment_status === 'Refunded' ? '#f0fdf4' : '#fef2f2', 
+                  color: selectedBooking.payment_status === 'Paid' ? '#15803d' : selectedBooking.payment_status === 'Pending_Refund' ? '#b91c1c' : selectedBooking.payment_status === 'Refunded' ? '#16a34a' : '#dc2626' 
                 }}>
-                  Trạng thái thanh toán: {selectedBooking.payment_status === 'Paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                  Trạng thái thanh toán: {selectedBooking.payment_status === 'Paid' ? 'Đã thanh toán' : selectedBooking.payment_status === 'Pending_Refund' ? 'Chờ hoàn tiền 100%' : selectedBooking.payment_status === 'Refunded' ? 'Đã hoàn tiền 100%' : 'Chưa thanh toán'}
                 </span>
               </div>
             </div>
@@ -299,6 +347,26 @@ const StaffBookingManagement = () => {
             {/* BODY SCROLLABLE */}
             <div style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: '#f8fafc', flex: 1 }}>
               
+              {/* BANNER THÔNG BÁO HỦY TOUR MỐC T-30 */}
+              {(selectedBooking.payment_status === 'Pending_Refund' || selectedBooking.notes?.includes('HỦY TOUR T-30')) && (
+                <div style={{
+                  background: '#fef2f2', border: '1.5px solid #f87171', borderRadius: '12px',
+                  padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#991b1b', fontWeight: '800', fontSize: '15px' }}>
+                      <span>🚨 TOUR HỦY MỐC T-30 DO THIẾU KHÁCH - CAM KẾT HOÀN TIỀN 100%</span>
+                    </div>
+                    <span style={{ backgroundColor: '#dc2626', color: '#fff', padding: '4px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '800' }}>
+                      Hoàn 100%: {formatCurrency(selectedBooking.total_amount)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '13.5px', color: '#7f1d1d', lineHeight: '1.5' }}>
+                    Theo chính sách điều hành mốc T-30, khách hàng được <strong>miễn phí phạt 0% và hoàn tiền 100%</strong>. Chuyên viên CSKH cần gọi ngay cho khách hàng qua số <strong>{selectedBooking.customer_phone || selectedBooking.contact_phone || 'SĐT khách'}</strong> để xác nhận số tài khoản, sau đó bấm nút <strong>Xác Nhận Đã Hoàn Tiền 100%</strong> bên dưới khi kế toán đã chuyển khoản.
+                  </div>
+                </div>
+              )}
+
               {/* 2. THÔNG TIN CHUYẾN TOUR */}
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
                   <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -325,13 +393,48 @@ const StaffBookingManagement = () => {
                   </div>
               </div>
 
-              {/* 3. THÔNG TIN NGƯỜI ĐẶT */}
+              {/* 3. THÔNG TIN NGƯỜI ĐẶT & LIÊN HỆ */}
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a', fontWeight: '700' }}>Thông tin người đặt</h3>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a', fontWeight: '700' }}>Thông tin người đặt & Liên hệ</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', fontSize: '14px' }}>
                     <div><span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Họ và tên:</span> <div style={{ fontWeight: '600', color: '#1e293b' }}>{selectedBooking.customer_name || 'Khách vãng lai'}</div></div>
-                    <div><span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Số điện thoại:</span> <div style={{ fontWeight: '600', color: '#1e293b' }}>{selectedBooking.customer_phone || 'N/A'}</div></div>
-                    <div><span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Email:</span> <div style={{ fontWeight: '600', color: '#1e293b' }}>{selectedBooking.customer_email || 'N/A'}</div></div>
+                    <div>
+                      <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Số điện thoại:</span>
+                      <div style={{ fontWeight: '600', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>{selectedBooking.customer_phone || selectedBooking.contact_phone || 'N/A'}</span>
+                        {(selectedBooking.customer_phone || selectedBooking.contact_phone) && (
+                          <a
+                            href={`tel:${selectedBooking.customer_phone || selectedBooking.contact_phone}`}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '3px 10px', background: '#0284c7', color: '#fff',
+                              borderRadius: '6px', textDecoration: 'none', fontSize: '12px', fontWeight: '700',
+                              boxShadow: '0 1px 3px rgba(2, 132, 199, 0.25)'
+                            }}
+                          >
+                            📞 Gọi điện
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>Email:</span>
+                      <div style={{ fontWeight: '600', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>{selectedBooking.customer_email || selectedBooking.contact_email || 'N/A'}</span>
+                        {(selectedBooking.customer_email || selectedBooking.contact_email) && (
+                          <a
+                            href={`mailto:${selectedBooking.customer_email || selectedBooking.contact_email}`}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '3px 10px', background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1',
+                              borderRadius: '6px', textDecoration: 'none', fontSize: '12px', fontWeight: '600'
+                            }}
+                          >
+                            ✉️ Gửi Email
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
               </div>
 
@@ -557,8 +660,23 @@ const StaffBookingManagement = () => {
             </div>
 
             {/* 9. FOOTER ACTIONS */}
-            <div style={{ padding: '20px 28px', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', gap: '12px', zIndex: 10, flexShrink: 0 }}>
+            <div style={{ padding: '20px 28px', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', gap: '12px', zIndex: 10, flexShrink: 0, flexWrap: 'wrap' }}>
               
+              {/* Nút xác nhận hoàn tiền 100% cho đơn hủy mốc T-30 */}
+              {selectedBooking.payment_status === 'Pending_Refund' && (
+                <button
+                  onClick={() => handleOpenRefundModal(selectedBooking)}
+                  disabled={actionLoading}
+                  style={{
+                    padding: '10px 24px', backgroundColor: '#dc2626', color: '#fff',
+                    border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '800',
+                    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
+                  }}
+                >
+                  {actionLoading ? 'Đang xử lý...' : `💵 Xác Nhận Đã Hoàn Tiền 100% (${formatCurrency(selectedBooking.total_amount)})`}
+                </button>
+              )}
+
               {/* Nút xác nhận thu tiền mặt cho khách thanh toán tại quầy */}
               {selectedBooking.payment_status !== 'Paid' && selectedBooking.booking_status !== 'Cancelled' && (
                 <button
@@ -635,7 +753,7 @@ const StaffBookingManagement = () => {
       )}
 
       {/* DASHBOARD STATS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #0f172a', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>Tổng Số Đơn</div>
           <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', marginTop: '6px' }}>{totalCount}</div>
@@ -652,6 +770,19 @@ const StaffBookingManagement = () => {
           <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>Đã Hủy Tour</div>
           <div style={{ fontSize: '28px', fontWeight: '800', color: '#dc2626', marginTop: '6px' }}>{cancelledCount}</div>
         </div>
+        {t30RefundCount > 0 && (
+          <div 
+            onClick={() => setFilterStatus('Pending_Refund')}
+            style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #dc2626', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.15)', cursor: 'pointer', background: 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)' }}
+            title="Nhấp để lọc danh sách khách cần hoàn tiền 100%"
+          >
+            <div style={{ fontSize: '13px', color: '#991b1b', fontWeight: '700', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>🚨 Hoàn Tiền T-30</span>
+              <span style={{ fontSize: '10px', background: '#dc2626', color: '#fff', padding: '2px 6px', borderRadius: '10px' }}>Gấp</span>
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: '800', color: '#dc2626', marginTop: '6px' }}>{t30RefundCount} đơn</div>
+          </div>
+        )}
       </div>
 
       {/* BỘ LỌC & TÌM KIẾM ĐA TIÊU CHÍ */}
@@ -664,16 +795,18 @@ const StaffBookingManagement = () => {
               { label: 'Tất cả', val: 'All' },
               { label: `Chờ thanh toán (${pendingCount})`, val: 'Pending' },
               { label: `Đã xác nhận (${confirmedCount})`, val: 'Confirmed' },
-              { label: `Đã hủy (${cancelledCount})`, val: 'Cancelled' }
+              { label: `Đã hủy (${cancelledCount})`, val: 'Cancelled' },
+              { label: `🚨 Cần hoàn tiền T-30 (${t30RefundCount})`, val: 'Pending_Refund', isAlert: true }
             ].map(tab => (
               <button
                 key={tab.val}
                 onClick={() => setFilterStatus(tab.val)}
                 style={{
-                  padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-                  backgroundColor: filterStatus === tab.val ? '#0f172a' : '#f1f5f9',
-                  color: filterStatus === tab.val ? '#fff' : '#475569',
-                  transition: 'all 0.2s'
+                  padding: '8px 16px', borderRadius: '8px', border: tab.isAlert ? (filterStatus === tab.val ? '1.5px solid #b91c1c' : '1.5px solid #fca5a5') : 'none', cursor: 'pointer', fontWeight: '700', fontSize: '14px',
+                  backgroundColor: filterStatus === tab.val ? (tab.isAlert ? '#dc2626' : '#0f172a') : (tab.isAlert ? '#fef2f2' : '#f1f5f9'),
+                  color: filterStatus === tab.val ? '#fff' : (tab.isAlert ? '#b91c1c' : '#475569'),
+                  transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: '6px'
                 }}
               >
                 {tab.label}
@@ -805,8 +938,19 @@ const StaffBookingManagement = () => {
                     #BKG-{b.booking_id.toString().padStart(4, '0')}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontWeight: '600', color: '#0f172a' }}>{b.customer_name || 'Khách vãng lai'}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>{b.customer_phone || b.customer_email || 'N/A'}</div>
+                    <div style={{ fontWeight: '700', color: '#0f172a' }}>{b.customer_name || 'Khách vãng lai'}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                      {b.customer_phone ? (
+                        <a href={`tel:${b.customer_phone}`} style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          📞 {b.customer_phone}
+                        </a>
+                      ) : null}
+                      {b.customer_email ? (
+                        <a href={`mailto:${b.customer_email}`} style={{ color: '#64748b', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          ✉️ {b.customer_email}
+                        </a>
+                      ) : null}
+                    </div>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ fontWeight: '600', color: '#334155' }}>{b.tour_name}</div>
@@ -819,7 +963,15 @@ const StaffBookingManagement = () => {
                     <div style={{ fontSize: '12px', color: '#64748b' }}>👥 {b.num_people} hành khách</div>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
-                    {b.payment_status === 'Paid' ? (
+                    {b.payment_status === 'Pending_Refund' ? (
+                      <span style={{ backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '12px', fontWeight: '800', fontSize: '12px', display: 'inline-block' }}>
+                        🟠 Chờ hoàn 100%
+                      </span>
+                    ) : b.payment_status === 'Refunded' ? (
+                      <span style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px', display: 'inline-block' }}>
+                        💰 Đã hoàn 100%
+                      </span>
+                    ) : b.payment_status === 'Paid' ? (
                       <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px', display: 'inline-block' }}>
                         🟢 Đã thanh toán
                       </span>
@@ -847,15 +999,30 @@ const StaffBookingManagement = () => {
                     )}
                   </td>
                   <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => setSelectedBooking(b)}
-                      style={{
-                        padding: '6px 14px', backgroundColor: '#0f172a', color: '#fff',
-                        border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px'
-                      }}
-                    >
-                      Xem chi tiết
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                      {b.payment_status === 'Pending_Refund' && (
+                        <button
+                          onClick={() => handleOpenRefundModal(b)}
+                          title="Xác nhận đã chuyển khoản hoàn 100% cho khách"
+                          style={{
+                            padding: '6px 12px', backgroundColor: '#dc2626', color: '#fff',
+                            border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '12px',
+                            boxShadow: '0 2px 4px rgba(220, 38, 38, 0.25)'
+                          }}
+                        >
+                          💵 Hoàn 100%
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setSelectedBooking(b)}
+                        style={{
+                          padding: '6px 14px', backgroundColor: '#0f172a', color: '#fff',
+                          border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px'
+                        }}
+                      >
+                        Xem chi tiết
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1035,6 +1202,120 @@ const StaffBookingManagement = () => {
           </div>
         );
       })()}
+
+      {/* MODAL XÁC NHẬN HOÀN TIỀN 100% CHO KHÁCH HÀNG (MỐC T-30) */}
+      {refundModalBooking && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '28px', width: '580px', maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '19px', fontWeight: '800', color: '#991b1b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>💵 Xác Nhận Hoàn Tiền 100% (Mốc T-30)</span>
+                </h3>
+                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                  Xác nhận kế toán đã chuyển khoản trả lại toàn bộ tiền cho khách hàng
+                </div>
+              </div>
+              <button
+                onClick={() => setRefundModalBooking(null)}
+                style={{ background: '#f1f5f9', border: 'none', color: '#64748b', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Thông tin đơn và khách */}
+            <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', marginBottom: '18px', fontSize: '13.5px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Mã Booking:</span>
+                <strong style={{ color: '#0284c7' }}>#BKG-{refundModalBooking.booking_id.toString().padStart(4, '0')}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Khách Hàng:</span>
+                <strong style={{ color: '#0f172a' }}>{refundModalBooking.customer_name || 'Khách hàng'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#64748b' }}>Số Điện Thoại:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <strong style={{ color: '#0f172a' }}>{refundModalBooking.customer_phone || refundModalBooking.contact_phone || 'N/A'}</strong>
+                  {(refundModalBooking.customer_phone || refundModalBooking.contact_phone) && (
+                    <a
+                      href={`tel:${refundModalBooking.customer_phone || refundModalBooking.contact_phone}`}
+                      style={{
+                        padding: '2px 8px', background: '#0284c7', color: '#fff',
+                        borderRadius: '4px', textDecoration: 'none', fontSize: '11px', fontWeight: '700'
+                      }}
+                    >
+                      📞 Gọi đối soát
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Chuyến Tour:</span>
+                <strong style={{ color: '#334155', textAlign: 'right', maxWidth: '300px' }}>{refundModalBooking.tour_name}</strong>
+              </div>
+              <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '4px 0' }}></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#991b1b', fontWeight: '700' }}>Số tiền hoàn 100%:</span>
+                <strong style={{ color: '#16a34a', fontSize: '20px', fontWeight: '900' }}>{formatCurrency(refundModalBooking.total_amount)}</strong>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmRefund}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontWeight: '700', fontSize: '13px', color: '#334155', marginBottom: '6px' }}>
+                  Mã giao dịch ngân hàng / Uỷ nhiệm chi:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: MB-123456789 / VCB-987654..."
+                  value={refundTxCode}
+                  onChange={(e) => setRefundTxCode(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontWeight: '700', fontSize: '13px', color: '#334155', marginBottom: '6px' }}>
+                  Ghi chú kế toán / Nội bộ:
+                </label>
+                <textarea
+                  rows={2}
+                  value={refundNote}
+                  onChange={(e) => setRefundNote(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '18px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '12.5px', color: '#166534', lineHeight: 1.5 }}>
+                🔔 <strong>Hệ thống tự động:</strong> Khi bấm xác nhận, đơn sẽ cập nhật trạng thái <strong>ĐÃ HOÀN TIỀN</strong> và chuông thông báo của khách hàng sẽ nhận được xác nhận kèm mã giao dịch.
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setRefundModalBooking(null)}
+                  style={{ padding: '10px 18px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  style={{ padding: '10px 22px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '800', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)' }}
+                >
+                  {actionLoading ? 'Đang xử lý...' : `✓ Xác Nhận Đã Hoàn ${formatCurrency(refundModalBooking.total_amount)}`}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };

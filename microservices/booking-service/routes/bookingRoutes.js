@@ -20,6 +20,7 @@ router.put('/:bookingId/pay', protect, bookingController.confirmPayment);
 router.put('/:bookingId/payment-status', protect, bookingController.confirmPayment);
 router.get('/admin/payments', protect, restrictTo(1, 2, 3, 4), bookingController.getAllPayments);
 router.put('/:bookingId/confirm-cash', protect, restrictTo(1, 2, 3, 4), bookingController.confirmCashByStaff);
+router.put('/:bookingId/confirm-refund', protect, restrictTo(1, 2, 3, 4), bookingController.confirmRefundByStaff);
 router.post('/:bookingId/resend-email', protect, bookingController.resendBookingEmail);
 
 // Quản lý tất cả Booking dành cho Nhân viên / Admin

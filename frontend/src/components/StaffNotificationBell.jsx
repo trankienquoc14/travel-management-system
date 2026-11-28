@@ -186,7 +186,14 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
           targetTab = 'change_request';
           break;
         case 'BOOKING_NEW':
+        case 'TOUR_CANCELLED_STAFF_REFUND':
           targetTab = 'orders';
+          break;
+        case 'TOUR_CANCELLED_GUIDE':
+          targetTab = 'guide_assigned';
+          break;
+        case 'TOUR_CANCELLED_DRIVER':
+          targetTab = 'driver_assigned';
           break;
         default:
           targetTab = 'overview';
@@ -249,6 +256,16 @@ const StaffNotificationBell = ({ onNavigate, onNavigateToServiceRequest }) => {
         return { icon: '❌', badgeColor: '#dc2626', badgeBg: '#fef2f2', actionText: '🔄 Đổi nhà cung cấp' };
       case 'DRIVER_INCIDENT_UPDATE':
         return { icon: '🔧', badgeColor: '#0284c7', badgeBg: '#f0f9ff', actionText: '🚌 Xem trạng thái xe' };
+      case 'TOUR_CANCELLED_STAFF_REFUND':
+        return { icon: '💰', badgeColor: '#dc2626', badgeBg: '#fef2f2', actionText: '💵 Xử lý hoàn tiền 100%' };
+      case 'TOUR_CANCELLED_GUIDE':
+        return { icon: '🚩', badgeColor: '#ea580c', badgeBg: '#fff7ed', actionText: '📅 Lịch đã giải phóng' };
+      case 'TOUR_CANCELLED_DRIVER':
+        return { icon: '🚌', badgeColor: '#ea580c', badgeBg: '#fff7ed', actionText: '🚌 Xe đã hoàn về bãi' };
+      case 'TOUR_CANCELLED_REFUND':
+        return { icon: '📢', badgeColor: '#dc2626', badgeBg: '#fef2f2', actionText: '📋 Xem đơn hủy' };
+      case 'PAYMENT_REFUNDED':
+        return { icon: '✅', badgeColor: '#16a34a', badgeBg: '#f0fdf4', actionText: '💰 Đã hoàn tiền' };
       default:
         return { icon: '📢', badgeColor: '#0284c7', badgeBg: '#f0f9ff', actionText: '➔ Xem chi tiết' };
     }

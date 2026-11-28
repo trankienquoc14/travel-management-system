@@ -1163,16 +1163,25 @@ exports.makeOperationalDecision = async (req, res) => {
     const { id } = req.params;
     const { action, note, user_id, user_name } = req.body;
     
+    const transaction = await sequelize.transaction();
     try {
-        const [depRows] = await sequelize.query('SELECT * FROM departures WHERE departure_id = ?', {
-            replacements: [id]
+        const [depRows] = await sequelize.query(`
+            SELECT d.*, t.tour_name, t.min_participants, t.tour_id
+            FROM departures d
+            JOIN tours t ON d.tour_id = t.tour_id
+            WHERE d.departure_id = ?
+        `, {
+            replacements: [id],
+            transaction
         });
         
         if (!depRows || depRows.length === 0) {
+            await transaction.rollback();
             return res.status(404).json({ success: false, message: 'Không tìm thấy đợt khởi hành' });
         }
         
         const dep = depRows[0];
+        const depDateStr = dep.departure_date ? new Date(dep.departure_date).toLocaleDateString('vi-VN') : 'Sắp tới';
         
         let newOperationalStatus = dep.operational_status;
         let newStatus = dep.status;
@@ -1193,7 +1202,7 @@ exports.makeOperationalDecision = async (req, res) => {
             decHistory = typeof dep.decision_history === 'string' ? JSON.parse(dep.decision_history) : dep.decision_history;
         }
         
-        const currentPax = (dep.max_slots || 0) - (dep.available_slots || 0);
+        const currentPax = Math.max(0, (dep.max_slots || 0) - (dep.available_slots || 0));
         
         decHistory.push({
             timestamp: new Date().toISOString(),
@@ -1204,16 +1213,235 @@ exports.makeOperationalDecision = async (req, res) => {
             note: note || ''
         });
         
-        await sequelize.query(`
-            UPDATE departures 
-            SET operational_status = ?, status = ?, decision_history = ?
-            WHERE departure_id = ?
-        `, {
-            replacements: [newOperationalStatus, newStatus, JSON.stringify(decHistory), id]
-        });
+        // NẾU HỦY TOUR (DO THIẾU KHÁCH MỐC T-30 HOẶC QUẢN LÝ QUYẾT ĐỊNH HỦY)
+        if (action === 'Đóng tour' || action === 'Hủy tour' || action === 'Đóng / Hủy tour') {
+            // 1. LẤY TẤT CẢ BOOKING THUỘC ĐỢT KHỞI HÀNH NÀY (TRỪ NHỮNG ĐƠN ĐÃ HỦY TRƯỚC ĐÓ)
+            const [affectedBookings] = await sequelize.query(`
+                SELECT b.booking_id, b.customer_id, b.num_people, b.total_amount, b.payment_status,
+                       b.contact_name, b.contact_phone, b.contact_email, b.notes,
+                       u.full_name AS customer_name, u.email AS customer_email, u.phone AS customer_phone
+                FROM bookings b
+                LEFT JOIN users u ON b.customer_id = u.user_id
+                WHERE b.departure_id = ? AND b.booking_status != 'Cancelled'
+            `, { replacements: [id], transaction });
+
+            const paidBookings = [];
+            const unpaidBookings = [];
+
+            for (const bk of affectedBookings) {
+                const totalAmt = Number(bk.total_amount || 0);
+                const custName = bk.contact_name || bk.customer_name || 'Quý khách';
+                const custPhone = bk.contact_phone || bk.customer_phone || '';
+
+                if (bk.payment_status === 'Paid') {
+                    paidBookings.push(bk);
+                    // Cập nhật đơn hàng sang Cancelled và payment_status sang Pending_Refund (Chờ kế toán hoàn 100%)
+                    await sequelize.query(`
+                        UPDATE bookings 
+                        SET booking_status = 'Cancelled',
+                            payment_status = 'Pending_Refund',
+                            notes = CONCAT(COALESCE(notes, ''), '\n[HỦY TOUR T-30 THIẾU KHÁCH: Hoàn 100% (', ?, ' ₫) - Chờ hoàn tiền]')
+                        WHERE booking_id = ?
+                    `, {
+                        replacements: [totalAmt.toLocaleString('vi-VN'), bk.booking_id],
+                        transaction
+                    });
+
+                    // Ghi nhận yêu cầu hoàn tiền 100% trong booking_change_requests
+                    await sequelize.query(`
+                        INSERT INTO booking_change_requests (
+                            booking_id, request_type, reason, status, staff_note,
+                            fee_percentage, fee_amount, refund_amount, days_before_departure, processed_by, created_at
+                        ) VALUES (?, 'Cancel', ?, 'Approved', ?, 0, 0, ?, 30, ?, NOW())
+                    `, {
+                        replacements: [
+                            bk.booking_id,
+                            'Hủy tour mốc T-30 do không đủ số khách tối thiểu',
+                            `Hệ thống tự động duyệt hủy do tour thiếu khách mốc T-30. Hoàn 100% (${totalAmt.toLocaleString('vi-VN')} ₫). Cần CSKH/Kế toán liên hệ đối soát và chuyển khoản.`,
+                            totalAmt,
+                            user_id || null
+                        ],
+                        transaction
+                    });
+
+                    // Gửi thông báo đến CHUÔNG THÔNG BÁO CỦA KHÁCH HÀNG
+                    const custNotifTitle = `📢 Thông báo hủy tour & Hoàn tiền 100%: ${dep.tour_name}`;
+                    const custNotifContent = `Chào ${custName}, rất tiếc đợt khởi hành ngày ${depDateStr} của tour "${dep.tour_name}" đã bị hủy do chưa đạt đủ số lượng khách tối thiểu. Công ty cam kết HOÀN LẠI 100% số tiền (${totalAmt.toLocaleString('vi-VN')} ₫) cho quý khách (miễn mọi chi phí hủy). Nhân viên CSKH sẽ chủ động liên hệ qua SĐT ${custPhone ? custPhone : 'của bạn'} để xác nhận số tài khoản và chuyển khoản hoàn tiền ngay.`;
+
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, tour_id, is_read, action_url, created_at)
+                        VALUES (?, 'TOUR_CANCELLED_REFUND', 'Customer', ?, ?, ?, ?, 0, '/my-bookings', NOW())
+                    `, {
+                        replacements: [bk.customer_id, custNotifTitle, custNotifContent, id, dep.tour_id],
+                        transaction
+                    });
+                } else {
+                    unpaidBookings.push(bk);
+                    // Đơn chưa thanh toán: hủy tự động
+                    await sequelize.query(`
+                        UPDATE bookings 
+                        SET booking_status = 'Cancelled',
+                            payment_status = 'Cancelled',
+                            notes = CONCAT(COALESCE(notes, ''), '\n[HỦY TOUR T-30 THIẾU KHÁCH: Hủy đơn chưa thanh toán]')
+                        WHERE booking_id = ?
+                    `, { replacements: [bk.booking_id], transaction });
+
+                    const custNotifTitle = `📢 Thông báo hủy tour: ${dep.tour_name}`;
+                    const custNotifContent = `Chào ${custName}, đợt khởi hành ngày ${depDateStr} của tour "${dep.tour_name}" đã bị hủy do chưa đạt đủ số lượng khách tối thiểu. Đơn đặt chỗ #${bk.booking_id} của bạn đã được hủy tự động và miễn phí.`;
+
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, tour_id, is_read, action_url, created_at)
+                        VALUES (?, 'TOUR_CANCELLED_REFUND', 'Customer', ?, ?, ?, ?, 0, '/my-bookings', NOW())
+                    `, {
+                        replacements: [bk.customer_id, custNotifTitle, custNotifContent, id, dep.tour_id],
+                        transaction
+                    });
+                }
+            }
+
+            // Vô hiệu hóa mã QR check-in cho toàn bộ khách của đợt này
+            await sequelize.query(`
+                UPDATE booking_passengers 
+                SET is_checked_in = 0 
+                WHERE booking_id IN (SELECT booking_id FROM bookings WHERE departure_id = ?)
+            `, { replacements: [id], transaction });
+
+            // 2. GỬI THÔNG BÁO ĐẾN CHUÔNG CỦA NHÂN VIÊN VĂN PHÒNG & KẾ TOÁN (STAFF)
+            const staffNotifTitle = `⚠️ Cần liên hệ & Hoàn tiền 100%: Tour ${dep.tour_name} đã hủy (Mốc T-30)`;
+            const staffNotifContent = `Đợt khởi hành ${depDateStr} của tour "${dep.tour_name}" đã chính thức hủy do không đạt số khách tối thiểu (${currentPax}/${dep.min_participants || 5} khách). ${paidBookings.length > 0 ? `Có ${paidBookings.length} đơn hàng đã thanh toán cần chuyên viên CSKH liên hệ khách hàng xác nhận tài khoản và thực hiện hoàn tiền 100% tại Quản lý Đặt Tour.` : 'Tất cả đơn đặt tour đều chưa thanh toán và đã được hệ thống hủy tự động.'}`;
+
+            await sequelize.query(`
+                INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, tour_id, is_read, action_url, created_at)
+                VALUES (NULL, 'TOUR_CANCELLED_STAFF_REFUND', 'STAFF', ?, ?, ?, ?, 0, 'orders', NOW())
+            `, {
+                replacements: [staffNotifTitle, staffNotifContent, id, dep.tour_id],
+                transaction
+            });
+
+            // 3. GIẢI PHÓNG HƯỚNG DẪN VIÊN & GỬI THÔNG BÁO ĐẾN CHUÔNG HDV
+            const [assignedGuides] = await sequelize.query(`
+                SELECT DISTINCT g.user_id, u.full_name, g.guide_id
+                FROM guide_assignments ga
+                JOIN guides g ON ga.guide_id = g.guide_id
+                JOIN users u ON g.user_id = u.user_id
+                WHERE ga.departure_id = ?
+            `, { replacements: [id], transaction });
+
+            if (dep.guide_id) {
+                const [directG] = await sequelize.query(`
+                    SELECT g.user_id, u.full_name, g.guide_id
+                    FROM guides g
+                    JOIN users u ON g.user_id = u.user_id
+                    WHERE g.guide_id = ? OR g.user_id = ?
+                `, { replacements: [dep.guide_id, dep.guide_id], transaction });
+                if (directG.length > 0 && !assignedGuides.some(g => g.user_id === directG[0].user_id)) {
+                    assignedGuides.push(directG[0]);
+                }
+            }
+
+            for (const g of assignedGuides) {
+                if (g.user_id) {
+                    const guideTitle = `⚠️ Thông báo hủy chuyến & Giải phóng lịch dẫn đoàn: ${dep.tour_name}`;
+                    const guideContent = `Đợt khởi hành ngày ${depDateStr} của tour "${dep.tour_name}" đã bị hủy do không đủ số khách tối thiểu. Phân công dẫn đoàn của bạn đã được giải phóng và chuyển về trạng thái Sẵn sàng nhận tour mới.`;
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, tour_id, is_read, action_url, created_at)
+                        VALUES (?, 'TOUR_CANCELLED_GUIDE', 'GUIDE', ?, ?, ?, ?, 0, 'guide_assigned', NOW())
+                    `, {
+                        replacements: [g.user_id, guideTitle, guideContent, id, dep.tour_id],
+                        transaction
+                    });
+                }
+            }
+
+            // Xóa phân công HDV
+            await sequelize.query(`DELETE FROM guide_assignments WHERE departure_id = ?`, {
+                replacements: [id],
+                transaction
+            });
+
+            // 4. GIẢI PHÓNG TÀI XẾ, HOÀN XE VỀ BÃI & GỬI THÔNG BÁO ĐẾN CHUÔNG TÀI XẾ
+            const [assignedVehicles] = await sequelize.query(`
+                SELECT DISTINCT tva.driver_id, tva.vehicle_id, v.license_plate, u.full_name AS driver_name
+                FROM tour_vehicle_assignments tva
+                LEFT JOIN vehicles v ON tva.vehicle_id = v.vehicle_id
+                LEFT JOIN users u ON tva.driver_id = u.user_id
+                WHERE tva.departure_id = ? AND tva.status != 'CANCELLED'
+            `, { replacements: [id], transaction });
+
+            if (dep.driver_id) {
+                if (!assignedVehicles.some(v => v.driver_id === dep.driver_id)) {
+                    assignedVehicles.push({ driver_id: dep.driver_id, vehicle_id: null, license_plate: dep.vehicle_number || '' });
+                }
+            }
+
+            for (const d of assignedVehicles) {
+                if (d.driver_id) {
+                    const driverTitle = `⚠️ Thông báo hủy chuyến & Hoàn trả xe: ${dep.tour_name}`;
+                    const driverContent = `Đợt khởi hành ngày ${depDateStr} của tour "${dep.tour_name}" đã bị hủy do không đủ số khách tối thiểu. Lịch điều động xe đã được giải phóng, phương tiện xe (${d.license_plate || dep.vehicle_number || 'xe được cấp'}) đã được hoàn về bãi và sẵn sàng nhận chuyến mới.`;
+                    await sequelize.query(`
+                        INSERT INTO notifications (user_id, type, target_role, title, content, departure_id, tour_id, is_read, action_url, created_at)
+                        VALUES (?, 'TOUR_CANCELLED_DRIVER', 'DRIVER', ?, ?, ?, ?, 0, 'driver_assigned', NOW())
+                    `, {
+                        replacements: [d.driver_id, driverTitle, driverContent, id, dep.tour_id],
+                        transaction
+                    });
+                }
+            }
+
+            // Đổi trạng thái phân công xe sang CANCELLED
+            await sequelize.query(`
+                UPDATE tour_vehicle_assignments 
+                SET status = 'CANCELLED' 
+                WHERE departure_id = ?
+            `, { replacements: [id], transaction });
+
+            // Đưa phương tiện về trạng thái 'Hoạt động' (sẵn sàng) nếu đang ở trạng thái điều động
+            for (const d of assignedVehicles) {
+                if (d.vehicle_id) {
+                    await sequelize.query(`
+                        UPDATE vehicles 
+                        SET status = 'Hoạt động' 
+                        WHERE vehicle_id = ? AND status = 'Đang đi tour'
+                    `, { replacements: [d.vehicle_id], transaction });
+                }
+            }
+
+            // 5. CẬP NHẬT ĐỢT KHỞI HÀNH: XÓA GUIDE_ID, DRIVER_ID, VEHICLE_NUMBER VÀ ĐỔI TRẠNG THÁI
+            await sequelize.query(`
+                UPDATE departures 
+                SET operational_status = ?, status = ?, guide_id = NULL, driver_id = NULL, vehicle_number = NULL, decision_history = ?
+                WHERE departure_id = ?
+            `, {
+                replacements: [newOperationalStatus, newStatus, JSON.stringify(decHistory), id],
+                transaction
+            });
+        } else {
+            // Các quyết định khác (Xác nhận vận hành, Tiếp tục xem xét, v.v.)
+            await sequelize.query(`
+                UPDATE departures 
+                SET operational_status = ?, status = ?, decision_history = ?
+                WHERE departure_id = ?
+            `, {
+                replacements: [newOperationalStatus, newStatus, JSON.stringify(decHistory), id],
+                transaction
+            });
+        }
+
+        await transaction.commit();
+
+        // Broadcast realtime
+        notifyTourEvent('departure_updated', { departure_id: id, action });
+        broadcastRealtime('realtime:notification', { type: 'NEW_NOTIFICATION', departure_id: id });
+        broadcastRealtime('realtime:booking', { type: 'BOOKING_UPDATED', departure_id: id });
         
-        res.status(200).json({ success: true, message: 'Đã lưu quyết định thành công.' });
+        res.status(200).json({
+            success: true,
+            message: (action === 'Đóng / Hủy tour' || action === 'Hủy tour' || action === 'Đóng tour')
+                ? '✅ Đã hủy đợt khởi hành thành công! Hệ thống đã tự động gửi thông báo hoàn tiền 100% đến khách hàng, thông báo cho nhân viên văn phòng, giải phóng lịch cho HDV và tài xế.'
+                : 'Đã lưu quyết định thành công.'
+        });
     } catch (err) {
+        await transaction.rollback();
         console.error('Error makeOperationalDecision:', err);
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
     }
