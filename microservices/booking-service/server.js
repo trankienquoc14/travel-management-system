@@ -23,16 +23,14 @@ app.use('/api/bookings', bookingRoutes);
 
 const PORT = process.env.BOOKING_SERVICE_PORT || 5003;
 
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 [Booking Service] Server đang lắng nghe tại http://localhost:${PORT}`);
+});
+
 sequelize.authenticate()
   .then(() => {
-    console.log('✅ Booking Service đã kết nối MySQL Database thành công!');
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Booking Service đang chạy tại http://localhost:${PORT}`);
-    });
+    console.log('✅ [Booking Service] Đã kết nối MySQL Database thành công!');
   })
   .catch(err => {
     console.error('❌ [Booking Service] Lỗi kết nối Database:', err.message);
-    app.listen(PORT, '0.0.0.0', () => {
-      console.warn(`⚠️ [Booking Service] Đang chạy cổng ${PORT} (chờ kiểm tra kết nối lại MySQL Database)...`);
-    });
   });
